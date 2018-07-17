@@ -91,12 +91,15 @@ class LocalDockerBatch(BuildStockBatchBase):
     @classmethod
     def run_building(cls, samples_csv, project_dir, buildstock_dir, cfg, i):
         sim_id = str(uuid.uuid4())
+        sim_dir = os.path.join(project_dir, 'localResults', sim_id)
 
         bind_mounts = OrderedDict([
-            (project_dir, '/var/simdata/openstudio/project'),
-            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/project/measures'),
-            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/project/lib/resources'),
-            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/project/lib/housing_characteristics')
+            (sim_dir, '/var/simdata/openstudio'),
+            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures'),
+            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources'),
+            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics'),
+            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds'),
+            (os.path.join(project_dir, 'weather'), '/var/simdata/openstudio/weather')
         ])
 
         osw = {
@@ -107,7 +110,7 @@ class LocalDockerBatch(BuildStockBatchBase):
                     'arguments': {
                         'building_id': i,
                         'workflow_json': 'measure-info.json',
-                        'weight': cfg['baseline']['n_buildings_represented'] / cfg['baseline']['n_datapoints']
+                        'sample_weight': cfg['baseline']['n_buildings_represented'] / cfg['baseline']['n_datapoints']
                     }
                 },
                 {
@@ -124,8 +127,6 @@ class LocalDockerBatch(BuildStockBatchBase):
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
-            'root': bind_mounts[project_dir],
-            'run_directory': 'localResults/{}'.format(sim_id),
             'file_paths': [
 
             ],
@@ -136,7 +137,6 @@ class LocalDockerBatch(BuildStockBatchBase):
             'weather_file': 'weather/Placeholder.epw'
         }
 
-        sim_dir = os.path.join(project_dir, 'localResults', sim_id)
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
@@ -152,11 +152,11 @@ class LocalDockerBatch(BuildStockBatchBase):
             'nrel/openstudio:{}'.format(cls.OS_VERSION),
             'openstudio',
             'run',
-            '-w', 'project/localResults/{}/in.osw'.format(sim_id),
+            '-w', 'in.osw',
             '--debug'
         ])
         logging.debug(' '.join(args))
-        subprocess.run(args, check=True)
+        subprocess.run(args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def run_batch(self, n_jobs=-1):
         samples_csv = self.run_sampling()
@@ -177,7 +177,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     parser.add_argument('-j', type=int,
-                        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one')
+                        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
+                        default=-1)
     args = parser.parse_args()
     batch = LocalDockerBatch(args.project_filename)
     batch.run_batch(n_jobs=args.j)
