@@ -2,6 +2,8 @@ import argparse
 from collections import OrderedDict
 import datetime as dt
 import os
+import itertools
+import functools
 import json
 import shutil
 import subprocess
@@ -89,7 +91,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         return destination_filename
 
     @classmethod
-    def run_building(cls, samples_csv, project_dir, buildstock_dir, cfg, i):
+    def run_building(cls, project_dir, buildstock_dir, cfg, i, upgrade_idx=None):
         sim_id = str(uuid.uuid4())
         sim_dir = os.path.join(project_dir, 'localResults', sim_id)
 
@@ -127,15 +129,38 @@ class LocalDockerBatch(BuildStockBatchBase):
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
-            'file_paths': [
-
-            ],
             'measure_paths': [
                 'measures'
             ],
             'seed_file': 'seeds/EmptySeedModel.osm',
             'weather_file': 'weather/Placeholder.epw'
         }
+
+        if upgrade_idx is not None:
+            measure_d = cfg['upgrades'][upgrade_idx]
+            expanded_measure_d = {
+                'measure_dir_name': 'ApplyUpgrade',
+                'arguments': {
+                    'upgrade_name': measure_d['upgrade_name'],
+                    'run_measure': 1
+                }
+            }
+            for opt_num, option in enumerate(measure_d['options'], 1):
+                expanded_measure_d['arguments']['option_{}'.format(opt_num)] = option['option']
+                for arg in ('apply_logic', 'lifetime'):
+                    if arg not in option:
+                        continue
+                    expanded_measure_d['arguments']['option_{}_{}'.format(opt_num, arg)] = option[arg]
+                for cost_num, cost in enumerate(option['costs'], 1):
+                    for arg in ('value', 'multiplier'):
+                        if arg not in cost:
+                            continue
+                        expanded_measure_d['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
+                            cost[arg]
+            if 'package_apply_logic' in measure_d:
+                expanded_measure_d['package_apply_logic'] = measure_d['package_apply_logic']
+
+            osw['steps'].insert(1, expanded_measure_d)
 
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
@@ -159,18 +184,20 @@ class LocalDockerBatch(BuildStockBatchBase):
         subprocess.run(args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def run_batch(self, n_jobs=-1):
-        samples_csv = self.run_sampling()
+        self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
-        Parallel(n_jobs=n_jobs, verbose=10)(
-            delayed(self.run_building)(
-                samples_csv,
-                self.project_dir,
-                self.buildstock_dir,
-                self.cfg,
-                i
-            )
-            for i in range(1, n_datapoints + 1)
+        run_building_d = functools.partial(
+            delayed(self.run_building),
+            self.project_dir,
+            self.buildstock_dir,
+            self.cfg
         )
+        baseline_sims = map(run_building_d, range(1, n_datapoints + 1))
+        upgrade_sims = []
+        for i in range(len(self.cfg.get('upgrades', []))):
+            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), range(1, n_datapoints + 1)))
+        all_sims = itertools.chain(baseline_sims, *upgrade_sims)
+        Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
 def main():
     logging.basicConfig(level=logging.DEBUG)

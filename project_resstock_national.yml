@@ -3,8 +3,16 @@ project_directory: project_resstock_national  # Relative to buildstock_directory
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 16
+  n_datapoints: 2
   n_buildings_represented: 80000000
-upgrades: []
+upgrades:
+  - upgrade_name: Triple-Pane Windows
+    options:
+      - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
+        # apply_logic:
+        costs:
+          - value: 45.77
+            multiplier: Window Area (ft^2)
+        lifetime: 30
 
 
