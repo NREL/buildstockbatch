@@ -35,8 +35,10 @@ class LocalDockerBatch(BuildStockBatchBase):
         )
 
         # Get the weather files
-        weather_dir = os.path.join(self.project_dir, 'weather')
-        os.makedirs(weather_dir, exist_ok=True)
+        self.weather_dir = tempfile.TemporaryDirectory(dir=self.project_dir, prefix='weather')
+        local_weather_dir = os.path.join(self.project_dir, 'weather')
+        for filename in os.listdir(local_weather_dir):
+            shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir.name)
         if 'weather_files_path' in self.cfg:
             logging.debug('Copying weather files')
             if os.path.isabs(self.cfg['weather_files_path']):
@@ -49,8 +51,8 @@ class LocalDockerBatch(BuildStockBatchBase):
                     )
                 )
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
-                logging.debug('Extracting weather files to: {}'.format(weather_dir))
-                zf.extractall(weather_dir)
+                logging.debug('Extracting weather files to: {}'.format(self.weather_dir.name))
+                zf.extractall(self.weather_dir.name)
         else:
             logging.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
@@ -60,8 +62,8 @@ class LocalDockerBatch(BuildStockBatchBase):
                         f.write(chunk)
                 f.seek(0)
                 with zipfile.ZipFile(f, 'r') as zf:
-                    logging.debug('Extracting weather files to: {}'.format(weather_dir))
-                    zf.extractall(weather_dir)
+                    logging.debug('Extracting weather files to: {}'.format(self.weather_dir.name))
+                    zf.extractall(self.weather_dir.name)
 
     def run_sampling(self):
         logging.debug('Sampling')
@@ -91,7 +93,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         return destination_filename
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, cfg, i, upgrade_idx=None):
         sim_id = str(uuid.uuid4())
         sim_dir = os.path.join(project_dir, 'localResults', sim_id)
 
@@ -101,7 +103,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources'),
             (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics'),
             (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds'),
-            (os.path.join(project_dir, 'weather'), '/var/simdata/openstudio/weather')
+            (weather_dir, '/var/simdata/openstudio/weather')
         ])
 
         osw = {
@@ -181,7 +183,8 @@ class LocalDockerBatch(BuildStockBatchBase):
             '--debug'
         ])
         logging.debug(' '.join(args))
-        subprocess.run(args, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with open(os.path.join(sim_dir, 'docker_output.log'), 'w') as f_out:
+            subprocess.run(args, check=True, stdout=f_out, stderr=subprocess.STDOUT)
 
     def run_batch(self, n_jobs=-1):
         self.run_sampling()
@@ -190,6 +193,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             delayed(self.run_building),
             self.project_dir,
             self.buildstock_dir,
+            self.weather_dir.name,
             self.cfg
         )
         baseline_sims = map(run_building_d, range(1, n_datapoints + 1))
