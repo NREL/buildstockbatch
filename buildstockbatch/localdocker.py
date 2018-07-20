@@ -1,4 +1,5 @@
 import argparse
+from copy import deepcopy
 import datetime as dt
 import os
 import itertools
@@ -142,7 +143,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
         if upgrade_idx is not None:
             measure_d = cfg['upgrades'][upgrade_idx]
-            expanded_measure_d = {
+            apply_upgrade_measure = {
                 'measure_dir_name': 'ApplyUpgrade',
                 'arguments': {
                     'upgrade_name': measure_d['upgrade_name'],
@@ -150,21 +151,30 @@ class LocalDockerBatch(BuildStockBatchBase):
                 }
             }
             for opt_num, option in enumerate(measure_d['options'], 1):
-                expanded_measure_d['arguments']['option_{}'.format(opt_num)] = option['option']
+                apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
                 for arg in ('apply_logic', 'lifetime'):
                     if arg not in option:
                         continue
-                    expanded_measure_d['arguments']['option_{}_{}'.format(opt_num, arg)] = option[arg]
+                    apply_upgrade_measure['arguments']['option_{}_{}'.format(opt_num, arg)] = option[arg]
                 for cost_num, cost in enumerate(option['costs'], 1):
                     for arg in ('value', 'multiplier'):
                         if arg not in cost:
                             continue
-                        expanded_measure_d['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
+                        apply_upgrade_measure['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
                             cost[arg]
             if 'package_apply_logic' in measure_d:
-                expanded_measure_d['package_apply_logic'] = measure_d['package_apply_logic']
+                apply_upgrade_measure['package_apply_logic'] = measure_d['package_apply_logic']
 
-            osw['steps'].insert(1, expanded_measure_d)
+            osw['steps'].insert(1, apply_upgrade_measure)
+
+        if 'timeseries_csv_export' in cfg:
+            timeseries_measure = {
+                'measure_dir_name': 'TimeseriesCSVExport',
+                'arguments': deepcopy(cfg['timeseries_csv_export'])
+            }
+            timeseries_measure['arguments']['output_variables'] = \
+                ','.join(cfg['timeseries_csv_export']['output_variables'])
+            osw['steps'].insert(-1, timeseries_measure)
 
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
