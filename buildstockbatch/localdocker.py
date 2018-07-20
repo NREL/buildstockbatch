@@ -1,10 +1,11 @@
 import argparse
-from collections import OrderedDict
 import datetime as dt
 import os
 import itertools
 import functools
+import glob
 import json
+import re
 import shutil
 import subprocess
 import tempfile
@@ -15,6 +16,7 @@ import zipfile
 
 from joblib import Parallel, delayed
 import requests
+from pandas.io.json import json_normalize
 
 from buildstockbatch.base import BuildStockBatchBase
 
@@ -97,14 +99,14 @@ class LocalDockerBatch(BuildStockBatchBase):
         sim_id = str(uuid.uuid4())
         sim_dir = os.path.join(project_dir, 'localResults', sim_id)
 
-        bind_mounts = OrderedDict([
+        bind_mounts = [
             (sim_dir, '/var/simdata/openstudio'),
-            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures'),
-            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources'),
-            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics'),
-            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds'),
-            (weather_dir, '/var/simdata/openstudio/weather')
-        ])
+            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
+            (weather_dir, '/var/simdata/openstudio/weather', 'ro')
+        ]
 
         osw = {
             'id': sim_id,
@@ -173,18 +175,21 @@ class LocalDockerBatch(BuildStockBatchBase):
             'run',
             '--rm'
         ]
-        for k, v in bind_mounts.items():
-            args.extend(['-v', '{}:{}'.format(k, v)])
+        for x in bind_mounts:
+            args.extend(['-v', ':'.join(x)])
         args.extend([
             'nrel/openstudio:{}'.format(cls.OS_VERSION),
             'openstudio',
             'run',
-            '-w', 'in.osw',
-            '--debug'
+            '-w', 'in.osw'
         ])
         logging.debug(' '.join(args))
         with open(os.path.join(sim_dir, 'docker_output.log'), 'w') as f_out:
             subprocess.run(args, check=True, stdout=f_out, stderr=subprocess.STDOUT)
+
+        # Clean up directories created with the docker mounts
+        for dirname in ('lib', 'measures', 'seeds', 'weather'):
+            shutil.rmtree(os.path.join(sim_dir, dirname), ignore_errors=True)
 
     def run_batch(self, n_jobs=-1):
         self.run_sampling()
@@ -203,6 +208,37 @@ class LocalDockerBatch(BuildStockBatchBase):
         all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
+    @staticmethod
+    def _read_data_point_out_json(filename):
+        with open(filename, 'r') as f:
+            d = json.load(f)
+        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
+        return d
+
+    @staticmethod
+    def to_camelcase(x):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+    def process_results(self):
+        results_dir = os.path.join(self.project_dir, 'localResults')
+        assert(os.path.isdir(results_dir))
+        datapoint_output_jsons = glob.glob(os.path.join(results_dir, '*', 'run', 'data_point_out.json'))
+        df = json_normalize(Parallel(n_jobs=-1)(map(delayed(self._read_data_point_out_json), datapoint_output_jsons)))
+        df.rename(columns=self.to_camelcase, inplace=True)
+        df.set_index('_id', inplace=True)
+        cols_to_keep = [
+            'build_existing_model.building_id',
+            'apply_upgrade.upgrade_name',
+            'apply_upgrade.applicable'
+        ]
+        cols_to_keep.extend(filter(lambda x: x.startswith('building_characteristics_report.'), df.columns))
+        cols_to_keep.extend(filter(lambda x: x.startswith('simulation_output_report.'), df.columns))
+        df = df[cols_to_keep]
+        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
+        df.to_pickle(os.path.join(results_dir, 'results.pkl'))
+
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser()
@@ -210,9 +246,14 @@ def main():
     parser.add_argument('-j', type=int,
                         help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
                         default=-1)
+    parser.add_argument('--skipsims',
+                        help='Skip simulating buildings, useful for when the simulations are already done',
+                        action='store_true')
     args = parser.parse_args()
     batch = LocalDockerBatch(args.project_filename)
-    batch.run_batch(n_jobs=args.j)
+    if not args.skipsims:
+        batch.run_batch(n_jobs=args.j)
+    batch.process_results()
 
 
 if __name__ == '__main__':
