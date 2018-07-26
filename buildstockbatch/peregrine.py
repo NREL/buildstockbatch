@@ -9,6 +9,7 @@ import functools
 import itertools
 import json
 import uuid
+import zipfile
 
 import requests
 from joblib import Parallel, delayed
@@ -191,6 +192,16 @@ class PeregrineBatch(BuildStockBatchBase):
         for dir in dirs_to_copy:
             shutil.rmtree(dir[1])
         shutil.rmtree(os.path.join(sim_dir, 'lib'))
+        shutil.rmtree(os.path.join(sim_dir, 'weather'))
+
+        # Remove files already in data_point.zip
+        zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
+        if os.path.isfile(zipfilename):
+            with zipfile.ZipFile(zipfilename, 'r') as zf:
+                for filename in zf.namelist():
+                    filepath = os.path.join(sim_dir, 'run', filename)
+                    if os.path.exists(filepath):
+                        os.remove(filepath)
 
 
 
