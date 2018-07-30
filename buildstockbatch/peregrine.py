@@ -81,7 +81,7 @@ class PeregrineBatch(BuildStockBatchBase):
         )
         return destination_filename
 
-    def run_batch(self, n_jobs=40, nodetype='haswell'):
+    def run_batch(self, n_jobs=40, nodetype='haswell', queue='batch-h'):
         self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
         n_sims = n_datapoints * len(self.cfg.get('upgrades', []))
@@ -99,8 +99,8 @@ class PeregrineBatch(BuildStockBatchBase):
             'haswell': 24
         }
 
-        # Upper limit of 3 minutes per simulation
-        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 3 * 60
+        # Estimated 3 minutes per simulation
+        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 10 * 60
 
         baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
         upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
@@ -118,8 +118,34 @@ class PeregrineBatch(BuildStockBatchBase):
                     'batch': batch,
                 }, f, indent=4)
 
-            # TODO: insert qsub command to run job batch
-            self.run_job_batch(job_json_filename)
+            here = os.path.dirname(os.path.abspath(__file__))
+            peregrine_sh = os.path.join(here, 'peregrine.sh')
+            args = [
+                'qsub',
+                '-v', 'PROJECTFILE={},JOBJSON={}'.format(self.project_filename, job_json_filename),
+                '-q', queue,
+                '-l', 'feature={}'.format(nodetype),
+                '-l', 'walltime={}'.format(walltime),
+                '-o', os.path.join(self.output_dir, 'job{:03d}.out'.format(i)),
+                peregrine_sh
+            ]
+            env = {}
+            env.update(os.environ)
+            env.update({
+                'JOBJSON': job_json_filename,
+                'PROJECTFILE': self.project_filename
+            })
+            resp = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env
+            )
+            try:
+                resp.check_returncode()
+            except subprocess.CalledProcessError as ex:
+                print(ex.stderr)
+                raise
 
     def run_job_batch(self, job_json_filename):
         with open(job_json_filename, 'r') as f:
@@ -204,14 +230,17 @@ class PeregrineBatch(BuildStockBatchBase):
                         os.remove(filepath)
 
 
-
 def main():
     logging.basicConfig(level=logging.DEBUG)
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)
-    batch.run_batch()
+    job_json_filename = os.environ.get('JOBJSON')
+    if job_json_filename:
+        batch.run_job_batch(job_json_filename)
+    else:
+        batch.run_batch()
 
 
 if __name__ == '__main__':
