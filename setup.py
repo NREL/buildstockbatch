@@ -14,7 +14,8 @@ setuptools.setup(
         'pyyaml',
         'requests',
         'pandas',
-        'joblib'
+        'joblib',
+        'feather-format'
     ],
     entry_points={
         'console_scripts': [

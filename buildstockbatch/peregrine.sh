@@ -8,4 +8,4 @@
 module load conda singularity-container
 source activate buildstock
 
-buildstock_peregrine "$PROJECTFILE"
+time buildstock_peregrine "$PROJECTFILE"

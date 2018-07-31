@@ -5,9 +5,14 @@ import shutil
 import zipfile
 import datetime as dt
 from copy import deepcopy
+import glob
+import re
+import json
 
 import requests
 import yaml
+from pandas.io.json import json_normalize
+from joblib import Parallel, delayed
 
 
 class BuildStockBatchBase(object):
@@ -85,6 +90,10 @@ class BuildStockBatchBase(object):
         assert(os.path.isdir(d))
         return d
 
+    @property
+    def results_dir(self):
+        raise NotImplementedError
+
     def run_sampling(self):
         raise NotImplementedError
 
@@ -161,3 +170,32 @@ class BuildStockBatchBase(object):
             osw['steps'].insert(-1, timeseries_measure)
 
         return osw
+
+    @staticmethod
+    def _read_data_point_out_json(filename):
+        with open(filename, 'r') as f:
+            d = json.load(f)
+        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
+        return d
+
+    @staticmethod
+    def to_camelcase(x):
+        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
+        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+    def process_results(self):
+        results_dir = self.results_dir
+        datapoint_output_jsons = glob.glob(os.path.join(results_dir, '*', 'run', 'data_point_out.json'))
+        df = json_normalize(Parallel(n_jobs=-1)(map(delayed(self._read_data_point_out_json), datapoint_output_jsons)))
+        df.rename(columns=self.to_camelcase, inplace=True)
+        df.set_index('_id', inplace=True)
+        cols_to_keep = [
+            'build_existing_model.building_id',
+            'apply_upgrade.upgrade_name',
+            'apply_upgrade.applicable'
+        ]
+        cols_to_keep.extend(filter(lambda x: x.startswith('building_characteristics_report.'), df.columns))
+        cols_to_keep.extend(filter(lambda x: x.startswith('simulation_output_report.'), df.columns))
+        df = df[cols_to_keep]
+        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
+        df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))

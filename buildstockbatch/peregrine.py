@@ -58,6 +58,12 @@ class PeregrineBatch(BuildStockBatchBase):
             self._get_weather_files()
         return weather_dir
 
+    @property
+    def results_dir(self):
+        results_dir = os.path.join(self.output_dir, 'results')
+        assert(os.path.isdir(results_dir))
+        return results_dir
+
     def run_sampling(self):
         logging.debug('Sampling')
         args = [
@@ -107,6 +113,7 @@ class PeregrineBatch(BuildStockBatchBase):
         upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
         all_sims = itertools.chain(baseline_sims, upgrade_sims)
 
+        jobids = []
         for i in itertools.count(1):
             batch = list(itertools.islice(all_sims, n_sims_per_job))
             if not batch:
@@ -123,7 +130,7 @@ class PeregrineBatch(BuildStockBatchBase):
             peregrine_sh = os.path.join(here, 'peregrine.sh')
             args = [
                 'qsub',
-                '-v', 'PROJECTFILE={},JOBJSON={}'.format(self.project_filename, job_json_filename),
+                '-v', 'PROJECTFILE,JOBJSON',
                 '-q', queue,
                 '-l', 'feature={}'.format(nodetype),
                 '-l', 'walltime={}'.format(walltime),
@@ -147,6 +154,25 @@ class PeregrineBatch(BuildStockBatchBase):
             except subprocess.CalledProcessError as ex:
                 print(ex.stderr)
                 raise
+            jobids.append(int(resp.stdout.strip()))
+
+        # Queue up post processing
+        env = {}
+        env.update(os.environ)
+        env.update({
+            'POSTPROCESS': '1',
+            'PROJECTFILE': self.project_filename
+        })
+        args = [
+            'qsub',
+            '-v', 'PROJECTFILE,POSTPROCESS',
+            '-W', 'depend=afterok:{}'.format(':'.join(map(str, jobids))),
+            '-q', 'short',
+            '-l', 'walltime=20:00',
+            '-o', os.path.join(self.output_dir, 'postprocessing.out'),
+            peregrine_sh
+        ]
+        subprocess.run(args, env=env)
 
     def run_job_batch(self, job_json_filename):
         with open(job_json_filename, 'r') as f:
@@ -249,8 +275,11 @@ def main():
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)
     job_json_filename = os.environ.get('JOBJSON')
+    postprocess = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
     if job_json_filename:
         batch.run_job_batch(job_json_filename)
+    elif postprocess:
+        batch.process_results()
     else:
         batch.run_batch()
 

@@ -2,9 +2,7 @@ import argparse
 import os
 import itertools
 import functools
-import glob
 import json
-import re
 import shutil
 import subprocess
 import time
@@ -12,7 +10,6 @@ import logging
 import uuid
 
 from joblib import Parallel, delayed
-from pandas.io.json import json_normalize
 
 from buildstockbatch.base import BuildStockBatchBase
 
@@ -115,35 +112,11 @@ class LocalDockerBatch(BuildStockBatchBase):
         all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
-    @staticmethod
-    def _read_data_point_out_json(filename):
-        with open(filename, 'r') as f:
-            d = json.load(f)
-        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
-        return d
-
-    @staticmethod
-    def to_camelcase(x):
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-    def process_results(self):
+    @property
+    def results_dir(self):
         results_dir = os.path.join(self.project_dir, 'localResults')
         assert(os.path.isdir(results_dir))
-        datapoint_output_jsons = glob.glob(os.path.join(results_dir, '*', 'run', 'data_point_out.json'))
-        df = json_normalize(Parallel(n_jobs=-1)(map(delayed(self._read_data_point_out_json), datapoint_output_jsons)))
-        df.rename(columns=self.to_camelcase, inplace=True)
-        df.set_index('_id', inplace=True)
-        cols_to_keep = [
-            'build_existing_model.building_id',
-            'apply_upgrade.upgrade_name',
-            'apply_upgrade.applicable'
-        ]
-        cols_to_keep.extend(filter(lambda x: x.startswith('building_characteristics_report.'), df.columns))
-        cols_to_keep.extend(filter(lambda x: x.startswith('simulation_output_report.'), df.columns))
-        df = df[cols_to_keep]
-        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
-        df.to_pickle(os.path.join(results_dir, 'results.pkl'))
+        return results_dir
 
 
 def main():
