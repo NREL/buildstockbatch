@@ -10,6 +10,7 @@ import itertools
 import json
 import uuid
 import zipfile
+import time
 
 import requests
 from joblib import Parallel, delayed
@@ -54,6 +55,7 @@ class PeregrineBatch(BuildStockBatchBase):
         weather_dir = os.path.join(self.output_dir, 'weather')
         if not os.path.exists(weather_dir):
             os.makedirs(weather_dir)
+            self._get_weather_files()
         return weather_dir
 
     def run_sampling(self):
@@ -62,7 +64,6 @@ class PeregrineBatch(BuildStockBatchBase):
             'singularity',
             'exec',
             '--contain',
-            '-B', '{}:/outdir'.format(self.output_dir),
             '--home', self.buildstock_dir,
             'openstudio.simg',
             'ruby',
@@ -99,7 +100,7 @@ class PeregrineBatch(BuildStockBatchBase):
             'haswell': 24
         }
 
-        # Estimated 3 minutes per simulation
+        # Estimated wall time
         walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 10 * 60
 
         baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
@@ -159,8 +160,11 @@ class PeregrineBatch(BuildStockBatchBase):
             self.output_dir,
             self.cfg
         )
-        with Parallel(n_jobs=-1, verbose=8) as parallel:
+        tick = time.time()
+        with Parallel(n_jobs=-1, verbose=9) as parallel:
             parallel(itertools.starmap(run_building_d, args['batch']))
+        tick = time.time() - tick
+        logging.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, cfg, i, upgrade_idx=None):
@@ -175,15 +179,24 @@ class PeregrineBatch(BuildStockBatchBase):
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 
-        # Find and copy the weather file we'll be using for this simulation so we don't have to copy all of them.
+        # Find and copy the row from buildstock.csv that we'll be using for this simulation.
+        # Also get the weather file we'll be using for this simulation so we don't have to copy all of them.
         epw_file = None
-        with open(os.path.join(output_dir, 'buildstock.csv'), 'r', newline='') as f:
-            cf = csv.DictReader(f)
-            for row in cf:
+        with open(os.path.join(output_dir, 'buildstock.csv'), 'r', newline='') as f_in:
+            cf_in = csv.DictReader(f_in)
+            for row in cf_in:
                 if int(row['Building']) == i:
                     epw_file = os.path.join(weather_dir, row['Location EPW'])
                     assert(os.path.isfile(epw_file))
                     break
+            assert(epw_file is not None)
+            housing_char_dir = os.path.join(sim_dir, 'lib', 'housing_characteristics')
+            os.makedirs(housing_char_dir)
+            with open(os.path.join(housing_char_dir, 'buildstock.csv'), 'w', newline='') as f_out:
+                cf_out = csv.DictWriter(f_out, fieldnames=cf_in.fieldnames)
+                cf_out.writeheader()
+                cf_out.writerow(row)
+
         weather_dest = os.path.join(sim_dir, 'weather')
         os.makedirs(weather_dest)
         shutil.copy(os.path.join(weather_dir, 'Placeholder.epw'), weather_dest)
@@ -193,7 +206,6 @@ class PeregrineBatch(BuildStockBatchBase):
         dirs_to_copy = [
             (os.path.join(buildstock_dir, 'measures'), os.path.join(sim_dir, 'measures')),
             (os.path.join(buildstock_dir, 'resources'), os.path.join(sim_dir, 'lib', 'resources')),
-            (os.path.join(project_dir, 'housing_characteristics'), os.path.join(sim_dir, 'lib', 'housing_characteristics')),
             (os.path.join(project_dir, 'seeds'), os.path.join(sim_dir, 'seeds'))
         ]
         for src, dest in dirs_to_copy:

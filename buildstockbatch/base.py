@@ -21,7 +21,10 @@ class BuildStockBatchBase(object):
             self.cfg = yaml.load(f)
         self._weather_dir = None
 
-        # Get the weather files
+        # Call property to create directory and copy weather files there
+        _ = self.weather_dir
+
+    def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
         for filename in os.listdir(local_weather_dir):
             shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
@@ -55,6 +58,7 @@ class BuildStockBatchBase(object):
     def weather_dir(self):
         if self._weather_dir is None:
             self._weather_dir = tempfile.TemporaryDirectory(dir=self.project_dir, prefix='weather')
+            self._get_weather_files()
         return self._weather_dir.name
 
     @property

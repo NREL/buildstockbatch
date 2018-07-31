@@ -147,7 +147,11 @@ class LocalDockerBatch(BuildStockBatchBase):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        format='%(levelname)s:%(asctime)s:%(message)s'
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     parser.add_argument('-j', type=int,
