@@ -107,13 +107,12 @@ class PeregrineBatch(BuildStockBatchBase):
         }
 
         # Estimated wall time
-        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 3 * 60
+        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 9 * 60
 
         baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
         upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
         all_sims = itertools.chain(baseline_sims, upgrade_sims)
 
-        jobids = []
         for i in itertools.count(1):
             batch = list(itertools.islice(all_sims, n_sims_per_job))
             if not batch:
@@ -126,36 +125,37 @@ class PeregrineBatch(BuildStockBatchBase):
                     'batch': batch,
                 }, f, indent=4)
 
-            here = os.path.dirname(os.path.abspath(__file__))
-            peregrine_sh = os.path.join(here, 'peregrine.sh')
-            args = [
-                'qsub',
-                '-v', 'PROJECTFILE,JOBJSON',
-                '-q', queue,
-                '-l', 'feature={}'.format(nodetype),
-                '-l', 'walltime={}'.format(walltime),
-                '-N', 'buildstock{:03d}'.format(i),
-                '-o', os.path.join(self.output_dir, 'job{:03d}.out'.format(i)),
-                peregrine_sh
-            ]
-            env = {}
-            env.update(os.environ)
-            env.update({
-                'JOBJSON': job_json_filename,
-                'PROJECTFILE': self.project_filename
-            })
-            resp = subprocess.run(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                env=env
-            )
-            try:
-                resp.check_returncode()
-            except subprocess.CalledProcessError as ex:
-                print(ex.stderr)
-                raise
-            jobids.append(int(resp.stdout.strip()))
+        # Queue up simulations
+        here = os.path.dirname(os.path.abspath(__file__))
+        peregrine_sh = os.path.join(here, 'peregrine.sh')
+        args = [
+            'qsub',
+            '-v', 'PROJECTFILE',
+            '-q', queue,
+            '-l', 'feature={}'.format(nodetype),
+            '-l', 'walltime={}'.format(walltime),
+            '-N', 'buildstocksims',
+            '-t', '1-{}'.format(i - 1),
+            '-o', os.path.join(self.output_dir, 'job.out'),
+            peregrine_sh
+        ]
+        env = {}
+        env.update(os.environ)
+        env['PROJECTFILE'] = self.project_filename
+        resp = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+            encoding='utf-8'
+        )
+        try:
+            resp.check_returncode()
+        except subprocess.CalledProcessError as ex:
+            print(ex.stderr)
+            raise
+        jobid = resp.stdout.strip()
+        logging.debug('Job ids: ' + jobid)
 
         # Queue up post processing
         env = {}
@@ -167,7 +167,7 @@ class PeregrineBatch(BuildStockBatchBase):
         args = [
             'qsub',
             '-v', 'PROJECTFILE,POSTPROCESS',
-            '-W', 'depend=afterok:{}'.format(':'.join(map(str, jobids))),
+            '-W', 'depend=afterokarray:{}'.format(jobid),
             '-q', 'short',
             '-l', 'walltime=20:00',
             '-N', 'buildstock_post',
@@ -176,7 +176,8 @@ class PeregrineBatch(BuildStockBatchBase):
         ]
         subprocess.run(args, env=env)
 
-    def run_job_batch(self, job_json_filename):
+    def run_job_batch(self, job_array_number):
+        job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
 
@@ -271,15 +272,19 @@ class PeregrineBatch(BuildStockBatchBase):
 
 
 def main():
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        datefmt='%Y-%m-%d %H:%M:%S',
+        format='%(levelname)s:%(asctime)s:%(message)s'
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)
-    job_json_filename = os.environ.get('JOBJSON')
+    job_array_number = int(os.environ.get('PBS_ARRAYID', 0))
     postprocess = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
-    if job_json_filename:
-        batch.run_job_batch(job_json_filename)
+    if job_array_number:
+        batch.run_job_batch(job_array_number)
     elif postprocess:
         batch.process_results()
     else:
