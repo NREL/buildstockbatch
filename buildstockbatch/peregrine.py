@@ -88,10 +88,10 @@ class PeregrineBatch(BuildStockBatchBase):
         )
         return destination_filename
 
-    def run_batch(self, n_jobs=40, nodetype='haswell', queue='batch-h'):
+    def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h'):
         self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
-        n_sims = n_datapoints * len(self.cfg.get('upgrades', []))
+        n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
         # This is the maximum number of jobs we'll submit for this batch
         n_sims_per_job = math.ceil(n_sims / n_jobs)
@@ -107,7 +107,7 @@ class PeregrineBatch(BuildStockBatchBase):
         }
 
         # Estimated wall time
-        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 10 * 60
+        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 3 * 60
 
         baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
         upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
@@ -134,6 +134,7 @@ class PeregrineBatch(BuildStockBatchBase):
                 '-q', queue,
                 '-l', 'feature={}'.format(nodetype),
                 '-l', 'walltime={}'.format(walltime),
+                '-N', 'buildstock{:03d}'.format(i),
                 '-o', os.path.join(self.output_dir, 'job{:03d}.out'.format(i)),
                 peregrine_sh
             ]
@@ -169,6 +170,7 @@ class PeregrineBatch(BuildStockBatchBase):
             '-W', 'depend=afterok:{}'.format(':'.join(map(str, jobids))),
             '-q', 'short',
             '-l', 'walltime=20:00',
+            '-N', 'buildstock_post',
             '-o', os.path.join(self.output_dir, 'postprocessing.out'),
             peregrine_sh
         ]
