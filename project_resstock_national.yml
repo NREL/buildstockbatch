@@ -23,4 +23,4 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
     - Zone Mean Air Humidity Ratio
     - Fan Runtime Fraction
-output_directory: /scratch/nmerket/test_resstock
+#output_directory: /scratch/nmerket/test_resstock
