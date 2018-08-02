@@ -1,5 +1,4 @@
 import os
-import csv
 import shutil
 import logging
 import argparse
@@ -11,6 +10,7 @@ import json
 import uuid
 import zipfile
 import time
+import shlex
 
 import requests
 from joblib import Parallel, delayed
@@ -79,14 +79,19 @@ class PeregrineBatch(BuildStockBatchBase):
             '-o', 'buildstock.csv'
         ]
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_filename = os.path.join(self.output_dir, 'buildstock.csv')
-        if os.path.exists(destination_filename):
-            os.remove(destination_filename)
+        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
+        if os.path.exists(destination_dir):
+            shutil.rmtree(destination_dir)
+        shutil.copytree(
+            os.path.join(self.project_dir, 'housing_characteristics'),
+            destination_dir
+        )
+        assert(os.path.isdir(destination_dir))
         shutil.move(
             os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
+            destination_dir
         )
-        return destination_filename
+        return os.path.join(destination_dir, 'buildstock.csv')
 
     def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h'):
         self.run_sampling()
@@ -124,6 +129,8 @@ class PeregrineBatch(BuildStockBatchBase):
                     'job_num': i,
                     'batch': batch,
                 }, f, indent=4)
+
+        return
 
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
@@ -208,37 +215,12 @@ class PeregrineBatch(BuildStockBatchBase):
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 
-        # Find and copy the row from buildstock.csv that we'll be using for this simulation.
-        # Also get the weather file we'll be using for this simulation so we don't have to copy all of them.
-        epw_file = None
-        with open(os.path.join(output_dir, 'buildstock.csv'), 'r', newline='') as f_in:
-            cf_in = csv.DictReader(f_in)
-            for row in cf_in:
-                if int(row['Building']) == i:
-                    epw_file = os.path.join(weather_dir, row['Location EPW'])
-                    assert(os.path.isfile(epw_file))
-                    break
-            assert(epw_file is not None)
-            housing_char_dir = os.path.join(sim_dir, 'lib', 'housing_characteristics')
-            os.makedirs(housing_char_dir)
-            with open(os.path.join(housing_char_dir, 'buildstock.csv'), 'w', newline='') as f_out:
-                cf_out = csv.DictWriter(f_out, fieldnames=cf_in.fieldnames)
-                cf_out.writeheader()
-                cf_out.writerow(row)
-
-        weather_dest = os.path.join(sim_dir, 'weather')
-        os.makedirs(weather_dest)
-        shutil.copy(os.path.join(weather_dir, 'Placeholder.epw'), weather_dest)
-        shutil.copy(epw_file, weather_dest)
-
         # Copy other necessary stuff into the simulation directory
-        dirs_to_copy = [
-            (os.path.join(buildstock_dir, 'measures'), os.path.join(sim_dir, 'measures')),
-            (os.path.join(buildstock_dir, 'resources'), os.path.join(sim_dir, 'lib', 'resources')),
-            (os.path.join(project_dir, 'seeds'), os.path.join(sim_dir, 'seeds'))
+        dirs_to_mount = [
+            os.path.join(buildstock_dir, 'measures'),
+            os.path.join(project_dir, 'seeds'),
+            weather_dir,
         ]
-        for src, dest in dirs_to_copy:
-            shutil.copytree(src, dest)
 
         # Call singularity to run the simulation
         args = [
@@ -246,20 +228,39 @@ class PeregrineBatch(BuildStockBatchBase):
             '--contain',
             '--pwd', '/var/simdata/openstudio',
             '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
-            'openstudio.simg',
-            'openstudio',
-            'run',
-            '-w', 'in.osw'
+            '-B', '{}:/lib/resources'.format(os.path.join(buildstock_dir, 'resources')),
+            '-B', '{}:/lib/housing_characteristics'.format(os.path.join(output_dir, 'housing_characteristics'))
         ]
+        runscript = [
+            'ln -s /lib /var/simdata/openstudio/lib'
+        ]
+        for src in dirs_to_mount:
+            container_mount = '/' + os.path.basename(src)
+            args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+            container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
+            runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+        runscript.extend([
+            'openstudio run -w in.osw --debug'
+        ])
+        args.extend([
+            'openstudio.simg',
+            'bash', '-x'
+        ])
         logging.debug(' '.join(args))
         with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
-            subprocess.run(args, check=True, stdout=f_out, stderr=subprocess.STDOUT, cwd=output_dir)
+            subprocess.run(
+                args,
+                check=True,
+                input='\n'.join(runscript).encode('utf-8'),
+                stdout=f_out,
+                stderr=subprocess.STDOUT,
+                cwd=output_dir
+            )
 
-        # Clean up the stuff we copied
-        for dir in dirs_to_copy:
-            shutil.rmtree(dir[1])
-        shutil.rmtree(os.path.join(sim_dir, 'lib'))
-        shutil.rmtree(os.path.join(sim_dir, 'weather'))
+        # Clean up the symbolic links we created in the container
+        for dir in dirs_to_mount:
+            os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
+        os.unlink(os.path.join(sim_dir, 'lib'))
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
