@@ -130,8 +130,6 @@ class PeregrineBatch(BuildStockBatchBase):
                     'batch': batch,
                 }, f, indent=4)
 
-        return
-
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
         peregrine_sh = os.path.join(here, 'peregrine.sh')
