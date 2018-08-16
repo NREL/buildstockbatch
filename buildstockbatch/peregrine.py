@@ -1,5 +1,6 @@
 import os
 import shutil
+import gzip
 import logging
 import argparse
 import subprocess
@@ -112,7 +113,7 @@ class PeregrineBatch(BuildStockBatchBase):
         }
 
         # Estimated wall time
-        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 9 * 60
+        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 3 * 60
 
         baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
         upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
@@ -139,7 +140,7 @@ class PeregrineBatch(BuildStockBatchBase):
             '-q', queue,
             '-l', 'feature={}'.format(nodetype),
             '-l', 'walltime={}'.format(walltime),
-            '-N', 'buildstocksims',
+            '-N', 'buildstock',
             '-t', '1-{}'.format(i - 1),
             '-o', os.path.join(self.output_dir, 'job.out'),
             peregrine_sh
@@ -163,23 +164,23 @@ class PeregrineBatch(BuildStockBatchBase):
         logging.debug('Job ids: ' + jobid)
 
         # Queue up post processing
-        env = {}
-        env.update(os.environ)
-        env.update({
-            'POSTPROCESS': '1',
-            'PROJECTFILE': self.project_filename
-        })
-        args = [
-            'qsub',
-            '-v', 'PROJECTFILE,POSTPROCESS',
-            '-W', 'depend=afterokarray:{}'.format(jobid),
-            '-q', 'short',
-            '-l', 'walltime=20:00',
-            '-N', 'buildstock_post',
-            '-o', os.path.join(self.output_dir, 'postprocessing.out'),
-            peregrine_sh
-        ]
-        subprocess.run(args, env=env)
+        # env = {}
+        # env.update(os.environ)
+        # env.update({
+        #     'POSTPROCESS': '1',
+        #     'PROJECTFILE': self.project_filename
+        # })
+        # args = [
+        #     'qsub',
+        #     '-v', 'PROJECTFILE,POSTPROCESS',
+        #     '-W', 'depend=afterokarray:{}'.format(jobid),
+        #     '-q', 'short',
+        #     '-l', 'walltime=20:00',
+        #     '-N', 'buildstock_post',
+        #     '-o', os.path.join(self.output_dir, 'postprocessing.out'),
+        #     peregrine_sh
+        # ]
+        # subprocess.run(args, env=env)
 
     def run_job_batch(self, job_array_number):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
@@ -246,28 +247,59 @@ class PeregrineBatch(BuildStockBatchBase):
         ])
         logging.debug(' '.join(args))
         with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
-            subprocess.run(
-                args,
-                check=True,
-                input='\n'.join(runscript).encode('utf-8'),
-                stdout=f_out,
-                stderr=subprocess.STDOUT,
-                cwd=output_dir
-            )
+            try:
+                subprocess.run(
+                    args,
+                    check=True,
+                    input='\n'.join(runscript).encode('utf-8'),
+                    stdout=f_out,
+                    stderr=subprocess.STDOUT,
+                    cwd=output_dir
+                )
+            except subprocess.CalledProcessError:
+                pass
+            else:
+                # Clean up the symbolic links we created in the container
+                for dir in dirs_to_mount:
+                    os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
+                os.unlink(os.path.join(sim_dir, 'lib'))
 
-        # Clean up the symbolic links we created in the container
-        for dir in dirs_to_mount:
-            os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
-        os.unlink(os.path.join(sim_dir, 'lib'))
+                # TODO: move this clean up stuff to base.py
 
-        # Remove files already in data_point.zip
-        zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
-        if os.path.isfile(zipfilename):
-            with zipfile.ZipFile(zipfilename, 'r') as zf:
-                for filename in zf.namelist():
-                    filepath = os.path.join(sim_dir, 'run', filename)
-                    if os.path.exists(filepath):
-                        os.remove(filepath)
+                # Gzip the timeseries data
+                timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+                if os.path.isfile(timeseries_filename):
+                    with open(timeseries_filename, 'rb') as f_in:
+                        with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
+                            shutil.copyfileobj(f_in, f_out)
+                    os.remove(timeseries_filename)
+
+                # Remove files already in data_point.zip
+                zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
+                enduse_timeseries_in_zip = False
+                timeseries_filename_base = os.path.basename(timeseries_filename)
+                if os.path.isfile(zipfilename):
+                    with zipfile.ZipFile(zipfilename, 'r') as zf:
+                        for filename in zf.namelist():
+                            for filepath in (os.path.join(sim_dir, 'run', filename), os.path.join(sim_dir, filename)):
+                                if os.path.exists(filepath):
+                                    os.remove(filepath)
+                            if filename == timeseries_filename_base:
+                                enduse_timeseries_in_zip = True
+
+                    # Remove csv file from data_point.zip
+                    if enduse_timeseries_in_zip:
+                        subprocess.run(
+                            ['zip', '-d', zipfilename, timeseries_filename_base],
+                            stdout=subprocess.DEVNULL,
+                            stderr=subprocess.DEVNULL
+                        )
+
+                # Remove reports dir
+                reports_dir = os.path.join(sim_dir, 'reports')
+                if os.path.isdir(reports_dir):
+                    shutil.rmtree(reports_dir)
+
 
 
 def main():

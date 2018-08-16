@@ -5,9 +5,9 @@ import shutil
 import zipfile
 import datetime as dt
 from copy import deepcopy
-import glob
 import re
 import json
+import logging
 
 import requests
 import yaml
@@ -185,8 +185,20 @@ class BuildStockBatchBase(object):
 
     def process_results(self):
         results_dir = self.results_dir
-        datapoint_output_jsons = glob.glob(os.path.join(results_dir, '*', 'run', 'data_point_out.json'))
+        logging.debug('Enumerating output files')
+
+        datapoint_output_jsons = filter(
+            os.path.isfile,
+            map(
+                lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'),
+                os.listdir(results_dir)
+            )
+        )
+
+        logging.debug('Loading into dataframe')
         df = json_normalize(Parallel(n_jobs=-1)(map(delayed(self._read_data_point_out_json), datapoint_output_jsons)))
+        logging.debug('Dataframe loaded, size = {}'.format(df.memory_usage().sum()))
+        logging.debug('Reshaping dataframe')
         df.rename(columns=self.to_camelcase, inplace=True)
         df.set_index('_id', inplace=True)
         cols_to_keep = [
@@ -197,5 +209,7 @@ class BuildStockBatchBase(object):
         cols_to_keep.extend(filter(lambda x: x.startswith('building_characteristics_report.'), df.columns))
         cols_to_keep.extend(filter(lambda x: x.startswith('simulation_output_report.'), df.columns))
         df = df[cols_to_keep]
-        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
+        logging.debug('Saving as csv')
+        df.to_csv(os.path.join(results_dir, 'results.csv'))
+        logging.debug('Saving as feather')
         df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))
