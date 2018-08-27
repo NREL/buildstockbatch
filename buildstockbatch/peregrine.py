@@ -258,48 +258,15 @@ class PeregrineBatch(BuildStockBatchBase):
                 )
             except subprocess.CalledProcessError:
                 pass
-            else:
+            finally:
                 # Clean up the symbolic links we created in the container
-                for dir in dirs_to_mount:
-                    os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
-                os.unlink(os.path.join(sim_dir, 'lib'))
+                for dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                    try:
+                        os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
+                    except FileNotFoundError:
+                        pass
 
-                # TODO: move this clean up stuff to base.py
-
-                # Gzip the timeseries data
-                timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-                if os.path.isfile(timeseries_filename):
-                    with open(timeseries_filename, 'rb') as f_in:
-                        with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
-                            shutil.copyfileobj(f_in, f_out)
-                    os.remove(timeseries_filename)
-
-                # Remove files already in data_point.zip
-                zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
-                enduse_timeseries_in_zip = False
-                timeseries_filename_base = os.path.basename(timeseries_filename)
-                if os.path.isfile(zipfilename):
-                    with zipfile.ZipFile(zipfilename, 'r') as zf:
-                        for filename in zf.namelist():
-                            for filepath in (os.path.join(sim_dir, 'run', filename), os.path.join(sim_dir, filename)):
-                                if os.path.exists(filepath):
-                                    os.remove(filepath)
-                            if filename == timeseries_filename_base:
-                                enduse_timeseries_in_zip = True
-
-                    # Remove csv file from data_point.zip
-                    if enduse_timeseries_in_zip:
-                        subprocess.run(
-                            ['zip', '-d', zipfilename, timeseries_filename_base],
-                            stdout=subprocess.DEVNULL,
-                            stderr=subprocess.DEVNULL
-                        )
-
-                # Remove reports dir
-                reports_dir = os.path.join(sim_dir, 'reports')
-                if os.path.isdir(reports_dir):
-                    shutil.rmtree(reports_dir)
-
+                cls.cleanup_sim_dir(sim_dir)
 
 
 def main():

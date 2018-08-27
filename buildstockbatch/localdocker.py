@@ -55,9 +55,9 @@ class LocalDockerBatch(BuildStockBatchBase):
         return destination_filename
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
         sim_id = str(uuid.uuid4())
-        sim_dir = os.path.join(project_dir, 'localResults', sim_id)
+        sim_dir = os.path.join(results_dir, sim_id)
 
         bind_mounts = [
             (sim_dir, '/var/simdata/openstudio'),
@@ -95,6 +95,8 @@ class LocalDockerBatch(BuildStockBatchBase):
         for dirname in ('lib', 'measures', 'seeds', 'weather'):
             shutil.rmtree(os.path.join(sim_dir, dirname), ignore_errors=True)
 
+        cls.cleanup_sim_dir(sim_dir)
+
     def run_batch(self, n_jobs=-1):
         self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
@@ -103,6 +105,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             self.project_dir,
             self.buildstock_dir,
             self.weather_dir,
+            self.results_dir,
             self.cfg
         )
         baseline_sims = map(run_building_d, range(1, n_datapoints + 1))
@@ -114,8 +117,12 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @property
     def results_dir(self):
-        results_dir = os.path.join(self.project_dir, 'localResults')
-        assert(os.path.isdir(results_dir))
+        results_dir = self.cfg.get(
+            'output_directory',
+            os.path.join(self.project_dir, 'localResults')
+        )
+        if not os.path.isdir(results_dir):
+            os.makedirs(results_dir)
         return results_dir
 
 

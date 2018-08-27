@@ -7,12 +7,49 @@ import datetime as dt
 from copy import deepcopy
 import re
 import json
-import logging
+import subprocess
+import gzip
 
 import requests
 import yaml
-from pandas.io.json import json_normalize
-from joblib import Parallel, delayed
+import dask
+import dask.bag as db
+from dask.distributed import Client
+
+
+def read_data_point_out_json(filename):
+    try:
+        with open(filename, 'r') as f:
+            d = json.load(f)
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    else:
+        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
+        return d
+
+
+def to_camelcase(x):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def flatten_json(d):
+    new_d = {
+        '_id': d['_id'],
+    }
+    cols_to_keep = {
+        'ApplyUpgrade': [
+            'upgrade_name',
+            'applicable'
+        ]
+    }
+    for k1, k2s in cols_to_keep.items():
+        for k2 in k2s:
+            new_d['{}.{}'.format(k1, k2)] = d.get(k1, {}).get(k2)
+    for k1 in ('BuildExistingModel', 'SimulationOutputReport'):
+        for k2, v in d.get(k1, {}).items():
+            new_d['{}.{}'.format(k1, k2)] = v
+    return new_d
 
 
 class BuildStockBatchBase(object):
@@ -172,6 +209,44 @@ class BuildStockBatchBase(object):
         return osw
 
     @staticmethod
+    def cleanup_sim_dir(sim_dir):
+
+        # Gzip the timeseries data
+        timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        if os.path.isfile(timeseries_filename):
+            with open(timeseries_filename, 'rb') as f_in:
+                with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
+                    shutil.copyfileobj(f_in, f_out)
+            os.remove(timeseries_filename)
+
+        # Remove files already in data_point.zip
+        zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
+        enduse_timeseries_in_zip = False
+        timeseries_filename_base = os.path.basename(timeseries_filename)
+        if os.path.isfile(zipfilename):
+            with zipfile.ZipFile(zipfilename, 'r') as zf:
+                for filename in zf.namelist():
+                    for filepath in (os.path.join(sim_dir, 'run', filename), os.path.join(sim_dir, filename)):
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                    if filename == timeseries_filename_base:
+                        enduse_timeseries_in_zip = True
+
+            # Remove csv file from data_point.zip
+            # TODO: make this windows compatible
+            if enduse_timeseries_in_zip:
+                subprocess.run(
+                    ['zip', '-d', zipfilename, timeseries_filename_base],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+
+        # Remove reports dir
+        reports_dir = os.path.join(sim_dir, 'reports')
+        if os.path.isdir(reports_dir):
+            shutil.rmtree(reports_dir)
+
+    @staticmethod
     def _read_data_point_out_json(filename):
         with open(filename, 'r') as f:
             d = json.load(f)
@@ -183,32 +258,22 @@ class BuildStockBatchBase(object):
         s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
         return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
+    def get_dask_client(self):
+        return Client()
+
     def process_results(self):
+        client = self.get_dask_client()
         results_dir = self.results_dir
-        logging.debug('Enumerating output files')
 
-        datapoint_output_jsons = filter(
-            os.path.isfile,
-            map(
-                lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'),
-                os.listdir(results_dir)
-            )
-        )
+        logging.debug('Creating Dask Dataframe of results')
+        datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500). \
+            map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
+        df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
+            map(flatten_json).to_dataframe().rename(columns=to_camelcase)
 
-        logging.debug('Loading into dataframe')
-        df = json_normalize(Parallel(n_jobs=-1)(map(delayed(self._read_data_point_out_json), datapoint_output_jsons)))
-        logging.debug('Dataframe loaded, size = {}'.format(df.memory_usage().sum()))
-        logging.debug('Reshaping dataframe')
-        df.rename(columns=self.to_camelcase, inplace=True)
-        df.set_index('_id', inplace=True)
-        cols_to_keep = [
-            'build_existing_model.building_id',
-            'apply_upgrade.upgrade_name',
-            'apply_upgrade.applicable'
-        ]
-        cols_to_keep.extend(filter(lambda x: x.startswith('building_characteristics_report.'), df.columns))
-        cols_to_keep.extend(filter(lambda x: x.startswith('simulation_output_report.'), df.columns))
-        df = df[cols_to_keep]
+        logging.debug('Computing Dask Dataframe')
+        df = df_d.compute()
+
         logging.debug('Saving as csv')
         df.to_csv(os.path.join(results_dir, 'results.csv'))
         logging.debug('Saving as feather')
