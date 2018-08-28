@@ -9,10 +9,12 @@ import re
 import json
 import subprocess
 import gzip
+import math
 
+import pandas as pd
+import numpy as np
 import requests
 import yaml
-import dask
 import dask.bag as db
 from dask.distributed import Client
 
@@ -131,14 +133,78 @@ class BuildStockBatchBase(object):
     def results_dir(self):
         raise NotImplementedError
 
-    def run_sampling(self):
+    def run_sampling(self, n_datapoints=None):
         raise NotImplementedError
 
     def run_batch(self):
         raise NotImplementedError
 
-    @staticmethod
-    def create_osw(sim_id, cfg, i, upgrade_idx):
+    @classmethod
+    def downselect_logic(cls, df, logic):
+        if isinstance(logic, dict):
+            assert (len(logic) == 1)
+            key = list(logic.keys())[0]
+            values = logic[key]
+            if key == 'and':
+                retval = cls.downselect_logic(df, values[0])
+                for value in values[1:]:
+                    retval &= cls.downselect_logic(df, value)
+                return retval
+            elif key == 'or':
+                retval = cls.downselect_logic(df, values[0])
+                for value in values[1:]:
+                    retval |= cls.downselect_logic(df, value)
+                return retval
+            elif key == 'not':
+                return ~cls.downselect_logic(df, values)
+        elif isinstance(logic, list):
+            retval = cls.downselect_logic(df, logic[0])
+            for value in logic[1:]:
+                retval &= cls.downselect_logic(df, value)
+            return retval
+        elif isinstance(logic, str):
+            key, value = logic.split('|')
+            return df[key] == value
+
+    def downselect(self):
+        logging.debug('Performing initial sampling to figure out number of samples for downselect')
+        n_samples_init = 5000
+        buildstock_csv_filename = self.run_sampling(n_samples_init)
+        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+        downselected_n_samples_init = df_new.shape[0]
+        n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
+        os.remove(buildstock_csv_filename)
+        buildstock_csv_filename = self.run_sampling(n_samples)
+        with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
+            with open(buildstock_csv_filename, 'rb') as f_in:
+                shutil.copyfileobj(f_in, f_out)
+        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+        old_index_name = df_new.index.name
+        df_new.index = np.arange(len(df_new)) + 1
+        df_new.index.name = old_index_name
+        df_new.to_csv(buildstock_csv_filename)
+
+
+    @classmethod
+    def make_apply_logic_arg(cls, logic):
+        if isinstance(logic, dict):
+            assert (len(logic) == 1)
+            key = list(logic.keys())[0]
+            if key == 'and':
+                return '(' + '&&'.join(map(cls.make_apply_logic_arg, logic[key])) + ')'
+            elif key == 'or':
+                return '(' + '||'.join(map(cls.make_apply_logic_arg, logic[key])) + ')'
+            elif key == 'not':
+                return '!' + cls.make_apply_logic_arg(logic[key])
+        elif isinstance(logic, list):
+            return '(' + '&&'.join(map(cls.make_apply_logic_arg, logic)) + ')'
+        elif isinstance(logic, str):
+            return logic
+
+    @classmethod
+    def create_osw(cls, sim_id, cfg, i, upgrade_idx):
         osw = {
             'id': sim_id,
             'steps': [
@@ -182,10 +248,11 @@ class BuildStockBatchBase(object):
             }
             for opt_num, option in enumerate(measure_d['options'], 1):
                 apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
-                for arg in ('apply_logic', 'lifetime'):
-                    if arg not in option:
-                        continue
-                    apply_upgrade_measure['arguments']['option_{}_{}'.format(opt_num, arg)] = option[arg]
+                if 'lifetime' in option:
+                    apply_upgrade_measure['arguments']['option_{}_lifetime'.format(opt_num)] = option['lifetime']
+                if 'apply_logic' in option:
+                    apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
+                        cls.make_apply_logic_arg(option['apply_logic'])
                 for cost_num, cost in enumerate(option['costs'], 1):
                     for arg in ('value', 'multiplier'):
                         if arg not in cost:
@@ -193,7 +260,7 @@ class BuildStockBatchBase(object):
                         apply_upgrade_measure['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
                             cost[arg]
             if 'package_apply_logic' in measure_d:
-                apply_upgrade_measure['package_apply_logic'] = measure_d['package_apply_logic']
+                apply_upgrade_measure['package_apply_logic'] = cls.make_apply_logic_arg(measure_d['package_apply_logic'])
 
             osw['steps'].insert(1, apply_upgrade_measure)
 
@@ -278,3 +345,5 @@ class BuildStockBatchBase(object):
         df.to_csv(os.path.join(results_dir, 'results.csv'))
         logging.debug('Saving as feather')
         df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))
+        logging.debug('Saving as parquet')
+        df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')

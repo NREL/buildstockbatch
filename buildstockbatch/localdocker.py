@@ -27,8 +27,10 @@ class LocalDockerBatch(BuildStockBatchBase):
             stderr=subprocess.STDOUT
         )
 
-    def run_sampling(self):
-        logging.debug('Sampling')
+    def run_sampling(self, n_datapoints=None):
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
+        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'docker',
             'run',
@@ -38,7 +40,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
-            '-n', str(self.cfg['baseline']['n_datapoints']),
+            '-n', str(n_datapoints),
             '-o', 'buildstock.csv'
         ]
         tick = time.time()
@@ -98,7 +100,10 @@ class LocalDockerBatch(BuildStockBatchBase):
         cls.cleanup_sim_dir(sim_dir)
 
     def run_batch(self, n_jobs=-1):
-        self.run_sampling()
+        if 'downselect' in self.cfg:
+            self.downselect()
+        else:
+            self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
         run_building_d = functools.partial(
             delayed(self.run_building),

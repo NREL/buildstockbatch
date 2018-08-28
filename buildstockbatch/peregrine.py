@@ -65,8 +65,10 @@ class PeregrineBatch(BuildStockBatchBase):
         assert(os.path.isdir(results_dir))
         return results_dir
 
-    def run_sampling(self):
-        logging.debug('Sampling')
+    def run_sampling(self, n_datapoints=None):
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
+        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'singularity',
             'exec',
@@ -76,7 +78,7 @@ class PeregrineBatch(BuildStockBatchBase):
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
-            '-n', str(self.cfg['baseline']['n_datapoints']),
+            '-n', str(n_datapoints),
             '-o', 'buildstock.csv'
         ]
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
@@ -95,7 +97,10 @@ class PeregrineBatch(BuildStockBatchBase):
         return os.path.join(destination_dir, 'buildstock.csv')
 
     def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h'):
-        self.run_sampling()
+        if 'downselect' in self.cfg:
+            self.downselect()
+        else:
+            self.run_sampling()
         n_datapoints = self.cfg['baseline']['n_datapoints']
         n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
