@@ -15,6 +15,8 @@ import shlex
 
 import requests
 from joblib import Parallel, delayed
+from dask.distributed import Client, LocalCluster
+
 
 from buildstockbatch.base import BuildStockBatchBase
 
@@ -28,20 +30,33 @@ class PeregrineBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logging.debug('Output directory = {}'.format(output_dir))
 
-        singularity_image_path = os.path.join(output_dir, 'openstudio.simg')
-        if not os.path.isfile(singularity_image_path):
-            logging.debug('Downloading singularity image')
-            simg_url = \
-                'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=self.OS_VERSION,
-                    sha=self.OS_SHA
-                )
-            r = requests.get(simg_url, stream=True)
-            with open(singularity_image_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
-            logging.debug('Downloaded singularity image to {}'.format(singularity_image_path))
+        _ = self.singularity_image
+
+    @property
+    def singularity_image(self):
+        sys_image_dir = '/projects/res_stock/openstudio_singularity_images'
+        sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+            ver=self.OS_VERSION,
+            sha=self.OS_SHA
+        ))
+        if os.path.isfile(sys_image):
+            return sys_image
+        else:
+            singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
+            if not os.path.isfile(singularity_image_path):
+                logging.debug('Downloading singularity image')
+                simg_url = \
+                    'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                        ver=self.OS_VERSION,
+                        sha=self.OS_SHA
+                    )
+                r = requests.get(simg_url, stream=True)
+                with open(singularity_image_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                logging.debug('Downloaded singularity image to {}'.format(singularity_image_path))
+            return singularity_image_path
 
     @property
     def output_dir(self):
@@ -74,7 +89,7 @@ class PeregrineBatch(BuildStockBatchBase):
             'exec',
             '--contain',
             '--home', self.buildstock_dir,
-            'openstudio.simg',
+            self.singularity_image,
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
@@ -169,23 +184,24 @@ class PeregrineBatch(BuildStockBatchBase):
         logging.debug('Job ids: ' + jobid)
 
         # Queue up post processing
-        # env = {}
-        # env.update(os.environ)
-        # env.update({
-        #     'POSTPROCESS': '1',
-        #     'PROJECTFILE': self.project_filename
-        # })
-        # args = [
-        #     'qsub',
-        #     '-v', 'PROJECTFILE,POSTPROCESS',
-        #     '-W', 'depend=afterokarray:{}'.format(jobid),
-        #     '-q', 'short',
-        #     '-l', 'walltime=20:00',
-        #     '-N', 'buildstock_post',
-        #     '-o', os.path.join(self.output_dir, 'postprocessing.out'),
-        #     peregrine_sh
-        # ]
-        # subprocess.run(args, env=env)
+        env = {}
+        env.update(os.environ)
+        env.update({
+            'POSTPROCESS': '1',
+            'PROJECTFILE': self.project_filename
+        })
+        args = [
+            'qsub',
+            '-v', 'PROJECTFILE,POSTPROCESS',
+            '-W', 'depend=afterokarray:{}'.format(jobid),
+            '-q', 'bigmem',
+            '-l', 'feature=256GB',
+            '-l', 'walltime=1:00:00',
+            '-N', 'buildstock_post',
+            '-o', os.path.join(self.output_dir, 'postprocessing.out'),
+            peregrine_sh
+        ]
+        subprocess.run(args, env=env)
 
     def run_job_batch(self, job_array_number):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
@@ -198,6 +214,7 @@ class PeregrineBatch(BuildStockBatchBase):
             self.buildstock_dir,
             self.weather_dir,
             self.output_dir,
+            self.singularity_image,
             self.cfg
         )
         tick = time.time()
@@ -207,7 +224,7 @@ class PeregrineBatch(BuildStockBatchBase):
         logging.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i, upgrade_idx=None):
         sim_id = str(uuid.uuid4())
 
         # Create the simulation directory
@@ -247,7 +264,7 @@ class PeregrineBatch(BuildStockBatchBase):
             'openstudio run -w in.osw --debug'
         ])
         args.extend([
-            'openstudio.simg',
+            singularity_image,
             'bash', '-x'
         ])
         logging.debug(' '.join(args))
@@ -272,6 +289,10 @@ class PeregrineBatch(BuildStockBatchBase):
                         pass
 
                 cls.cleanup_sim_dir(sim_dir)
+
+    def get_dask_client(self):
+        cl = LocalCluster(local_directory=os.path.join(self.output_dir, 'dask_worker_space'))
+        return Client(cl)
 
 
 def main():
