@@ -291,7 +291,7 @@ class PeregrineBatch(BuildStockBatchBase):
                 cls.cleanup_sim_dir(sim_dir)
 
     def get_dask_client(self):
-        cl = LocalCluster(local_directory=os.path.join(self.output_dir, 'dask_worker_space'))
+        cl = LocalCluster(local_dir=os.path.join(self.output_dir, 'dask_worker_space'))
         return Client(cl)
 
 
