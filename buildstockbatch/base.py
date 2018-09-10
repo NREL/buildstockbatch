@@ -284,6 +284,8 @@ class BuildStockBatchBase(object):
             with open(timeseries_filename, 'rb') as f_in:
                 with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
+            tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
+            tsdf.to_parquet(timeseries_filename, engine='pyarrow', flavor='spark')
             os.remove(timeseries_filename)
 
         # Remove files already in data_point.zip
