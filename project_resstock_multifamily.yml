@@ -1,0 +1,19 @@
+buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
+project_directory: project_resstock_multifamily  # Relative to buildstock_directory
+#weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
+weather_files_path: project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+baseline:
+  n_datapoints: 30
+  n_buildings_represented: 80000000
+  measures:
+    - measure_dir_name: ZoneMultipliers
+      arguments: {}
+timeseries_csv_export:
+  reporting_frequency: Hourly
+  inc_end_use_subcategories: true
+  inc_output_variables: true
+  output_variables:
+    - Zone Mean Air Temperature
+    - Zone Mean Air Humidity Ratio
+    - Fan Runtime Fraction
+output_directory: /Users/nmerket/Desktop/resstock_multifamily

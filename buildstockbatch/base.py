@@ -35,7 +35,7 @@ def to_camelcase(x):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-def flatten_json(d):
+def flatten_datapoint_json(d):
     new_d = {
         '_id': d['_id'],
     }
@@ -52,6 +52,26 @@ def flatten_json(d):
         for k2, v in d.get(k1, {}).items():
             new_d['{}.{}'.format(k1, k2)] = v
     return new_d
+
+
+def read_out_osw(filename):
+    try:
+        with open(filename, 'r') as f:
+            d = json.load(f)
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    else:
+        out_d = {}
+        out_d['_id'] = os.path.basename(os.path.dirname(os.path.abspath(filename)))
+        keys_to_copy = [
+            'started_at',
+            'completed_at',
+            'completed_status'
+        ]
+        for key in keys_to_copy:
+            out_d[key] = d[key]
+        return out_d
+
 
 
 class BuildStockBatchBase(object):
@@ -215,18 +235,6 @@ class BuildStockBatchBase(object):
                         'workflow_json': 'measure-info.json',
                         'sample_weight': cfg['baseline']['n_buildings_represented'] / cfg['baseline']['n_datapoints']
                     }
-                },
-                {
-                    'measure_dir_name': 'BuildingCharacteristicsReport',
-                    'arguments': {}
-                },
-                {
-                    'measure_dir_name': 'SimulationOutputReport',
-                    'arguments': {}
-                },
-                {
-                    'measure_dir_name': 'ServerDirectoryCleanup',
-                    'arguments': {}
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
@@ -236,6 +244,23 @@ class BuildStockBatchBase(object):
             'seed_file': 'seeds/EmptySeedModel.osm',
             'weather_file': 'weather/Placeholder.epw'
         }
+
+        osw['steps'].extend(cfg['baseline'].get('measures', []))
+
+        osw['steps'].extend([
+            {
+                'measure_dir_name': 'BuildingCharacteristicsReport',
+                'arguments': {}
+            },
+            {
+                'measure_dir_name': 'SimulationOutputReport',
+                'arguments': {}
+            },
+            {
+                'measure_dir_name': 'ServerDirectoryCleanup',
+                'arguments': {}
+            }
+        ])
 
         if upgrade_idx is not None:
             measure_d = cfg['upgrades'][upgrade_idx]
@@ -285,7 +310,7 @@ class BuildStockBatchBase(object):
                 with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
             tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
-            tsdf.to_parquet(timeseries_filename, engine='pyarrow', flavor='spark')
+            tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + 'parquet', engine='pyarrow', flavor='spark')
             os.remove(timeseries_filename)
 
         # Remove files already in data_point.zip
@@ -315,18 +340,6 @@ class BuildStockBatchBase(object):
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir)
 
-    @staticmethod
-    def _read_data_point_out_json(filename):
-        with open(filename, 'r') as f:
-            d = json.load(f)
-        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
-        return d
-
-    @staticmethod
-    def to_camelcase(x):
-        s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', x)
-        return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
     def get_dask_client(self):
         return Client()
 
@@ -335,16 +348,21 @@ class BuildStockBatchBase(object):
         results_dir = self.results_dir
 
         logging.debug('Creating Dask Dataframe of results')
-        datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500). \
+        datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500).\
             map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
         df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
-            map(flatten_json).to_dataframe().rename(columns=to_camelcase)
+            map(flatten_datapoint_json).to_dataframe().rename(columns=to_camelcase)
+        out_osws = db.from_sequence(os.listdir(results_dir), partition_size=500).\
+            map(lambda x: os.path.join(results_dir, x, 'out.osw'))
+        df2_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
 
         logging.debug('Computing Dask Dataframe')
-        df = df_d.compute()
+        df = df2_d.merge(df_d, how='left', on='_id').compute()
+        for col in ('started_at', 'completed_at'):
+            df[col] = df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
 
         logging.debug('Saving as csv')
-        df.to_csv(os.path.join(results_dir, 'results.csv'))
+        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
         logging.debug('Saving as feather')
         df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))
         logging.debug('Saving as parquet')
