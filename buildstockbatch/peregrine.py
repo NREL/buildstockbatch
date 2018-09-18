@@ -1,6 +1,5 @@
 import os
 import shutil
-import gzip
 import logging
 import argparse
 import subprocess
@@ -8,10 +7,10 @@ import math
 import functools
 import itertools
 import json
-import uuid
-import zipfile
 import time
 import shlex
+import random
+import re
 
 import requests
 from joblib import Parallel, delayed
@@ -111,18 +110,7 @@ class PeregrineBatch(BuildStockBatchBase):
         )
         return os.path.join(destination_dir, 'buildstock.csv')
 
-    def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h'):
-        if 'downselect' in self.cfg:
-            self.downselect()
-        else:
-            self.run_sampling()
-        n_datapoints = self.cfg['baseline']['n_datapoints']
-        n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
-
-        # This is the maximum number of jobs we'll submit for this batch
-        n_sims_per_job = math.ceil(n_sims / n_jobs)
-        # Have at least 48 simulations per job
-        n_sims_per_job = max(n_sims_per_job, 48)
+    def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
         nodes_per_nodetype = {
             '16core': 16,
@@ -132,24 +120,8 @@ class PeregrineBatch(BuildStockBatchBase):
             'haswell': 24
         }
 
-        # Estimated wall time
-        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * 3 * 60
-
-        baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
-        upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
-        all_sims = itertools.chain(baseline_sims, upgrade_sims)
-
-        for i in itertools.count(1):
-            batch = list(itertools.islice(all_sims, n_sims_per_job))
-            if not batch:
-                break
-            logging.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
-            job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(i))
-            with open(job_json_filename, 'w') as f:
-                json.dump({
-                    'job_num': i,
-                    'batch': batch,
-                }, f, indent=4)
+        # Estimate wall time
+        walltime = math.ceil(n_sims_per_job / nodes_per_nodetype[nodetype]) * minutes_per_sim * 60
 
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
@@ -158,10 +130,11 @@ class PeregrineBatch(BuildStockBatchBase):
             'qsub',
             '-v', 'PROJECTFILE',
             '-q', queue,
+            '-A', allocation,
             '-l', 'feature={}'.format(nodetype),
             '-l', 'walltime={}'.format(walltime),
             '-N', 'buildstock',
-            '-t', '1-{}'.format(i - 1),
+            '-t', array_spec,
             '-o', os.path.join(self.output_dir, 'job.out'),
             peregrine_sh
         ]
@@ -181,9 +154,13 @@ class PeregrineBatch(BuildStockBatchBase):
             print(ex.stderr)
             raise
         jobid = resp.stdout.strip()
-        logging.debug('Job ids: ' + jobid)
+        logging.debug('Job id: ' + jobid)
+        return jobid
 
+    def _queue_post_processing(self, after_jobid, allocation):
         # Queue up post processing
+        here = os.path.dirname(os.path.abspath(__file__))
+        peregrine_sh = os.path.join(here, 'peregrine.sh')
         env = {}
         env.update(os.environ)
         env.update({
@@ -193,15 +170,82 @@ class PeregrineBatch(BuildStockBatchBase):
         args = [
             'qsub',
             '-v', 'PROJECTFILE,POSTPROCESS',
-            '-W', 'depend=afterokarray:{}'.format(jobid),
+            '-W', 'depend=afterokarray:{}'.format(after_jobid),
             '-q', 'bigmem',
+            '-A', allocation,
             '-l', 'feature=256GB',
-            '-l', 'walltime=1:00:00',
+            '-l', 'walltime=1:30:00',
             '-N', 'buildstock_post',
             '-o', os.path.join(self.output_dir, 'postprocessing.out'),
             peregrine_sh
         ]
         subprocess.run(args, env=env)
+
+    def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h', allocation='res_stock', minutes_per_sim=3):
+        if 'downselect' in self.cfg:
+            self.downselect()
+        else:
+            self.run_sampling()
+        n_datapoints = self.cfg['baseline']['n_datapoints']
+        n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
+
+        # This is the maximum number of jobs we'll submit for this batch
+        n_sims_per_job = math.ceil(n_sims / n_jobs)
+        # Have at least 48 simulations per job
+        n_sims_per_job = max(n_sims_per_job, 48)
+
+        baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
+        upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
+        all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        random.shuffle(all_sims)
+        all_sims_iter = iter(all_sims)
+
+        for i in itertools.count(1):
+            batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
+            if not batch:
+                break
+            logging.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
+            job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(i))
+            with open(job_json_filename, 'w') as f:
+                json.dump({
+                    'job_num': i,
+                    'batch': batch,
+                }, f, indent=4)
+
+        jobid = self._queue_jobs(n_sims_per_job, minutes_per_sim, '1-{}'.format(i - 1), queue, nodetype, allocation)
+
+        self._queue_post_processing(jobid, allocation)
+
+    def pick_up_where_left_off(self):
+        jobs_to_restart = []
+        n_sims_per_job = 0
+        for filename in os.listdir(self.output_dir):
+            m_jobout = re.match(r'job.out-(\d+)', filename)
+            if m_jobout:
+                array_id = int(m_jobout.group(1))
+                with open(os.path.join(self.output_dir, filename)) as f:
+                    if re.search(r'PBS: job killed: walltime \d+ exceeded limit \d+', f.read()):
+                        jobs_to_restart.append(array_id)
+                continue
+            m_jobjson = re.match(r'job(\d+).json', filename)
+            if m_jobjson:
+                with open(os.path.join(self.output_dir, filename)) as f:
+                    job_d = json.load(f)
+                n_sims_per_job = max(len(job_d['batch']), n_sims_per_job)
+        jobs_to_restart.sort()
+
+        allocation = self.cfg.get('peregrine', {}).get('allocation', 'res_stock')
+
+        jobid = self._queue_jobs(
+            n_sims_per_job,
+            self.cfg.get('peregrine', {}).get('minutes_per_sim', 3),
+            ','.join(map(str, jobs_to_restart)),
+            self.cfg.get('peregrine', {}).get('queue', 'batch-h'),
+            self.cfg.get('peregrine', {}).get('nodetype', 'haswell'),
+            allocation
+        )
+
+        self._queue_post_processing(jobid, allocation)
 
     def run_job_batch(self, job_array_number):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
@@ -225,10 +269,19 @@ class PeregrineBatch(BuildStockBatchBase):
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i, upgrade_idx=None):
-        sim_id = str(uuid.uuid4())
+        sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
+
+        # Check to see if the simulation is done already and skip it if so.
+        sim_dir = os.path.join(output_dir, 'results', sim_id)
+        if os.path.exists(sim_dir):
+            if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
+                return
+            elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
+                return
+            else:
+                shutil.rmtree(sim_dir)
 
         # Create the simulation directory
-        sim_dir = os.path.join(output_dir, 'results', sim_id)
         os.makedirs(sim_dir)
 
         # Generate the osw for this simulation
@@ -306,13 +359,16 @@ def main():
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)
     job_array_number = int(os.environ.get('PBS_ARRAYID', 0))
-    postprocess = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
+    post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
+    pick_up = os.environ.get('PICKUP', '0').lower() in ('true', 't', '1', 'y', 'yes')
     if job_array_number:
         batch.run_job_batch(job_array_number)
-    elif postprocess:
+    elif post_process:
         batch.process_results()
+    elif pick_up:
+        batch.pick_up_where_left_off()
     else:
-        batch.run_batch()
+        batch.run_batch(**batch.cfg.get('peregrine', {}))
 
 
 if __name__ == '__main__':

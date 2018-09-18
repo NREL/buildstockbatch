@@ -188,7 +188,7 @@ class BuildStockBatchBase(object):
 
     def downselect(self):
         logging.debug('Performing initial sampling to figure out number of samples for downselect')
-        n_samples_init = 5000
+        n_samples_init = 350000
         buildstock_csv_filename = self.run_sampling(n_samples_init)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
@@ -205,7 +205,6 @@ class BuildStockBatchBase(object):
         df_new.index = np.arange(len(df_new)) + 1
         df_new.index.name = old_index_name
         df_new.to_csv(buildstock_csv_filename)
-
 
     @classmethod
     def make_apply_logic_arg(cls, logic):

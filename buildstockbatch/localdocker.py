@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import time
 import logging
-import uuid
 
 from joblib import Parallel, delayed
 
@@ -58,7 +57,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
-        sim_id = str(uuid.uuid4())
+        sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
         sim_dir = os.path.join(results_dir, sim_id)
 
         bind_mounts = [
