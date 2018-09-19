@@ -220,12 +220,18 @@ class PeregrineBatch(BuildStockBatchBase):
         jobs_to_restart = []
         n_sims_per_job = 0
         for filename in os.listdir(self.output_dir):
-            m_jobout = re.match(r'job.out-(\d+)', filename)
+            m_jobout = re.match(r'job.out-(\d+)$', filename)
             if m_jobout:
                 array_id = int(m_jobout.group(1))
-                with open(os.path.join(self.output_dir, filename)) as f:
-                    if re.search(r'PBS: job killed: walltime \d+ exceeded limit \d+', f.read()):
-                        jobs_to_restart.append(array_id)
+                logfile_path = os.path.join(self.output_dir, filename)
+                with open(logfile_path, 'r') as f:
+                    logfile_contents = f.read()
+                if re.search(r'PBS: job killed: walltime \d+ exceeded limit \d+', logfile_contents):
+                    jobs_to_restart.append(array_id)
+                    with open(logfile_path + '.bak', 'a') as f:
+                        f.write('\n')
+                        f.write(logfile_contents)
+                    os.remove(logfile_path)
                 continue
             m_jobjson = re.match(r'job(\d+).json', filename)
             if m_jobjson:
@@ -234,14 +240,15 @@ class PeregrineBatch(BuildStockBatchBase):
                 n_sims_per_job = max(len(job_d['batch']), n_sims_per_job)
         jobs_to_restart.sort()
 
-        allocation = self.cfg.get('peregrine', {}).get('allocation', 'res_stock')
+        peregrine_cfg = self.cfg.get('peregrine', {})
+        allocation = peregrine_cfg.get('allocation', 'res_stock')
 
         jobid = self._queue_jobs(
             n_sims_per_job,
-            self.cfg.get('peregrine', {}).get('minutes_per_sim', 3),
+            peregrine_cfg.get('minutes_per_sim', 3),
             ','.join(map(str, jobs_to_restart)),
-            self.cfg.get('peregrine', {}).get('queue', 'batch-h'),
-            self.cfg.get('peregrine', {}).get('nodetype', 'haswell'),
+            peregrine_cfg.get('queue', 'batch-h'),
+            peregrine_cfg.get('nodetype', 'haswell'),
             allocation
         )
 
