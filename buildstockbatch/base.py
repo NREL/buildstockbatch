@@ -18,6 +18,8 @@ import yaml
 import dask.bag as db
 from dask.distributed import Client
 
+logger = logging.getLogger(__name__)
+
 
 def read_data_point_out_json(filename):
     try:
@@ -73,7 +75,6 @@ def read_out_osw(filename):
         return out_d
 
 
-
 class BuildStockBatchBase(object):
 
     OS_VERSION = '2.6.0'
@@ -93,7 +94,7 @@ class BuildStockBatchBase(object):
         for filename in os.listdir(local_weather_dir):
             shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
         if 'weather_files_path' in self.cfg:
-            logging.debug('Copying weather files')
+            logger.debug('Copying weather files')
             if os.path.isabs(self.cfg['weather_files_path']):
                 weather_file_path = os.path.abspath(self.cfg['weather_files_path'])
             else:
@@ -104,10 +105,10 @@ class BuildStockBatchBase(object):
                     )
                 )
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
-                logging.debug('Extracting weather files to: {}'.format(self.weather_dir))
+                logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
         else:
-            logging.debug('Downloading weather files')
+            logger.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
             with tempfile.TemporaryFile() as f:
                 for chunk in r.iter_content(chunk_size=1024):
@@ -115,7 +116,7 @@ class BuildStockBatchBase(object):
                         f.write(chunk)
                 f.seek(0)
                 with zipfile.ZipFile(f, 'r') as zf:
-                    logging.debug('Extracting weather files to: {}'.format(self.weather_dir))
+                    logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                     zf.extractall(self.weather_dir)
 
     @property
@@ -136,7 +137,7 @@ class BuildStockBatchBase(object):
                     self.cfg['buildstock_directory']
                 )
             )
-        # logging.debug('buildstock_dir = {}'.format(d))
+        # logger.debug('buildstock_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
 
@@ -145,7 +146,7 @@ class BuildStockBatchBase(object):
         d = os.path.abspath(
             os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         )
-        # logging.debug('project_dir = {}'.format(d))
+        # logger.debug('project_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
 
@@ -187,7 +188,7 @@ class BuildStockBatchBase(object):
             return df[key] == value
 
     def downselect(self):
-        logging.debug('Performing initial sampling to figure out number of samples for downselect')
+        logger.debug('Performing initial sampling to figure out number of samples for downselect')
         n_samples_init = 350000
         buildstock_csv_filename = self.run_sampling(n_samples_init)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
@@ -309,7 +310,7 @@ class BuildStockBatchBase(object):
                 with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
                     shutil.copyfileobj(f_in, f_out)
             tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
-            tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + 'parquet', engine='pyarrow', flavor='spark')
+            tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
             os.remove(timeseries_filename)
 
         # Remove files already in data_point.zip
@@ -346,7 +347,7 @@ class BuildStockBatchBase(object):
         client = self.get_dask_client()
         results_dir = self.results_dir
 
-        logging.debug('Creating Dask Dataframe of results')
+        logger.debug('Creating Dask Dataframe of results')
         datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500).\
             map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
         df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
@@ -355,14 +356,14 @@ class BuildStockBatchBase(object):
             map(lambda x: os.path.join(results_dir, x, 'out.osw'))
         df2_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
 
-        logging.debug('Computing Dask Dataframe')
+        logger.debug('Computing Dask Dataframe')
         df = df2_d.merge(df_d, how='left', on='_id').compute()
         for col in ('started_at', 'completed_at'):
             df[col] = df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
 
-        logging.debug('Saving as csv')
+        logger.debug('Saving as csv')
         df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
-        logging.debug('Saving as feather')
+        logger.debug('Saving as feather')
         df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))
-        logging.debug('Saving as parquet')
+        logger.debug('Saving as parquet')
         df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')

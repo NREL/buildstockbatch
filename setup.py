@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='buildstock-batch',
-    version='0.0.2',
+    version='0.1',
     author='Noel Merket (NREL)',
     author_email='noel.merket@nrel.gov',
     packages=setuptools.find_packages(),
@@ -17,7 +17,8 @@ setuptools.setup(
         'joblib',
         'pyarrow>=0.10.0',
         'feather-format',
-        'dask[complete]'
+        'dask[complete]',
+        'docker'
     ],
     entry_points={
         'console_scripts': [

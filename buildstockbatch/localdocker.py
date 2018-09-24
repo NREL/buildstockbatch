@@ -4,48 +4,54 @@ import itertools
 import functools
 import json
 import shutil
-import subprocess
 import time
 import logging
 
 from joblib import Parallel, delayed
+import docker
 
 from buildstockbatch.base import BuildStockBatchBase
+
+logger = logging.getLogger(__name__)
 
 
 class LocalDockerBatch(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
+        self.docker_client = docker.DockerClient.from_env()
 
-        logging.debug('Pulling docker image')
-        subprocess.run(
-            ['docker', 'pull', 'nrel/openstudio:{}'.format(self.OS_VERSION)],
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT
-        )
+        logger.debug('Pulling docker image')
+        self.docker_client.images.pull(self.docker_image())
+
+    @classmethod
+    def docker_image(cls):
+        return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
 
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        args = [
-            'docker',
-            'run',
-            '--rm',
-            '-v', '{}:/var/simdata/openstudio'.format(self.buildstock_dir),
-            'nrel/openstudio:{}'.format(self.OS_VERSION),
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(n_datapoints),
-            '-o', 'buildstock.csv'
-        ]
+        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         tick = time.time()
-        subprocess.run(args, check=True)
+        container_output = self.docker_client.containers.run(
+            self.docker_image(),
+            [
+                'ruby',
+                'resources/run_sampling.rb',
+                '-p', self.cfg['project_directory'],
+                '-n', str(n_datapoints),
+                '-o', 'buildstock.csv'
+            ],
+            remove=True,
+            volumes={
+                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
+            },
+            name='buildstock_sampling'
+        )
         tick = time.time() - tick
-        logging.debug('Sampling took {:.1f} seconds'.format(tick))
+        for line in container_output.decode('utf-8').split('\n'):
+            logger.debug(line)
+        logger.debug('Sampling took {:.1f} seconds'.format(tick))
         destination_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
         if os.path.exists(destination_filename):
             os.remove(destination_filename)
@@ -61,13 +67,14 @@ class LocalDockerBatch(BuildStockBatchBase):
         sim_dir = os.path.join(results_dir, sim_id)
 
         bind_mounts = [
-            (sim_dir, '/var/simdata/openstudio'),
+            (sim_dir, '/var/simdata/openstudio', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
             (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
             (weather_dir, '/var/simdata/openstudio/weather', 'ro')
         ]
+        docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
 
         osw = cls.create_osw(sim_id, cfg, i, upgrade_idx)
 
@@ -75,22 +82,20 @@ class LocalDockerBatch(BuildStockBatchBase):
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 
-        args = [
-            'docker',
-            'run',
-            '--rm'
-        ]
-        for x in bind_mounts:
-            args.extend(['-v', ':'.join(x)])
-        args.extend([
-            'nrel/openstudio:{}'.format(cls.OS_VERSION),
-            'openstudio',
-            'run',
-            '-w', 'in.osw'
-        ])
-        logging.debug(' '.join(args))
-        with open(os.path.join(sim_dir, 'docker_output.log'), 'w') as f_out:
-            subprocess.run(args, check=True, stdout=f_out, stderr=subprocess.STDOUT)
+        docker_client = docker.client.from_env()
+        container_output = docker_client.containers.run(
+            cls.docker_image(),
+            [
+                'openstudio',
+                'run',
+                '-w', 'in.osw'
+            ],
+            remove=True,
+            volumes=docker_volume_mounts,
+            name=sim_id
+        )
+        with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
+            f_out.write(container_output)
 
         # Clean up directories created with the docker mounts
         for dirname in ('lib', 'measures', 'seeds', 'weather'):
@@ -131,11 +136,36 @@ class LocalDockerBatch(BuildStockBatchBase):
 
 
 def main():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        datefmt='%Y-%m-%d %H:%M:%S',
-        format='%(levelname)s:%(asctime)s:%(message)s'
-    )
+    logging.config.dictConfig({
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'defaultfmt': {
+                'format': '%(levelname)s:%(asctime)s:%(name)s:%(message)s',
+                'datefmt': '%Y-%m-%d %H:%M:%S'
+            }
+        },
+        'handlers': {
+            'console': {
+                'class': 'logging.StreamHandler',
+                'formatter': 'defaultfmt',
+                'level': 'DEBUG',
+                'stream': 'ext://sys.stdout',
+            }
+        },
+        'loggers': {
+            '__main__': {
+                'level': 'DEBUG',
+                'propagate': True,
+                'handlers': ['console']
+            },
+            'buildstockbatch': {
+                'level': 'DEBUG',
+                'propagate': True,
+                'handlers': ['console']
+            }
+        },
+    })
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     parser.add_argument('-j', type=int,
