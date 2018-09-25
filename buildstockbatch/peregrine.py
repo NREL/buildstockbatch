@@ -30,6 +30,8 @@ from dask.distributed import Client, LocalCluster
 
 
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.residential import res_run_peregrine_sampling
+from buildstockbatch.commercial import com_run_peregrine_sampling
 
 
 class PeregrineBatch(BuildStockBatchBase):
@@ -91,36 +93,15 @@ class PeregrineBatch(BuildStockBatchBase):
         assert(os.path.isdir(results_dir))
         return results_dir
 
-    def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        args = [
-            'singularity',
-            'exec',
-            '--contain',
-            '--home', self.buildstock_dir,
-            self.singularity_image,
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(n_datapoints),
-            '-o', 'buildstock.csv'
-        ]
-        subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
-        if os.path.exists(destination_dir):
-            shutil.rmtree(destination_dir)
-        shutil.copytree(
-            os.path.join(self.project_dir, 'housing_characteristics'),
-            destination_dir
-        )
-        assert(os.path.isdir(destination_dir))
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_dir
-        )
-        return os.path.join(destination_dir, 'buildstock.csv')
+    @classmethod
+    def run_sampling(cls, n_datapoints=None):
+        if cls.stock_type == 'residential':
+            buildstock_csv_path = res_run_peregrine_sampling(cls=cls, n_datapoints=n_datapoints)
+        elif cls.stock_type == 'commercial':
+            buildstock_csv_path = com_run_peregrine_sampling(cls=cls, n_datapoints=n_datapoints)
+        else:
+            raise AttributeError('PeregrineBatch.run_sampling does not support stock_type {}'.format(cls.stock_type))
+        return buildstock_csv_path
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
@@ -287,7 +268,8 @@ class PeregrineBatch(BuildStockBatchBase):
         logging.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
+                     upgrade_idx=None):
         sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
 
         # Check to see if the simulation is done already and skip it if so.
@@ -354,9 +336,9 @@ class PeregrineBatch(BuildStockBatchBase):
                 pass
             finally:
                 # Clean up the symbolic links we created in the container
-                for dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
                     try:
-                        os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
+                        os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
                     except FileNotFoundError:
                         pass
 

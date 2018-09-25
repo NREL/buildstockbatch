@@ -16,7 +16,6 @@ import logging
 import shutil
 import zipfile
 import datetime as dt
-from copy import deepcopy
 import re
 import json
 import subprocess
@@ -29,6 +28,8 @@ import requests
 import yaml
 import dask.bag as db
 from dask.distributed import Client
+from buildstockbatch.commercial import com_create_osw
+from buildstockbatch.residential import res_create_osw
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +97,11 @@ class BuildStockBatchBase(object):
         self.project_filename = os.path.abspath(project_filename)
         with open(self.project_filename, 'r') as f:
             self.cfg = yaml.load(f)
+        if 'stock_type' not in self.cfg.keys():
+            raise KeyError('Key `stock_type` not specified in project file `{}`'.format(project_filename))
+        elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
+            raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
+                                                                                           project_filename))
         self._weather_dir = None
 
         # Call property to create directory and copy weather files there
@@ -130,6 +136,10 @@ class BuildStockBatchBase(object):
                 with zipfile.ZipFile(f, 'r') as zf:
                     logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                     zf.extractall(self.weather_dir)
+
+    @property
+    def stock_type(self):
+        return self.cfg['stock_type']
 
     @property
     def weather_dir(self):
@@ -237,79 +247,12 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def create_osw(cls, sim_id, cfg, i, upgrade_idx):
-        osw = {
-            'id': sim_id,
-            'steps': [
-                {
-                    'measure_dir_name': 'BuildExistingModel',
-                    'arguments': {
-                        'building_id': i,
-                        'workflow_json': 'measure-info.json',
-                        'sample_weight': cfg['baseline']['n_buildings_represented'] / cfg['baseline']['n_datapoints']
-                    }
-                }
-            ],
-            'created_at': dt.datetime.now().isoformat(),
-            'measure_paths': [
-                'measures'
-            ],
-            'seed_file': 'seeds/EmptySeedModel.osm',
-            'weather_file': 'weather/Placeholder.epw'
-        }
-
-        osw['steps'].extend(cfg['baseline'].get('measures', []))
-
-        osw['steps'].extend([
-            {
-                'measure_dir_name': 'BuildingCharacteristicsReport',
-                'arguments': {}
-            },
-            {
-                'measure_dir_name': 'SimulationOutputReport',
-                'arguments': {}
-            },
-            {
-                'measure_dir_name': 'ServerDirectoryCleanup',
-                'arguments': {}
-            }
-        ])
-
-        if upgrade_idx is not None:
-            measure_d = cfg['upgrades'][upgrade_idx]
-            apply_upgrade_measure = {
-                'measure_dir_name': 'ApplyUpgrade',
-                'arguments': {
-                    'upgrade_name': measure_d['upgrade_name'],
-                    'run_measure': 1
-                }
-            }
-            for opt_num, option in enumerate(measure_d['options'], 1):
-                apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
-                if 'lifetime' in option:
-                    apply_upgrade_measure['arguments']['option_{}_lifetime'.format(opt_num)] = option['lifetime']
-                if 'apply_logic' in option:
-                    apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
-                        cls.make_apply_logic_arg(option['apply_logic'])
-                for cost_num, cost in enumerate(option['costs'], 1):
-                    for arg in ('value', 'multiplier'):
-                        if arg not in cost:
-                            continue
-                        apply_upgrade_measure['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
-                            cost[arg]
-            if 'package_apply_logic' in measure_d:
-                apply_upgrade_measure['package_apply_logic'] = cls.make_apply_logic_arg(measure_d['package_apply_logic'])
-
-            osw['steps'].insert(1, apply_upgrade_measure)
-
-        if 'timeseries_csv_export' in cfg:
-            timeseries_measure = {
-                'measure_dir_name': 'TimeseriesCSVExport',
-                'arguments': deepcopy(cfg['timeseries_csv_export'])
-            }
-            timeseries_measure['arguments']['output_variables'] = \
-                ','.join(cfg['timeseries_csv_export']['output_variables'])
-            osw['steps'].insert(-1, timeseries_measure)
-
+        if cls.stock_type == 'residential':
+            osw = res_create_osw(cls=cls, sim_id=sim_id, cfg=cfg, i=i, upgrade_idx=upgrade_idx)
+        elif cls.stock_type == 'commercial':
+            osw = com_create_osw(cls=cls, sim_id=sim_id, cfg=cfg, i=i, upgrade_idx=upgrade_idx)
+        else:
+            raise AttributeError('BuildStockBatchBase.create_osw does not support stock_type {}'.format(cls.stock_type))
         return osw
 
     @staticmethod

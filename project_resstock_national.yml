@@ -1,3 +1,4 @@
+stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
