@@ -157,6 +157,7 @@ def main():
         },
     })
     parser = argparse.ArgumentParser()
+    print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
     parser.add_argument('-j', type=int,
                         help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',

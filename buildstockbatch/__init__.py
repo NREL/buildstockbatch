@@ -12,12 +12,13 @@ BuildStockBatch is a simulation runtime library, written in Python, to allow res
 simulation sets required for BuildStock analyses. Basic Peregrine usage:
 ```
    [user@loginN ~]$ source ~/buildstockbatch/create_peregrine_env.sh
-   [user@loginN ~]$ python setup.py buildstock_peregrine
+   [user@loginN ~]$ buildstock_peregrine ~/buildstockbatch/project_resstock_national.yml
 ```
 ... or locally using Docker:
 ```
    user$ pyenv activate buildstockbatch
-   user$ python python setup.py buildstock_docker -j -2
+   user$ pip install -e ./buildstockbatch
+   user$ buildstock_docker -j -2 ~/buildstockbatch/project_resstock_multifamily.yml
 ```
 Other batch simulation methods may be supported in future. Please refer to the to-be-written documentation for more
 details regarding these features, and configuration via the project yaml configuration documentation.
