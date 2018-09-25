@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""
+buildstockbatch.localdocker
+~~~~~~~~~~~~~~~
+This object contains the code required for execution of local docker batch simulations
+
+:author: Noel Merket
+:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:license: BSD-3
+"""
+
 import argparse
 import os
 import itertools

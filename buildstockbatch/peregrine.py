@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""
+buildstockbatch.peregrine
+~~~~~~~~~~~~~~~
+This class contains the object & methods that allow for usage of the library with peregrine
+
+:author: Noel Merket
+:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:license: BSD-3
+"""
+
 import os
 import shutil
 import logging

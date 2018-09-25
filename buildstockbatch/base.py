@@ -1,3 +1,15 @@
+# -*- coding: utf-8 -*-
+
+"""
+buildstockbatch.base
+~~~~~~~~~~~~~~~
+This is the base class mixed into the deployment specific classes (i.e. peregrine, localdocker)
+
+:author: Noel Merket
+:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:license: BSD-3
+"""
+
 import os
 import tempfile
 import logging
