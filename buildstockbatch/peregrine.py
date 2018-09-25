@@ -353,6 +353,7 @@ def main():
         format='%(levelname)s:%(asctime)s:%(message)s'
     )
     parser = argparse.ArgumentParser()
+    print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)

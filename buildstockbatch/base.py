@@ -91,6 +91,14 @@ class BuildStockBatchBase(object):
 
     OS_VERSION = '2.6.0'
     OS_SHA = '8c81faf8bc'
+    LOGO = '''
+     _ __         _     __,              _ __               
+    ( /  )    o  //   /(    _/_       / ( /  )     _/_    / 
+     /--< , ,,  // __/  `.  /  __ _, /<  /--< __,  /  _, /_ 
+    /___/(_/_(_(/_(_/_(___)(__(_)(__/ |_/___/(_/(_(__(__/ /_
+      Executing BuildStock projects with grace since 2018
+
+'''
 
     def __init__(self, project_filename):
         self.project_filename = os.path.abspath(project_filename)
