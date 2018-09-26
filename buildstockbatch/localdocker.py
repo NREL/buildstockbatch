@@ -11,18 +11,17 @@ This object contains the code required for execution of local docker batch simul
 """
 
 import argparse
-import os
-import itertools
-import functools
-import json
-import shutil
-import time
-import logging
-
-from joblib import Parallel, delayed
 import docker
+import functools
+import itertools
+from joblib import Parallel, delayed
+import json
+import logging
+import os
+import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.sample import BuildStockSample
 
 logger = logging.getLogger(__name__)
 
@@ -41,37 +40,14 @@ class LocalDockerBatch(BuildStockBatchBase):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
 
     def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        tick = time.time()
-        container_output = self.docker_client.containers.run(
-            self.docker_image(),
-            [
-                'ruby',
-                'resources/run_sampling.rb',
-                '-p', self.cfg['project_directory'],
-                '-n', str(n_datapoints),
-                '-o', 'buildstock.csv'
-            ],
-            remove=True,
-            volumes={
-                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
-            },
-            name='buildstock_sampling'
-        )
-        tick = time.time() - tick
-        for line in container_output.decode('utf-8').split('\n'):
-            logger.debug(line)
-        logger.debug('Sampling took {:.1f} seconds'.format(tick))
-        destination_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-        if os.path.exists(destination_filename):
-            os.remove(destination_filename)
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
-        )
-        return destination_filename
+        sampling = BuildStockSample(self.cfg, self.project_dir, self.buildstock_dir, n_datapoints)
+        if self.stock_type == 'residential':
+            buildstock_csv_path = sampling.run_local_res_sample(self.docker_client, self.docker_image())
+        elif self.stock_type == 'commercial':
+            buildstock_csv_path = sampling.run_local_com_sample()
+        else:
+            raise AttributeError('LocalDockerBatch.run_sampling does not support stock_type {}'.format(self.stock_type))
+        return buildstock_csv_path
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
@@ -82,7 +58,8 @@ class LocalDockerBatch(BuildStockBatchBase):
             (sim_dir, '/var/simdata/openstudio', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'),
+             '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
             (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
             (weather_dir, '/var/simdata/openstudio/weather', 'ro')
         ]
