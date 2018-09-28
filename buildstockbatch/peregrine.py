@@ -91,14 +91,14 @@ class PeregrineBatch(BuildStockBatchBase):
         return results_dir
 
     def run_sampling(self, n_datapoints=None):
+        if 'sampling_algorithm' not in self.cfg['baseline'].keys():
+            self.cfg['baseline']['sampling_algorithm'] = 'peregrine'
         sampling = BuildStockSample(self.cfg, self.project_dir, self.buildstock_dir, n_datapoints)
-        if self.stock_type == 'residential':
-            buildstock_csv_path = sampling.run_peregrine_res_sample(self.singularity_image, self.output_dir)
-        elif self.stock_type == 'commercial':
-            buildstock_csv_path = sampling.run_peregrine_com_sample()
-        else:
-            raise AttributeError('PeregrineBatch.run_sampling does not support stock_type {}'.format(self.stock_type))
-        return buildstock_csv_path
+        inputs = {
+            'singularity_image': self.singularity_image,
+            'output_dir': self.output_dir
+        }
+        return sampling.run_sampling(**inputs)
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
@@ -283,7 +283,11 @@ class PeregrineBatch(BuildStockBatchBase):
         os.makedirs(sim_dir)
 
         # Generate the osw for this simulation
-        osw = cls.create_osw(sim_id, cfg, i, upgrade_idx)
+        osw_cfg = {
+            'i': i,
+            'upgrade_idx': upgrade_idx
+        }
+        osw = cls.create_osw(cfg, sim_id, **osw_cfg)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 

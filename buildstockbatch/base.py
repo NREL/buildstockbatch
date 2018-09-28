@@ -237,16 +237,9 @@ class BuildStockBatchBase(object):
         df_new.to_csv(buildstock_csv_filename)
 
     @staticmethod
-    def create_osw(sim_id, cfg, i, upgrade_idx):
+    def create_osw(cfg, sim_id, **kwargs):
         osw_generator = BuildStockOsw(cfg)
-        if cfg['stock_type'] == 'residential':
-            osw = osw_generator.create_res_osw(sim_id, i, upgrade_idx)
-        elif cfg['stock_type'] == 'commercial':
-            osw = osw_generator.create_com_osw()
-        else:
-            raise AttributeError('BuildStockBatchBase.create_osw does not support stock_type {}'.
-                                 format(cfg['stock_type']))
-        return osw
+        return osw_generator.create_osw(sim_id, **kwargs)
 
     @staticmethod
     def cleanup_sim_dir(sim_dir):

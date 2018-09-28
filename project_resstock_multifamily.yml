@@ -18,3 +18,4 @@ timeseries_csv_export:
 output_directory: /scratch/nmerket/multifamily10k
 peregrine:
   minutes_per_sim: 60
+stock_type: residential

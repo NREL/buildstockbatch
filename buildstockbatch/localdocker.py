@@ -31,7 +31,6 @@ class LocalDockerBatch(BuildStockBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
 
@@ -40,14 +39,14 @@ class LocalDockerBatch(BuildStockBatchBase):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
 
     def run_sampling(self, n_datapoints=None):
+        if 'sampling_algorithm' not in self.cfg['baseline'].keys():
+            self.cfg['baseline']['sampling_algorithm'] = 'local'
         sampling = BuildStockSample(self.cfg, self.project_dir, self.buildstock_dir, n_datapoints)
-        if self.stock_type == 'residential':
-            buildstock_csv_path = sampling.run_local_res_sample(self.docker_client, self.docker_image())
-        elif self.stock_type == 'commercial':
-            buildstock_csv_path = sampling.run_local_com_sample()
-        else:
-            raise AttributeError('LocalDockerBatch.run_sampling does not support stock_type {}'.format(self.stock_type))
-        return buildstock_csv_path
+        inputs = {
+            'docker_client': self.docker_client,
+            'docker_image': self.docker_image()
+        }
+        return sampling.run_sampling(**inputs)
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
@@ -65,7 +64,11 @@ class LocalDockerBatch(BuildStockBatchBase):
         ]
         docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
 
-        osw = cls.create_osw(sim_id, cfg, i, upgrade_idx)
+        osw_cfg = {
+            'i': i,
+            'upgrade_idx': upgrade_idx
+        }
+        osw = cls.create_osw(cfg, sim_id, **osw_cfg)
 
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:

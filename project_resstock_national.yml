@@ -30,3 +30,4 @@ output_directory: /Users/nmerket/Desktop/temp_resstock_results
 #  - Location EPW|USA_CO_Colorado.Springs-Peterson.Field.724660_TMY3.epw
 #  - not: Heating Fuel|Propane
 #  - Location Region|CR06
+stock_type: residential
