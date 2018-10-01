@@ -87,7 +87,7 @@ class BuildStockBatchBase(object):
         self._weather_dir = None
 
         # Call property to create directory and copy weather files there
-        _ = self.weather_dir
+        _ = self.weather_dir  # noqa: F841
 
     def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
@@ -344,7 +344,7 @@ class BuildStockBatchBase(object):
         return Client()
 
     def process_results(self):
-        client = self.get_dask_client()
+        client = self.get_dask_client()  # noqa: F841
         results_dir = self.results_dir
 
         logger.debug('Creating Dask Dataframe of results')
