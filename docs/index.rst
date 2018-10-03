@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to BuildStock Batch's documentation!
-============================================
+BuildStock Batch
+================
 
 This set of tools provides an alternative means to PAT to run and manage the batch
 simulations for the
