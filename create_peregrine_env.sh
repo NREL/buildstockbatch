@@ -4,6 +4,7 @@
 #PBS -q short
 #PBS -A res_stock
 #PBS -j oe
+#PBS -o create_environment.out
 
 module load conda
 conda remove -y --name buildstock --all

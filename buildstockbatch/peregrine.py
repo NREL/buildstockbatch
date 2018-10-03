@@ -29,7 +29,7 @@ class PeregrineBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logging.debug('Output directory = {}'.format(output_dir))
 
-        _ = self.singularity_image
+        _ = self.singularity_image  # noqa: F841
 
     @property
     def singularity_image(self):
