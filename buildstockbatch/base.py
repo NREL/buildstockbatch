@@ -229,6 +229,16 @@ class BuildStockBatchBase(object):
             'id': sim_id,
             'steps': [
                 {
+                    'measure_dir_name': 'ResidentialSimulationControls',
+                    'arguments': {
+                        'timesteps_per_hr': 6,
+                        'begin_month': 1,
+                        'begin_day_of_month': 1,
+                        'end_month': 12,
+                        'end_day_of_month': 31
+                    }
+                },
+                {
                     'measure_dir_name': 'BuildExistingModel',
                     'arguments': {
                         'building_id': i,
@@ -287,7 +297,8 @@ class BuildStockBatchBase(object):
             if 'package_apply_logic' in measure_d:
                 apply_upgrade_measure['package_apply_logic'] = cls.make_apply_logic_arg(measure_d['package_apply_logic'])
 
-            osw['steps'].insert(1, apply_upgrade_measure)
+            build_existing_model_idx = list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+            osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'timeseries_csv_export' in cfg:
             timeseries_measure = {
@@ -303,37 +314,20 @@ class BuildStockBatchBase(object):
     @staticmethod
     def cleanup_sim_dir(sim_dir):
 
-        # Gzip the timeseries data
+        # Convert the timeseries data to parquet
         timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filename):
-            with open(timeseries_filename, 'rb') as f_in:
-                with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
-                    shutil.copyfileobj(f_in, f_out)
             tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
             tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
-            os.remove(timeseries_filename)
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
-        enduse_timeseries_in_zip = False
-        timeseries_filename_base = os.path.basename(timeseries_filename)
         if os.path.isfile(zipfilename):
             with zipfile.ZipFile(zipfilename, 'r') as zf:
                 for filename in zf.namelist():
                     for filepath in (os.path.join(sim_dir, 'run', filename), os.path.join(sim_dir, filename)):
                         if os.path.exists(filepath):
                             os.remove(filepath)
-                    if filename == timeseries_filename_base:
-                        enduse_timeseries_in_zip = True
-
-            # Remove csv file from data_point.zip
-            # TODO: make this windows compatible
-            if enduse_timeseries_in_zip:
-                subprocess.run(
-                    ['zip', '-d', zipfilename, timeseries_filename_base],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
 
         # Remove reports dir
         reports_dir = os.path.join(sim_dir, 'reports')
