@@ -112,7 +112,7 @@ class BuildStockBatchBase(object):
         self._weather_dir = None
 
         # Call property to create directory and copy weather files there
-        _ = self.weather_dir
+        _ = self.weather_dir  # noqa: F841
 
     def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
@@ -244,37 +244,20 @@ class BuildStockBatchBase(object):
     @staticmethod
     def cleanup_sim_dir(sim_dir):
 
-        # Gzip the timeseries data
+        # Convert the timeseries data to parquet
         timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filename):
-            with open(timeseries_filename, 'rb') as f_in:
-                with gzip.open(timeseries_filename + '.gz', 'wb') as f_out:
-                    shutil.copyfileobj(f_in, f_out)
             tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
             tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
-            os.remove(timeseries_filename)
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
-        enduse_timeseries_in_zip = False
-        timeseries_filename_base = os.path.basename(timeseries_filename)
         if os.path.isfile(zipfilename):
             with zipfile.ZipFile(zipfilename, 'r') as zf:
                 for filename in zf.namelist():
                     for filepath in (os.path.join(sim_dir, 'run', filename), os.path.join(sim_dir, filename)):
                         if os.path.exists(filepath):
                             os.remove(filepath)
-                    if filename == timeseries_filename_base:
-                        enduse_timeseries_in_zip = True
-
-            # Remove csv file from data_point.zip
-            # TODO: make this windows compatible
-            if enduse_timeseries_in_zip:
-                subprocess.run(
-                    ['zip', '-d', zipfilename, timeseries_filename_base],
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
-                )
 
         # Remove reports dir
         reports_dir = os.path.join(sim_dir, 'reports')
@@ -285,7 +268,7 @@ class BuildStockBatchBase(object):
         return Client()
 
     def process_results(self):
-        client = self.get_dask_client()
+        client = self.get_dask_client()  # noqa: F841
         results_dir = self.results_dir
 
         logger.debug('Creating Dask Dataframe of results')

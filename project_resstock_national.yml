@@ -1,9 +1,10 @@
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
+output_directory: /scratch/nmerket/resstock_national_3pwindows
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
-weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: /projects/res_stock/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 6
+  n_datapoints: 350000
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -23,11 +24,11 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
     - Zone Mean Air Humidity Ratio
     - Fan Runtime Fraction
-# output_directory: /scratch/nmerket/downselect_results
-output_directory: /Users/nmerket/Desktop/temp_resstock_results
-#downselect:
-#  - Location EPW|USA_CO_Boulder-Broomfield-Jefferson.County.AP.724699_TMY3.epw
-#  - Location EPW|USA_CO_Colorado.Springs-Peterson.Field.724660_TMY3.epw
+# downselect:
 #  - not: Heating Fuel|Propane
 #  - Location Region|CR06
 stock_type: residential
+peregrine:
+  nodetype: haswell
+  queue: batch-h
+  n_jobs: 200

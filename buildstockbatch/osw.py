@@ -84,16 +84,28 @@ class BuildStockOsw(object):
         required_keys = ['i', 'upgrade_idx']
         self.verify_kwargs(required_keys, {}, kwargs)
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
+        cfg = self.cfg
+        i = self.osw_attrs['i']
+        upgrade_idx = self.osw_attrs['upgrade_idx']
         osw = {
             'id': sim_id,
             'steps': [
                 {
+                    'measure_dir_name': 'ResidentialSimulationControls',
+                    'arguments': {
+                        'timesteps_per_hr': 6,
+                        'begin_month': 1,
+                        'begin_day_of_month': 1,
+                        'end_month': 12,
+                        'end_day_of_month': 31
+                    }
+                },
+                {
                     'measure_dir_name': 'BuildExistingModel',
                     'arguments': {
-                        'building_id': self.osw_attrs['i'],
+                        'building_id': i,
                         'workflow_json': 'measure-info.json',
-                        'sample_weight': self.cfg['baseline']['n_buildings_represented'] /
-                                         self.cfg['baseline']['n_datapoints']
+                        'sample_weight': cfg['baseline']['n_buildings_represented'] / cfg['baseline']['n_datapoints']
                     }
                 }
             ],
@@ -105,7 +117,7 @@ class BuildStockOsw(object):
             'weather_file': 'weather/Placeholder.epw'
         }
 
-        osw['steps'].extend(self.cfg['baseline'].get('measures', []))
+        osw['steps'].extend(cfg['baseline'].get('measures', []))
 
         osw['steps'].extend([
             {
@@ -122,8 +134,8 @@ class BuildStockOsw(object):
             }
         ])
 
-        if self.osw_attrs['upgrade_idx'] is not None:
-            measure_d = self.cfg['upgrades'][self.osw_attrs['upgrade_idx']]
+        if upgrade_idx is not None:
+            measure_d = cfg['upgrades'][upgrade_idx]
             apply_upgrade_measure = {
                 'measure_dir_name': 'ApplyUpgrade',
                 'arguments': {
@@ -148,15 +160,16 @@ class BuildStockOsw(object):
                 apply_upgrade_measure['package_apply_logic'] = self._make_apply_logic_arg(
                     measure_d['package_apply_logic'])
 
-            osw['steps'].insert(1, apply_upgrade_measure)
+            build_existing_model_idx = list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+            osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
-        if 'timeseries_csv_export' in self.cfg:
+        if 'timeseries_csv_export' in cfg:
             timeseries_measure = {
                 'measure_dir_name': 'TimeseriesCSVExport',
-                'arguments': deepcopy(self.cfg['timeseries_csv_export'])
+                'arguments': deepcopy(cfg['timeseries_csv_export'])
             }
             timeseries_measure['arguments']['output_variables'] = \
-                ','.join(self.cfg['timeseries_csv_export']['output_variables'])
+                ','.join(cfg['timeseries_csv_export']['output_variables'])
             osw['steps'].insert(-1, timeseries_measure)
 
         return osw
