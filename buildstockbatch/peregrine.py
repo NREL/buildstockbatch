@@ -28,7 +28,7 @@ import subprocess
 import time
 
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.sample import BuildStockSample
+from buildstockbatch.sample import ResidentialSingularitySampler, CommercialSobolSampler
 
 
 class PeregrineBatch(BuildStockBatchBase):
@@ -40,7 +40,27 @@ class PeregrineBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logging.debug('Output directory = {}'.format(output_dir))
 
-        _ = self.singularity_image  # noqa: F841
+        if self.stock_type == 'residential':
+            self.sampler = ResidentialSingularitySampler(
+                self.singularity_image,
+                self.output_dir,
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'commercial':
+            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSampler(
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @property
     def singularity_image(self):
@@ -89,16 +109,6 @@ class PeregrineBatch(BuildStockBatchBase):
         results_dir = os.path.join(self.output_dir, 'results')
         assert(os.path.isdir(results_dir))
         return results_dir
-
-    def run_sampling(self, n_datapoints=None):
-        if 'sampling_algorithm' not in self.cfg['baseline'].keys():
-            self.cfg['baseline']['sampling_algorithm'] = 'peregrine'
-        sampling = BuildStockSample(self.cfg, self.project_dir, self.buildstock_dir, n_datapoints)
-        inputs = {
-            'singularity_image': self.singularity_image,
-            'output_dir': self.output_dir
-        }
-        return sampling.run_sampling(**inputs)
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 

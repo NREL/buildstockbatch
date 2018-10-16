@@ -21,7 +21,7 @@ import os
 import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.sample import BuildStockSample
+from buildstockbatch.sample import ResidentialDockerSampler, CommercialSobolSampler
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +34,30 @@ class LocalDockerBatch(BuildStockBatchBase):
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
 
+        if self.stock_type == 'residential':
+            self.sampler = ResidentialDockerSampler(
+                self.docker_image(),
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'commercial':
+            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSampler(
+                    self.project_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
+
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
-
-    def run_sampling(self, n_datapoints=None):
-        if 'sampling_algorithm' not in self.cfg['baseline'].keys():
-            self.cfg['baseline']['sampling_algorithm'] = 'local'
-        sampling = BuildStockSample(self.cfg, self.project_dir, self.buildstock_dir, n_datapoints)
-        inputs = {
-            'docker_client': self.docker_client,
-            'docker_image': self.docker_image()
-        }
-        return sampling.run_sampling(**inputs)
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):

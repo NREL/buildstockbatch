@@ -5,12 +5,13 @@ buildstockbatch.sample
 ~~~~~~~~~~~~~~~
 This object contains the code required for generating the set of simulations to execute
 
-:author: Noel Merket
+:author: Noel Merket, Ry Horsey
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
 
 from copy import deepcopy
+import docker
 from itertools import compress
 from joblib import Parallel, delayed
 import logging
@@ -27,77 +28,58 @@ from buildstockbatch.sobol_lib import i4_sobol_generate
 logger = logging.getLogger(__name__)
 
 
-class BuildStockSample(object):
+class BuildStockSampler(object):
 
-    SAMPLING_DEFAULTS = {
-        'commercial': {
-            'sampling_algorithm': 'sobol',
-            'n_datapoints': 50000
-        },
-        'residential': {
-            'sampling_algorithm': 'stratified',
-            'n_datapoints': 350000
-        }
-    }
-
-    def __init__(self, cfg, project_dir, buildstock_dir, n_datapoints=None):
+    def __init__(self, cfg, buildstock_dir, project_dir):
         """
-        Create the buildstock.csv file required for batch simulations using this class.\
+        Create the buildstock.csv file required for batch simulations using this class.
+
         Multiple sampling methods are available to support local & peregrine analyses, as well as to support multiple\
         sampling strategies. Currently there are separate implementations for commercial & residential stock types\
         due to unique requirements created by the commercial tsv set.
+
         :param cfg: YAML configuration specified by the user for the analysis
-        :param project_dir: I think where the buildstock.csv file is supposed to be written
-        :param buildstock_dir: I think where the *.tsv files are supposed to be located
-        :param n_datapoints: The number of samples to compute for the given sample space defined by the input tsv files
+        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
+        :param project_dir: The project directory within the OpenStudio-BuildStock repo
         """
         self.cfg = cfg
-        # Set default values into cfg if not provided by the user
-        for key in self.SAMPLING_DEFAULTS[self.cfg['stock_type']].keys():
-            if self.cfg['baseline'][key] is None:
-                self.cfg['baseline'][key] = self.SAMPLING_DEFAULTS[self.cfg['stock_type']][key]
-        if n_datapoints is not None:
-            self.cfg['baseline']['n_datapoints'] = n_datapoints
-        self.project_dir = project_dir
         self.buildstock_dir = buildstock_dir
-        self.sampling_attrs = {}
+        self.project_dir = project_dir
 
-    def run_sampling(self, **kwargs):
+    def run_sampling(self, n_datapoints=None):
         """
-        Execute the sampling algorithm as defined by the user, or by default for the stock type. This function\
-        dispatches to a stock type & sampling specific method to allow for flexible support of various use scenarios.\
-        For the required kwargs for each sampling method please refer to the _run_ method for the sampling method.
-        :param kwargs: Currently used keys include 'docker_image', 'docker_container', 'singularity_image', and \
-        'output_dir'
-        """
-        method = '_run_' + self.cfg['stock_type'] + '_' + self.cfg['baseline']['sampling_algorithm'] + '_sample'
-        method = getattr(self, method)(**kwargs)
-        return method
+        Execute the sampling generating the specified number of datapoints.
 
-    def verify_kwargs(self, required_keys, defaults, kwargs):
-        """
-        Verify that the required kwargs are provided for a given method.
-        :param required_keys: List of keys that are required by the method.
-        :param defaults: Dictionary of default values with are generally acceptable unless otherwise defined.
-        :param kwargs: Input kwargs passed to the method.
-        """
-        for key in required_keys:
-            if key in kwargs.keys():
-                self.sampling_attrs[key] = kwargs[key]
-            elif key in defaults.keys():
-                self.sampling_attrs[key] = defaults[key]
-                warn('Required key `{}` was not provided - defaulting to {}'.format(key, defaults[key]))
-            else:
-                raise KeyError('Unable to find required attribute `{}`.'.format(key))
+        This is a stub. It needs to be implemented in the child classes.
 
-    def _run_residential_local_sample(self, **kwargs):
-        logger.debug('Validating inputs for _run_residential_local_sample')
-        required_keys = ['docker_client, docker_image']
-        self.verify_kwargs(required_keys, {}, kwargs)
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        """
+        raise NotImplementedError
+
+
+class ResidentialDockerSampler(BuildStockSampler):
+
+    def __init__(self, docker_image, *args, **kwargs):
+        """
+        Initialize the sampler.
+
+        :param docker_image: the docker image to use (i.e. nrel/openstudio:2.7.0)
+        :return: Absolute path to the output buildstock.csv file
+        """
+        super().__init__(*args, **kwargs)
+        self.docker_image = docker_image
+
+    def run_sampling(self, n_datapoints):
+        """
+        Run the residential sampling in a docker container.
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        """
+        docker_client = docker.DockerClient.from_env()
         logger.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
         tick = time.time()
-        container_output = self.sampling_attrs['docker_client'].containers.run(
-            self.sampling_attrs['docker_image'](),
+        container_output = docker_client.containers.run(
+            self.docker_image,
             [
                 'ruby',
                 'resources/run_sampling.rb',
@@ -124,25 +106,45 @@ class BuildStockSample(object):
         )
         return destination_filename
 
-    def _run_residential_peregrine_sample(self, **kwargs):
-        logger.debug('Validating inputs for _run_residential_peregrine_sample')
-        required_keys = ['singularity_image, output_dir']
-        self.verify_kwargs(required_keys, {}, kwargs)
-        logging.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
+
+class ResidentialSingularitySampler(BuildStockSampler):
+
+    def __init__(self, singularity_image, output_dir, *args, **kwargs):
+        """
+        Initialize the sampler.
+
+        :param singularity_image: path to the singularity image to use
+        :param output_dir: Simulation working directory
+        :param cfg: YAML configuration specified by the user for the analysis
+        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
+        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        """
+        super().__init__(*args, **kwargs)
+        self.singularity_image = singularity_image
+        self.output_dir = output_dir
+
+    def run_sampling(self, n_datapoints):
+        """
+        Run the residential sampling in a singularity container.
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        :return: Absolute path to the output buildstock.csv file
+        """
+        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'singularity',
             'exec',
             '--contain',
             '--home', self.buildstock_dir,
-            self.sampling_attrs['singularity_image'],
+            self.singularity_image,
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
             '-n', str(self.cfg['baseline']['n_datapoints']),
             '-o', 'buildstock.csv'
         ]
-        subprocess.run(args, check=True, env=os.environ, cwd=self.sampling_attrs['output_dir'])
-        destination_dir = os.path.join(self.sampling_attrs['output_dir'], 'housing_characteristics')
+        subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
+        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
         shutil.copytree(
@@ -156,17 +158,32 @@ class BuildStockSample(object):
         )
         return os.path.join(destination_dir, 'buildstock.csv')
 
-    def _run_commercial_sobol_sample(self, **kwargs):
+
+class CommercialSobolSampler(BuildStockSampler):
+
+    def __init__(self, output_dir, *args, **kwargs):
         """
+        Initialize the sampler.
+
+        :param output_dir: Directory in which to place buildstock.csv
+        :param cfg: YAML configuration specified by the user for the analysis
+        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
+        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        """
+        super().__init__(*args, **kwargs)
+        self.output_dir = output_dir
+
+    def run_sampling(self, n_datapoints):
+        """
+        Run the commercial sampling.
+
         This sampling method executes a sobol sequence to pre-compute optimally space-filling sample locations in the\
         unit hyper-cube defined by the set of TSV files & then spawns processes to evaluate each point in the sample\
         space given the input TSV set.
-        :param kwargs: No kwargs are required for this method
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
-        logger.debug('Validating inputs for _run_commercial_sobol_sample')
-        required_keys = []
-        self.verify_kwargs(required_keys, {}, kwargs)
         logging.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
@@ -194,18 +211,6 @@ class BuildStockSample(object):
             for index in range(self.cfg['baseline']['n_samples'])
         )
         return csv_path
-
-    def _run_commercial_local_sample(self, **kwargs):
-        """
-        Alias of _run_commercial_sobol_sample method
-        """
-        self._run_commercial_sobol_sample(**kwargs)
-
-    def _run_commercial_peregrine_sample(self, **kwargs):
-        """
-        Alias of _run_commercial_sobol_sample method
-        """
-        self._run_commercial_sobol_sample(**kwargs)
 
     @staticmethod
     def _com_execute_sobol_sampling(n_dims, n_samples):

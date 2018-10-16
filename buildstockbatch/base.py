@@ -109,9 +109,10 @@ class BuildStockBatchBase(object):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
         self._weather_dir = None
-
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
+
+        self.sampler = None
 
     def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
@@ -183,7 +184,9 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     def run_sampling(self, n_datapoints=None):
-        raise NotImplementedError
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
+        return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError
