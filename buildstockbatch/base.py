@@ -23,7 +23,6 @@ import pandas as pd
 import re
 import requests
 import shutil
-import subprocess
 import tempfile
 import yaml
 import zipfile
@@ -92,9 +91,9 @@ class BuildStockBatchBase(object):
     OS_VERSION = '2.6.0'
     OS_SHA = '8c81faf8bc'
     LOGO = '''
-     _ __         _     __,              _ __               
-    ( /  )    o  //   /(    _/_       / ( /  )     _/_    / 
-     /--< , ,,  // __/  `.  /  __ _, /<  /--< __,  /  _, /_ 
+     _ __         _     __,              _ __
+    ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
+     /--< , ,,  // __/  `.  /  __ _, /<  /--< __,  /  _, /
     /___/(_/_(_(/_(_/_(___)(__(_)(__/ |_/___/(_/(_(__(__/ /_
       Executing BuildStock projects with grace since 2018
 

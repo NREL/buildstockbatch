@@ -160,7 +160,8 @@ class BuildStockOsw(object):
                 apply_upgrade_measure['package_apply_logic'] = self._make_apply_logic_arg(
                     measure_d['package_apply_logic'])
 
-            build_existing_model_idx = list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+            build_existing_model_idx = \
+                list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'timeseries_csv_export' in cfg:

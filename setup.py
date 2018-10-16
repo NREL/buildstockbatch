@@ -36,7 +36,7 @@ metadata = {}
 with open(os.path.join(here, 'buildstockbatch', '__version__.py'), 'r', 'utf-8') as f:
     exec(f.read(), metadata)
 
-with open('README.rst', 'r', 'utf-8') as f:
+with open('README.md', 'r', 'utf-8') as f:
     readme = f.read()
 
 setuptools.setup(
@@ -46,6 +46,7 @@ setuptools.setup(
     author_email=metadata['__author_email__'],
     description=metadata['__description__'],
     long_description=readme,
+    long_description_content_type='text/markdown',
     url=metadata['__url__'],
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
@@ -67,7 +68,7 @@ setuptools.setup(
         'dev': [
             'pytest>=2.8.0',
             'codecov',
-            'Sphinx<=1.5.5',
+            'Sphinx',
             'flake8',
             'tox',
             'detox'
