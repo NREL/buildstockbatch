@@ -5,7 +5,7 @@ buildstockbatch.osw
 ~~~~~~~~~~~~~~~
 This object contains the code required for generating OSW files from individual samples
 
-:author: Noel Merket
+:author: Noel Merket, Ry Horsey
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
@@ -44,7 +44,7 @@ class BuildStockOsw(object):
         self.cfg = cfg
         # Set default values into cfg if not provided by the user
         for key in self.OSW_DEFAULTS[self.cfg['stock_type']].keys():
-            if self.cfg['baseline'][key] is None:
+            if self.cfg['baseline'].get(key) is None:
                 self.cfg['baseline'][key] = self.OSW_DEFAULTS[self.cfg['stock_type']][key]
         if n_datapoints is not None:
             self.cfg['baseline']['n_datapoints'] = n_datapoints
