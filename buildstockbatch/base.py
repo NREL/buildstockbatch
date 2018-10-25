@@ -77,8 +77,8 @@ def read_out_osw(filename):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.6.0'
-    OS_SHA = '8c81faf8bc'
+    OS_VERSION = '2.7.0'
+    OS_SHA = '544f363db5'
 
     def __init__(self, project_filename):
         self.project_filename = os.path.abspath(project_filename)
