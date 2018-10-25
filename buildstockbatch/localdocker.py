@@ -20,8 +20,8 @@ import logging
 import os
 import shutil
 
-from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.sample import ResidentialDockerSampler, CommercialSobolSampler
+from .base import BuildStockBatchBase
+from .sampler import ResidentialDockerSampler, CommercialSobolSampler
 
 logger = logging.getLogger(__name__)
 

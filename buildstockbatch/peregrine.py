@@ -27,8 +27,8 @@ import shlex
 import subprocess
 import time
 
-from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.sample import ResidentialSingularitySampler, CommercialSobolSampler
+from .base import BuildStockBatchBase
+from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 
 
 class PeregrineBatch(BuildStockBatchBase):

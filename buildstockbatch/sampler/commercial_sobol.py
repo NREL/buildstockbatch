@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-buildstockbatch.sample
+buildstockbatch.sampler.commercial_sobol
 ~~~~~~~~~~~~~~~
 This object contains the code required for generating the set of simulations to execute
 
@@ -11,152 +11,18 @@ This object contains the code required for generating the set of simulations to 
 """
 
 from copy import deepcopy
-import docker
 from itertools import compress
 from joblib import Parallel, delayed
 import logging
 from multiprocessing import Manager, cpu_count
 import os
 import pandas as pd
-import shutil
-import subprocess
-import time
 from warnings import warn
 
-from buildstockbatch.sobol_lib import i4_sobol_generate
+from .sobol_lib import i4_sobol_generate
+from .base import BuildStockSampler
 
 logger = logging.getLogger(__name__)
-
-
-class BuildStockSampler(object):
-
-    def __init__(self, cfg, buildstock_dir, project_dir):
-        """
-        Create the buildstock.csv file required for batch simulations using this class.
-
-        Multiple sampling methods are available to support local & peregrine analyses, as well as to support multiple\
-        sampling strategies. Currently there are separate implementations for commercial & residential stock types\
-        due to unique requirements created by the commercial tsv set.
-
-        :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
-        """
-        self.cfg = cfg
-        self.buildstock_dir = buildstock_dir
-        self.project_dir = project_dir
-
-    def run_sampling(self, n_datapoints=None):
-        """
-        Execute the sampling generating the specified number of datapoints.
-
-        This is a stub. It needs to be implemented in the child classes.
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        """
-        raise NotImplementedError
-
-
-class ResidentialDockerSampler(BuildStockSampler):
-
-    def __init__(self, docker_image, *args, **kwargs):
-        """
-        Initialize the sampler.
-
-        :param docker_image: the docker image to use (i.e. nrel/openstudio:2.7.0)
-        :return: Absolute path to the output buildstock.csv file
-        """
-        super().__init__(*args, **kwargs)
-        self.docker_image = docker_image
-
-    def run_sampling(self, n_datapoints):
-        """
-        Run the residential sampling in a docker container.
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        """
-        docker_client = docker.DockerClient.from_env()
-        logger.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
-        tick = time.time()
-        container_output = docker_client.containers.run(
-            self.docker_image,
-            [
-                'ruby',
-                'resources/run_sampling.rb',
-                '-p', self.cfg['project_directory'],
-                '-n', str(self.cfg['baseline']['n_datapoints']),
-                '-o', 'buildstock.csv'
-            ],
-            remove=True,
-            volumes={
-                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
-            },
-            name='buildstock_sampling'
-        )
-        tick = time.time() - tick
-        for line in container_output.decode('utf-8').split('\n'):
-            logger.debug(line)
-        logger.debug('Sampling took {:.1f} seconds'.format(tick))
-        destination_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-        if os.path.exists(destination_filename):
-            os.remove(destination_filename)
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
-        )
-        return destination_filename
-
-
-class ResidentialSingularitySampler(BuildStockSampler):
-
-    def __init__(self, singularity_image, output_dir, *args, **kwargs):
-        """
-        Initialize the sampler.
-
-        :param singularity_image: path to the singularity image to use
-        :param output_dir: Simulation working directory
-        :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
-        """
-        super().__init__(*args, **kwargs)
-        self.singularity_image = singularity_image
-        self.output_dir = output_dir
-
-    def run_sampling(self, n_datapoints):
-        """
-        Run the residential sampling in a singularity container.
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :return: Absolute path to the output buildstock.csv file
-        """
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        args = [
-            'singularity',
-            'exec',
-            '--contain',
-            '--home', self.buildstock_dir,
-            self.singularity_image,
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(self.cfg['baseline']['n_datapoints']),
-            '-o', 'buildstock.csv'
-        ]
-        subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
-        if os.path.exists(destination_dir):
-            shutil.rmtree(destination_dir)
-        shutil.copytree(
-            os.path.join(self.project_dir, 'housing_characteristics'),
-            destination_dir
-        )
-        assert(os.path.isdir(destination_dir))
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_dir
-        )
-        return os.path.join(destination_dir, 'buildstock.csv')
 
 
 class CommercialSobolSampler(BuildStockSampler):
