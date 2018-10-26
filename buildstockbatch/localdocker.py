@@ -75,11 +75,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         ]
         docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
 
-        osw_cfg = {
-            'i': i,
-            'upgrade_idx': upgrade_idx
-        }
-        osw = cls.create_osw(cfg, sim_id, **osw_cfg)
+        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:

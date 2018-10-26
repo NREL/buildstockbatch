@@ -27,7 +27,7 @@ import tempfile
 import yaml
 import zipfile
 
-from buildstockbatch.osw import BuildStockOsw
+from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -239,9 +239,13 @@ class BuildStockBatchBase(object):
         df_new.to_csv(buildstock_csv_filename)
 
     @staticmethod
-    def create_osw(cfg, sim_id, **kwargs):
-        osw_generator = BuildStockOsw(cfg)
-        return osw_generator.create_osw(sim_id, **kwargs)
+    def create_osw(cfg, *args, **kwargs):
+        if cfg['stock_type'] == 'residential':
+            osw_generator = ResidentialDefaultWorkflowGenerator(cfg)
+        else:
+            assert(cfg['stock_type'] == 'commercial')
+            osw_generator = CommercialDefaultWorkflowGenerator(cfg)
+        return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod
     def cleanup_sim_dir(sim_dir):
