@@ -1,23 +1,34 @@
-import os
-import shutil
-import logging
+# -*- coding: utf-8 -*-
+
+"""
+buildstockbatch.peregrine
+~~~~~~~~~~~~~~~
+This class contains the object & methods that allow for usage of the library with peregrine
+
+:author: Noel Merket
+:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:license: BSD-3
+"""
+
 import argparse
-import subprocess
-import math
+from dask.distributed import Client, LocalCluster
 import functools
 import itertools
+from joblib import Parallel, delayed
 import json
-import time
-import shlex
+import logging
+import math
+import os
 import random
 import re
-
 import requests
-from joblib import Parallel, delayed
-from dask.distributed import Client, LocalCluster
+import shutil
+import shlex
+import subprocess
+import time
 
-
-from buildstockbatch.base import BuildStockBatchBase
+from .base import BuildStockBatchBase
+from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 
 
 class PeregrineBatch(BuildStockBatchBase):
@@ -29,7 +40,27 @@ class PeregrineBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logging.debug('Output directory = {}'.format(output_dir))
 
-        _ = self.singularity_image  # noqa: F841
+        if self.stock_type == 'residential':
+            self.sampler = ResidentialSingularitySampler(
+                self.singularity_image,
+                self.output_dir,
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'commercial':
+            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSampler(
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @property
     def singularity_image(self):
@@ -78,37 +109,6 @@ class PeregrineBatch(BuildStockBatchBase):
         results_dir = os.path.join(self.output_dir, 'results')
         assert(os.path.isdir(results_dir))
         return results_dir
-
-    def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        args = [
-            'singularity',
-            'exec',
-            '--contain',
-            '--home', self.buildstock_dir,
-            self.singularity_image,
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(n_datapoints),
-            '-o', 'buildstock.csv'
-        ]
-        subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
-        if os.path.exists(destination_dir):
-            shutil.rmtree(destination_dir)
-        shutil.copytree(
-            os.path.join(self.project_dir, 'housing_characteristics'),
-            destination_dir
-        )
-        assert(os.path.isdir(destination_dir))
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_dir
-        )
-        return os.path.join(destination_dir, 'buildstock.csv')
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
@@ -275,7 +275,8 @@ class PeregrineBatch(BuildStockBatchBase):
         logging.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
+                     upgrade_idx=None):
         sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
 
         # Check to see if the simulation is done already and skip it if so.
@@ -292,7 +293,7 @@ class PeregrineBatch(BuildStockBatchBase):
         os.makedirs(sim_dir)
 
         # Generate the osw for this simulation
-        osw = cls.create_osw(sim_id, cfg, i, upgrade_idx)
+        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 
@@ -342,9 +343,9 @@ class PeregrineBatch(BuildStockBatchBase):
                 pass
             finally:
                 # Clean up the symbolic links we created in the container
-                for dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
                     try:
-                        os.unlink(os.path.join(sim_dir, os.path.basename(dir)))
+                        os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
                     except FileNotFoundError:
                         pass
 
@@ -362,6 +363,7 @@ def main():
         format='%(levelname)s:%(asctime)s:%(message)s'
     )
     parser = argparse.ArgumentParser()
+    print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)

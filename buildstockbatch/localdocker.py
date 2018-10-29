@@ -1,16 +1,27 @@
+# -*- coding: utf-8 -*-
+
+"""
+buildstockbatch.localdocker
+~~~~~~~~~~~~~~~
+This object contains the code required for execution of local docker batch simulations
+
+:author: Noel Merket
+:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:license: BSD-3
+"""
+
 import argparse
-import os
-import itertools
-import functools
-import json
-import shutil
-import time
-import logging
-
-from joblib import Parallel, delayed
 import docker
+import functools
+import itertools
+from joblib import Parallel, delayed
+import json
+import logging
+import os
+import shutil
 
-from buildstockbatch.base import BuildStockBatchBase
+from .base import BuildStockBatchBase
+from .sampler import ResidentialDockerSampler, CommercialSobolSampler
 
 logger = logging.getLogger(__name__)
 
@@ -20,46 +31,33 @@ class LocalDockerBatch(BuildStockBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
+
+        if self.stock_type == 'residential':
+            self.sampler = ResidentialDockerSampler(
+                self.docker_image(),
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'commercial':
+            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSampler(
+                    self.project_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
-
-    def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-        tick = time.time()
-        container_output = self.docker_client.containers.run(
-            self.docker_image(),
-            [
-                'ruby',
-                'resources/run_sampling.rb',
-                '-p', self.cfg['project_directory'],
-                '-n', str(n_datapoints),
-                '-o', 'buildstock.csv'
-            ],
-            remove=True,
-            volumes={
-                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
-            },
-            name='buildstock_sampling'
-        )
-        tick = time.time() - tick
-        for line in container_output.decode('utf-8').split('\n'):
-            logger.debug(line)
-        logger.debug('Sampling took {:.1f} seconds'.format(tick))
-        destination_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-        if os.path.exists(destination_filename):
-            os.remove(destination_filename)
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
-        )
-        return destination_filename
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
@@ -70,13 +68,14 @@ class LocalDockerBatch(BuildStockBatchBase):
             (sim_dir, '/var/simdata/openstudio', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'), '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'),
+             '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
             (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
             (weather_dir, '/var/simdata/openstudio/weather', 'ro')
         ]
         docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
 
-        osw = cls.create_osw(sim_id, cfg, i, upgrade_idx)
+        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
@@ -130,6 +129,15 @@ class LocalDockerBatch(BuildStockBatchBase):
             'output_directory',
             os.path.join(self.project_dir, 'localResults')
         )
+        if os.path.isabs(results_dir):
+            results_dir = os.path.abspath(results_dir)
+        else:
+            results_dir = os.path.abspath(
+                os.path.join(
+                    os.path.dirname(self.project_filename),
+                    results_dir
+                )
+            )
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
         return results_dir
@@ -167,6 +175,7 @@ def main():
         },
     })
     parser = argparse.ArgumentParser()
+    print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
     parser.add_argument('-j', type=int,
                         help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',

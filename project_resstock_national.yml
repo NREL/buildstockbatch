@@ -27,6 +27,7 @@ timeseries_csv_export:
 # downselect:
 #  - not: Heating Fuel|Propane
 #  - Location Region|CR06
+stock_type: residential
 peregrine:
   nodetype: haswell
   queue: batch-h
