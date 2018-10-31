@@ -30,6 +30,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
         :param buildstock_dir: The location of the OpenStudio-BuildStock repo
         :param project_dir: The project directory within the OpenStudio-BuildStock repo
         """
+        logger.debug('args are `{}`'.format(*args))
         super().__init__(*args, **kwargs)
 
     def check_sampling(self, output_path, n_datapoints=None):
@@ -76,6 +77,7 @@ class CommercialPrecomputedSingularitySampler(PrecomputedBaseSampler):
 
         :param output_dir: Directory in which to place buildstock.csv
         """
+        logger.debug('args are `{}`'.format(*args))
         super().__init__(*args, **kwargs)
         self.output_dir = output_dir
 

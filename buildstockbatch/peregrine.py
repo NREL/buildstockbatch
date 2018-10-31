@@ -59,6 +59,7 @@ class PeregrineBatch(BuildStockBatchBase):
                     self.project_dir
                 )
             elif sampling_algorithm == 'precomputed':
+                print('calling precomputed commercial sampler')
                 self.sampler = CommercialPrecomputedDockerSampler(
                     self.output_dir,
                     self.cfg,
