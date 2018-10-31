@@ -25,9 +25,9 @@ from .base import BuildStockSampler
 logger = logging.getLogger(__name__)
 
 
-class CommercialSobolSampler(BuildStockSampler):
+class CommercialBaseSobolSampler(BuildStockSampler):
 
-    def __init__(self, output_dir, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initialize the sampler.
 
@@ -37,9 +37,18 @@ class CommercialSobolSampler(BuildStockSampler):
         :param project_dir: The project directory within the OpenStudio-BuildStock repo
         """
         super().__init__(*args, **kwargs)
-        self.output_dir = output_dir
 
-    def run_sampling(self, n_datapoints):
+    def run_sampling(self, n_datapoints=None):
+        """
+        Execute the sampling generating the specified number of datapoints.
+
+        This is a stub. It needs to be implemented in the child classes for each deployment environment.
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        """
+        raise NotImplementedError
+
+    def run_sobol_sampling(self, n_datapoints, csv_path):
         """
         Run the commercial sampling.
 
@@ -48,9 +57,13 @@ class CommercialSobolSampler(BuildStockSampler):
         space given the input TSV set.
 
         :param n_datapoints: Number of datapoints to sample from the distributions.
+        :param csv_path: Where to write the output CSV to - this is deployment dependent
         :return: Absolute path to the output buildstock.csv file
         """
-        logging.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
+        sample_number = self.cfg['baseline']['n_samples']
+        if isinstance(n_datapoints, int):
+            sample_number = n_datapoints
+        logging.debug('Sampling, n_datapoints={}'.format(sample_number))
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
             if '.tsv' in tsv_file:
@@ -59,8 +72,7 @@ class CommercialSobolSampler(BuildStockSampler):
                 tsv_df[dependency_columns] = tsv_df[dependency_columns].astype('str')
                 tsv_hash[tsv_file.replace('.tsv', '')] = tsv_df
         dependency_hash, attr_order = self._com_order_tsvs(tsv_hash)
-        sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), self.cfg['baseline']['n_samples'])
-        csv_path = os.path.join(self.project_dir, 'buildstock.csv')
+        sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), sample_number)
         header = 'Building,'
         for item in attr_order:
             header += str(item) + ','
@@ -74,7 +86,7 @@ class CommercialSobolSampler(BuildStockSampler):
         Parallel(n_jobs=n_jobs, verbose=5)(
             delayed(self._com_execute_sample)(tsv_hash, dependency_hash, attr_order, sample_matrix, index, csv_path,
                                               lock)
-            for index in range(self.cfg['baseline']['n_samples'])
+            for index in range(sample_number)
         )
         return csv_path
 
@@ -171,3 +183,43 @@ class CommercialSobolSampler(BuildStockSampler):
                 fd.write(csv_row)
         finally:
             lock.release()
+
+
+class CommercialSobolSingularitySampler(CommercialBaseSobolSampler):
+
+    def __init__(self, output_dir, *args, **kwargs):
+        """
+        This class uses the Commercial Sobol Sampler to execute samples for Peregrine Singularity deployments
+        """
+        self.output_dir = output_dir
+        super().__init__(*args, **kwargs)
+
+    def run_sampling(self, n_datapoints=None):
+        """
+        Execute the sampling for use in Peregrine Singularity deployments
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        :return: Path to the sample CSV file
+        """
+        csv_path = os.path.join(self.output_dir, 'buildstock.csv')
+        return self.run_sobol_sampling(n_datapoints, csv_path)
+
+
+class CommercialSobolDockerSampler(CommercialBaseSobolSampler):
+
+    def __init__(self, *args, **kwargs):
+        """
+        This class uses the Commercial Sobol Sampler to execute samples for local Docker deployments
+        """
+        super().__init__(*args, **kwargs)
+
+    def run_sampling(self, n_datapoints=None):
+        """
+        Execute the sampling for use in local Docker deployments
+
+        :param n_datapoints: Number of datapoints to sample from the distributions.
+        :return: Path to the sample CSV file
+        """
+        csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        return self.run_sobol_sampling(n_datapoints, csv_path)
+

@@ -111,6 +111,11 @@ class BuildStockBatchBase(object):
         self._weather_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
+        # Load in overriding OS_VERSION and OS_SHA arguments if they exist in the YAML
+        if 'os_version' in self.cfg.keys():
+            self.OS_VERSION = self.cfg['os_version']
+        if 'os_sha' in self.cfg.keys():
+            self.OS_VERSION = self.cfg['os_sha']
 
         self.sampler = None
 

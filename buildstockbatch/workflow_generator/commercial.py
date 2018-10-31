@@ -11,6 +11,7 @@ This object contains the commercial classes for generating OSW files from indivi
 """
 
 import logging
+import datetime as dt
 
 from .base import WorkflowGeneratorBase
 
@@ -28,4 +29,70 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
-        raise NotImplementedError
+        osw = {
+            'id': sim_id,
+            'steps': [
+                {
+                    "measure_dir_name": "BuildExistingModel",
+                    "arguments": {
+                        "number_of_buildings_represented": 1,
+                        "building_id": 28
+                    },
+                    "measure_type": "ModelMeasure"
+                },
+
+            ],
+            'created_at': dt.datetime.now().isoformat(),
+            'measure_paths': [
+                'measures'
+            ],
+            'seed_file': 'seeds/empty.osm',
+            'weather_file': 'weather/placeholder.epw'
+        }
+
+        osw['steps'].extend(self.cfg['baseline'].get('measures', []))
+
+        osw['steps'].extend([
+            {
+                "measure_dir_name": "SimulationOutputReport",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "f8e23017-894d-4bdf-977f-37e3961e6f42",
+                "arguments": {
+                    "building_summary_section": True,
+                    "annual_overview_section": True,
+                    "monthly_overview_section": True,
+                    "utility_bills_rates_section": True,
+                    "envelope_section_section": True,
+                    "space_type_breakdown_section": True,
+                    "space_type_details_section": True,
+                    "interior_lighting_section": True,
+                    "plug_loads_section": True,
+                    "exterior_light_section": True,
+                    "water_use_section": True,
+                    "hvac_load_profile": True,
+                    "zone_condition_section": True,
+                    "zone_summary_section": True,
+                    "zone_equipment_detail_section": True,
+                    "air_loops_detail_section": True,
+                    "plant_loops_detail_section": True,
+                    "outdoor_air_section": True,
+                    "cost_summary_section": True,
+                    "source_energy_section": True,
+                    "schedules_overview_section": True
+                },
+                "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "TimeseriesCSVExport",
+                "arguments": {
+                    "reporting_frequency": "Hourly",
+                    "inc_output_variables": False
+                },
+                "measure_type": "ReportingMeasure"
+            }
+        ])
+
+        return osw
