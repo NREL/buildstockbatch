@@ -60,7 +60,7 @@ class CommercialBaseSobolSampler(BuildStockSampler):
         :param csv_path: Where to write the output CSV to - this is deployment dependent
         :return: Absolute path to the output buildstock.csv file
         """
-        sample_number = self.cfg['baseline']['n_samples']
+        sample_number = self.cfg['baseline']['n_datapoints']
         if isinstance(n_datapoints, int):
             sample_number = n_datapoints
         logging.debug('Sampling, n_datapoints={}'.format(sample_number))

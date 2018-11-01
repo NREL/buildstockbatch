@@ -40,7 +40,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
         :param output_path: Path the output csv file should occupy
         :return: Absolute path to the output buildstock.csv file
         """
-        sample_number = self.cfg['baseline']['n_samples']
+        sample_number = self.cfg['baseline']['n_datapoints']
         if isinstance(n_datapoints, int):
             sample_number = n_datapoints
         logging.debug('Loading samples from the project directory')

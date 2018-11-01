@@ -29,7 +29,7 @@ import time
 
 from .base import BuildStockBatchBase
 from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, \
-    CommercialPrecomputedDockerSampler
+    CommercialPrecomputedDockerSampler, CommercialPrecomputedSingularitySampler
 
 
 class PeregrineBatch(BuildStockBatchBase):
@@ -60,7 +60,7 @@ class PeregrineBatch(BuildStockBatchBase):
                 )
             elif sampling_algorithm == 'precomputed':
                 print('calling precomputed commercial sampler')
-                self.sampler = CommercialPrecomputedDockerSampler(
+                self.sampler = CommercialPrecomputedSingularitySampler(
                     self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
