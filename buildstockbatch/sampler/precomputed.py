@@ -49,8 +49,8 @@ class PrecomputedBaseSampler(BuildStockSampler):
             raise RuntimeError('Unable to locate precomputed sampling file at `{}`'.format(sample_filename))
         sample_df = pd.read_csv(sample_filename)
         if sample_df.shape[0] != sample_number:
-            logger.warn('The number of samples requested ({}) and precomputed ({}) do not match. Continuing.').format(
-                sample_number, sample_df.shape[0]
+            logger.warn('The number of samples requested ({}) and precomputed ({}) do not match. Continuing.'.format(
+                sample_number, sample_df.shape[0])
             )
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
