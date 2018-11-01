@@ -150,7 +150,7 @@ class PeregrineBatch(BuildStockBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        print('args are `{}` with env `{}`'.format(args, os.environ))
+        print('args are `{}` with env `{}`'.format(args, env))
         exit(0)
         resp = subprocess.run(
             args,
@@ -190,7 +190,7 @@ class PeregrineBatch(BuildStockBatchBase):
             '-o', os.path.join(self.output_dir, 'postprocessing.out'),
             peregrine_sh
         ]
-        print('args are `{}` with env `{}`'.format(args, os.environ))
+        print('args are `{}` with env `{}`'.format(args, env))
         exit(0)
         subprocess.run(args, env=env)
 
