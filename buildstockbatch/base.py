@@ -219,14 +219,18 @@ class BuildStockBatchBase(object):
             return df[key] == value
 
     def downselect(self):
-        logger.debug('Performing initial sampling to figure out number of samples for downselect')
-        n_samples_init = 350000
-        buildstock_csv_filename = self.run_sampling(n_samples_init)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0)
-        df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
-        downselected_n_samples_init = df_new.shape[0]
-        n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
-        os.remove(buildstock_csv_filename)
+        downselect_resample = self.cfg.get('downselect_resample', True)
+        if downselect_resample:
+            logger.debug('Performing initial sampling to figure out number of samples for downselect')
+            n_samples_init = 350000
+            buildstock_csv_filename = self.run_sampling(n_samples_init)
+            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+            downselected_n_samples_init = df_new.shape[0]
+            n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
+            os.remove(buildstock_csv_filename)
+        else:
+            n_samples = self.cfg['baseline']['n_datapoints']
         buildstock_csv_filename = self.run_sampling(n_samples)
         with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
             with open(buildstock_csv_filename, 'rb') as f_in:
