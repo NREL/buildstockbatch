@@ -74,10 +74,13 @@ class PeregrineBatch(BuildStockBatchBase):
     @property
     def singularity_image(self):
         sys_image_dir = '/projects/res_stock/openstudio_singularity_images'
+        if 'sys_image_dir' in self.cfg.keys():
+            sys_image_dir = self.cfg['sys_image_dir']
         sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
             ver=self.OS_VERSION,
             sha=self.OS_SHA
         ))
+        logging.debug('Singularity image to use is `{}`'.format(sys_image))
         if os.path.isfile(sys_image):
             return sys_image
         else:
