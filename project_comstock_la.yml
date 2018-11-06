@@ -1,9 +1,10 @@
-buildstock_directory: ../comstock-pat  # Relative to this file or absolute
-project_directory: project_comstock_la  # Relative to buildstock_directory
+buildstock_directory: ../la100-comstock  # Relative to this file or absolute
+project_directory: project_la100com  # Relative to buildstock_directory
 weather_files_path: /projects/dsgrid/la100/la100commwf.zip  # Relative to this file or absolute path to zipped weather files
 # weather_files_path: /mnt/la100run/wfs/lawfs.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 4890
+#  n_datapoints: 4890
+  n_datapoints: 24
   n_buildings_represented: 50000
   sampling_algorithm: precomputed
   osw_template: default
