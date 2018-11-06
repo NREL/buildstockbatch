@@ -12,3 +12,6 @@ output_directory: /scratch/hhorsey/la100_res
 stock_type: commercial
 os_sha: la100v0.0
 sys_image_dir: /projects/dsgrid/openstudio_singularity_images
+peregrine:
+  minutes_per_sim: 5
+  allocation: eedr
