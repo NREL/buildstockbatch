@@ -29,7 +29,7 @@ import time
 
 from .base import BuildStockBatchBase
 from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, \
-    CommercialPrecomputedDockerSampler, CommercialPrecomputedSingularitySampler
+    CommercialPrecomputedSingularitySampler
 
 
 class PeregrineBatch(BuildStockBatchBase):
@@ -150,7 +150,7 @@ class PeregrineBatch(BuildStockBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        env['PBS_ARRAYID'] = 1
+        env['PBS_ARRAYID'] = '1'
         print('args are `{}` with env `{}`'.format(args, env))
         resp = subprocess.run(
             args,
