@@ -24,9 +24,10 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
     - Zone Mean Air Humidity Ratio
     - Fan Runtime Fraction
-# downselect:
-#  - not: Heating Fuel|Propane
-#  - Location Region|CR06
+downselect:
+  resample: false
+  logic:
+    - not: Heating Fuel|Natural Gas
 stock_type: residential
 peregrine:
   nodetype: haswell
