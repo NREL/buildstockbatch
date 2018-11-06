@@ -150,8 +150,8 @@ class PeregrineBatch(BuildStockBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
+        env['PBS_ARRAYID'] = 1
         print('args are `{}` with env `{}`'.format(args, env))
-        exit(0)
         resp = subprocess.run(
             args,
             stdout=subprocess.PIPE,
