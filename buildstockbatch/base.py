@@ -237,10 +237,12 @@ class BuildStockBatchBase(object):
                 shutil.copyfileobj(f_in, f_out)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
-        old_index_name = df_new.index.name
-        df_new.index = np.arange(len(df_new)) + 1
-        df_new.index.name = old_index_name
+        if downselect_resample:
+            old_index_name = df_new.index.name
+            df_new.index = np.arange(len(df_new)) + 1
+            df_new.index.name = old_index_name
         df_new.to_csv(buildstock_csv_filename)
+        return buildstock_csv_filename
 
     @staticmethod
     def create_osw(cfg, *args, **kwargs):
