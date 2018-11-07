@@ -338,7 +338,7 @@ class PeregrineBatch(BuildStockBatchBase):
             container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
             runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
         runscript.extend([
-            'openstudio run -w in.osw --debug'
+            'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
         ])
         args.extend([
             singularity_image,
