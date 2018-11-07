@@ -61,7 +61,9 @@ setuptools.setup(
         'joblib',
         'pyarrow>=0.10.0',
         'dask[complete]',
-        'docker'
+        'docker',
+        'awscli',
+        'boto3'
     ],
     extras_require={
         'dev': [

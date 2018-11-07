@@ -27,13 +27,11 @@ from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSam
 logger = logging.getLogger(__name__)
 
 
-class LocalDockerBatch(BuildStockBatchBase):
+class DockerBatchBase(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-        logger.debug('Pulling docker image')
-        self.docker_client.images.pull(self.docker_image())
 
         if self.stock_type == 'residential':
             self.sampler = ResidentialDockerSampler(
@@ -59,6 +57,14 @@ class LocalDockerBatch(BuildStockBatchBase):
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
+
+
+class LocalDockerBatch(DockerBatchBase):
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+        logger.debug('Pulling docker image')
+        self.docker_client.images.pull(self.docker_image())
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):

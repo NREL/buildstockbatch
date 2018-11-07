@@ -33,3 +33,6 @@ peregrine:
   nodetype: haswell
   queue: batch-h
   n_jobs: 200
+aws:
+  s3bucket: buildstockbatch-test
+  prefix: resstock_national_3pwindows
