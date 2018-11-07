@@ -18,10 +18,11 @@ from joblib import Parallel, delayed
 import json
 import logging
 import os
+import pandas as pd
 import shutil
 
-from .base import BuildStockBatchBase
-from .sampler import ResidentialDockerSampler, CommercialSobolSampler
+from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
 
 logger = logging.getLogger(__name__)
 
@@ -104,10 +105,11 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     def run_batch(self, n_jobs=-1):
         if 'downselect' in self.cfg:
-            self.downselect()
+            buildstock_csv_filename = self.downselect()
         else:
-            self.run_sampling()
-        n_datapoints = self.cfg['baseline']['n_datapoints']
+            buildstock_csv_filename = self.run_sampling()
+        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        building_ids = df.index.tolist()
         run_building_d = functools.partial(
             delayed(self.run_building),
             self.project_dir,
@@ -116,10 +118,10 @@ class LocalDockerBatch(BuildStockBatchBase):
             self.results_dir,
             self.cfg
         )
-        baseline_sims = map(run_building_d, range(1, n_datapoints + 1))
+        baseline_sims = map(run_building_d, building_ids)
         upgrade_sims = []
         for i in range(len(self.cfg.get('upgrades', []))):
-            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), range(1, n_datapoints + 1)))
+            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
         all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 

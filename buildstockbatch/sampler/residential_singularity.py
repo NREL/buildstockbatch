@@ -54,7 +54,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
-            '-n', str(self.cfg['baseline']['n_datapoints']),
+            '-n', str(n_datapoints),
             '-o', 'buildstock.csv'
         ]
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)

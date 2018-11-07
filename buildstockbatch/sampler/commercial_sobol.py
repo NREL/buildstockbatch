@@ -50,7 +50,7 @@ class CommercialSobolSampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
-        logging.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
+        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
             if '.tsv' in tsv_file:
@@ -59,7 +59,7 @@ class CommercialSobolSampler(BuildStockSampler):
                 tsv_df[dependency_columns] = tsv_df[dependency_columns].astype('str')
                 tsv_hash[tsv_file.replace('.tsv', '')] = tsv_df
         dependency_hash, attr_order = self._com_order_tsvs(tsv_hash)
-        sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), self.cfg['baseline']['n_samples'])
+        sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), n_datapoints)
         csv_path = os.path.join(self.project_dir, 'buildstock.csv')
         header = 'Building,'
         for item in attr_order:
@@ -74,7 +74,7 @@ class CommercialSobolSampler(BuildStockSampler):
         Parallel(n_jobs=n_jobs, verbose=5)(
             delayed(self._com_execute_sample)(tsv_hash, dependency_hash, attr_order, sample_matrix, index, csv_path,
                                               lock)
-            for index in range(self.cfg['baseline']['n_samples'])
+            for index in range(n_datapoints)
         )
         return csv_path
 

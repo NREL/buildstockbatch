@@ -40,7 +40,7 @@ class ResidentialDockerSampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         """
         docker_client = docker.DockerClient.from_env()
-        logger.debug('Sampling, n_datapoints={}'.format(self.cfg['baseline']['n_datapoints']))
+        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         tick = time.time()
         container_output = docker_client.containers.run(
             self.docker_image,
@@ -48,7 +48,7 @@ class ResidentialDockerSampler(BuildStockSampler):
                 'ruby',
                 'resources/run_sampling.rb',
                 '-p', self.cfg['project_directory'],
-                '-n', str(self.cfg['baseline']['n_datapoints']),
+                '-n', str(n_datapoints),
                 '-o', 'buildstock.csv'
             ],
             remove=True,
