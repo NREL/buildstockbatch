@@ -327,6 +327,7 @@ class PeregrineBatch(BuildStockBatchBase):
             '--pwd', '/var/simdata/openstudio',
             '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
             '-B', '{}:/lib/resources'.format(os.path.join(buildstock_dir, 'resources')),
+            '-B', '{}:/lib/resources-shared'.format(os.path.join(buildstock_dir, 'resources', 'shared')),
             '-B', '{}:/lib/housing_characteristics'.format(os.path.join(output_dir, 'housing_characteristics'))
         ]
         runscript = [
