@@ -2,7 +2,7 @@ buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absol
 project_directory: project_resstock_national  # Relative to buildstock_directory
 output_directory: /scratch/nmerket/resstock_national_3pwindows
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
-weather_files_path: /projects/res_stock/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   n_datapoints: 350000
   n_buildings_represented: 80000000
@@ -24,15 +24,16 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
     - Zone Mean Air Humidity Ratio
     - Fan Runtime Fraction
-downselect:
-  resample: false
-  logic:
-    - not: Heating Fuel|Natural Gas
+# downselect:
+#   resample: false
+#   logic:
+#     - not: Heating Fuel|Natural Gas
 stock_type: residential
 peregrine:
   nodetype: haswell
   queue: batch-h
   n_jobs: 200
 aws:
-  s3bucket: buildstockbatch-test
-  prefix: resstock_national_3pwindows
+  s3:
+    bucket: buildstockbatch-test
+    prefix: resstock_national_3pwindows

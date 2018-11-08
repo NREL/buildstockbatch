@@ -12,12 +12,54 @@ This class contains the object & methods that allow for usage of the library wit
 import argparse
 import base64
 import boto3
+import gzip
+from joblib import Parallel, delayed
 import json
 import logging
+import os
+import pathlib
+import shutil
+import tarfile
+import tempfile
 
 from buildstockbatch.localdocker import DockerBatchBase
 
 logger = logging.getLogger(__name__)
+
+
+def upload_file_to_s3(*args, **kwargs):
+    s3 = boto3.client('s3')
+    s3.upload_file(*args, **kwargs)
+
+
+def upload_directory_to_s3(local_directory, bucket, prefix):
+    local_dir_abs = pathlib.Path(local_directory).absolute()
+
+    def filename_generator():
+        for dirpath, dirnames, filenames in os.walk(local_dir_abs):
+            for filename in filenames:
+                if filename.startswith('.'):
+                    continue
+                local_filepath = pathlib.Path(dirpath, filename)
+                s3_key = pathlib.PurePosixPath(
+                    prefix,
+                    local_filepath.relative_to(local_dir_abs)
+                )
+                yield local_filepath, s3_key
+
+    logger.debug('Uploading {} => {}/{}'.format(local_dir_abs, bucket, prefix))
+
+    Parallel(n_jobs=-1, verbose=9)(
+        delayed(upload_file_to_s3)(str(local_file), bucket, s3_key.as_posix())
+        for local_file, s3_key
+        in filename_generator()
+    )
+
+
+def compress_file(in_filename, out_filename):
+    with gzip.open(str(out_filename), 'wb') as f_out:
+        with open(str(in_filename), 'rb') as f_in:
+            shutil.copyfileobj(f_in, f_out)
 
 
 class AwsBatch(DockerBatchBase):
@@ -27,10 +69,6 @@ class AwsBatch(DockerBatchBase):
 
         self.ecr = boto3.client('ecr')
         self.s3 = boto3.client('s3')
-
-    @property
-    def weather_dir(self):
-        return None
 
     @classmethod
     def docker_image(cls):
@@ -76,7 +114,39 @@ class AwsBatch(DockerBatchBase):
                     last_status = y['status']
 
     def run_batch(self):
-        raise NotImplementedError
+
+        # Generate buildstock.csv
+        if 'downselect' in self.cfg:
+            buildstock_csv_filename = self.downselect()
+        else:
+            buildstock_csv_filename = self.run_sampling()
+
+        # Compress and upload assets to S3
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = pathlib.Path(tmpdir)
+            with tarfile.open(tmppath / 'assets.tar.gz', 'x:gz') as tar_f:
+                project_path = pathlib.Path(self.project_dir)
+                buildstock_path = pathlib.Path(self.buildstock_dir)
+                tar_f.add(buildstock_path / 'measures', 'measures')
+                tar_f.add(buildstock_path / 'resources', 'lib/resources')
+                tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
+                tar_f.add(project_path / 'seeds', 'seeds')
+                tar_f.add(project_path / 'weather', 'weather')
+            weather_path = tmppath / 'weather'
+            os.makedirs(weather_path)
+            Parallel(n_jobs=-1, verbose=9)(
+                delayed(compress_file)(
+                    pathlib.Path(self.weather_dir) / epw_filename,
+                    str(weather_path / epw_filename) + '.gz'
+                )
+                for epw_filename
+                in filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir))
+            )
+            upload_directory_to_s3(
+                tmppath,
+                self.cfg['aws']['s3']['bucket'],
+                self.cfg['aws']['s3']['prefix']
+            )
 
 
 if __name__ == '__main__':
@@ -115,5 +185,4 @@ if __name__ == '__main__':
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = AwsBatch(args.project_filename)
-    print(batch.container_repo)
-    batch.push_image()
+    batch.run_batch()
