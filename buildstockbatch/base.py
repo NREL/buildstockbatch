@@ -224,24 +224,30 @@ class BuildStockBatchBase(object):
             return df[key] == value
 
     def downselect(self):
-        logger.debug('Performing initial sampling to figure out number of samples for downselect')
-        n_samples_init = 350000
-        buildstock_csv_filename = self.run_sampling(n_samples_init)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0)
-        df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
-        downselected_n_samples_init = df_new.shape[0]
-        n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
-        os.remove(buildstock_csv_filename)
+        downselect_resample = self.cfg['downselect'].get('resample', True)
+        if downselect_resample:
+            logger.debug('Performing initial sampling to figure out number of samples for downselect')
+            n_samples_init = 350000
+            buildstock_csv_filename = self.run_sampling(n_samples_init)
+            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+            downselected_n_samples_init = df_new.shape[0]
+            n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
+            os.remove(buildstock_csv_filename)
+        else:
+            n_samples = self.cfg['baseline']['n_datapoints']
         buildstock_csv_filename = self.run_sampling(n_samples)
         with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
             with open(buildstock_csv_filename, 'rb') as f_in:
                 shutil.copyfileobj(f_in, f_out)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
-        df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
-        old_index_name = df_new.index.name
-        df_new.index = np.arange(len(df_new)) + 1
-        df_new.index.name = old_index_name
+        df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
+        if downselect_resample:
+            old_index_name = df_new.index.name
+            df_new.index = np.arange(len(df_new)) + 1
+            df_new.index.name = old_index_name
         df_new.to_csv(buildstock_csv_filename)
+        return buildstock_csv_filename
 
     @staticmethod
     def create_osw(cfg, *args, **kwargs):
@@ -298,7 +304,5 @@ class BuildStockBatchBase(object):
 
         logger.debug('Saving as csv')
         df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
-        logger.debug('Saving as feather')
-        df.reset_index().to_feather(os.path.join(results_dir, 'results.feather'))
         logger.debug('Saving as parquet')
         df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')

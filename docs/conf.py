@@ -24,9 +24,9 @@ copyright = '2018, Noel Merket (NREL)'
 author = 'Noel Merket (NREL)'
 
 # The short X.Y version
-version = '0.2'
+version = '0.4'
 # The full version, including alpha/beta/rc tags
-release = '0.2'
+release = '0.4'
 
 
 # -- General configuration ---------------------------------------------------

@@ -64,6 +64,7 @@ class CommercialBaseSobolSampler(BuildStockSampler):
         if isinstance(n_datapoints, int):
             sample_number = n_datapoints
         logging.debug('Sampling, n_datapoints={}'.format(sample_number))
+
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
             if '.tsv' in tsv_file:

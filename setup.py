@@ -60,7 +60,6 @@ setuptools.setup(
         'pandas',
         'joblib',
         'pyarrow>=0.10.0',
-        'feather-format',
         'dask[complete]',
         'docker'
     ],

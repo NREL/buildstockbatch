@@ -19,6 +19,7 @@ import json
 import logging
 import math
 import os
+import pandas as pd
 import random
 import re
 import requests
@@ -27,8 +28,8 @@ import shlex
 import subprocess
 import time
 
-from .base import BuildStockBatchBase
-from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, \
+from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, \
     CommercialPrecomputedSingularitySampler
 
 
@@ -199,10 +200,12 @@ class PeregrineBatch(BuildStockBatchBase):
 
     def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h', allocation='res_stock', minutes_per_sim=3):
         if 'downselect' in self.cfg:
-            self.downselect()
+            buildstock_csv_filename = self.downselect()
         else:
-            self.run_sampling()
-        n_datapoints = self.cfg['baseline']['n_datapoints']
+            buildstock_csv_filename = self.run_sampling()
+        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        building_ids = df.index.tolist()
+        n_datapoints = len(building_ids)
         n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
         # This is the maximum number of jobs we'll submit for this batch
@@ -210,8 +213,8 @@ class PeregrineBatch(BuildStockBatchBase):
         # Have at least 48 simulations per job
         n_sims_per_job = max(n_sims_per_job, 48)
 
-        baseline_sims = zip(range(1, n_datapoints + 1), itertools.repeat(None))
-        upgrade_sims = itertools.product(range(1, n_datapoints + 1), range(len(self.cfg.get('upgrades', []))))
+        baseline_sims = zip(building_ids, itertools.repeat(None))
+        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
         all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
