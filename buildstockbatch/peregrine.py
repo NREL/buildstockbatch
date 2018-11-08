@@ -154,7 +154,6 @@ class PeregrineBatch(BuildStockBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        env['PBS_ARRAYID'] = '1'
         print('args are `{}` with env `{}`'.format(args, env))
         resp = subprocess.run(
             args,
@@ -195,7 +194,6 @@ class PeregrineBatch(BuildStockBatchBase):
             peregrine_sh
         ]
         print('args are `{}` with env `{}`'.format(args, env))
-        exit(0)
         subprocess.run(args, env=env)
 
     def run_batch(self, n_jobs=200, nodetype='haswell', queue='batch-h', allocation='res_stock', minutes_per_sim=3):
@@ -288,7 +286,7 @@ class PeregrineBatch(BuildStockBatchBase):
             self.cfg
         )
         tick = time.time()
-        with Parallel(n_jobs=1, verbose=9) as parallel:
+        with Parallel(n_jobs=-1, verbose=9) as parallel:
             parallel(itertools.starmap(run_building_d, args['batch']))
         tick = time.time() - tick
         logging.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
