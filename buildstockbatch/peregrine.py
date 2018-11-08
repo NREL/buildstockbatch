@@ -344,6 +344,9 @@ class PeregrineBatch(BuildStockBatchBase):
             singularity_image,
             'bash', '-x'
         ])
+        env = {}
+        env.update(os.environ)
+        env.pop('LANG', None)
         logging.debug(' '.join(args))
         with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
             try:
@@ -353,7 +356,8 @@ class PeregrineBatch(BuildStockBatchBase):
                     input='\n'.join(runscript).encode('utf-8'),
                     stdout=f_out,
                     stderr=subprocess.STDOUT,
-                    cwd=output_dir
+                    cwd=output_dir,
+                    env=env
                 )
             except subprocess.CalledProcessError:
                 pass
