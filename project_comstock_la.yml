@@ -13,8 +13,7 @@ stock_type: commercial
 os_sha: la100v0.1
 sys_image_dir: /projects/dsgrid/openstudio_singularity_images
 peregrine:
-  minutes_per_sim: 9
+  minutes_per_sim: 5
   allocation: eedr
-  n_jobs: 50
+  n_jobs: 10
   queue: batch-h
-  
