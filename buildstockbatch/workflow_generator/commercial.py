@@ -36,7 +36,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     "measure_dir_name": "BuildExistingModel",
                     "arguments": {
                         "number_of_buildings_represented": 1,
-                        "building_id": 28
+                        "building_id": int(building_id)
                     },
                     "measure_type": "ModelMeasure"
                 },
