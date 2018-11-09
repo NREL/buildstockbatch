@@ -15,6 +15,7 @@ from dask.distributed import Client
 import datetime as dt
 import gzip
 import json
+from json.decoder import JSONDecodeError
 import logging
 import math
 import numpy as np
@@ -71,7 +72,7 @@ def read_out_osw(filename):
     try:
         with open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError):
+    except (FileNotFoundError, NotADirectoryError, JSONDecodeError):
         return None
     else:
         out_d = {}
