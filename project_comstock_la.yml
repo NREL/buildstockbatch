@@ -3,8 +3,7 @@ project_directory: project_la100com  # Relative to buildstock_directory
 weather_files_path: /projects/dsgrid/la100/la100commwf.zip  # Relative to this file or absolute path to zipped weather files
 # weather_files_path: /mnt/la100run/wfs/lawfs.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-#  n_datapoints: 4890
-  n_datapoints: 24
+  n_datapoints: 4890
   n_buildings_represented: 50000
   sampling_algorithm: precomputed
   osw_template: default
@@ -16,3 +15,6 @@ sys_image_dir: /projects/dsgrid/openstudio_singularity_images
 peregrine:
   minutes_per_sim: 9
   allocation: eedr
+  n_jobs: 50
+  queue: batch-h
+  
