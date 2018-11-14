@@ -29,6 +29,12 @@ import tarfile
 import tempfile
 
 from buildstockbatch.localdocker import DockerBatchBase
+from buildstockbatch.base import (
+    read_data_point_out_json,
+    to_camelcase,
+    flatten_datapoint_json,
+    read_out_osw
+)
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +100,9 @@ class AwsBatch(DockerBatchBase):
         return repo
 
     def push_image(self):
+        """
+        Push the locally built docker image to the AWS docker repo
+        """
         auth_token = self.ecr.get_authorization_token()
         dkr_user, dkr_pass = base64.b64decode(auth_token['authorizationData'][0]['authorizationToken']).\
             decode('ascii').split(':')
@@ -114,11 +123,19 @@ class AwsBatch(DockerBatchBase):
             except json.JSONDecodeError:
                 continue
             else:
-                if y.get('status') != last_status:
+                if y.get('status') is not None and y.get('status') != last_status:
                     logger.debug(y['status'])
                     last_status = y['status']
 
     def run_batch(self):
+        """
+        Run a batch of simulations using AWS Batch
+
+        This will
+            - perform the sampling
+            - package and upload the assets, including weather
+            - kick off a batch simulation on AWS
+        """
 
         # Generate buildstock.csv
         if 'downselect' in self.cfg:
@@ -186,6 +203,8 @@ class AwsBatch(DockerBatchBase):
                 self.cfg['aws']['s3']['bucket'],
                 self.cfg['aws']['s3']['prefix']
             )
+
+        # TODO: Setup Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix):
@@ -264,6 +283,20 @@ class AwsBatch(DockerBatchBase):
                         str(pathlib.Path(prefix, 'results', sim_id, filepath.relative_to(sim_dir)))
                     )
 
+            logger.debug('Writing output data to Firehose')
+            datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
+            out_osw_filepath = sim_dir / 'out.osw'
+            if os.path.isfile(out_osw_filepath):
+                out_osw = read_out_osw(out_osw_filepath)
+                dp_out = flatten_datapoint_json(read_data_point_out_json(datapoint_out_filepath))
+                if dp_out is None:
+                    dp_out = {}
+                dp_out.update(out_osw)
+                dp_out['_id'] = sim_id
+                for key in dp_out.keys():
+                    dp_out[to_camelcase(key)] = dp_out.pop(key)
+                # TODO: write dp_out to firehose
+
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
                 if os.path.isdir(item):
@@ -314,4 +347,5 @@ if __name__ == '__main__':
         parser.add_argument('project_filename')
         args = parser.parse_args()
         batch = AwsBatch(args.project_filename)
+        batch.push_image()
         batch.run_batch()
