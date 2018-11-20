@@ -55,7 +55,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
         else:
-            shutil.copy(os.path.abspath(sample_filename), os.path.abspath(output_path))
+            shutil.copyfile(os.path.abspath(sample_filename), os.path.abspath(output_path))
             return os.path.abspath(output_path)
 
     def run_sampling(self, n_datapoints=None):

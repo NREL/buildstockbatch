@@ -1,17 +1,17 @@
 buildstock_directory: ../la100-comstock  # Relative to this file or absolute
 project_directory: project_la100com  # Relative to buildstock_directory
-weather_files_path: /projects/dsgrid/la100/la100commwf.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: /projects/eedr/weather_zips/com_init_epws.zip  # Relative to this file or absolute path to zipped weather files
 # weather_files_path: /mnt/la100run/wfs/lawfs.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   n_datapoints: 4890
   n_buildings_represented: 50000
   sampling_algorithm: precomputed
   osw_template: default
-output_directory: /scratch/hhorsey/la100_res
+output_directory: /projects/eedr/la100
 # output_directory: /Users/hhorsey/Desktop/temp_resstock_results
 stock_type: commercial
 os_sha: la100v0.1
-sys_image_dir: /projects/dsgrid/openstudio_singularity_images
+sys_image_dir: /projects/eedr/singularity_images
 peregrine:
   minutes_per_sim: 5
   allocation: eedr
