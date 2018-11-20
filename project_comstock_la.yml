@@ -6,8 +6,9 @@ baseline:
   n_datapoints: 4890
   n_buildings_represented: 50000
   sampling_algorithm: precomputed
+  precomputed_sample: /projects/eedr/la100_round_1/samples/buildstock.csv
   osw_template: default
-output_directory: /projects/eedr/la100
+output_directory: /projects/eedr/la100_round_1/reference_2015/
 # output_directory: /Users/hhorsey/Desktop/temp_resstock_results
 stock_type: commercial
 os_sha: la100v0.1

@@ -40,11 +40,13 @@ class PrecomputedBaseSampler(BuildStockSampler):
         :param output_path: Path the output csv file should occupy
         :return: Absolute path to the output buildstock.csv file
         """
-        sample_number = self.cfg['baseline']['n_datapoints']
+        sample_number = self.cfg['baseline'].get('n_datapoints', 25000)
         if isinstance(n_datapoints, int):
             sample_number = n_datapoints
         logging.debug('Loading samples from the project directory')
-        sample_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        sample_filename = self.cfg['baseline'].get('precomputed_sample', None)
+        if not sample_filename:
+            sample_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
         if not os.path.isfile(sample_filename):
             raise RuntimeError('Unable to locate precomputed sampling file at `{}`'.format(sample_filename))
         sample_df = pd.read_csv(sample_filename)
