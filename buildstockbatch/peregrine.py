@@ -371,7 +371,7 @@ class PeregrineBatch(BuildStockBatchBase):
                     except FileNotFoundError:
                         pass
 
-                cls.cleanup_sim_dir(sim_dir)
+                cls.cleanup_sim_dir(sim_dir, cfg['peregrine'].get('allocation', 'eedr'))
 
     def get_dask_client(self):
         cl = LocalCluster(local_dir=os.path.join(self.output_dir, 'dask_worker_space'))

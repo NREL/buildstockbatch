@@ -13,6 +13,7 @@ This is the base class mixed into the deployment specific classes (i.e. peregrin
 import dask.bag as db
 from dask.distributed import Client
 import datetime as dt
+from glob import glob
 import gzip
 import json
 from json.decoder import JSONDecodeError
@@ -260,7 +261,7 @@ class BuildStockBatchBase(object):
         return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir):
+    def cleanup_sim_dir(sim_dir, allocation):
 
         # Convert the timeseries data to parquet
         timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
@@ -281,6 +282,14 @@ class BuildStockBatchBase(object):
         reports_dir = os.path.join(sim_dir, 'reports')
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir)
+
+        # Set permissions and allocation ownership
+        to_modify = [y for x in os.walk(sim_dir) for y in glob(os.path.join(x[0], '*.*'))]
+        try:
+            _ = [os.chmod(file, 0o664) for file in to_modify]
+            _ = [shutil.chown(file, group=allocation) for file in to_modify]
+        except:
+            logger.warn('Unable to chmod/chown results of simulation in directory {}'.format(sim_dir))
 
     def get_dask_client(self):
         return Client()
