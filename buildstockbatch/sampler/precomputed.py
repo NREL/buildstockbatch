@@ -55,7 +55,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
                 sample_number, sample_df.shape[0])
             )
         shutil.copyfile(os.path.abspath(sample_filename), os.path.join(os.path.dirname(os.path.abspath(output_path)),
-                                                                       'housing_characteristics'))
+                                                                       'housing_characteristics', 'buildstock.csv'))
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
         else:
