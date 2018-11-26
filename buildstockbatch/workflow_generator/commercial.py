@@ -47,12 +47,19 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 'measures'
             ],
             'seed_file': 'seeds/empty.osm',
-            'weather_file': 'weather/placeholder.epw'
+            'weather_file': 'weather/CA_LOS-ANGELES-DOWNTOWN-USC_722874S_12.epw'
         }
 
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
         osw['steps'].extend([
+            {
+                "measure_dir_name": "saturate_internal_load_design_day_schedules",
+                "arguments": {
+                    "saturate_load_profiles": True
+                },
+                "measure_type": "ModelMeasure"
+            },
             {
                 "measure_dir_name": "SimulationOutputReport",
                 "arguments": {},
