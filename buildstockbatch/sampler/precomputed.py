@@ -54,7 +54,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
             logger.warn('The number of samples requested ({}) and precomputed ({}) do not match. Continuing.'.format(
                 sample_number, sample_df.shape[0])
             )
-        shutil.copyfile(os.path.abspath(sample_filename), os.path.join(os.path.abspath(output_path),
+        shutil.copyfile(os.path.abspath(sample_filename), os.path.join(os.path.dirname(os.path.abspath(output_path)),
                                                                        'housing_characteristics'))
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
