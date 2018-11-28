@@ -146,6 +146,7 @@ class PeregrineBatch(BuildStockBatchBase):
             '-A', allocation,
             '-l', 'feature={}'.format(nodetype),
             '-l', 'walltime={}'.format(walltime),
+            '-l', 'qos=high',
             '-N', 'buildstock',
             '-t', array_spec,
             '-o', os.path.join(self.output_dir, 'job.out'),
