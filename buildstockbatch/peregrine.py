@@ -65,7 +65,7 @@ class PeregrineBatch(BuildStockBatchBase):
 
     @property
     def singularity_image(self):
-        sys_image_dir = '/projects/res_stock/openstudio_singularity_images'
+        sys_image_dir = '/projects/enduse/openstudio_singularity_images'
         sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
             ver=self.OS_VERSION,
             sha=self.OS_SHA
@@ -113,6 +113,18 @@ class PeregrineBatch(BuildStockBatchBase):
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
+        return []
+
+        def array_id_generator(array_spec):
+            for array_group in array_spec.split(','):
+                array_range = tuple(map(int, array_group.split('-')))
+                if len(array_range) == 1:
+                    yield array_range[0]
+                else:
+                    assert(len(array_range) == 2)
+                    for x in range(array_range[0], array_range[1] + 1):
+                        yield x
+
         nodes_per_nodetype = {
             '16core': 16,
             '64GB': 24,
@@ -127,38 +139,45 @@ class PeregrineBatch(BuildStockBatchBase):
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
         peregrine_sh = os.path.join(here, 'peregrine.sh')
-        args = [
-            'qsub',
-            '-v', 'PROJECTFILE',
-            '-q', queue,
-            '-A', allocation,
-            '-l', 'feature={}'.format(nodetype),
-            '-l', 'walltime={}'.format(walltime),
-            '-N', 'buildstock',
-            '-t', array_spec,
-            '-o', os.path.join(self.output_dir, 'job.out'),
-            peregrine_sh
-        ]
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        resp = subprocess.run(
-            args,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            env=env,
-            encoding='utf-8'
-        )
-        try:
-            resp.check_returncode()
-        except subprocess.CalledProcessError as ex:
-            print(ex.stderr)
-            raise
-        jobid = resp.stdout.strip()
-        logging.debug('Job id: ' + jobid)
-        return jobid
+        job_ids = []
+        for array_id in array_id_generator(array_spec):
+            args = [
+                'qsub',
+                '-v', 'PROJECTFILE,PBS_ARRAYID',
+                '-q', queue,
+                '-A', allocation,
+                '-l', 'feature={}'.format(nodetype),
+                '-l', 'walltime={}'.format(walltime),
+                '-N', 'buildstock-{}'.format(array_id),
+                '-o', os.path.join(self.output_dir, 'job.out-{}'.format(array_id)),
+                peregrine_sh
+            ]
+            env['PBS_ARRAYID'] = str(array_id)
+            resp = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                env=env,
+                encoding='utf-8'
+            )
+            try:
+                resp.check_returncode()
+            except subprocess.CalledProcessError as ex:
+                print(ex.stderr)
+                raise
+            jobid = resp.stdout.strip()
+            job_ids.append(jobid)
+            logging.debug('Job id: ' + jobid)
+        with open(os.path.join(self.output_dir, 'job_ids.txt'), 'w') as f:
+            for jobid in job_ids:
+                f.write('{}\n'.format(jobid))
+        return job_ids
 
-    def _queue_post_processing(self, after_jobid, allocation):
+    def _queue_post_processing(self, after_jobids, allocation):
+
         # Queue up post processing
         here = os.path.dirname(os.path.abspath(__file__))
         peregrine_sh = os.path.join(here, 'peregrine.sh')
@@ -171,12 +190,12 @@ class PeregrineBatch(BuildStockBatchBase):
         args = [
             'qsub',
             '-v', 'PROJECTFILE,POSTPROCESS',
-            '-W', 'depend=afterokarray:{}'.format(after_jobid),
+            '-W', 'depend=afterok:{}'.format(','.join(after_jobids)),
             '-q', 'bigmem',
             '-A', allocation,
             '-l', 'feature=256GB',
             '-l', 'walltime=1:30:00',
-            '-N', 'buildstock_post',
+            '-N', 'buildstock-post',
             '-o', os.path.join(self.output_dir, 'postprocessing.out'),
             peregrine_sh
         ]
@@ -215,9 +234,9 @@ class PeregrineBatch(BuildStockBatchBase):
                     'batch': batch,
                 }, f, indent=4)
 
-        jobid = self._queue_jobs(n_sims_per_job, minutes_per_sim, '1-{}'.format(i - 1), queue, nodetype, allocation)
+        jobids = self._queue_jobs(n_sims_per_job, minutes_per_sim, '1-{}'.format(i - 1), queue, nodetype, allocation)
 
-        self._queue_post_processing(jobid, allocation)
+        self._queue_post_processing(jobids, allocation)
 
     def pick_up_where_left_off(self):
         jobs_to_restart = []
@@ -246,7 +265,7 @@ class PeregrineBatch(BuildStockBatchBase):
         peregrine_cfg = self.cfg.get('peregrine', {})
         allocation = peregrine_cfg.get('allocation', 'res_stock')
 
-        jobid = self._queue_jobs(
+        jobids = self._queue_jobs(
             n_sims_per_job,
             peregrine_cfg.get('minutes_per_sim', 3),
             ','.join(map(str, jobs_to_restart)),
@@ -255,7 +274,7 @@ class PeregrineBatch(BuildStockBatchBase):
             allocation
         )
 
-        self._queue_post_processing(jobid, allocation)
+        self._queue_post_processing(jobids, allocation)
 
     def run_job_batch(self, job_array_number):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
