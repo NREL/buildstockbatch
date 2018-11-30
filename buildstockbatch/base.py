@@ -173,7 +173,7 @@ class BuildStockBatchBase(object):
                     self.cfg['buildstock_directory']
                 )
             )
-        logger.debug('buildstock_dir = {}'.format(d))
+        # logger.debug('buildstock_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
 
@@ -182,7 +182,7 @@ class BuildStockBatchBase(object):
         d = os.path.abspath(
             os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         )
-        logger.debug('project_dir = {}'.format(d))
+        # logger.debug('project_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
 

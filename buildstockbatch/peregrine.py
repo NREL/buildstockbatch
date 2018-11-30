@@ -125,8 +125,6 @@ class PeregrineBatch(BuildStockBatchBase):
 
     def _queue_jobs(self, n_sims_per_job, minutes_per_sim, array_spec, queue, nodetype, allocation):
 
-        return []
-
         def array_id_generator(array_spec):
             for array_group in array_spec.split(','):
                 array_range = tuple(map(int, array_group.split('-')))
