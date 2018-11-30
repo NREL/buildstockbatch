@@ -199,7 +199,7 @@ class PeregrineBatch(BuildStockBatchBase):
         args = [
             'qsub',
             '-v', 'PROJECTFILE,POSTPROCESS',
-            '-W', 'depend=afterok:{}'.format(','.join(after_jobids)),
+            '-W', 'depend=afterok:{}'.format(':'.join(after_jobids)),
             '-q', 'bigmem',
             '-A', allocation,
             '-l', 'feature=256GB',
