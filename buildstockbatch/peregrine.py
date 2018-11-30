@@ -12,13 +12,15 @@ This class contains the object & methods that allow for usage of the library wit
 
 import argparse
 import json
-import logging
+import logging as logging_
 import math
 import os
 import re
 import subprocess
 
 from .hpc import HPCBatchBase
+
+logger = logging_.getLogger(__name__)
 
 
 class PeregrineBatch(HPCBatchBase):
@@ -97,7 +99,7 @@ class PeregrineBatch(HPCBatchBase):
                 raise
             jobid = resp.stdout.strip()
             job_ids.append(jobid)
-            logging.debug('Job id: ' + jobid)
+            logger.debug('Job id: {}'.format(jobid))
         with open(os.path.join(self.output_dir, 'job_ids.txt'), 'w') as f:
             for jobid in job_ids:
                 f.write('{}\n'.format(jobid))
@@ -170,7 +172,7 @@ class PeregrineBatch(HPCBatchBase):
 
 
 def main():
-    logging.config.dictConfig({
+    logging_.config.dictConfig({
         'version': 1,
         'disable_existing_loggers': True,
         'formatters': {

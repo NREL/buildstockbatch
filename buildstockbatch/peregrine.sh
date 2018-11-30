@@ -7,4 +7,4 @@
 module load conda singularity-container
 source activate buildstock
 
-time buildstock_peregrine "$PROJECTFILE"
+time python -u -m buildstockbatch.peregrine "$PROJECTFILE"

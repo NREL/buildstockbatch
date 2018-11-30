@@ -76,7 +76,6 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
-            'buildstock_peregrine=buildstockbatch.peregrine:main'
         ]
     },
     cmdclass={'test': PyTest},
