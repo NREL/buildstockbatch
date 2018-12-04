@@ -11,6 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
+from dask.distributed import Client, LocalCluster
 import json
 import logging as logging_
 import math
@@ -27,6 +28,7 @@ class PeregrineBatch(HPCBatchBase):
 
     sys_image_dir = '/projects/enduse/openstudio_singularity_images'
     hpc_name = 'peregrine'
+    min_sims_per_job = 48
 
     @property
     def output_dir(self):
@@ -169,6 +171,10 @@ class PeregrineBatch(HPCBatchBase):
         )
 
         self.queue_post_processing(jobids, allocation)
+
+    def get_dask_client(self):
+        cl = LocalCluster(local_dir=os.path.join(self.output_dir, 'dask_worker_space'))
+        return Client(cl)
 
 
 def main():

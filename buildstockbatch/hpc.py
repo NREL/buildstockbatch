@@ -36,6 +36,7 @@ class HPCBatchBase(BuildStockBatchBase):
 
     sys_image_dir = None
     hpc_name = None
+    min_sims_per_job = None
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
@@ -121,9 +122,7 @@ class HPCBatchBase(BuildStockBatchBase):
 
         # This is the maximum number of jobs we'll submit for this batch
         n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
-        # Have at least 48 simulations per job
-        # TODO: does this work everywhere?
-        n_sims_per_job = max(n_sims_per_job, 48)
+        n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
         baseline_sims = zip(building_ids, itertools.repeat(None))
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
@@ -245,11 +244,10 @@ class HPCBatchBase(BuildStockBatchBase):
                 cls.cleanup_sim_dir(sim_dir)
 
     def get_dask_client(self):
-        cl = LocalCluster(local_dir=os.path.join(self.output_dir, 'dask_worker_space'))
-        return Client(cl)
-    
+        raise NotImplementedError
+
     def queue_jobs(self, array_ids=None):
         raise NotImplementedError
-    
+
     def queue_post_processing(self, after_jobids):
         raise NotImplementedError
