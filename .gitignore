@@ -3,3 +3,5 @@ __pycache__
 .idea
 docs/_build
 dask-worker-space
+venv/*
+*.DS_Store

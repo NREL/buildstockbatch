@@ -27,6 +27,8 @@ import shutil
 import subprocess
 import tarfile
 import tempfile
+import re
+import time
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import (
@@ -74,13 +76,558 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
+class AwsBatchEnv():
+
+    def __init__(self, job_name, s3_bucket, s3_prefix, use_spot=True):
+        self.job_name = job_name
+        self.s3_bucket = s3_bucket
+        # TODO should build in more controls for names to comply with AWS standards:
+        self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
+        self.use_spot = use_spot
+        # AWS clients
+        self.session = boto3.Session(profile_name='nrel-aws-dev')
+        self.batch = self.session.client('batch', region_name='us-west-2')
+        self.iam = self.session.client('iam', region_name='us-west-2')
+        # Naming conventions
+        self.compute_environment_name = f"computeenvionment{self.job_identifier}"
+        self.job_queue_name = f"job_queue_{self.job_identifier}"
+        self.service_role_name = f"batch_service_role_{self.job_identifier}"
+        self.instance_role_name = f"batch_instance_role_{self.job_identifier}"
+        self.instance_profile_name = f"batch_instance_profile_{self.job_identifier}"
+        self.spot_service_role_name = f"spot_fleet_role_{self.job_identifier}"
+        self.task_role_name = f"ecs_task_role_{self.job_identifier}"
+        self.task_policy_name = f"ecs_task_policy_{self.job_identifier}"
+        # Bucket information
+        self.s3_bucket_arn = "arn:aws:s3:::{self.s3_bucket}"
+        self.s3_prefix = s3_prefix
+        # These are populated by functions below - although there is no controller the order of operation is reflected by order in the file.
+        self.task_role_arn = None
+        self.job_definition_arn = None
+        self.instance_role_arn = None
+        self.spot_service_role_arn = None
+        self.service_role_arn = None
+        self.instance_profile_arn = None
+
+    def __repr__(self):
+
+        return f"""
+The following objects compose the environment to support the Batch run for {self.job_name}:
+Job Definition Name: {self.job_identifier}
+Compute Environment: {self.compute_environment_name}
+Job Queue Name: {self.job_queue_name}
+Batch Service Role Name: {self.service_role_name}
+Instance Role Name: {self.instance_role_name}
+Instance Profile Name: {self.instance_profile_name}
+Spot Fleet Service Role (if use_spot): {self.spot_service_role_name}
+Task Role Name: {self.task_role_name}
+Task Role Policy Name: {self.task_policy_name}
+"""
+
+    def generate_name_value_inputs(self, var_dictionary):
+        """
+        Helper to properly format more easily used dictionaries.
+        :param var_dictionary: a dictionary of key/values to be transformed
+        :return: list of dictionaries in name: and value: outputs
+        """
+        name_vals = []
+        for k, v in var_dictionary.items():
+            name_vals.append(dict(name=k, value=v))
+        return name_vals
+
+    def create_batch_service_roles(self):
+        """
+        Creates the IAM roles used in the various areas of the batch service. This currently will not try to overwrite or update existing roles.
+        """
+
+        # Service Role
+        trust_policy = '''{
+                "Version": "2012-10-17",
+                "Statement": [{
+                    "Effect": "Allow",
+                    "Principal": {
+                        "Service": "batch.amazonaws.com"
+                    },
+                    "Action": "sts:AssumeRole"
+                }]
+            }
+        '''
+
+        try:
+
+            response = self.iam.create_role(
+                Path='/',
+                RoleName=self.service_role_name,
+                AssumeRolePolicyDocument=trust_policy,
+                Description=f"Service role for Batch environment {self.job_identifier}",
+                Tags=[
+                    {
+                        'Key': 'job',
+                        'Value': self.job_name
+                    },
+                ]
+            )
+            self.service_role_arn = response['Role']['Arn']
+
+            response = self.iam.attach_role_policy(
+                PolicyArn='arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole',
+                RoleName=self.service_role_name
+            )
+
+            logger.info('Service Role created')
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('Service Role not created - already exists')
+                response = self.iam.get_role(
+                    RoleName=self.service_role_name
+                )
+                self.service_role_arn = response['Role']['Arn']
+
+            else:
+                logger.error(str(e))
+
+        ## Instance Role
+
+        instance_trust_policy = '''{
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }]
+                    }
+                '''
+
+        try:
+            response = self.iam.create_role(
+                Path='/',
+                RoleName=self.instance_role_name,
+                AssumeRolePolicyDocument=instance_trust_policy,
+                Description=f"Instance role for Batch environment {self.job_identifier}",
+                Tags=[
+                    {
+                        'Key': 'job',
+                        'Value': self.job_name
+                    },
+                ]
+            )
+
+            self.instance_role_arn = response['Role']['Arn']
+
+            response = self.iam.attach_role_policy(
+                PolicyArn='arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role',
+                RoleName=self.instance_role_name
+            )
+
+            logger.info('ECS Instance Role created')
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('ECS Instance Role not created - already exists')
+                response = self.iam.get_role(
+                    RoleName=self.instance_role_name
+                )
+                self.instance_role_arn = response['Role']['Arn']
+
+        # Instance Profile
+        try:
+            response = self.iam.create_instance_profile(
+                InstanceProfileName=self.instance_profile_name
+            )
+
+            self.instance_profile_arn = response['InstanceProfile']['Arn']
+
+            logger.info("Instance Profile created")
+
+            response = self.iam.add_role_to_instance_profile(
+                InstanceProfileName=self.instance_profile_name,
+                RoleName=self.instance_role_name
+            )
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('ECS Instance Profile not created - already exists')
+                response = self.iam.get_instance_profile(
+                    InstanceProfileName=self.instance_profile_name
+                )
+                self.instance_profile_arn = response['InstanceProfile']['Arn']
+
+        # ECS Task Policy
+        ecs_task_trust_policy = '''{
+                                "Version": "2012-10-17",
+                                "Statement": [{
+                                    "Effect": "Allow",
+                                    "Principal": {
+                                        "Service": "ecs-tasks.amazonaws.com"
+                                    },
+                                    "Action": "sts:AssumeRole"
+                                }]
+                            }
+                        '''
+
+        try:
+            response = self.iam.create_role(
+                Path='/',
+                RoleName=self.task_role_name,
+                AssumeRolePolicyDocument=ecs_task_trust_policy,
+                Description=f"ECS Task role for Batch environment {self.job_identifier}",
+                Tags=[
+                    {
+                        'Key': 'job',
+                        'Value': self.job_name
+                    },
+                ]
+            )
+
+            self.task_role_arn = response['Role']['Arn']
+
+            # TODO: slim this down
+            task_permissions_policy = f'''{{
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {{
+                            "Sid": "VisualEditor0",
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:PutAnalyticsConfiguration",
+                                "s3:GetObjectVersionTagging",
+                                "s3:CreateBucket",
+                                "s3:ReplicateObject",
+                                "s3:GetObjectAcl",
+                                "s3:DeleteBucketWebsite",
+                                "s3:PutLifecycleConfiguration",
+                                "s3:GetObjectVersionAcl",
+                                "s3:PutObjectTagging",
+                                "s3:DeleteObject",
+                                "s3:GetIpConfiguration",
+                                "s3:DeleteObjectTagging",
+                                "s3:GetBucketWebsite",
+                                "s3:PutReplicationConfiguration",
+                                "s3:DeleteObjectVersionTagging",
+                                "s3:GetBucketNotification",
+                                "s3:PutBucketCORS",
+                                "s3:GetReplicationConfiguration",
+                                "s3:ListMultipartUploadParts",
+                                "s3:PutObject",
+                                "s3:GetObject",
+                                "s3:PutBucketNotification",
+                                "s3:PutBucketLogging",
+                                "s3:GetAnalyticsConfiguration",
+                                "s3:GetObjectVersionForReplication",
+                                "s3:GetLifecycleConfiguration",
+                                "s3:ListBucketByTags",
+                                "s3:GetInventoryConfiguration",
+                                "s3:GetBucketTagging",
+                                "s3:PutAccelerateConfiguration",
+                                "s3:DeleteObjectVersion",
+                                "s3:GetBucketLogging",
+                                "s3:ListBucketVersions",
+                                "s3:ReplicateTags",
+                                "s3:RestoreObject",
+                                "s3:ListBucket",
+                                "s3:GetAccelerateConfiguration",
+                                "s3:GetBucketPolicy",
+                                "s3:PutEncryptionConfiguration",
+                                "s3:GetEncryptionConfiguration",
+                                "s3:GetObjectVersionTorrent",
+                                "s3:AbortMultipartUpload",
+                                "s3:PutBucketTagging",
+                                "s3:GetBucketRequestPayment",
+                                "s3:GetObjectTagging",
+                                "s3:GetMetricsConfiguration",
+                                "s3:DeleteBucket",
+                                "s3:PutBucketVersioning",
+                                "s3:ListBucketMultipartUploads",
+                                "s3:PutMetricsConfiguration",
+                                "s3:PutObjectVersionTagging",
+                                "s3:GetBucketVersioning",
+                                "s3:GetBucketAcl",
+                                "s3:PutInventoryConfiguration",
+                                "s3:PutIpConfiguration",
+                                "s3:GetObjectTorrent",
+                                "s3:PutBucketWebsite",
+                                "s3:PutBucketRequestPayment",
+                                "s3:GetBucketCORS",
+                                "s3:GetBucketLocation",
+                                "s3:ReplicateDelete",
+                                "s3:GetObjectVersion"
+                            ],
+                            "Resource": [
+                                "{self.s3_bucket_arn}",
+                                "{self.s3_bucket_arn}/*"
+                            ]
+                        }},
+                        {{
+                            "Sid": "VisualEditor1",
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:ListAllMyBuckets",
+                                "s3:HeadBucket"
+                            ],
+                            "Resource": "*"
+                        }}
+                    ]
+                }}'''
+
+            response = self.iam.put_role_policy(
+                RoleName=self.task_role_name,
+                PolicyName=self.task_policy_name,
+                PolicyDocument=task_permissions_policy
+            )
+
+            logger.info('ECS Task Role created')
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('ECS Task Role not created - already exists')
+                response = self.iam.get_role(
+                    RoleName=self.task_role_name
+                )
+
+                self.task_role_arn = response['Role']['Arn']
+            else:
+                logger.error(str(e))
+
+        if self.use_spot:
+            # Spot Fleet Role
+            trust_policy = '''{
+                            "Version": "2012-10-17",
+                            "Statement": [{
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Service": "spotfleet.amazonaws.com"
+                                },
+                                "Action": "sts:AssumeRole"
+                            }]
+                        }
+                    '''
+            try:
+                response = self.iam.create_role(
+                    Path='/',
+                    RoleName=self.spot_service_role_name,
+                    AssumeRolePolicyDocument=trust_policy,
+                    Description=f"Service role for Batch spot fleets for environment {self.job_identifier}",
+                    Tags=[
+                        {
+                            'Key': 'job',
+                            'Value': self.job_name
+                        },
+                    ]
+                )
+
+                self.spot_service_role_arn = response['Role']['Arn']
+
+                response = self.iam.attach_role_policy(
+                    PolicyArn='arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole',
+                    RoleName=self.spot_service_role_name
+                )
+
+                logger.info('Spot Fleet Service Role created')
+
+            except Exception as e:
+                if 'EntityAlreadyExists' in str(e):
+                    logger.info('Spot Fleet Service Role not created - already exists')
+                    response = self.iam.get_role(
+                        RoleName=self.spot_service_role_name
+                    )
+
+                    self.spot_service_role_arn = response['Role']['Arn']
+                else:
+                    logger.error(str(e))
+
+    def create_compute_environment(self, subnets, security_groups, use_spot=True, maxCPUs=10000):
+        """
+        Creates a compute environment suffixed with the job name
+        :param subnets: list of subnet IDs
+        :param security_groups: list of security group IDs
+        :param maxCPUs: numeric value for max VCPUs for the envionment
+
+        """
+        # Trying to accomodate a list or a string here:
+        if not isinstance(security_groups, list):
+            security_groups = [security_groups]
+
+        if len(subnets) != len(set(subnets)):
+            raise ValueError("There are duplicate subnets listed.  Please correct and resubmit.")
+
+        if len(security_groups) != len(set(security_groups)):
+            raise ValueError("There are duplicate security groups listed.  Please correct and resubmit.")
+
+        if self.use_spot:
+            type = 'SPOT'
+            try:
+                response = self.batch.create_compute_environment(
+                    computeEnvironmentName=self.compute_environment_name,
+                    type='MANAGED',
+                    state='ENABLED',
+                    computeResources={
+                        'type': type,
+                        'minvCpus': 0,
+                        'maxvCpus': maxCPUs,
+                        'desiredvCpus': 0,
+                        'instanceTypes': [
+                            'optimal',
+                        ],
+                        'subnets': subnets,
+                        'securityGroupIds': security_groups,
+                        # 'ec2KeyPair': key_pair,
+                        'instanceRole': self.instance_role_arn,
+                        'bidPercentage': 100,
+                        'spotIamFleetRole': self.spot_service_role_arn
+                    },
+                    serviceRole=self.service_role_arn
+                )
+
+                logger.info('Service Role created')
+
+            except Exception as e:
+                if 'Object already exists' in str(e):
+                    logger.info('Compute environment not created - already exists')
+                else:
+                    logger.error(str(e))
+
+        else:
+            type = 'EC2'
+            try:
+                response = self.batch.create_compute_environment(
+                    computeEnvironmentName=self.compute_environment_name,
+                    type='MANAGED',
+                    state='ENABLED',
+                    computeResources={
+                        'type': type,
+                        'minvCpus': 0,
+                        'maxvCpus': maxCPUs,
+                        'desiredvCpus': 0,
+                        'instanceTypes': [
+                            'optimal',
+                        ],
+                        'subnets': subnets,
+                        'securityGroupIds': security_groups,
+                        # 'ec2KeyPair': key_pair,
+                        'instanceRole': self.instance_profile_arn
+                    },
+                    serviceRole=self.service_role_arn
+                )
+
+                logger.info('Service Role created')
+
+            except Exception as e:
+                if 'Object already exists' in str(e):
+                    logger.info('Compute environment not created - already exists')
+                else:
+                    logger.error(str(e))
+
+    def create_job_queue(self):
+        """
+        Creates a job queue based on the Batch environment definition
+        """
+        go = True
+        while go:
+            try:
+                response = self.batch.create_job_queue(
+                    jobQueueName=self.job_queue_name,
+                    state='ENABLED',
+                    priority=1,
+                    computeEnvironmentOrder=[
+                        {
+                            'order': 1,
+                            'computeEnvironment': self.compute_environment_name
+                        },
+                    ]
+                )
+
+                logger.info('Job queue created')
+                go = False
+
+            except Exception as e:
+                if 'Object already exists' in str(e):
+                    logger.info('Job queue not created - already exists')
+                    go = False
+
+                elif 'is not valid' in str(e):
+                    # Need to wait a second for the compute environment to complete registration
+                    logger.error(
+                        '5 second sleep initiated to wait for compute environment creation due to error: ' + str(e))
+                    time.sleep(5)
+
+                else:
+                    logger.error(str(e))
+                    go = False
+
+    def create_job_definition(self, docker_image, vcpus, memory, command, env_vars):
+        """
+        Creates a job definition to run in the Batch environment.  This will create a new version with every execution.
+        :param docker_image: The image ID from the related ECR enviornment
+        :param vcpus: Numeric value of the vcpus dedicated to each container
+        :param memory: Numeric value of the memory MBs dedicated to each container
+        :param command: Command to run in the container
+        :param env_vars: Dictionary of key/value environment variables to include in the job
+        """
+        response = self.batch.register_job_definition(
+            jobDefinitionName=self.job_identifier,
+            type='container',
+            # parameters={
+            #    'string': 'string'
+            # },
+            containerProperties={
+                'image': docker_image,
+                'vcpus': vcpus,
+                'memory': memory,
+                'command': command,
+                'jobRoleArn': self.task_role_arn,
+                'environment': self.generate_name_value_inputs(env_vars)
+            }
+        )
+
+        self.job_definition_arn = response['jobDefinitionArn']
+
+    def submit_job(self, array_size=4):
+        """
+        Submits the created job definition and version to be run.
+        """
+        go = True
+        while go:
+            try:
+                response = self.batch.submit_job(
+                    jobName=self.job_identifier,
+                    jobQueue=self.job_queue_name,
+                    arrayProperties={
+                        'size': array_size
+                    },
+                    jobDefinition=self.job_definition_arn
+                )
+
+                go = False
+
+                logger.info(f"Job {self.job_identifier} submitted.")
+
+            except Exception as e:
+
+                if 'not in VALID state' in str(e):
+                    # Need to wait a second for the compute environment to complete registration
+                    logger.error('5 second sleep initiated to wait for job queue creation due to error: ' + str(e))
+                    time.sleep(5)
+                else:
+                    logger.error(str(e))
+                    go = False
+
+
 class AwsBatch(DockerBatchBase):
 
-    def __init__(self, project_filename):
+    def __init__(self, project_filename, s3_bucket, s3_prefix, array_size, subnet, security_group, use_spot):
         super().__init__(project_filename)
 
         self.ecr = boto3.client('ecr')
         self.s3 = boto3.client('s3')
+        self.job_name = re.sub('[^0-9a-zA-Z]+', '_', project_filename)
+        self.s3_bucket = s3_bucket
+        self.s3_bucket_prefix = s3_prefix
+        self.batch_env_subnet = subnet
+        self.batch_env_use_spot = use_spot
+        self.array_size = array_size
+        self.security_group = security_group
 
     @classmethod
     def docker_image(cls):
@@ -104,7 +651,7 @@ class AwsBatch(DockerBatchBase):
         Push the locally built docker image to the AWS docker repo
         """
         auth_token = self.ecr.get_authorization_token()
-        dkr_user, dkr_pass = base64.b64decode(auth_token['authorizationData'][0]['authorizationToken']).\
+        dkr_user, dkr_pass = base64.b64decode(auth_token['authorizationData'][0]['authorizationToken']). \
             decode('ascii').split(':')
         repo_url = self.container_repo['repositoryUri']
         registry_url = 'https://' + repo_url.split('/')[0]
@@ -204,7 +751,31 @@ class AwsBatch(DockerBatchBase):
                 self.cfg['aws']['s3']['prefix']
             )
 
-        # TODO: Setup Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
+        # TODO: Review Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
+
+        batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix)
+        logging.info(
+            "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
+
+        batch_env.create_batch_service_roles()
+
+        logger.debug(str(batch_env))
+
+
+
+        batch_env.create_compute_environment([self.batch_env_subnet], self.security_group, self.batch_env_use_spot)
+
+        batch_env.create_job_queue()
+
+        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix)
+
+        batch_env.create_job_definition(
+            '246460460343.dkr.ecr.us-west-2.amazonaws.com/nrel/buildstockbatch:latest',
+            command=['python3', '/buildstock-batch/buildstockbatch/aws.py'], vcpus=1,
+            memory=1024,
+            env_vars=env_vars
+        )
+        batch_env.submit_job(self.array_size)
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix):
@@ -283,7 +854,7 @@ class AwsBatch(DockerBatchBase):
                         str(pathlib.Path(prefix, 'results', sim_id, filepath.relative_to(sim_dir)))
                     )
 
-            logger.debug('Writing output data to Firehose')
+            #logger.debug('Writing output data to Firehose')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
             out_osw_filepath = sim_dir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
@@ -345,7 +916,14 @@ if __name__ == '__main__':
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
+        parser.add_argument('s3_bucket_name')
+        parser.add_argument('s3_prefix')
+        parser.add_argument('array_size', type=int)
+        parser.add_argument('subnet_id')
+        parser.add_argument('security_group_id')
+        parser.add_argument('use_spot_instances', type=bool)
         args = parser.parse_args()
-        batch = AwsBatch(args.project_filename)
+        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.array_size, args.subnet_id,
+                         args.security_group_id, args.use_spot_instances)
         batch.push_image()
         batch.run_batch()
