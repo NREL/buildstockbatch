@@ -40,7 +40,6 @@ from buildstockbatch.base import (
 
 logger = logging.getLogger(__name__)
 
-
 def upload_file_to_s3(*args, **kwargs):
     s3 = boto3.client('s3')
     s3.upload_file(*args, **kwargs)
@@ -98,7 +97,7 @@ class AwsBatchEnv():
         self.task_role_name = f"ecs_task_role_{self.job_identifier}"
         self.task_policy_name = f"ecs_task_policy_{self.job_identifier}"
         # Bucket information
-        self.s3_bucket_arn = "arn:aws:s3:::{self.s3_bucket}"
+        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_prefix = s3_prefix
         # These are populated by functions below - although there is no controller the order of operation is reflected by order in the file.
         self.task_role_arn = None
@@ -118,6 +117,7 @@ Job Queue Name: {self.job_queue_name}
 Batch Service Role Name: {self.service_role_name}
 Instance Role Name: {self.instance_role_name}
 Instance Profile Name: {self.instance_profile_name}
+Instance Profile ARN:  {self.instance_profile_arn}
 Spot Fleet Service Role (if use_spot): {self.spot_service_role_name}
 Task Role Name: {self.task_role_name}
 Task Role Policy Name: {self.task_policy_name}
@@ -371,6 +371,7 @@ Task Role Policy Name: {self.task_policy_name}
                     ]
                 }}'''
 
+
             response = self.iam.put_role_policy(
                 RoleName=self.task_role_name,
                 PolicyName=self.task_policy_name,
@@ -473,7 +474,7 @@ Task Role Policy Name: {self.task_policy_name}
                         'subnets': subnets,
                         'securityGroupIds': security_groups,
                         # 'ec2KeyPair': key_pair,
-                        'instanceRole': self.instance_role_arn,
+                        'instanceRole': self.instance_profile_arn,
                         'bidPercentage': 100,
                         'spotIamFleetRole': self.spot_service_role_arn
                     },
@@ -760,8 +761,6 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_batch_service_roles()
 
         logger.debug(str(batch_env))
-
-
 
         batch_env.create_compute_environment([self.batch_env_subnet], self.security_group, self.batch_env_use_spot)
 
