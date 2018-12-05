@@ -83,9 +83,12 @@ def read_out_osw(filename):
             'completed_at',
             'completed_status'
         ]
-        for key in keys_to_copy:
-            out_d[key] = d[key]
-        return out_d
+        try:
+            for key in keys_to_copy:
+                out_d[key] = d[key]
+            return out_d
+        except KeyError:
+            return None
 
 
 class BuildStockBatchBase(object):
