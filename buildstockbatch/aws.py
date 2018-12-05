@@ -75,6 +75,263 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
+class AwsFirehose():
+
+    logger.propagate = False
+
+    def __init__(self, job_name, s3_bucket, s3_bucket_prefix):
+        """
+        Initializes the Firehose configuration.
+        :param job_name:
+        :param s3_bucket:
+        """
+
+        self.session = boto3.Session(region_name='us-west-2')
+        self.firehose = self.session.client('firehose')
+        self.iam = self.session.client('iam')
+        self.s3 = self.session.client('s3')
+
+        self.job_name = job_name
+        self.job_identifier = self.job_name.replace(' ', '_')
+        self.s3_bucket = s3_bucket
+        self.s3_bucket_prefix = s3_bucket_prefix
+        self.s3_results_bucket = f"{self.s3_bucket}-result"
+        self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_results_bucket}"
+        self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
+        self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_results_backup_bucket}"
+        self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
+        self.firehose_name = f"{self.job_identifier}_firehose"
+        self.firehose_role_policy_name = f"{self.job_identifier}_firehose_delivery_policy"
+        # Initialize with create_firehose_delivery_role
+        self.firehose_role_arn = None
+
+    def __repr__(self):
+
+        return f"""
+The following objects compose the environment to support the Firehose collection for {self.job_name}:
+Job Definition Name: {self.job_identifier}
+Firehose: {self.firehose_name}
+s3 Results Bucket: {self.s3_results_bucket}
+s3 Backup Bucket: {self.s3_results_backup_bucket}
+Firehose Role Name: {self.firehose_role}
+
+"""
+
+    def create_firehose_delivery_role(self):
+        """
+        Generate the firehose role with permissions to the endpoints - in this case cloudwatch and project s3 buckets.
+        """
+
+        # Service Role
+        trust_policy = '''{
+                       "Version": "2012-10-17",
+                       "Statement": [{
+                           "Effect": "Allow",
+                           "Principal": {
+                               "Service": "firehose.amazonaws.com"
+                           },
+                           "Action": "sts:AssumeRole"
+                       }]
+                   }
+               '''
+
+        try:
+
+            response = self.iam.create_role(
+                Path='/',
+                RoleName=self.firehose_role,
+                AssumeRolePolicyDocument=trust_policy,
+                Description=f"Service role for Firehose support {self.job_identifier}",
+                Tags=[
+                    {
+                        'Key': 'job',
+                        'Value': self.job_name
+                    },
+                ]
+            )
+            self.firehose_role_arn = response['Role']['Arn']
+
+            delivery_role_policy = f'''{{
+                "Version": "2012-10-17",
+                "Statement": [
+                    {{
+                        "Sid": "S3AllowForFH",
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:AbortMultipartUpload",
+                            "s3:GetBucketLocation",
+                            "s3:GetObject",
+                            "s3:ListBucket",
+                            "s3:ListBucketMultipartUploads",
+                            "s3:PutObject"
+                        ],
+                        "Resource": [
+                            "{self.s3_results_bucket_arn}",
+                            "{self.s3_results_bucket_arn}/*",
+                            "{self.s3_results_backup_bucket_arn}",
+                            "{self.s3_results_backup_bucket_arn}/*"
+                        ]
+                    }},
+
+                    {{
+                        "Sid": "CWAllowForCW",
+                        "Effect": "Allow",
+                        "Action": [
+                            "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                            "arn:aws:logs:us-west-2:246460460343:log-group:/aws/kinesisfirehose/{self.job_name}:*:*",
+                            "arn:aws:logs:us-west-2:246460460343:log-group:/aws/kinesisfirehose/{self.job_name}:*:*"
+                        ]
+                    }}    
+                ]
+            }}'''
+
+            response = self.iam.put_role_policy(
+                RoleName=self.firehose_role,
+                PolicyName=self.firehose_role_policy_name,
+                PolicyDocument=delivery_role_policy
+            )
+
+            logger.info('Firehose Service Role created')
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('Service Role not created - already exists')
+                response = self.iam.get_role(
+                    RoleName=self.firehose_role
+                )
+                self.firehose_role_arn = response['Role']['Arn']
+
+            else:
+                logger.error(str(e))
+
+    def create_firehose_buckets(self):
+        """
+        Creates the output and backup buckets for the data.
+        Failed processing stream events will land in the backup.
+        """
+        try:
+
+            self.s3.create_bucket(
+                Bucket=self.s3_results_bucket,
+                CreateBucketConfiguration={
+                    'LocationConstraint': self.session.region_name
+                }
+            )
+
+        except Exception as e:
+
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'Bucket {self.s3_results_bucket}  not created - already exists')
+
+            else:
+                logger.error(str(e))
+
+        try:
+
+            self.s3.create_bucket(
+                Bucket=self.s3_results_backup_bucket,
+                CreateBucketConfiguration={
+                    'LocationConstraint': self.session.region_name
+                }
+            )
+        except Exception as e:
+
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'Bucket {self.s3_results_backup_bucket} not created - already exists')
+
+            else:
+                logger.error(str(e))
+
+    def create_firehose(self):
+        """
+        Creates a simple firehose with S3 endpoints in AWS and waits for success.
+        """
+        try:
+            response = self.firehose.create_delivery_stream(
+                DeliveryStreamName=self.firehose_name,
+                DeliveryStreamType='DirectPut',
+                ExtendedS3DestinationConfiguration={
+                    'RoleARN': self.firehose_role_arn,
+                    'BucketARN': self.s3_results_bucket_arn,
+                    'Prefix': self.s3_bucket_prefix,
+                    'BufferingHints': {
+                        'SizeInMBs': 128,
+                        'IntervalInSeconds': 900
+                    },
+                    'CompressionFormat': 'GZIP',
+                    'CloudWatchLoggingOptions': {
+                        'Enabled': True,
+                        'LogGroupName': self.job_name,
+                        'LogStreamName': self.s3_results_bucket
+                    },
+
+                    'S3BackupMode': 'Enabled',
+                    'S3BackupConfiguration': {
+                        'RoleARN': self.firehose_role_arn,
+                        'BucketARN': self.s3_results_backup_bucket_arn,
+                        'Prefix': self.s3_bucket_prefix,
+                        'BufferingHints': {
+                            'SizeInMBs': 128,
+                            'IntervalInSeconds': 900
+                        },
+                        'CompressionFormat': 'GZIP',
+
+                        'CloudWatchLoggingOptions': {
+                            'Enabled': True,
+                            'LogGroupName': self.job_name,
+                            'LogStreamName': self.s3_results_backup_bucket
+                        }
+                    },
+                },
+
+                Tags=[
+                    {
+                        'Key': 'batch_job',
+                        'Value': self.job_name
+                    },
+                ]
+            )
+        except Exception as e:
+            if 'ResourceInUseException' in str(e):
+                logger.info('Firehose stream operation in progress...')
+
+        logger.info('Waiting for firehose delivery stream creation')
+
+        while 1 == 1:
+            time.sleep(5)
+            try:
+                # We need to give it a second to start
+
+                response = self.firehose.describe_delivery_stream(
+                    DeliveryStreamName=self.firehose_name,
+                    Limit=1
+                )
+            except Exception as e:
+                if 'ResourceNotFoundException' in str(e):
+                    logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
+                    time.sleep(5)
+
+            if response['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
+                logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
+                break
+
+    def put_record(self, data):
+        """
+        :param data: dictionary of data to record in the firehose
+        """
+        try:
+            response = self.firehose.put_record(
+                DeliveryStreamName=self.firehose_name,
+                Record={
+                    'Data': json.dumps(data)
+                }
+            )
+        except Exception as e:
+            logger.debug(str(e))
+
+
 class AwsBatchEnv():
 
     def __init__(self, job_name, s3_bucket, s3_prefix, use_spot=True):
@@ -84,9 +341,9 @@ class AwsBatchEnv():
         self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
         self.use_spot = use_spot
         # AWS clients
-        self.session = boto3.Session(profile_name='nrel-aws-dev')
-        self.batch = self.session.client('batch', region_name='us-west-2')
-        self.iam = self.session.client('iam', region_name='us-west-2')
+        self.session = boto3.Session(region_name='us-west-2')
+        self.batch = self.session.client('batch')
+        self.iam = self.session.client('iam')
         # Naming conventions
         self.compute_environment_name = f"computeenvionment{self.job_identifier}"
         self.job_queue_name = f"job_queue_{self.job_identifier}"
@@ -106,6 +363,8 @@ class AwsBatchEnv():
         self.spot_service_role_arn = None
         self.service_role_arn = None
         self.instance_profile_arn = None
+
+        logger.propagate = False
 
     def __repr__(self):
 
@@ -617,7 +876,7 @@ Task Role Policy Name: {self.task_policy_name}
 
 class AwsBatch(DockerBatchBase):
 
-    def __init__(self, project_filename, s3_bucket, s3_prefix, array_size, subnet, security_group, use_spot):
+    def __init__(self, project_filename, s3_bucket, s3_prefix, array_size, region, subnet, security_group, use_spot):
         super().__init__(project_filename)
 
         self.ecr = boto3.client('ecr')
@@ -629,6 +888,7 @@ class AwsBatch(DockerBatchBase):
         self.batch_env_use_spot = use_spot
         self.array_size = array_size
         self.security_group = security_group
+        self.region = region
 
     @classmethod
     def docker_image(cls):
@@ -754,19 +1014,25 @@ class AwsBatch(DockerBatchBase):
 
         # TODO: Review Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
 
+        # Define the batch environment
         batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix)
         logging.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
 
-        batch_env.create_batch_service_roles()
-
+        # Review config
         logger.debug(str(batch_env))
 
+        # Create the service roles for this batch environment
+        batch_env.create_batch_service_roles()
+
+        # Create the compute envionrment for the environment
         batch_env.create_compute_environment([self.batch_env_subnet], self.security_group, self.batch_env_use_spot)
 
+        # Create the associated job queue and associate the compute environment
         batch_env.create_job_queue()
 
-        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix)
+        # Pass through config for the Docker containers
+        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_name, REGION=self.region)
 
         batch_env.create_job_definition(
             '246460460343.dkr.ecr.us-west-2.amazonaws.com/nrel/buildstockbatch:latest',
@@ -774,10 +1040,27 @@ class AwsBatch(DockerBatchBase):
             memory=1024,
             env_vars=env_vars
         )
+
+        # Initialize the firehose environment and try to create it
+        firehose_env = AwsFirehose(self.job_name, self.s3_bucket, self.s3_bucket_prefix)
+
+        # Review the config
+        logger.debug(str(firehose_env))
+
+        # Create the associated role with S3 permissions
+        firehose_env.create_firehose_delivery_role()
+
+        # Create the buckets for the firehose
+        firehose_env.create_firehose_buckets()
+
+        # Create the firehose
+        firehose_env.create_firehose()
+
+        # Once the firehose delivery stream is running we submit the job
         batch_env.submit_job(self.array_size)
 
     @classmethod
-    def run_job(cls, job_id, bucket, prefix):
+    def run_job(cls, job_id, bucket, prefix, job_name, region):
         """
         Run a few simulations inside a container.
 
@@ -785,8 +1068,14 @@ class AwsBatch(DockerBatchBase):
         go get the necessary files from S3, run the simulation, and post the
         results back to S3.
         """
+
+        logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
+        firehose = boto3.client('firehose', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
+
+        firehose_name = f"{job_name.replace(' ', '_')}_firehose"
+
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
@@ -853,7 +1142,7 @@ class AwsBatch(DockerBatchBase):
                         str(pathlib.Path(prefix, 'results', sim_id, filepath.relative_to(sim_dir)))
                     )
 
-            #logger.debug('Writing output data to Firehose')
+            logger.debug('Writing output data to Firehose')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
             out_osw_filepath = sim_dir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
@@ -866,6 +1155,20 @@ class AwsBatch(DockerBatchBase):
                 for key in dp_out.keys():
                     dp_out[to_camelcase(key)] = dp_out.pop(key)
                 # TODO: write dp_out to firehose
+
+                try:
+                    response = firehose.put_record(
+                        DeliveryStreamName=firehose_name,
+                        Record={
+                            'Data': json.dumps(dp_out)
+                        }
+                    )
+                    logger.info(response)
+
+                except Exception as e:
+                    logger.error(str(e))
+
+
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
@@ -911,18 +1214,21 @@ if __name__ == '__main__':
         job_id = int(os.environ['AWS_BATCH_JOB_ARRAY_INDEX'])
         s3_bucket = os.environ['S3_BUCKET']
         s3_prefix = os.environ['S3_PREFIX']
-        AwsBatch.run_job(job_id, s3_bucket, s3_prefix)
+        job_name = os.environ['JOB_NAME']
+        region = os.environ['REGION']
+        AwsBatch.run_job(job_id, s3_bucket, s3_prefix, job_name, region)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
         parser.add_argument('s3_bucket_name')
         parser.add_argument('s3_prefix')
         parser.add_argument('array_size', type=int)
+        parser.add_argument('region')
         parser.add_argument('subnet_id')
         parser.add_argument('security_group_id')
         parser.add_argument('use_spot_instances', type=bool)
         args = parser.parse_args()
-        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.array_size, args.subnet_id,
+        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.array_size, args.region, args.subnet_id,
                          args.security_group_id, args.use_spot_instances)
         batch.push_image()
         batch.run_batch()
