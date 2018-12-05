@@ -95,7 +95,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             {
                 "measure_dir_name": "TimeseriesCSVExport",
                 "arguments": {
-                    "reporting_frequency": "Hourly",
+                    "reporting_frequency": "Timestep",
                     "inc_output_variables": False
                 },
                 "measure_type": "ReportingMeasure"
