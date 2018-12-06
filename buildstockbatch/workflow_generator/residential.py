@@ -36,7 +36,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 {
                     'measure_dir_name': 'ResidentialSimulationControls',
                     'arguments': {
-                        'timesteps_per_hr': 6,
+                        'timesteps_per_hr': 4,
                         'begin_month': 1,
                         'begin_day_of_month': 1,
                         'end_month': 12,
