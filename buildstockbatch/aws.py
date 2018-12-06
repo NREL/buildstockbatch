@@ -75,6 +75,7 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
+
 class AwsFirehose():
 
     logger.propagate = False
@@ -102,8 +103,10 @@ class AwsFirehose():
         self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
         self.firehose_name = f"{self.job_identifier}_firehose"
         self.firehose_role_policy_name = f"{self.job_identifier}_firehose_delivery_policy"
+        self.firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
         # Initialize with create_firehose_delivery_role
         self.firehose_role_arn = None
+        self.firehose_arn = None
 
     def __repr__(self):
 
@@ -194,6 +197,7 @@ Firehose Role Name: {self.firehose_role}
             )
 
             logger.info('Firehose Service Role created')
+
 
         except Exception as e:
             if 'EntityAlreadyExists' in str(e):
@@ -293,6 +297,7 @@ Firehose Role Name: {self.firehose_role}
                     },
                 ]
             )
+
         except Exception as e:
             if 'ResourceInUseException' in str(e):
                 logger.info('Firehose stream operation in progress...')
@@ -313,9 +318,37 @@ Firehose Role Name: {self.firehose_role}
                     logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
                     time.sleep(5)
 
+            # If this fails there is an issue with creation
             if response['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
+                self.firehose_arn = response['DeliveryStreamDescription']['DeliveryStreamARN']
                 logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
                 break
+
+    def add_firehose_task_permissions(self, task_role):
+        delivery_role_policy = f'''{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Sid": "TaskFH",
+                    "Effect": "Allow",
+                    "Action": [
+                        "firehose:PutRecord"
+                    ],
+                    "Resource": [
+                        "{self.firehose_arn}"
+                    ]
+                }}
+            ]
+        }}'''
+
+        response = self.iam.put_role_policy(
+            RoleName=task_role,
+            PolicyName=self.firehost_task_policy_name,
+            PolicyDocument=delivery_role_policy
+        )
+
+
+
 
     def put_record(self, data):
         """
@@ -1056,6 +1089,8 @@ class AwsBatch(DockerBatchBase):
         # Create the firehose
         firehose_env.create_firehose()
 
+        firehose_env.add_firehose_task_permissions(batch_env.task_role_name)
+
         # Once the firehose delivery stream is running we submit the job
         batch_env.submit_job(self.array_size)
 
@@ -1144,7 +1179,7 @@ class AwsBatch(DockerBatchBase):
 
             logger.debug('Writing output data to Firehose')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
-            out_osw_filepath = sim_dir / 'out.osw'
+            out_osw_filepath = sim_d. ir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
                 out_osw = read_out_osw(out_osw_filepath)
                 dp_out = flatten_datapoint_json(read_data_point_out_json(datapoint_out_filepath))
