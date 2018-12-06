@@ -36,7 +36,7 @@ def read_data_point_out_json(filename):
     try:
         with open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError):
+    except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
         return None
     else:
         d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
@@ -71,7 +71,7 @@ def read_out_osw(filename):
     try:
         with open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError):
+    except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
         return None
     else:
         out_d = {}
