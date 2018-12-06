@@ -16,6 +16,7 @@ import json
 import os
 import logging
 import math
+import pathlib
 import re
 import subprocess
 
@@ -71,31 +72,33 @@ class EagleBatch(HPCBatchBase):
             '--time={}'.format(walltime),
             '--export=PROJECTFILE',
             '--array={}'.format(array_spec),
-            '--output="{}"'.format(os.path.join(self.output_dir, 'job.out-%a')),
-            '--job-name=buildstock',
+            '--output=job.out-%a',
+            '--job-name=bstk',
             eagle_sh
         ]
         if account:
             args.insert(1, '--account={}'.format(account))
+        logger.debug(' '.join(args))
         resp = subprocess.run(
             args,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             env=env,
-            encoding='utf-8'
+            encoding='utf-8',
+            cwd=self.output_dir
         )
         try:
             resp.check_returncode()
         except subprocess.CalledProcessError as ex:
             logger.error(ex.stderr)
             raise
+        for line in resp.stdout.split('\n'):
+            logger.debug('sbatch:' + line)
         m = re.search(r'Submitted batch job (\d+)', resp.stdout)
         if not m:
             logger.error('Did not receive job id back from sbatch:')
-            for line in resp.stdout.split('\n'):
-                logger.error('    ' + line)
             raise RuntimeError('Didn\'t receive job id back from sbatch')
-        job_id = int(m.group(1))
+        job_id = m.group(1)
         return [job_id]
 
     def queue_post_processing(self, after_jobids):
@@ -118,8 +121,8 @@ class EagleBatch(HPCBatchBase):
             '--export=PROJECTFILE,POSTPROCESS',
             '--dependency=afterok:{}'.format(':'.join(after_jobids)),
             '--mem=184000',
-            '--job-name=buildstock-post',
-            '--output="{}"'.format(os.path.join(self.output_dir, 'postprocessing.out')),
+            '--job-name=bstkpost',
+            '--output=postprocessing.out',
             eagle_sh
         ]
         if account:
@@ -130,7 +133,8 @@ class EagleBatch(HPCBatchBase):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             env=env,
-            encoding='utf-8'
+            encoding='utf-8',
+            cwd=self.output_dir
         )
         for line in resp.stdout.split('\n'):
             logger.debug('sbatch: {}'.format(line))
