@@ -1179,7 +1179,7 @@ class AwsBatch(DockerBatchBase):
 
             logger.debug('Writing output data to Firehose')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
-            out_osw_filepath = sim_d. ir / 'out.osw'
+            out_osw_filepath = sim_dir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
                 out_osw = read_out_osw(out_osw_filepath)
                 dp_out = flatten_datapoint_json(read_data_point_out_json(datapoint_out_filepath))
@@ -1195,10 +1195,10 @@ class AwsBatch(DockerBatchBase):
                     response = firehose.put_record(
                         DeliveryStreamName=firehose_name,
                         Record={
-                            'Data': json.dumps(dp_out)
+                            'Data': json.dumps(dp_out) + '\n'
                         }
                     )
-                    logger.info(response)
+                    #logger.info(response)
 
                 except Exception as e:
                     logger.error(str(e))
