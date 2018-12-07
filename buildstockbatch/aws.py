@@ -1066,8 +1066,12 @@ class AwsBatch(DockerBatchBase):
         # Pass through config for the Docker containers
         env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_name, REGION=self.region)
 
+        image_url = 'https://{}:latest'.format(
+            self.container_repo['repositoryUri']
+        )
+
         batch_env.create_job_definition(
-            '246460460343.dkr.ecr.us-west-2.amazonaws.com/nrel/buildstockbatch:latest',
+            image_url,
             command=['python3', '/buildstock-batch/buildstockbatch/aws.py'], vcpus=1,
             memory=1024,
             env_vars=env_vars
