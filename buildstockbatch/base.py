@@ -237,6 +237,8 @@ class BuildStockBatchBase(object):
                 shutil.copyfileobj(f_in, f_out)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
+        if len(df_new.index) == 0:
+            raise RuntimeError('There are no buildings left after the down select!')
         if downselect_resample:
             old_index_name = df_new.index.name
             df_new.index = np.arange(len(df_new)) + 1
