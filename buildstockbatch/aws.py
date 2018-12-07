@@ -909,18 +909,18 @@ Task Role Policy Name: {self.task_policy_name}
 
 class AwsBatch(DockerBatchBase):
 
-    def __init__(self, project_filename, s3_bucket, s3_prefix, region, subnet, security_group, use_spot):
+    def __init__(self, project_filename):
         super().__init__(project_filename)
 
         self.ecr = boto3.client('ecr')
         self.s3 = boto3.client('s3')
         self.job_name = re.sub('[^0-9a-zA-Z]+', '_', project_filename)
-        self.s3_bucket = s3_bucket
-        self.s3_bucket_prefix = s3_prefix
-        self.batch_env_subnet = subnet
-        self.batch_env_use_spot = use_spot
-        self.security_group = security_group
-        self.region = region
+        self.s3_bucket = self.cfg['aws']['s3']['bucket']
+        self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix']
+        self.batch_env_subnet = self.cfg['aws']['subnet']
+        self.batch_env_use_spot = self.cfg['aws']['use_spot']
+        self.security_group = self.cfg['aws']['security_group']
+        self.region = self.cfg['aws']['region']
 
     @classmethod
     def docker_image(cls):
@@ -1110,7 +1110,6 @@ class AwsBatch(DockerBatchBase):
 
         firehose_name = f"{job_name.replace(' ', '_')}_firehose"
 
-
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
         s3.download_file(bucket, '{}/assets.tar.gz'.format(prefix), str(assets_file_path))
@@ -1254,14 +1253,7 @@ if __name__ == '__main__':
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
-        parser.add_argument('s3_bucket_name')
-        parser.add_argument('s3_prefix')
-        parser.add_argument('region')
-        parser.add_argument('subnet_id')
-        parser.add_argument('security_group_id')
-        parser.add_argument('use_spot_instances', type=bool)
         args = parser.parse_args()
-        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.region, args.subnet_id,
-                         args.security_group_id, args.use_spot_instances)
+        batch = AwsBatch(args.project_filename)
         batch.push_image()
         batch.run_batch()
