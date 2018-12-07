@@ -16,7 +16,6 @@ import json
 import os
 import logging
 import math
-import pathlib
 import re
 import subprocess
 
@@ -27,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class EagleBatch(HPCBatchBase):
 
-    sys_image_dir = ''
+    sys_image_dir = '/home/nmerket/buildstock/assets'
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2
 

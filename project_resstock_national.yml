@@ -1,10 +1,10 @@
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
-output_directory: /home/nmerket/buildstock/resultstemp
-weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
-#weather_files_path: /projects/enduse/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+output_directory: /scratch/nmerket/national_baseline
+#weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
+weather_files_path: /home/nmerket/buildstock/assets/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 48
+  n_datapoints: 350000
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -35,6 +35,7 @@ peregrine:
   n_jobs: 2
   allocation: la100
 eagle:
-  minutes_per_sim: 3
+  n_jobs: 600
+  minutes_per_sim: 2.5
   postprocessing:
-    time: 10
+    time: 2:00:00
