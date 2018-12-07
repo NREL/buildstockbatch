@@ -909,7 +909,7 @@ Task Role Policy Name: {self.task_policy_name}
 
 class AwsBatch(DockerBatchBase):
 
-    def __init__(self, project_filename, s3_bucket, s3_prefix, array_size, region, subnet, security_group, use_spot):
+    def __init__(self, project_filename, s3_bucket, s3_prefix, region, subnet, security_group, use_spot):
         super().__init__(project_filename)
 
         self.ecr = boto3.client('ecr')
@@ -919,7 +919,6 @@ class AwsBatch(DockerBatchBase):
         self.s3_bucket_prefix = s3_prefix
         self.batch_env_subnet = subnet
         self.batch_env_use_spot = use_spot
-        self.array_size = array_size
         self.security_group = security_group
         self.region = region
 
@@ -1015,8 +1014,8 @@ class AwsBatch(DockerBatchBase):
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
             # This is the maximum number of jobs that can be in an array
-            n_jobs = 10000
-            n_sims_per_job = math.ceil(n_sims / n_jobs)
+            array_size = 10000
+            n_sims_per_job = math.ceil(n_sims / array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
 
             baseline_sims = zip(building_ids, itertools.repeat(None))
@@ -1092,7 +1091,7 @@ class AwsBatch(DockerBatchBase):
         firehose_env.add_firehose_task_permissions(batch_env.task_role_name)
 
         # Once the firehose delivery stream is running we submit the job
-        batch_env.submit_job(self.array_size)
+        batch_env.submit_job(array_size)
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -1257,13 +1256,12 @@ if __name__ == '__main__':
         parser.add_argument('project_filename')
         parser.add_argument('s3_bucket_name')
         parser.add_argument('s3_prefix')
-        parser.add_argument('array_size', type=int)
         parser.add_argument('region')
         parser.add_argument('subnet_id')
         parser.add_argument('security_group_id')
         parser.add_argument('use_spot_instances', type=bool)
         args = parser.parse_args()
-        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.array_size, args.region, args.subnet_id,
+        batch = AwsBatch(args.project_filename, args.s3_bucket_name, args.s3_prefix, args.region, args.subnet_id,
                          args.security_group_id, args.use_spot_instances)
         batch.push_image()
         batch.run_batch()
