@@ -40,7 +40,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                         'begin_month': 1,
                         'begin_day_of_month': 1,
                         'end_month': 12,
-                        'end_day_of_month': 31
+                        'end_day_of_month': 30
                     }
                 },
                 {
