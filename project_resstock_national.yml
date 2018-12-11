@@ -40,4 +40,5 @@ aws:
   region: us-west-2
   subnet: subnet-0c6ba1c73648fd95f
   security_group: sg-0f191551f974edd1e
-  use_spot: false
+  use_spot: true
+  batch_array_size: 100

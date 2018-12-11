@@ -80,14 +80,14 @@ class AwsFirehose():
 
     logger.propagate = False
 
-    def __init__(self, job_name, s3_bucket, s3_bucket_prefix):
+    def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
         """
         Initializes the Firehose configuration.
         :param job_name:
         :param s3_bucket:
         """
-
-        self.session = boto3.Session(region_name='us-west-2')
+        self.region = region
+        self.session = boto3.Session(region_name=region)
         self.firehose = self.session.client('firehose')
         self.iam = self.session.client('iam')
         self.s3 = self.session.client('s3')
@@ -183,8 +183,8 @@ Firehose Role Name: {self.firehose_role}
                             "logs:PutLogEvents"
                         ],
                         "Resource": [
-                            "arn:aws:logs:us-west-2:246460460343:log-group:/aws/kinesisfirehose/{self.job_name}:*:*",
-                            "arn:aws:logs:us-west-2:246460460343:log-group:/aws/kinesisfirehose/{self.job_name}:*:*"
+                            "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*",
+                            "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*"
                         ]
                     }}    
                 ]
@@ -251,65 +251,75 @@ Firehose Role Name: {self.firehose_role}
     def create_firehose(self):
         """
         Creates a simple firehose with S3 endpoints in AWS and waits for success.
+        There appears to be a race condition with creation of the role, so firehose
+        will re-try until created.
         """
-        try:
-            response = self.firehose.create_delivery_stream(
-                DeliveryStreamName=self.firehose_name,
-                DeliveryStreamType='DirectPut',
-                ExtendedS3DestinationConfiguration={
-                    'RoleARN': self.firehose_role_arn,
-                    'BucketARN': self.s3_results_bucket_arn,
-                    'Prefix': self.s3_bucket_prefix,
-                    'BufferingHints': {
-                        'SizeInMBs': 128,
-                        'IntervalInSeconds': 900
-                    },
-                    'CompressionFormat': 'GZIP',
-                    'CloudWatchLoggingOptions': {
-                        'Enabled': True,
-                        'LogGroupName': self.job_name,
-                        'LogStreamName': self.s3_results_bucket
-                    },
-
-                    'S3BackupMode': 'Enabled',
-                    'S3BackupConfiguration': {
+        while 1 == 1:
+            time.sleep(5)
+            try:
+                response = self.firehose.create_delivery_stream(
+                    DeliveryStreamName=self.firehose_name,
+                    DeliveryStreamType='DirectPut',
+                    ExtendedS3DestinationConfiguration={
                         'RoleARN': self.firehose_role_arn,
-                        'BucketARN': self.s3_results_backup_bucket_arn,
+                        'BucketARN': self.s3_results_bucket_arn,
                         'Prefix': self.s3_bucket_prefix,
                         'BufferingHints': {
                             'SizeInMBs': 128,
                             'IntervalInSeconds': 900
                         },
                         'CompressionFormat': 'GZIP',
-
                         'CloudWatchLoggingOptions': {
                             'Enabled': True,
                             'LogGroupName': self.job_name,
-                            'LogStreamName': self.s3_results_backup_bucket
-                        }
+                            'LogStreamName': self.s3_results_bucket
+                        },
+
+                        'S3BackupMode': 'Enabled',
+                        'S3BackupConfiguration': {
+                            'RoleARN': self.firehose_role_arn,
+                            'BucketARN': self.s3_results_backup_bucket_arn,
+                            'Prefix': self.s3_bucket_prefix,
+                            'BufferingHints': {
+                                'SizeInMBs': 128,
+                                'IntervalInSeconds': 900
+                            },
+                            'CompressionFormat': 'GZIP',
+
+                            'CloudWatchLoggingOptions': {
+                                'Enabled': True,
+                                'LogGroupName': self.job_name,
+                                'LogStreamName': self.s3_results_backup_bucket
+                            }
+                        },
                     },
-                },
 
-                Tags=[
-                    {
-                        'Key': 'batch_job',
-                        'Value': self.job_name
-                    },
-                ]
-            )
+                    Tags=[
+                        {
+                            'Key': 'batch_job',
+                            'Value': self.job_name
+                        },
+                    ]
+                )
 
-        except Exception as e:
-            if 'ResourceInUseException' in str(e):
-                logger.info('Firehose stream operation in progress...')
+            except Exception as e:
+                if 'ResourceInUseException' in str(e):
+                    logger.info('Firehose stream operation in progress...')
+                    break
+                else:
+                    logger.error("Problem creating stream - retrying after 5 seconds.  Error is:")
+                    logger.error(str(e))
+                    time.sleep(5)
 
-        logger.info('Waiting for firehose delivery stream creation')
+
+        logger.info('Waiting for firehose delivery stream activation')
 
         while 1 == 1:
             time.sleep(5)
             try:
                 # We need to give it a second to start
 
-                response = self.firehose.describe_delivery_stream(
+                cresponse = self.firehose.describe_delivery_stream(
                     DeliveryStreamName=self.firehose_name,
                     Limit=1
                 )
@@ -317,10 +327,13 @@ Firehose Role Name: {self.firehose_role}
                 if 'ResourceNotFoundException' in str(e):
                     logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
                     time.sleep(5)
+                else:
+                    logger.error(str(e))
+
 
             # If this fails there is an issue with creation
-            if response['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
-                self.firehose_arn = response['DeliveryStreamDescription']['DeliveryStreamARN']
+            if cresponse['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
+                self.firehose_arn = cresponse['DeliveryStreamDescription']['DeliveryStreamARN']
                 logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
                 break
 
@@ -367,14 +380,15 @@ Firehose Role Name: {self.firehose_role}
 
 class AwsBatchEnv():
 
-    def __init__(self, job_name, s3_bucket, s3_prefix, use_spot=True):
+    def __init__(self, job_name, s3_bucket, s3_prefix, region, use_spot=True):
         self.job_name = job_name
         self.s3_bucket = s3_bucket
         # TODO should build in more controls for names to comply with AWS standards:
         self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
         self.use_spot = use_spot
         # AWS clients
-        self.session = boto3.Session(region_name='us-west-2')
+        self.region = region
+        self.session = boto3.Session(region_name=self.region)
         self.batch = self.session.client('batch')
         self.iam = self.session.client('iam')
         # Naming conventions
@@ -730,7 +744,7 @@ Task Role Policy Name: {self.task_policy_name}
                 else:
                     logger.error(str(e))
 
-    def create_compute_environment(self, subnets, security_groups, use_spot=True, maxCPUs=10000):
+    def create_compute_environment(self, subnets, security_groups, maxCPUs=10000):
         """
         Creates a compute environment suffixed with the job name
         :param subnets: list of subnet IDs
@@ -912,15 +926,17 @@ class AwsBatch(DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
-        self.ecr = boto3.client('ecr')
-        self.s3 = boto3.client('s3')
+        self.region = self.cfg['aws']['region']
+        self.ecr = boto3.client('ecr', region_name=self.region)
+        self.s3 = boto3.client('s3', region_name=self.region)
         self.job_name = re.sub('[^0-9a-zA-Z]+', '_', project_filename)
         self.s3_bucket = self.cfg['aws']['s3']['bucket']
         self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix']
         self.batch_env_subnet = self.cfg['aws']['subnet']
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
         self.security_group = self.cfg['aws']['security_group']
-        self.region = self.cfg['aws']['region']
+        self.batch_array_size = self.cfg['aws']['batch_array_size']
+
 
     @classmethod
     def docker_image(cls):
@@ -1014,7 +1030,10 @@ class AwsBatch(DockerBatchBase):
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
             # This is the maximum number of jobs that can be in an array
-            array_size = 10000
+            if self.batch_array_size <= 10000:
+                array_size = self.batch_array_size
+            else:
+                array_size = 10000
             n_sims_per_job = math.ceil(n_sims / array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
 
@@ -1047,7 +1066,7 @@ class AwsBatch(DockerBatchBase):
         # TODO: Review Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
 
         # Define the batch environment
-        batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix)
+        batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
         logging.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
 
@@ -1058,7 +1077,7 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_batch_service_roles()
 
         # Create the compute envionrment for the environment
-        batch_env.create_compute_environment([self.batch_env_subnet], self.security_group, self.batch_env_use_spot)
+        batch_env.create_compute_environment([self.batch_env_subnet], self.security_group)
 
         # Create the associated job queue and associate the compute environment
         batch_env.create_job_queue()
@@ -1066,19 +1085,20 @@ class AwsBatch(DockerBatchBase):
         # Pass through config for the Docker containers
         env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_name, REGION=self.region)
 
-        image_url = 'https://{}:latest'.format(
+        image_url = '{}:latest'.format(
             self.container_repo['repositoryUri']
         )
 
         batch_env.create_job_definition(
             image_url,
-            command=['python3', '/buildstock-batch/buildstockbatch/aws.py'], vcpus=1,
+            command=['python3', '/buildstock-batch/buildstockbatch/aws.py'],
+            vcpus=1,
             memory=1024,
             env_vars=env_vars
         )
 
         # Initialize the firehose environment and try to create it
-        firehose_env = AwsFirehose(self.job_name, self.s3_bucket, self.s3_bucket_prefix)
+        firehose_env = AwsFirehose(self.job_name, self.s3_bucket, self.s3_bucket_prefix, self.region)
 
         # Review the config
         logger.debug(str(firehose_env))
