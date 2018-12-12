@@ -16,7 +16,9 @@ import json
 import os
 import logging
 import math
+import pathlib
 import re
+import shutil
 import subprocess
 
 from .hpc import HPCBatchBase
@@ -30,6 +32,13 @@ class EagleBatch(HPCBatchBase):
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2
 
+    local_scratch = pathlib.Path('/tmp/scratch')
+    local_project_dir = local_scratch / 'project'
+    local_buildstock_dir = local_scratch / 'buildstock'
+    local_weather_dir = local_scratch / 'weather'
+    local_output_dir = local_scratch
+    local_singularity_img = local_scratch / 'openstudio.simg'
+
     @property
     def output_dir(self):
         output_dir = self.cfg.get(
@@ -37,6 +46,66 @@ class EagleBatch(HPCBatchBase):
             os.path.join('/scratch/{}'.format(os.environ['USER']), os.path.basename(self.project_dir))
         )
         return output_dir
+
+    @staticmethod
+    def clear_and_copy_dir(src, dst):
+        if os.path.exists(dst):
+            shutil.rmtree(dst, ignore_errors=True)
+        shutil.copytree(src, dst)
+
+    def run_job_batch(self, job_array_number):
+
+        # Move resources to the local scratch directory
+        self.clear_and_copy_dir(
+            pathlib.Path(self.project_dir) / 'seeds',
+            self.local_project_dir / 'seeds'
+        )
+        self.clear_and_copy_dir(
+            pathlib.Path(self.buildstock_dir) / 'resources',
+            self.local_buildstock_dir / 'resources'
+        )
+        self.clear_and_copy_dir(
+            pathlib.Path(self.buildstock_dir) / 'measures',
+            self.local_buildstock_dir / 'measures'
+        )
+        self.clear_and_copy_dir(
+            self.weather_dir,
+            self.local_weather_dir
+        )
+        self.clear_and_copy_dir(
+            pathlib.Path(self.output_dir) / 'housing_characteristics',
+            self.local_output_dir / 'housing_characteristics'
+        )
+        if os.path.exists(self.local_singularity_img):
+            os.remove(self.local_singularity_img)
+        shutil.copy2(self.singularity_image, self.local_singularity_img)
+
+        # Run the job batch as normal
+        super(EagleBatch, self).run_job_batch(job_array_number)
+
+    @classmethod
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
+                     upgrade_idx=None):
+
+        # Check for an existing results directory
+        sim_id, remote_sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+
+        # Run the building using the local copies of the resources
+        HPCBatchBase.run_building(
+            str(cls.local_project_dir),
+            str(cls.local_buildstock_dir),
+            str(cls.local_weather_dir),
+            str(cls.local_output_dir),
+            str(cls.local_singularity_img),
+            cfg,
+            i,
+            upgrade_idx
+        )
+
+        # Copy the results to the remote directory
+        local_sim_dir = cls.local_output_dir / 'results' / sim_id
+        cls.clear_and_copy_dir(local_sim_dir, remote_sim_dir)
+        shutil.rmtree(local_sim_dir, ignore_errors=True)
 
     def queue_jobs(self, array_ids=None):
         eagle_cfg = self.cfg['eagle']
@@ -58,7 +127,7 @@ class EagleBatch(HPCBatchBase):
 
         # Estimate the wall time in minutes
         cores_per_node = 36
-        walltime = math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim
+        walltime = math.ceil(math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim)
 
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
@@ -118,7 +187,7 @@ class EagleBatch(HPCBatchBase):
             'sbatch',
             '--time={}'.format(walltime),
             '--export=PROJECTFILE,POSTPROCESS',
-            '--dependency=afterok:{}'.format(':'.join(after_jobids)),
+            '--dependency=afterany:{}'.format(':'.join(after_jobids)),
             '--mem=184000',
             '--job-name=bstkpost',
             '--output=postprocessing.out',

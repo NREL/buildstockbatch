@@ -166,13 +166,12 @@ class HPCBatchBase(BuildStockBatchBase):
         tick = time.time() - tick
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
-    @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
-                     upgrade_idx=None):
-        sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
+    @staticmethod
+    def make_sim_dir(building_id, upgrade_idx, base_dir):
+        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
 
         # Check to see if the simulation is done already and skip it if so.
-        sim_dir = os.path.join(output_dir, 'results', sim_id)
+        sim_dir = os.path.join(base_dir, sim_id)
         if os.path.exists(sim_dir):
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
                 return
@@ -183,6 +182,14 @@ class HPCBatchBase(BuildStockBatchBase):
 
         # Create the simulation directory
         os.makedirs(sim_dir)
+
+        return sim_id, sim_dir
+
+    @classmethod
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
+                     upgrade_idx=None):
+
+        sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
 
         # Generate the osw for this simulation
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)

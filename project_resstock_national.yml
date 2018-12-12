@@ -6,16 +6,16 @@ weather_files_path: /home/nmerket/buildstock/assets/project_resstock_national_we
 baseline:
   n_datapoints: 350000
   n_buildings_represented: 80000000
-upgrades:
-  - upgrade_name: Triple-Pane Windows
-    options:
-      - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
-#        apply_logic:
-        costs:
-          - value: 45.77
-            multiplier: Window Area (ft^2)
-        lifetime: 30
-#    package_apply_logic:
+# upgrades:
+#   - upgrade_name: Triple-Pane Windows
+#     options:
+#       - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
+# #        apply_logic:
+#         costs:
+#           - value: 45.77
+#             multiplier: Window Area (ft^2)
+#         lifetime: 30
+# #    package_apply_logic:
 timeseries_csv_export:
   reporting_frequency: Hourly
   inc_end_use_subcategories: true
@@ -35,7 +35,7 @@ peregrine:
   n_jobs: 2
   allocation: la100
 eagle:
-  n_jobs: 600
-  minutes_per_sim: 2.5
+  n_jobs: 500
+  minutes_per_sim: 3
   postprocessing:
-    time: 2:00:00
+    time: 180
