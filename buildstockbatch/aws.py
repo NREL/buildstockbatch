@@ -1034,7 +1034,7 @@ class AwsBatch(DockerBatchBase):
                 max_array_size = self.batch_array_size
             else:
                 max_array_size = 10000
-            n_sims_per_job = math.ceil(n_sims / array_size)
+            n_sims_per_job = math.ceil(n_sims / max_array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
 
             baseline_sims = zip(building_ids, itertools.repeat(None))
