@@ -1031,9 +1031,9 @@ class AwsBatch(DockerBatchBase):
 
             # This is the maximum number of jobs that can be in an array
             if self.batch_array_size <= 10000:
-                array_size = self.batch_array_size
+                max_array_size = self.batch_array_size
             else:
-                array_size = 10000
+                max_array_size = 10000
             n_sims_per_job = math.ceil(n_sims / array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
 
@@ -1056,6 +1056,7 @@ class AwsBatch(DockerBatchBase):
                         'job_num': i,
                         'batch': batch,
                     }, f, indent=4)
+            array_size = i
 
             upload_directory_to_s3(
                 tmppath,
