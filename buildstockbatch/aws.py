@@ -1002,6 +1002,7 @@ class AwsBatch(DockerBatchBase):
         # Compress and upload assets to S3
         with tempfile.TemporaryDirectory() as tmpdir:
             tmppath = pathlib.Path(tmpdir)
+            logger.debug('Creating assets tarfile')
             with tarfile.open(tmppath / 'assets.tar.gz', 'x:gz') as tar_f:
                 project_path = pathlib.Path(self.project_dir)
                 buildstock_path = pathlib.Path(self.buildstock_dir)
@@ -1010,6 +1011,7 @@ class AwsBatch(DockerBatchBase):
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
                 tar_f.add(project_path / 'seeds', 'seeds')
                 tar_f.add(project_path / 'weather', 'weather')
+            logger.debug('Compressing weather files')
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
             Parallel(n_jobs=-1, verbose=9)(
@@ -1020,6 +1022,7 @@ class AwsBatch(DockerBatchBase):
                 for epw_filename
                 in filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir))
             )
+            logger.debug('Writing project configuration for upload')
             with open(tmppath / 'config.json', 'wt', encoding='utf-8') as f:
                 json.dump(self.cfg, f)
 
@@ -1028,6 +1031,7 @@ class AwsBatch(DockerBatchBase):
             building_ids = df.index.tolist()
             n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
+            logger.debug('Total number of simulations = {}'.format(n_sims))
 
             # This is the maximum number of jobs that can be in an array
             if self.batch_array_size <= 10000:
@@ -1036,6 +1040,7 @@ class AwsBatch(DockerBatchBase):
                 max_array_size = 10000
             n_sims_per_job = math.ceil(n_sims / max_array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
+            logger.debug('Number of simulations per array job = {}'.format(n_sims_per_job))
 
             baseline_sims = zip(building_ids, itertools.repeat(None))
             upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
@@ -1057,7 +1062,9 @@ class AwsBatch(DockerBatchBase):
                         'batch': batch,
                     }, f, indent=4)
             array_size = i
+            logger.debug('Array size = {}'.format(array_size))
 
+            logger.debug('Uploading files to S3')
             upload_directory_to_s3(
                 tmppath,
                 self.cfg['aws']['s3']['bucket'],
@@ -1068,7 +1075,7 @@ class AwsBatch(DockerBatchBase):
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
-        logging.info(
+        logger.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
 
         # Review config
