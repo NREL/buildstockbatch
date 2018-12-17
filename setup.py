@@ -63,7 +63,7 @@ setuptools.setup(
         'dask[complete]',
         'docker',
         'awscli',
-        'boto3'
+        'boto3>=1.9.66'
     ],
     extras_require={
         'dev': [

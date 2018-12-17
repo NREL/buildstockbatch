@@ -4,7 +4,7 @@ output_directory: /scratch/nmerket/resstock_national_3pwindows
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 100
+  n_datapoints: 1000
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -40,5 +40,5 @@ aws:
   region: us-west-2
   subnet: subnet-0c6ba1c73648fd95f
   security_group: sg-0f191551f974edd1e
-  use_spot: true
-  batch_array_size: 100
+  use_spot: false
+  batch_array_size: 1000

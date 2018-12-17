@@ -40,6 +40,7 @@ from buildstockbatch.base import (
 
 logger = logging.getLogger(__name__)
 
+
 def upload_file_to_s3(*args, **kwargs):
     s3 = boto3.client('s3')
     s3.upload_file(*args, **kwargs)
@@ -73,7 +74,6 @@ def compress_file(in_filename, out_filename):
     with gzip.open(str(out_filename), 'wb') as f_out:
         with open(str(in_filename), 'rb') as f_in:
             shutil.copyfileobj(f_in, f_out)
-
 
 
 class AwsFirehose():
@@ -310,7 +310,6 @@ Firehose Role Name: {self.firehose_role}
                     logger.error("Problem creating stream - retrying after 5 seconds.  Error is:")
                     logger.error(str(e))
                     time.sleep(5)
-
 
         logger.info('Waiting for firehose delivery stream activation')
 
@@ -1054,7 +1053,7 @@ class AwsBatch(DockerBatchBase):
                 batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
                 if not batch:
                     break
-                logging.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
+                logger.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
                 job_json_filename = tmppath / 'jobs' / 'job{:05d}.json'.format(i)
                 with open(job_json_filename, 'w') as f:
                     json.dump({
@@ -1063,6 +1062,17 @@ class AwsBatch(DockerBatchBase):
                     }, f, indent=4)
             array_size = i
             logger.debug('Array size = {}'.format(array_size))
+
+            # Compress job jsons
+            jobs_dir = tmppath / 'jobs'
+            logger.debug('Compressing job jsons using gz')
+            tick = time.time()
+            with tarfile.open(tmppath / 'jobs.tar.gz', 'w:gz') as tf:
+                tf.add(jobs_dir, arcname='jobs')
+            tick = time.time() - tick
+            logger.debug('Done compressing job jsons using gz {:.1f} seconds'.format(tick))
+
+            shutil.rmtree(jobs_dir)
 
             logger.debug('Uploading files to S3')
             upload_directory_to_s3(
@@ -1156,9 +1166,10 @@ class AwsBatch(DockerBatchBase):
             cfg = json.loads(f.getvalue(), encoding='utf-8')
 
         logger.debug('Getting job information')
-        with io.BytesIO() as f:
-            s3.download_fileobj(bucket, '{}/jobs/job{:05d}.json'.format(prefix, job_id), f)
-            jobs_d = json.loads(f.getvalue(), encoding='utf-8')
+        jobs_file_path = sim_dir.parent / 'jobs.tar.gz'
+        s3.download_file(bucket, '{}/jobs.tar.gz'.format(prefix), str(jobs_file_path))
+        with tarfile.open(jobs_file_path, 'r') as tar_f:
+            jobs_d = json.load(tar_f.extractfile('jobs/job{:05d}.json'.format(job_id)), encoding='utf-8')
         logger.debug('Number of simulations = {}'.format(len(jobs_d['batch'])))
 
         logger.debug('Getting weather files')
