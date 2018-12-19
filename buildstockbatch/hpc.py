@@ -32,6 +32,10 @@ from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 logger = logging_.getLogger(__name__)
 
 
+class SimulationExists(Exception):
+    pass
+
+
 class HPCBatchBase(BuildStockBatchBase):
 
     sys_image_dir = None
@@ -167,16 +171,16 @@ class HPCBatchBase(BuildStockBatchBase):
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
     @staticmethod
-    def make_sim_dir(building_id, upgrade_idx, base_dir):
+    def make_sim_dir(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
 
         # Check to see if the simulation is done already and skip it if so.
         sim_dir = os.path.join(base_dir, sim_id)
         if os.path.exists(sim_dir):
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
-                return
+                raise SimulationExists('{} exists and finished successfully'.format(sim_id))
             elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
-                return
+                raise SimulationExists('{} exists and failed'.format(sim_id))
             else:
                 shutil.rmtree(sim_dir)
 
@@ -189,7 +193,10 @@ class HPCBatchBase(BuildStockBatchBase):
     def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
                      upgrade_idx=None):
 
-        sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+        try:
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+        except SimulationExists:
+            return
 
         # Generate the osw for this simulation
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)

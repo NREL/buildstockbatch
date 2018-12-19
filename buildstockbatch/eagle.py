@@ -21,7 +21,7 @@ import re
 import shutil
 import subprocess
 
-from .hpc import HPCBatchBase
+from .hpc import HPCBatchBase, SimulationExists
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,14 @@ class EagleBatch(HPCBatchBase):
                      upgrade_idx=None):
 
         # Check for an existing results directory
-        sim_id, remote_sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+        try:
+            sim_id, remote_sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+        except SimulationExists:
+            return
+
+        # Clear the local directory if it exists for some reason
+        local_sim_dir = cls.local_output_dir / 'results' / sim_id
+        shutil.rmtree(local_sim_dir, ignore_errors=True)
 
         # Run the building using the local copies of the resources
         HPCBatchBase.run_building(
@@ -103,7 +110,6 @@ class EagleBatch(HPCBatchBase):
         )
 
         # Copy the results to the remote directory
-        local_sim_dir = cls.local_output_dir / 'results' / sim_id
         cls.clear_and_copy_dir(local_sim_dir, remote_sim_dir)
         shutil.rmtree(local_sim_dir, ignore_errors=True)
 

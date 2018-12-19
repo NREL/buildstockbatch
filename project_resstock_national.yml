@@ -1,6 +1,6 @@
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
-output_directory: /scratch/nmerket/national_baseline
+output_directory: /scratch/nmerket/national_baseline5
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: /home/nmerket/buildstock/assets/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
@@ -35,7 +35,7 @@ peregrine:
   n_jobs: 2
   allocation: la100
 eagle:
-  n_jobs: 500
-  minutes_per_sim: 3
+  n_jobs: 250
+  minutes_per_sim: 4
   postprocessing:
     time: 180
