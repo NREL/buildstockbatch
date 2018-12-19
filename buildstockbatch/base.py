@@ -285,21 +285,25 @@ class BuildStockBatchBase(object):
         client = self.get_dask_client()  # noqa: F841
         results_dir = self.results_dir
 
-        logger.debug('Creating Dask Dataframe of results')
+        logger.debug('Computing dataframe of data_point_out.json files')
         datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500).\
             map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
-        df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
+        data_point_out_df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
             map(flatten_datapoint_json).to_dataframe().rename(columns=to_camelcase)
+        data_point_out_df = data_point_out_df_d.compute()
+
+        logger.debug('Computing dataframe of out.osw files')
         out_osws = db.from_sequence(os.listdir(results_dir), partition_size=500).\
             map(lambda x: os.path.join(results_dir, x, 'out.osw'))
-        df2_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+        out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+        out_osw_df = out_osw_df_d.compute()
 
-        logger.debug('Computing Dask Dataframe')
-        df = df2_d.merge(df_d, how='left', on='_id').compute()
+        logger.debug('Joining into results dataframe')
+        results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
         for col in ('started_at', 'completed_at'):
-            df[col] = df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+            results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
 
         logger.debug('Saving as csv')
-        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
+        results_df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
         logger.debug('Saving as parquet')
-        df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')
+        results_df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')

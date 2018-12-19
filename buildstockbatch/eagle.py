@@ -214,7 +214,11 @@ class EagleBatch(HPCBatchBase):
             logger.debug('sbatch: {}'.format(line))
 
     def get_dask_client(self):
-        cl = LocalCluster(local_dir='/tmp/scratch/dask_worker_space')
+        cl = LocalCluster(
+            n_workers=18,
+            threads_per_worker=2,
+            local_dir='/tmp/scratch/dask_worker_space'
+        )
         return Client(cl)
 
 
