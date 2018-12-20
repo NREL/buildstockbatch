@@ -303,7 +303,10 @@ class BuildStockBatchBase(object):
         for col in ('started_at', 'completed_at'):
             results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
 
+        logger.info('results_df memory usage: {}'.format(results_df.memory_usage(deep=True).sum()))
+
         logger.debug('Saving as csv')
-        results_df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
+        with gzip.open(os.path.join(results_dir, 'results.csv.gz'), 'wb') as f:
+            results_df.to_csv(f, index=False)
         logger.debug('Saving as parquet')
         results_df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')
