@@ -10,8 +10,10 @@ This is the base class mixed into the deployment specific classes (i.e. peregrin
 :license: BSD-3
 """
 
+from collections import defaultdict
 import dask.bag as db
 from dask.distributed import Client
+import dask
 import datetime as dt
 import gzip
 import json
@@ -285,28 +287,85 @@ class BuildStockBatchBase(object):
         client = self.get_dask_client()  # noqa: F841
         results_dir = self.results_dir
 
-        logger.debug('Computing dataframe of data_point_out.json files')
-        datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500).\
-            map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
-        data_point_out_df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
-            map(flatten_datapoint_json).to_dataframe().rename(columns=to_camelcase)
-        data_point_out_df = data_point_out_df_d.compute()
+        results_by_upgrade = defaultdict(list)
+        for item in os.listdir(results_dir):
+            m = re.match(r'bldg(\d+)up(\d+)', item)
+            if not m:
+                continue
+            building_id, upgrade_id = map(int, m.groups())
+            results_by_upgrade[upgrade_id].append(item)
 
-        logger.debug('Computing dataframe of out.osw files')
-        out_osws = db.from_sequence(os.listdir(results_dir), partition_size=500).\
-            map(lambda x: os.path.join(results_dir, x, 'out.osw'))
-        out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
-        out_osw_df = out_osw_df_d.compute()
+        store = pd.HDFStore(os.path.join(results_dir, 'results.h5'), complevel=9, complib='blosc:snappy')
 
-        logger.debug('Joining into results dataframe')
-        results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
-        for col in ('started_at', 'completed_at'):
-            results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+        for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
-        logger.info('results_df memory usage: {}'.format(results_df.memory_usage(deep=True).sum()))
+            logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
 
-        logger.debug('Saving as csv')
-        with gzip.open(os.path.join(results_dir, 'results.csv.gz'), 'wb') as f:
-            results_df.to_csv(f, index=False)
-        logger.debug('Saving as parquet')
-        results_df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')
+            datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
+                map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json')).\
+                map(read_data_point_out_json).\
+                filter(lambda x: x is not None)
+
+            meta = pd.DataFrame(list(
+                datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
+                map(flatten_datapoint_json).take(10)
+            ))
+            if meta.shape == (0, 0):
+                meta = None
+
+            data_point_out_df_d = datapoint_output_jsons.map(flatten_datapoint_json).\
+                to_dataframe(meta=meta).rename(columns=to_camelcase)
+
+            out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
+                map(lambda x: os.path.join(results_dir, x, 'out.osw'))
+
+            out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+
+            data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
+
+            results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
+            results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].\
+                astype('int')
+            cols_to_remove = (
+                'build_existing_model.weight',
+                'simulation_output_report.weight',
+                'build_existing_model.workflow_json',
+                'simulation_output_report.upgrade_name'
+            )
+            for col in cols_to_remove:
+                if col in results_df.columns:
+                    del results_df[col]
+            for col in ('started_at', 'completed_at'):
+                results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+
+            if upgrade_id > 0:
+                cols_to_keep = list(
+                    filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
+                )
+                results_df = results_df[cols_to_keep]
+
+            logger.debug('Saving to csv.gz')
+            csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
+            with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
+                results_df.to_csv(f, index=False)
+
+            logger.debug('Saving to parquet')
+            results_df.to_parquet(
+                os.path.join(results_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
+                engine='pyarrow',
+                flavor='spark'
+            )
+
+            logger.debug('Categorizing variables')
+            logger.debug('memory before categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
+            for col in results_df.columns:
+                if results_df[col].dtype == 'object' and (col.startswith('build_existing_model.') or
+                                                          col.startswith('apply_upgrade.') or
+                                                          col == 'completed_status'):
+                    results_df[col] = results_df[col].astype('category')
+            logger.debug('memory after categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
+
+            logger.debug('Saving to HDF5')
+            store.put('upgrade/{}'.format(upgrade_id), results_df, format='table', append=False)
+
+        store.close()

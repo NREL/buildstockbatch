@@ -7,7 +7,7 @@
 
 module load conda
 conda remove -y --name buildstock --all
-conda create -y --name buildstock python=3.6 pandas
+conda create -y --name buildstock python=3.6 pandas hdf5 pytables
 source activate buildstock
 pip install --upgrade pip
 pip install -e .
