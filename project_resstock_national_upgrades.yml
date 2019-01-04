@@ -1,8 +1,8 @@
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
-project_directory: project_resstock_national  # Relative to buildstock_directory
-output_directory: /scratch/nmerket/resstock_national_3pwindows
+project_directory: project_resstock_heterogeneity  # Relative to buildstock_directory
+output_directory: /scratch/nmerket/heterogeneity4
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
-weather_files_path: /projects/res_stock/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: /home/nmerket/buildstock/assets/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   n_datapoints: 350000
   n_buildings_represented: 81221016
@@ -41,43 +41,43 @@ upgrades:
   - upgrade_name: Air Leakage 25% reduction, with mech. vent.
     options:
       - option: Infiltration|6 ACH50
-       apply_logic: Infiltration|8 ACH50
+        apply_logic: Infiltration|8 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|5.25 ACH50
-       apply_logic: Infiltration|7 ACH50
+        apply_logic: Infiltration|7 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|4.5 ACH50
-       apply_logic: Infiltration|6 ACH50
+        apply_logic: Infiltration|6 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|3.75 ACH50
-       apply_logic: Infiltration|5 ACH50
+        apply_logic: Infiltration|5 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|3 ACH50
-       apply_logic: Infiltration|4 ACH50
+        apply_logic: Infiltration|4 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|2.25 ACH50
-       apply_logic: Infiltration|3 ACH50
+        apply_logic: Infiltration|3 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
         lifetime: 999
       - option: Infiltration|1.5 ACH50
-       apply_logic: Infiltration|2 ACH50
+        apply_logic: Infiltration|2 ACH50
         costs:
           - value: 0
             multiplier: Floor Area, Conditioned (ft^2)
@@ -94,31 +94,31 @@ upgrades:
   - upgrade_name: R-38 Attic Insulation
     options:
       - option: Insulation Unfinished Attic|Ceiling R-38, Vented
-       apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
+        apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-38, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-38, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-38, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-38, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
@@ -170,37 +170,37 @@ upgrades:
   - upgrade_name: R-60 Attic Insulation
     options:
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
+        apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
         lifetime: 999
       - option: Insulation Unfinished Attic|Ceiling R-60, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-38, Vented
+        apply_logic: Insulation Unfinished Attic|Ceiling R-38, Vented
         costs:
           - value: 0
             multiplier: Floor Area, Attic (ft^2)
@@ -222,25 +222,25 @@ upgrades:
   - upgrade_name: Low-E Storm Window
     options:
       - option: Windows|Low-E Storm on Single, Metal
-       apply_logic: Windows|Clear, Single, Metal
+        apply_logic: Windows|Clear, Single, Metal
         costs:
           - value: 0
             multiplier: Fixed (1)
         lifetime: 30
       - option: Windows|Low-E Storm on Single, Non-metal
-       apply_logic: Windows|Clear, Single, Non-metal
+        apply_logic: Windows|Clear, Single, Non-metal
         costs:
           - value: 0
             multiplier: Fixed (1)
         lifetime: 30
       - option: Windows|Low-E Storm on Double, Metal
-       apply_logic: Windows|Clear, Double, Metal, Air
+        apply_logic: Windows|Clear, Double, Metal, Air
         costs:
           - value: 0
             multiplier: Fixed (1)
         lifetime: 30
       - option: Windows|Low-E Storm on Double, Non-metal
-       apply_logic: Windows|Clear, Double, Non-metal, Air
+        apply_logic: Windows|Clear, Double, Non-metal, Air
         costs:
           - value: 0
             multiplier: Fixed (1)
@@ -254,7 +254,7 @@ upgrades:
   - upgrade_name: Room AC, EER 12.0
     options:
       - option: HVAC System Cooling|Room AC, EER 12.0
-       apply_logic: HVAC System Cooling|FIXME Room AC, EER 8.5, 20% Conditioned||HVAC System Cooling|FIXME Room AC, EER 10.7, 20% Conditioned
+        apply_logic: HVAC System Cooling|FIXME Room AC, EER 8.5, 20% Conditioned||HVAC System Cooling|FIXME Room AC, EER 10.7, 20% Conditioned
         costs:
           - value: 0
             multiplier: Size, Cooling System (kBtu/h)
@@ -267,7 +267,7 @@ upgrades:
   - upgrade_name: Room AC Reference
     options:
       - option: HVAC System Cooling|Room AC, EER 9.8
-       apply_logic: HVAC System Cooling|FIXME Room AC, EER 8.5, 20% Conditioned
+        apply_logic: HVAC System Cooling|FIXME Room AC, EER 8.5, 20% Conditioned
         costs:
           - value: 0
             multiplier: Size, Cooling System (kBtu/h)
@@ -275,7 +275,7 @@ upgrades:
             multiplier: Fixed (1)
         lifetime: 16
       - option: HVAC System Cooling|FIXME Room AC, EER 10.7, 20% Conditioned
-       apply_logic: HVAC System Cooling|FIXME Room AC, EER 10.7, 20% Conditioned
+        apply_logic: HVAC System Cooling|FIXME Room AC, EER 10.7, 20% Conditioned
         costs:
           - value: 0
             multiplier: Size, Cooling System (kBtu/h)
@@ -497,3 +497,9 @@ peregrine:
   nodetype: haswell
   queue: batch-h
   n_jobs: 200
+eagle:
+  account: es5
+  n_jobs: 500
+  minutes_per_sim: 2
+  postprocessing:
+    time: 300
