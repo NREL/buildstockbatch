@@ -29,6 +29,9 @@ import tarfile
 import tempfile
 import re
 import time
+import zipfile
+import io
+import stat
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import (
@@ -36,6 +39,10 @@ from buildstockbatch.base import (
     to_camelcase,
     flatten_datapoint_json,
     read_out_osw
+)
+
+from buildstockbatch.awsbase import (
+    AwsJobBase
 )
 
 logger = logging.getLogger(__name__)
@@ -76,34 +83,32 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
-class AwsFirehose():
+class AwsFirehose(AwsJobBase):
 
     logger.propagate = False
 
     def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
+
         """
         Initializes the Firehose configuration.
-        :param job_name:
-        :param s3_bucket:
-        """
-        self.region = region
-        self.session = boto3.Session(region_name=region)
-        self.firehose = self.session.client('firehose')
-        self.iam = self.session.client('iam')
-        self.s3 = self.session.client('s3')
+        :param job_name:  Name of the job being run
+        :param s3_bucket: Bucket to land results into
+        :param s3_bucket_prefix: Prefix to land results into
 
-        self.job_name = job_name
-        self.job_identifier = self.job_name.replace(' ', '_')
-        self.s3_bucket = s3_bucket
-        self.s3_bucket_prefix = s3_bucket_prefix
-        self.s3_results_bucket = f"{self.s3_bucket}-result"
-        self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_results_bucket}"
-        self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
-        self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_results_backup_bucket}"
-        self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
-        self.firehose_name = f"{self.job_identifier}_firehose"
-        self.firehose_role_policy_name = f"{self.job_identifier}_firehose_delivery_policy"
-        self.firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
+        """
+        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
+
+        self.firehose = self.session.client('firehose')
+        #self.iam = self.session.client('iam')
+        self.s3 = self.session.client('s3')
+        self.s3_results_bucket = self.get_name('s3_results_bucket')
+        self.s3_results_bucket_arn = self.get_name('s3_results_bucket_arn')
+        self.s3_results_backup_bucket = self.get_name('s3_results_backup_bucket')
+        self.s3_results_backup_bucket_arn = self.get_name('s3_results_backup_bucket_arn')
+        self.firehose_role = self.get_name('firehose_role')
+        self.firehose_name = self.get_name('firehose_name')
+        self.firehose_role_policy_name = self.get_name('firehose_role_policy_name')
+        self.firehost_task_policy_name = self.get_name('firehost_task_policy_name')
         # Initialize with create_firehose_delivery_role
         self.firehose_role_arn = None
         self.firehose_arn = None
@@ -125,96 +130,50 @@ Firehose Role Name: {self.firehose_role}
         Generate the firehose role with permissions to the endpoints - in this case cloudwatch and project s3 buckets.
         """
 
-        # Service Role
-        trust_policy = '''{
-                       "Version": "2012-10-17",
-                       "Statement": [{
-                           "Effect": "Allow",
-                           "Principal": {
-                               "Service": "firehose.amazonaws.com"
-                           },
-                           "Action": "sts:AssumeRole"
-                       }]
-                   }
-               '''
+        delivery_role_policy = f'''{{
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {{
+                                "Sid": "S3AllowForFH",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:AbortMultipartUpload",
+                                    "s3:GetBucketLocation",
+                                    "s3:GetObject",
+                                    "s3:ListBucket",
+                                    "s3:ListBucketMultipartUploads",
+                                    "s3:PutObject"
+                                ],
+                                "Resource": [
+                                    "{self.s3_results_bucket_arn}",
+                                    "{self.s3_results_bucket_arn}/*",
+                                    "{self.s3_results_backup_bucket_arn}",
+                                    "{self.s3_results_backup_bucket_arn}/*"
+                                ]
+                            }},
 
-        try:
-
-            response = self.iam.create_role(
-                Path='/',
-                RoleName=self.firehose_role,
-                AssumeRolePolicyDocument=trust_policy,
-                Description=f"Service role for Firehose support {self.job_identifier}",
-                Tags=[
-                    {
-                        'Key': 'job',
-                        'Value': self.job_name
-                    },
-                ]
-            )
-            self.firehose_role_arn = response['Role']['Arn']
-
-            delivery_role_policy = f'''{{
-                "Version": "2012-10-17",
-                "Statement": [
-                    {{
-                        "Sid": "S3AllowForFH",
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:AbortMultipartUpload",
-                            "s3:GetBucketLocation",
-                            "s3:GetObject",
-                            "s3:ListBucket",
-                            "s3:ListBucketMultipartUploads",
-                            "s3:PutObject"
-                        ],
-                        "Resource": [
-                            "{self.s3_results_bucket_arn}",
-                            "{self.s3_results_bucket_arn}/*",
-                            "{self.s3_results_backup_bucket_arn}",
-                            "{self.s3_results_backup_bucket_arn}/*"
+                            {{
+                                "Sid": "CWAllowForCW",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "logs:PutLogEvents"
+                                ],
+                                "Resource": [
+                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*",
+                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*"
+                                ]
+                            }}    
                         ]
-                    }},
+                    }}'''
 
-                    {{
-                        "Sid": "CWAllowForCW",
-                        "Effect": "Allow",
-                        "Action": [
-                            "logs:PutLogEvents"
-                        ],
-                        "Resource": [
-                            "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*",
-                            "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_name}:*:*"
-                        ]
-                    }}    
-                ]
-            }}'''
-
-            response = self.iam.put_role_policy(
-                RoleName=self.firehose_role,
-                PolicyName=self.firehose_role_policy_name,
-                PolicyDocument=delivery_role_policy
-            )
-
-            logger.info('Firehose Service Role created')
-
-
-        except Exception as e:
-            if 'EntityAlreadyExists' in str(e):
-                logger.info('Service Role not created - already exists')
-                response = self.iam.get_role(
-                    RoleName=self.firehose_role
-                )
-                self.firehose_role_arn = response['Role']['Arn']
-
-            else:
-                logger.error(str(e))
+        self.firehose_role_arn = self.iam_helper.role_stitcher(self.firehose_role, 'firehose', f"Service role for Firehose support {self.job_identifier}", policies_list=[delivery_role_policy])
 
     def create_firehose_buckets(self):
         """
         Creates the output and backup buckets for the data.
         Failed processing stream events will land in the backup.
         """
+
         try:
 
             self.s3.create_bucket(
@@ -263,7 +222,7 @@ Firehose Role Name: {self.firehose_role}
                     ExtendedS3DestinationConfiguration={
                         'RoleARN': self.firehose_role_arn,
                         'BucketARN': self.s3_results_bucket_arn,
-                        'Prefix': self.s3_bucket_prefix,
+                        'Prefix': self.s3_bucket_prefix + '/',
                         'BufferingHints': {
                             'SizeInMBs': 128,
                             'IntervalInSeconds': 900
@@ -353,13 +312,12 @@ Firehose Role Name: {self.firehose_role}
             ]
         }}'''
 
+        # TODO: probably adding duplicate policies - may need a manual check for existance
         response = self.iam.put_role_policy(
             RoleName=task_role,
             PolicyName=self.firehost_task_policy_name,
             PolicyDocument=delivery_role_policy
         )
-
-
 
 
     def put_record(self, data):
@@ -377,31 +335,807 @@ Firehose Role Name: {self.firehose_role}
             logger.debug(str(e))
 
 
-class AwsBatchEnv():
+class AWSGlueTransform(AwsJobBase):
+
+    def __init__(self, job_name, s3_bucket, s3_prefix, region):
+        super().__init__(job_name, s3_bucket, s3_prefix, region)
+
+        self.glue = self.session.client('glue')
+        #self.s3_bucket = s3_bucket
+        #self.s3_bucket prefix = s3_prefix
+        self.md_crawler_role_name = self.get_name('glue_metadata_crawler_role_name')
+        self.md_crawler_name = self.get_name('glue_metadata_crawler_name')
+        self.glue_metadata_parquet_crawler_name = self.get_name('glue_metadata_parquet_crawler_name')
+        self.glue_metadata_parqeut_results_s3_path = self.get_name('glue_metadata_parqeut_results_s3_path')
+        self.database_name = self.get_name('glue_database_name')
+        self.s3_results_bucket = self.get_name('s3_results_bucket')
+        self.md_crawler_role_arn = None
+
+    def __repr__(self):
+        return f"""
+The following objects compose the Glue to support the Batch run for {self.job_name}:
+Crawler Role Name: {self.md_crawler_role_name}
+S3 Bucket For Source Data and Glue Tables: {self.s3_results_bucket}
+Source S3 Bucket Prefix: {self.s3_bucket_prefix}
+    """
+
+    def create_database(self):
+
+        try:
+            response = self.glue.create_database(
+                DatabaseInput={
+                    'Name': self.database_name,
+                    'Description': f'Database created for job: {self.job_name}'
+                }
+            )
+        except Exception as e:
+            if 'AlreadyExistsException' in str(e):
+                logger.info(f'Database {self.database_name} already exists, skipping...')
+            else:
+                logger.error(str(e))
+                raise
+
+    def create_roles(self):
+
+        service_policy = f'''{{"Version": "2012-10-17",
+                "Statement": [
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "glue:*",
+                            "s3:GetBucketLocation",
+                            "s3:ListBucket",
+                            "s3:ListAllMyBuckets",
+                            "s3:GetBucketAcl",
+                            "ec2:DescribeVpcEndpoints",
+                            "ec2:DescribeRouteTables",
+                            "ec2:CreateNetworkInterface",
+                            "ec2:DeleteNetworkInterface",
+                            "ec2:DescribeNetworkInterfaces",
+                            "ec2:DescribeSecurityGroups",
+                            "ec2:DescribeSubnets",
+                            "ec2:DescribeVpcAttribute",
+                            "iam:ListRolePolicies",
+                            "iam:GetRole",
+                            "iam:GetRolePolicy",
+                            "cloudwatch:PutMetricData"
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:CreateBucket"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::aws-glue-*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:GetObject",
+                            "s3:PutObject",
+                            "s3:DeleteObject"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::aws-glue-*/*",
+                            "arn:aws:s3:::*/*aws-glue-*/*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:GetObject"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::crawler-public*",
+                            "arn:aws:s3:::aws-glue-*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                            "arn:aws:logs:*:*:/aws-glue/*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "ec2:CreateTags",
+                            "ec2:DeleteTags"
+                        ],
+                        "Condition": {{
+                            "ForAllValues:StringEquals": {{
+                                "aws:TagKeys": [
+                                    "aws-glue-service-resource"
+                                ]
+                            }}
+                        }},
+                        "Resource": [
+                            "arn:aws:ec2:*:*:network-interface/*",
+                            "arn:aws:ec2:*:*:security-group/*",
+                            "arn:aws:ec2:*:*:instance/*"
+                        ]
+                    }}
+                ]
+            }}
+
+            '''
+
+        data_access_policy = f'''{{"Version": "2012-10-17",
+                "Statement": [
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:GetBucketLocation",
+                            "s3:ListBucket",
+                            "s3:ListAllMyBuckets",
+                            "s3:GetBucketAcl" 
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:Get*",
+                            "s3:List*"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::{self.s3_results_bucket}/*",
+                            "arn:aws:s3:::{self.s3_results_bucket}/*/*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:Get*",
+                            "s3:List*",
+                            "s3:Put*"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::{self.s3_results_bucket}/*",
+                            "arn:aws:s3:::{self.s3_results_bucket}/*/*"
+                        ]
+                    }}
+
+                ]
+
+            }}
+            '''
+
+        policies = []
+        policies.append(service_policy)
+        policies.append(data_access_policy)
+
+        self.crawler_role_arn = self.iam_helper.role_stitcher(
+            self.md_crawler_role_name,
+            'glue',
+            f'IAM role for {self.md_crawler_role_name} and {self.glue_metadata_parquet_crawler_name}',
+            policies_list=policies
+        )
+
+    def create_crawler(self):
+        # Identified a race condition here - will add some sleep time to work around it.
+        while True:
+            try:
+                response = self.glue.create_crawler(
+                    Name=self.md_crawler_name,
+                    Role=self.md_crawler_role_name,
+                    DatabaseName=self.database_name,
+                    Description=f"{self.job_name} crawler",
+                    Targets={
+                        'S3Targets': [
+                            {
+                                'Path': f's3://{self.s3_results_bucket}/{self.s3_bucket_prefix}/',
+                            },
+                        ],
+                    },
+                    TablePrefix=self.s3_bucket_prefix,
+                    SchemaChangePolicy={
+                        'UpdateBehavior': 'UPDATE_IN_DATABASE',
+                        'DeleteBehavior': 'DELETE_FROM_DATABASE'
+                    }
+                )
+
+                logger.info(f'Crawler {self.md_crawler_name} created')
+                break
+
+            except Exception as e:
+                if "Service is unable to assume role" in str(e):
+                    logger.info('Sleeping to allow role to register correctly before crawler creation...')
+                    time.sleep(5)
+                elif 'AlreadyExistsException' in str(e):
+                    logger.info(f'Crawler {self.md_crawler_name} already exists, skipping...')
+                    break
+                else:
+                    logger.error(str(e))
+                    raise
+
+    def create_parquet_crawler(self):
+        # Identified a race condition here - will add some sleep time to work around it.
+        while True:
+            try:
+                response = self.glue.create_crawler(
+                    Name=self.md_crawler_name,
+                    Role=self.md_crawler_role_name,
+                    DatabaseName=self.database_name,
+                    Description=f"{self.job_name} crawler",
+                    Targets={
+                        'S3Targets': [
+                            {
+                                'Path': f'{self.glue_metadata_parqeut_results_s3_path}',
+                            },
+                        ],
+                    },
+                    TablePrefix=self.s3_bucket_prefix,
+                    SchemaChangePolicy={
+                        'UpdateBehavior': 'UPDATE_IN_DATABASE',
+                        'DeleteBehavior': 'DELETE_FROM_DATABASE'
+                    }
+                )
+
+                logger.info(f'Crawler {self.md_crawler_name} created')
+                break
+
+            except Exception as e:
+                if "Service is unable to assume role" in str(e):
+                    logger.info('Sleeping to allow role to register correctly before crawler creation...')
+                    time.sleep(5)
+                elif 'AlreadyExistsException' in str(e):
+                    logger.info(f'Crawler {self.md_crawler_name} already exists, skipping...')
+                    break
+                else:
+                    logger.error(str(e))
+                    raise
+
+    def delete_crawler(self):
+        response = self.glue.delete_crawler(
+            Name=self.md_crawler_name
+        )
+        logger.info(f'Crawler {self.md_crawler_name} deleted')
+
+
+class AwsLambda(AwsJobBase):
+    def __init__(self, job_name, s3_bucket, s3_prefix, region):
+        super().__init__(job_name, s3_bucket, s3_prefix, region)
+        self.aws_lambda = self.session.client('lambda')
+        self.md_crawler_function_name = self.get_name('lambda_metadata_crawler_function_name')
+        self.md_lambda_crawler_role_name = self.get_name('lambda_metadata_crawler_role_name')
+        self.md_crawler_name = self.get_name('glue_metadata_crawler_name')
+        self.s3 = self.session.client('s3')
+        self.s3_res = self.session.resource('s3')
+        self.s3_lambda_code_bucket = self.get_name('s3_lambda_code_bucket')
+        self.s3_lambda_md_crawler_key = self.get_name('s3_lambda_code_metadata_crawler_key')
+        self.database_name = self.get_name('glue_database_name')
+        self.glue_md_table_name = self.get_name('glue_metadata_table_name')
+        self.s3_results_bucket = self.get_name('s3_results_bucket')
+        self.md_lambda_crawler_role_arn = None
+        self.lambda_metadata_etl_role_arn = None
+        self.lambda_metadata_etl_role_name = self.get_name('lambda_metadata_etl_role_name')
+        self.lambda_metadata_etl_function_name = self.get_name('lambda_metadata_etl_function_name')
+        self.glue_metadata_parquet_results_s3_prefix = self.get_name('glue_metadata_parquet_results_s3_prefix')
+        self.glue_metadata_parqeut_results_s3_path = self.get_name('glue_metadata_parqeut_results_s3_path')
+        self.s3_lambda_code_metadata_etl_key = self.get_name('s3_lambda_code_metadata_etl_key')
+        self.s3_lambda_code_metadata_parquet_crawler_key = self.get_name('s3_lambda_code_metadata_parquet_crawler_key')
+        self.lambda_metadata_parquet_crawler_function_name = self.get_name('lambda_metadata_parquet_crawler_function_name')
+
+        self.lambda_ts_crawler_function_name = self.get_name('lambda_ts_crawler_function_name')
+
+        #TODO write script to bucket for ETL job:
+        self.s3_glue_scripts_bucket = self.get_name('s3_glue_scripts_bucket')
+        self.s3_glue_scripts_md_etl_key = self.get_name('s3_glue_scripts_md_etl_key')
+
+
+    def create_roles(self):
+
+        lambda_policy = f'''{{"Version": "2012-10-17",
+        "Statement": [
+          {{
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+          }},
+          {{
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": "glue:StartCrawler",
+            "Resource": "*"
+          }},
+          {{
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:*:*:*"
+          }},
+          {{
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "glue:GetCrawlerMetrics",
+            "Resource": "*"
+          }}
+        ]
+    }}
+
+
+        '''
+        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(self.md_lambda_crawler_role_name, 'lambda',
+                                                              f'Lambda execution role for {self.md_crawler_function_name}',
+                                                              policies_list=[lambda_policy])
+
+        lambda_etl_policy = f'''{{"Version": "2012-10-17",
+        "Statement": [
+          {{
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+              "logs:CreateLogStream",
+              "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+          }},
+          {{
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "glue:CreateJob",
+                "glue:CreateScript",
+                "glue:Get*"
+            ],
+            "Resource": "*"
+          }},
+          {{
+            "Sid": "VisualEditor2",
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:*:*:*"
+          }}
+        ]
+    }}
+    '''
+
+        self.lambda_metadata_etl_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_etl_function_name,
+                                                                          'lambda',
+                                                                          f'Lambda execution role for {self.md_lambda_crawler_role_name}',
+                                                                          policies_list=[lambda_etl_policy])
+
+    def delete_roles(self):
+        self.iam.delete_role(self.md_lambda_crawler_role_name)
+
+    def create_crawler_function(self):
+        '''
+        This is the crawler running on the Firehose JSON data to define the first table to seed our ETL job
+        :return:
+        '''
+
+        try:
+            self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
+                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
+            logger.info(f'{self.s3_lambda_code_bucket} s3 bucket created')
+
+        except Exception as e:
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
+            else:
+                logger.error(str(e))
+                raise
+
+        function_script = f'''
+import json
+from pprint import pprint
+import boto3
+import time
+
+def lambda_handler(event, context):
+    client = boto3.client('glue')
+    response = client.start_crawler(Name='{self.md_crawler_name}')
+    
+    while True:
+        response = client.get_crawler_metrics(
+            CrawlerNameList=[
+                '{self.md_crawler_name}'
+            ]
+        )
+        print(response)
+        if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
+            tables_response = client.get_tables(
+                DatabaseName='{self.database_name}',
+                Expression='*{self.s3_bucket_prefix}*'
+            )
+            for table in tables_response['TableList']:
+                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.md_crawler_name}':
+                    return table
+            print(tables_response)
+            break
+        else:
+            print("Crawler still running")
+            time.sleep(5)
+
+        '''
+
+        self.zip_and_s3_load(function_script,
+                             'run_md_crawler.py',
+                             'run_md_crawler.py.zip',
+                             self.s3_lambda_code_bucket,
+                             self.s3_lambda_md_crawler_key)
+        '''
+        zip_archive = zipfile.ZipFile('run_md_crawler.py.zip', mode='w', compression=zipfile.ZIP_STORED)
+
+        info = zipfile.ZipInfo('run_md_crawler.py')
+        info.external_attr = 0o777 << 16
+        zip_archive.writestr(info, function_script)
+
+        zip_archive.close()
+        '''
+
+        #os.chmod('run_crawler.py.zip', stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+        #self.s3.upload_file('run_md_crawler.py.zip', self.s3_lambda_code_bucket, self.s3_lambda_md_crawler_key)
+
+        print(self.md_lambda_crawler_role_arn)
+
+        while 1 == 1:
+            try:
+
+                response = self.aws_lambda.create_function(
+                    FunctionName=self.md_crawler_function_name,
+                    Runtime='python3.7',
+                    Role=self.md_lambda_crawler_role_arn,
+                    Handler='run_md_crawler.lambda_handler',
+                    Code={
+                        'S3Bucket': self.s3_lambda_code_bucket,
+                        'S3Key': self.s3_lambda_md_crawler_key
+                    },
+                    Description=f'Lambda for crawler exection on job {self.job_name}',
+                    Timeout=900,
+                    MemorySize=128,
+                    Publish=True,
+                    Tags={
+                        'job': self.job_name
+                    }
+                )
+
+                print(response)
+                break
+
+            except Exception as e:
+                if 'role defined for the function cannot be assumed' in str(e):
+                    logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
+                    time.sleep(5)
+                elif 'Function already exist' in str(e):
+                    logger.info(f'Lambda function {self.md_crawler_function_name} exists, skipping...')
+                    break
+                else:
+                    logger.error(str(e))
+                    raise
+
+    def create_etl_script_function(self):
+
+        try:
+            self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
+                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
+            logger.info(f'{self.s3_lambda_code_bucket} s3 bucket created')
+
+        except Exception as e:
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
+            else:
+                logger.error(str(e))
+                raise
+        try:
+            self.s3.create_bucket(Bucket=self.s3_glue_scripts_bucket,
+                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
+            logger.info(f'{self.s3_glue_scripts_bucket} s3 bucket created')
+
+        except Exception as e:
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
+            else:
+                logger.error(str(e))
+                raise
+
+        function_script = '''
+import json
+from pprint import pprint
+import boto3
+
+def lambda_handler(event, context):
+    client = boto3.client('glue')
+    response = client.get_table(DatabaseName='%s', Name='%s')
+    pprint(response['Table']['StorageDescriptor']['Columns'])
+
+    columns = []
+    for column in response['Table']['StorageDescriptor']['Columns']:
+        columns.append((column['Name'], column['Type'], column['Name'], column['Type']))
+        
+
+    
+    response = client.create_script(
+        DagNodes=[
+            {
+                'NodeType': 'DataSource',
+                'Id': 'datasource0',
+                'Args': [{
+                    'Param': False,
+                    'Name': 'database',
+                    'Value': '"%s"'
+                }, {
+                    'Param': False,
+                    'Name': 'table_name',
+                    'Value': '"%s"'
+                }, {
+                    'Param': False,
+                    'Name': 'transformation_ctx',
+                    'Value': '"datasource0"'
+                }],
+                'LineNumber': 18
+            },
+            {
+                'NodeType': 'ApplyMapping',
+                'Id': 'applymapping1',
+                'Args': [{
+                    'Param': False,
+                    'Name': 'mappings',
+                    'Value': f'{columns}'
+                }, {
+                    'Param': False,
+                    'Name': 'transformation_ctx',
+                    'Value': '"applymapping1"'
+                }],
+    
+                'LineNumber': 20
+            },
+            {
+                'Args': [{
+                    'Param': False,
+                    'Name': 'choice',
+                    'Value': '"make_struct"'
+                }, {
+                    'Param': False,
+                    'Name': 'transformation_ctx',
+                    'Value': '"resolvechoice2"'
+                }],
+                'NodeType': 'ResolveChoice',
+                'Id': 'resolvechoice2',
+                'LineNumber': 22
+            },
+            {
+                'Args': [{
+                    'Param': False,
+                    'Name': 'transformation_ctx',
+                    'Value': '"dropnullfields3"'
+                }],
+                'NodeType': 'DropNullFields',
+                'Id': 'dropnullfields3',
+                'LineNumber': 25
+            },
+            {
+                'NodeType': 'DataSink',
+                'Id': 'datasink4',
+                'Args': [{
+                    'Param': False,
+                    'Name': 'connection_type',
+                    'Value': '"s3"'
+                }, {
+                    'Param': False,
+                    'Name': 'format',
+                    'Value': '"parquet"'
+                }, {
+                    'Param': False,
+                    'Name': 'connection_options',
+                    'Value': '%s'
+                }, {
+                    'Param': False,
+                    'Name': 'transformation_ctx',
+                    'Value': '"datasink4"'
+                }],
+    
+                'LineNumber': 27
+            }
+        ],
+    
+        DagEdges=[
+            {
+                'Source': 'datasource0',
+                'TargetParameter': 'frame',
+                'Target': 'applymapping1'
+            },
+            {
+                'Source': 'applymapping1',
+                'TargetParameter': 'frame',
+                'Target': 'resolvechoice2'
+            },
+            {
+                'Source': 'resolvechoice2',
+                'TargetParameter': 'frame',
+                'Target': 'dropnullfields3'
+            },
+            {
+                'Source': 'dropnullfields3',
+                'TargetParameter': 'frame',
+                'Target': 'datasink4'
+            }
+        ],
+    
+        Language='PYTHON')
+    
+    print(response['PythonScript'])
+
+        '''  % (self.database_name, self.glue_md_table_name, self.database_name, self.glue_md_table_name, self.glue_metadata_parqeut_results_s3_path)
+
+        self.zip_and_s3_load(function_script,
+                             'run_etl_job_creation.py',
+                             'run_etl_job_creation.py.zip',
+                             self.s3_lambda_code_bucket,
+                             self.s3_lambda_code_metadata_etl_key)
+
+        while True:
+            try:
+                response = self.aws_lambda.create_function(
+                    FunctionName=self.lambda_metadata_etl_function_name,
+                    Runtime='python3.7',
+                    Role=self.lambda_metadata_etl_role_arn,
+                    Handler='run_etl_job_creation.lambda_handler',
+                    Code={
+                        'S3Bucket': self.s3_lambda_code_bucket,
+                        'S3Key': self.s3_lambda_code_metadata_etl_key
+                    },
+                    Description=f'Lambda for etl job creation on job {self.job_name}',
+                    Timeout=900,
+                    MemorySize=128,
+                    Publish=True,
+                    Tags={
+                        'job': self.job_name
+                    }
+                )
+
+                print(response)
+                break
+
+            except Exception as e:
+                if 'role defined for the function cannot be assumed' in str(e):
+                    logger.info(f"Lamda role not registered for {self.lambda_metadata_etl_role_name} - sleeping ...")
+                    time.sleep(5)
+
+                elif 'Function already exist' in str(e):
+                    logger.info(f'Lambda function {self.lambda_metadata_etl_function_name} exists, skipping...')
+                    break
+
+                else:
+                    logger.error(str(e))
+                    raise
+
+    def create_parquet_crawler_function(self):
+        '''
+        This is the crawler running on the Firehose JSON data to define the first table to seed our ETL job
+        :return:
+        '''
+
+        try:
+            self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
+                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
+            logger.info(f'{self.s3_lambda_code_bucket} s3 bucket created')
+
+        except Exception as e:
+            if 'BucketAlreadyOwnedByYou' in str(e):
+                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
+            else:
+                logger.error(str(e))
+                raise
+
+        function_script = f'''
+import json
+from pprint import pprint
+import boto3
+import time
+
+def lambda_handler(event, context):
+    client = boto3.client('glue')
+    response = client.start_crawler(Name='{self.lambda_ts_crawler_function_name}')
+
+    while True:
+        response = client.get_crawler_metrics(
+            CrawlerNameList=[
+                '{self.md_crawler_name}'
+            ]
+        )
+        print(response)
+        if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
+            tables_response = client.get_tables(
+                DatabaseName='{self.database_name}',
+                Expression='*{self.s3_bucket_prefix}*'
+            )
+            for table in tables_response['TableList']:
+                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.md_crawler_name}':
+                    return table
+            print(tables_response)
+            break
+        else:
+            print("Crawler still running")
+            time.sleep(5)
+
+        '''
+
+        self.zip_and_s3_load(function_script,
+                             'run_md_crawler.py',
+                             'run_md_crawler.py.zip',
+                             self.s3_lambda_code_bucket,
+                             self.s3_lambda_code_metadata_parquet_crawler_key)
+
+        while 1 == 1:
+            try:
+
+                response = self.aws_lambda.create_function(
+                    FunctionName=self.lambda_metadata_parquet_crawler_function_name,
+                    Runtime='python3.7',
+                    Role=self.md_lambda_crawler_role_arn,
+                    Handler='run_md_crawler.lambda_handler',
+                    Code={
+                        'S3Bucket': self.s3_lambda_code_bucket,
+                        'S3Key': self.s3_lambda_code_metadata_parquet_crawler_key
+                    },
+                    Description=f'Lambda for crawler execution on job {self.job_name}',
+                    Timeout=900,
+                    MemorySize=128,
+                    Publish=True,
+                    Tags={
+                        'job': self.job_name
+                    }
+                )
+
+                print(response)
+                break
+
+            except Exception as e:
+                if 'role defined for the function cannot be assumed' in str(e):
+                    logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
+                    time.sleep(5)
+                elif 'Function already exist' in str(e):
+                    logger.info(f'Lambda function {self.lambda_metadata_parquet_crawler_function_name} exists, skipping...')
+                    break
+                else:
+                    logger.error(str(e))
+                    raise
+
+
+class AwsBatchEnv(AwsJobBase):
 
     def __init__(self, job_name, s3_bucket, s3_prefix, region, use_spot=True):
+        super().__init__(job_name, s3_bucket, s3_prefix, region)
         self.job_name = job_name
         self.s3_bucket = s3_bucket
         # TODO should build in more controls for names to comply with AWS standards:
         self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
         self.use_spot = use_spot
         # AWS clients
-        self.region = region
-        self.session = boto3.Session(region_name=self.region)
+        #self.region = self.session.region
         self.batch = self.session.client('batch')
-        self.iam = self.session.client('iam')
+        #self.iam = self.session.client('iam')
         # Naming conventions
-        self.compute_environment_name = f"computeenvionment{self.job_identifier}"
-        self.job_queue_name = f"job_queue_{self.job_identifier}"
-        self.service_role_name = f"batch_service_role_{self.job_identifier}"
-        self.instance_role_name = f"batch_instance_role_{self.job_identifier}"
-        self.instance_profile_name = f"batch_instance_profile_{self.job_identifier}"
-        self.spot_service_role_name = f"spot_fleet_role_{self.job_identifier}"
-        self.task_role_name = f"ecs_task_role_{self.job_identifier}"
-        self.task_policy_name = f"ecs_task_policy_{self.job_identifier}"
+        self.compute_environment_name = self.get_name('batch_compute_environment_name')
+        self.job_queue_name = self.get_name('batch_job_queue_name')
+        self.service_role_name = self.get_name('batch_service_role_name')
+        self.instance_role_name = self.get_name('batch_instance_role_name')
+        self.instance_profile_name = self.get_name('batch_instance_profile_name')
+        self.spot_service_role_name = self.get_name('batch_spot_service_role_name')
+        self.task_role_name = self.get_name('batch_ecs_task_role_name')
+        self.task_policy_name = self.get_name('batch_task_policy_name')
         # Bucket information
-        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_prefix = s3_prefix
+        #self.s3_bucket_arn = self.get_name('batch_compute_environment_name')
+        #self.s3_prefix = self.s3_bucket_prefix
         # These are populated by functions below - although there is no controller the order of operation is reflected by order in the file.
         self.task_role_arn = None
         self.job_definition_arn = None
@@ -426,6 +1160,8 @@ Instance Profile ARN:  {self.instance_profile_arn}
 Spot Fleet Service Role (if use_spot): {self.spot_service_role_name}
 Task Role Name: {self.task_role_name}
 Task Role Policy Name: {self.task_policy_name}
+S3 Bucket: {self.s3_bucket}
+S3 Bucket ARN: {self.s3_bucket_arn}
 """
 
     def generate_name_value_inputs(self, var_dictionary):
@@ -443,100 +1179,22 @@ Task Role Policy Name: {self.task_policy_name}
         """
         Creates the IAM roles used in the various areas of the batch service. This currently will not try to overwrite or update existing roles.
         """
+        self.service_role_arn = self.iam_helper.role_stitcher(self.service_role_name,
+                                      "batch",
+                                      f"Service role for Batch environment {self.job_identifier}",
+                                      managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole'])
 
-        # Service Role
-        trust_policy = '''{
-                "Version": "2012-10-17",
-                "Statement": [{
-                    "Effect": "Allow",
-                    "Principal": {
-                        "Service": "batch.amazonaws.com"
-                    },
-                    "Action": "sts:AssumeRole"
-                }]
-            }
-        '''
+        ## Instance Role for Batch compute environment
 
-        try:
+        self.instance_role_arn = self.iam_helper.role_stitcher(self.instance_role_name,
+                                                               "ec2",
+                                                               f"Instance role for Batch compute environment {self.job_identifier}",
+                                                               managed_policie_arns=[
+                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
 
-            response = self.iam.create_role(
-                Path='/',
-                RoleName=self.service_role_name,
-                AssumeRolePolicyDocument=trust_policy,
-                Description=f"Service role for Batch environment {self.job_identifier}",
-                Tags=[
-                    {
-                        'Key': 'job',
-                        'Value': self.job_name
-                    },
-                ]
-            )
-            self.service_role_arn = response['Role']['Arn']
-
-            response = self.iam.attach_role_policy(
-                PolicyArn='arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole',
-                RoleName=self.service_role_name
-            )
-
-            logger.info('Service Role created')
-
-        except Exception as e:
-            if 'EntityAlreadyExists' in str(e):
-                logger.info('Service Role not created - already exists')
-                response = self.iam.get_role(
-                    RoleName=self.service_role_name
-                )
-                self.service_role_arn = response['Role']['Arn']
-
-            else:
-                logger.error(str(e))
-
-        ## Instance Role
-
-        instance_trust_policy = '''{
-                        "Version": "2012-10-17",
-                        "Statement": [{
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Service": "ec2.amazonaws.com"
-                            },
-                            "Action": "sts:AssumeRole"
-                        }]
-                    }
-                '''
-
-        try:
-            response = self.iam.create_role(
-                Path='/',
-                RoleName=self.instance_role_name,
-                AssumeRolePolicyDocument=instance_trust_policy,
-                Description=f"Instance role for Batch environment {self.job_identifier}",
-                Tags=[
-                    {
-                        'Key': 'job',
-                        'Value': self.job_name
-                    },
-                ]
-            )
-
-            self.instance_role_arn = response['Role']['Arn']
-
-            response = self.iam.attach_role_policy(
-                PolicyArn='arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role',
-                RoleName=self.instance_role_name
-            )
-
-            logger.info('ECS Instance Role created')
-
-        except Exception as e:
-            if 'EntityAlreadyExists' in str(e):
-                logger.info('ECS Instance Role not created - already exists')
-                response = self.iam.get_role(
-                    RoleName=self.instance_role_name
-                )
-                self.instance_role_arn = response['Role']['Arn']
 
         # Instance Profile
+
         try:
             response = self.iam.create_instance_profile(
                 InstanceProfileName=self.instance_profile_name
@@ -560,188 +1218,115 @@ Task Role Policy Name: {self.task_policy_name}
                 self.instance_profile_arn = response['InstanceProfile']['Arn']
 
         # ECS Task Policy
-        ecs_task_trust_policy = '''{
-                                "Version": "2012-10-17",
-                                "Statement": [{
-                                    "Effect": "Allow",
-                                    "Principal": {
-                                        "Service": "ecs-tasks.amazonaws.com"
-                                    },
-                                    "Action": "sts:AssumeRole"
-                                }]
-                            }
-                        '''
 
-        try:
-            response = self.iam.create_role(
-                Path='/',
-                RoleName=self.task_role_name,
-                AssumeRolePolicyDocument=ecs_task_trust_policy,
-                Description=f"ECS Task role for Batch environment {self.job_identifier}",
-                Tags=[
-                    {
-                        'Key': 'job',
-                        'Value': self.job_name
-                    },
+        print(self.s3_bucket)
+        print(self.s3_bucket_arn)
+
+        # TODO: slim this down
+
+
+        task_permissions_policy = f'''{{
+                "Version": "2012-10-17",
+                "Statement": [
+                    {{
+                        "Sid": "VisualEditor0",
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:PutAnalyticsConfiguration",
+                            "s3:GetObjectVersionTagging",
+                            "s3:CreateBucket",
+                            "s3:ReplicateObject",
+                            "s3:GetObjectAcl",
+                            "s3:DeleteBucketWebsite",
+                            "s3:PutLifecycleConfiguration",
+                            "s3:GetObjectVersionAcl",
+                            "s3:PutObjectTagging",
+                            "s3:DeleteObject",
+                            "s3:GetIpConfiguration",
+                            "s3:DeleteObjectTagging",
+                            "s3:GetBucketWebsite",
+                            "s3:PutReplicationConfiguration",
+                            "s3:DeleteObjectVersionTagging",
+                            "s3:GetBucketNotification",
+                            "s3:PutBucketCORS",
+                            "s3:GetReplicationConfiguration",
+                            "s3:ListMultipartUploadParts",
+                            "s3:PutObject",
+                            "s3:GetObject",
+                            "s3:PutBucketNotification",
+                            "s3:PutBucketLogging",
+                            "s3:GetAnalyticsConfiguration",
+                            "s3:GetObjectVersionForReplication",
+                            "s3:GetLifecycleConfiguration",
+                            "s3:ListBucketByTags",
+                            "s3:GetInventoryConfiguration",
+                            "s3:GetBucketTagging",
+                            "s3:PutAccelerateConfiguration",
+                            "s3:DeleteObjectVersion",
+                            "s3:GetBucketLogging",
+                            "s3:ListBucketVersions",
+                            "s3:ReplicateTags",
+                            "s3:RestoreObject",
+                            "s3:ListBucket",
+                            "s3:GetAccelerateConfiguration",
+                            "s3:GetBucketPolicy",
+                            "s3:PutEncryptionConfiguration",
+                            "s3:GetEncryptionConfiguration",
+                            "s3:GetObjectVersionTorrent",
+                            "s3:AbortMultipartUpload",
+                            "s3:PutBucketTagging",
+                            "s3:GetBucketRequestPayment",
+                            "s3:GetObjectTagging",
+                            "s3:GetMetricsConfiguration",
+                            "s3:DeleteBucket",
+                            "s3:PutBucketVersioning",
+                            "s3:ListBucketMultipartUploads",
+                            "s3:PutMetricsConfiguration",
+                            "s3:PutObjectVersionTagging",
+                            "s3:GetBucketVersioning",
+                            "s3:GetBucketAcl",
+                            "s3:PutInventoryConfiguration",
+                            "s3:PutIpConfiguration",
+                            "s3:GetObjectTorrent",
+                            "s3:PutBucketWebsite",
+                            "s3:PutBucketRequestPayment",
+                            "s3:GetBucketCORS",
+                            "s3:GetBucketLocation",
+                            "s3:ReplicateDelete",
+                            "s3:GetObjectVersion"
+                        ],
+                        "Resource": [
+                            "{self.s3_bucket_arn}",
+                            "{self.s3_bucket_arn}/*"
+                        ]
+                    }},
+                    {{
+                        "Sid": "VisualEditor1",
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:ListAllMyBuckets",
+                            "s3:HeadBucket"
+                        ],
+                        "Resource": "*"
+                    }}
                 ]
-            )
+            }}'''
 
-            self.task_role_arn = response['Role']['Arn']
+        self.task_role_arn = self.iam_helper.role_stitcher(self.task_role_name,
+                                                               "ecs-tasks",
+                                                               f"Task role for Batch job {self.job_identifier}",
+                                                               policies_list=[task_permissions_policy])
 
-            # TODO: slim this down
-            task_permissions_policy = f'''{{
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {{
-                            "Sid": "VisualEditor0",
-                            "Effect": "Allow",
-                            "Action": [
-                                "s3:PutAnalyticsConfiguration",
-                                "s3:GetObjectVersionTagging",
-                                "s3:CreateBucket",
-                                "s3:ReplicateObject",
-                                "s3:GetObjectAcl",
-                                "s3:DeleteBucketWebsite",
-                                "s3:PutLifecycleConfiguration",
-                                "s3:GetObjectVersionAcl",
-                                "s3:PutObjectTagging",
-                                "s3:DeleteObject",
-                                "s3:GetIpConfiguration",
-                                "s3:DeleteObjectTagging",
-                                "s3:GetBucketWebsite",
-                                "s3:PutReplicationConfiguration",
-                                "s3:DeleteObjectVersionTagging",
-                                "s3:GetBucketNotification",
-                                "s3:PutBucketCORS",
-                                "s3:GetReplicationConfiguration",
-                                "s3:ListMultipartUploadParts",
-                                "s3:PutObject",
-                                "s3:GetObject",
-                                "s3:PutBucketNotification",
-                                "s3:PutBucketLogging",
-                                "s3:GetAnalyticsConfiguration",
-                                "s3:GetObjectVersionForReplication",
-                                "s3:GetLifecycleConfiguration",
-                                "s3:ListBucketByTags",
-                                "s3:GetInventoryConfiguration",
-                                "s3:GetBucketTagging",
-                                "s3:PutAccelerateConfiguration",
-                                "s3:DeleteObjectVersion",
-                                "s3:GetBucketLogging",
-                                "s3:ListBucketVersions",
-                                "s3:ReplicateTags",
-                                "s3:RestoreObject",
-                                "s3:ListBucket",
-                                "s3:GetAccelerateConfiguration",
-                                "s3:GetBucketPolicy",
-                                "s3:PutEncryptionConfiguration",
-                                "s3:GetEncryptionConfiguration",
-                                "s3:GetObjectVersionTorrent",
-                                "s3:AbortMultipartUpload",
-                                "s3:PutBucketTagging",
-                                "s3:GetBucketRequestPayment",
-                                "s3:GetObjectTagging",
-                                "s3:GetMetricsConfiguration",
-                                "s3:DeleteBucket",
-                                "s3:PutBucketVersioning",
-                                "s3:ListBucketMultipartUploads",
-                                "s3:PutMetricsConfiguration",
-                                "s3:PutObjectVersionTagging",
-                                "s3:GetBucketVersioning",
-                                "s3:GetBucketAcl",
-                                "s3:PutInventoryConfiguration",
-                                "s3:PutIpConfiguration",
-                                "s3:GetObjectTorrent",
-                                "s3:PutBucketWebsite",
-                                "s3:PutBucketRequestPayment",
-                                "s3:GetBucketCORS",
-                                "s3:GetBucketLocation",
-                                "s3:ReplicateDelete",
-                                "s3:GetObjectVersion"
-                            ],
-                            "Resource": [
-                                "{self.s3_bucket_arn}",
-                                "{self.s3_bucket_arn}/*"
-                            ]
-                        }},
-                        {{
-                            "Sid": "VisualEditor1",
-                            "Effect": "Allow",
-                            "Action": [
-                                "s3:ListAllMyBuckets",
-                                "s3:HeadBucket"
-                            ],
-                            "Resource": "*"
-                        }}
-                    ]
-                }}'''
-
-
-            response = self.iam.put_role_policy(
-                RoleName=self.task_role_name,
-                PolicyName=self.task_policy_name,
-                PolicyDocument=task_permissions_policy
-            )
-
-            logger.info('ECS Task Role created')
-
-        except Exception as e:
-            if 'EntityAlreadyExists' in str(e):
-                logger.info('ECS Task Role not created - already exists')
-                response = self.iam.get_role(
-                    RoleName=self.task_role_name
-                )
-
-                self.task_role_arn = response['Role']['Arn']
-            else:
-                logger.error(str(e))
 
         if self.use_spot:
+
             # Spot Fleet Role
-            trust_policy = '''{
-                            "Version": "2012-10-17",
-                            "Statement": [{
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Service": "spotfleet.amazonaws.com"
-                                },
-                                "Action": "sts:AssumeRole"
-                            }]
-                        }
-                    '''
-            try:
-                response = self.iam.create_role(
-                    Path='/',
-                    RoleName=self.spot_service_role_name,
-                    AssumeRolePolicyDocument=trust_policy,
-                    Description=f"Service role for Batch spot fleets for environment {self.job_identifier}",
-                    Tags=[
-                        {
-                            'Key': 'job',
-                            'Value': self.job_name
-                        },
-                    ]
-                )
+            self.spot_service_role_arn = self.iam_helper.role_stitcher(self.spot_service_role_name,
+                                                               "spotfleet",
+                                                               f"Spot Fleet role for Batch compute environment {self.job_identifier}",
+                                                               managed_policie_arns=[
+                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'])
 
-                self.spot_service_role_arn = response['Role']['Arn']
-
-                response = self.iam.attach_role_policy(
-                    PolicyArn='arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole',
-                    RoleName=self.spot_service_role_name
-                )
-
-                logger.info('Spot Fleet Service Role created')
-
-            except Exception as e:
-                if 'EntityAlreadyExists' in str(e):
-                    logger.info('Spot Fleet Service Role not created - already exists')
-                    response = self.iam.get_role(
-                        RoleName=self.spot_service_role_name
-                    )
-
-                    self.spot_service_role_arn = response['Role']['Arn']
-                else:
-                    logger.error(str(e))
 
     def create_compute_environment(self, subnets, security_groups, maxCPUs=10000):
         """
@@ -924,11 +1509,12 @@ class AwsBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
+        self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', project_filename)
 
+        self.project_filename = project_filename
         self.region = self.cfg['aws']['region']
         self.ecr = boto3.client('ecr', region_name=self.region)
         self.s3 = boto3.client('s3', region_name=self.region)
-        self.job_name = re.sub('[^0-9a-zA-Z]+', '_', project_filename)
         self.s3_bucket = self.cfg['aws']['s3']['bucket']
         self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix']
         self.batch_env_subnet = self.cfg['aws']['subnet']
@@ -1084,24 +1670,16 @@ class AwsBatch(DockerBatchBase):
         # TODO: Review Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
 
         # Define the batch environment
-        batch_env = AwsBatchEnv(self.job_name, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
+        batch_env = AwsBatchEnv(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
         logger.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
-
-        # Review config
         logger.debug(str(batch_env))
-
-        # Create the service roles for this batch environment
         batch_env.create_batch_service_roles()
-
-        # Create the compute envionrment for the environment
         batch_env.create_compute_environment([self.batch_env_subnet], self.security_group)
-
-        # Create the associated job queue and associate the compute environment
         batch_env.create_job_queue()
 
         # Pass through config for the Docker containers
-        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_name, REGION=self.region)
+        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier, REGION=self.region)
 
         image_url = '{}:latest'.format(
             self.container_repo['repositoryUri']
@@ -1116,23 +1694,28 @@ class AwsBatch(DockerBatchBase):
         )
 
         # Initialize the firehose environment and try to create it
-        firehose_env = AwsFirehose(self.job_name, self.s3_bucket, self.s3_bucket_prefix, self.region)
-
-        # Review the config
+        firehose_env = AwsFirehose(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
         logger.debug(str(firehose_env))
-
-        # Create the associated role with S3 permissions
         firehose_env.create_firehose_delivery_role()
-
-        # Create the buckets for the firehose
         firehose_env.create_firehose_buckets()
-
-        # Create the firehose
         firehose_env.create_firehose()
-
         firehose_env.add_firehose_task_permissions(batch_env.task_role_name)
 
-        # Once the firehose delivery stream is running we submit the job
+        # Create database and 2 crawlers to manage the resulting data
+        glue_env = AWSGlueTransform(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        glue_env.create_database()
+        glue_env.create_roles()
+        glue_env.create_crawler()
+        glue_env.create_parquet_crawler()
+
+
+        # Set up 3 functions to manage ETL after the Batch job completes
+        lambda_env = AwsLambda(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        lambda_env.create_roles()
+        lambda_env.create_crawler_function()
+        lambda_env.create_etl_script_function()
+        lambda_env.create_parquet_crawler_function()
+
         batch_env.submit_job(array_size)
 
     @classmethod
@@ -1239,11 +1822,10 @@ class AwsBatch(DockerBatchBase):
                             'Data': json.dumps(dp_out) + '\n'
                         }
                     )
-                    #logger.info(response)
+                    logger.info(response)
 
                 except Exception as e:
                     logger.error(str(e))
-
 
 
             logger.debug('Clearing out simulation directory')
