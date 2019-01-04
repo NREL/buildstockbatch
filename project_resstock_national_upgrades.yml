@@ -9,34 +9,34 @@ baseline:
 
 upgrades:
 
-  - upgrade_name: Air Leakage 25% reduction
-    options:
-      - option: Infiltration|18.5 ACH50
-       apply_logic: Infiltration|25 ACH50
-        costs:
-          - value: 1.488
-            multiplier: Floor Area, Conditioned (ft^2)
-        lifetime: 999
-      - option: Infiltration|15 ACH50
-       apply_logic: Infiltration|20 ACH50
-        costs:
-          - value: 1.2
-            multiplier: Floor Area, Conditioned (ft^2)
-        lifetime: 999
-      - option: Infiltration|11.25 ACH50
-       apply_logic: Infiltration|15 ACH50
-        costs:
-          - value: 0.9
-            multiplier: Floor Area, Conditioned (ft^2)
-        lifetime: 999
-      - option: Infiltration|7.5 ACH50
-       apply_logic: Infiltration|10 ACH50
-        costs:
-          - value: 0.625
-            multiplier: Floor Area, Conditioned (ft^2)
-        lifetime: 999
-#    package_apply_logic:
-#   reference_scenario: baseline
+#   - upgrade_name: Air Leakage 25% reduction
+#     options:
+#       - option: Infiltration|18.5 ACH50
+#        apply_logic: Infiltration|25 ACH50
+#         costs:
+#           - value: 1.488
+#             multiplier: Floor Area, Conditioned (ft^2)
+#         lifetime: 999
+#       - option: Infiltration|15 ACH50
+#        apply_logic: Infiltration|20 ACH50
+#         costs:
+#           - value: 1.2
+#             multiplier: Floor Area, Conditioned (ft^2)
+#         lifetime: 999
+#       - option: Infiltration|11.25 ACH50
+#        apply_logic: Infiltration|15 ACH50
+#         costs:
+#           - value: 0.9
+#             multiplier: Floor Area, Conditioned (ft^2)
+#         lifetime: 999
+#       - option: Infiltration|7.5 ACH50
+#        apply_logic: Infiltration|10 ACH50
+#         costs:
+#           - value: 0.625
+#             multiplier: Floor Area, Conditioned (ft^2)
+#         lifetime: 999
+# #    package_apply_logic:
+# #   reference_scenario: baseline
 
   - upgrade_name: Air Leakage 25% reduction, with mech. vent.
     options:
@@ -126,46 +126,46 @@ upgrades:
 #    package_apply_logic:
 #    reference_scenario: baseline
 
-  - upgrade_name: R-49 Attic Insulation
-    options:
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
-        costs:
-          - value: 2.4
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
-        costs:
-          - value: 1.9
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
-        costs:
-          - value: 1.6
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
-        costs:
-          - value: 1.4
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
-        costs:
-          - value: 0.87
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-      - option: Insulation Unfinished Attic|Ceiling R-49, Vented
-       apply_logic: Insulation Unfinished Attic|Ceiling R-38, Vented
-        costs:
-          - value: 0.5
-            multiplier: Floor Area, Attic (ft^2)
-        lifetime: 999
-#    package_apply_logic:
-#    reference_scenario: baseline
+#   - upgrade_name: R-49 Attic Insulation
+#     options:
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Uninsulated, Vented
+#         costs:
+#           - value: 2.4
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Ceiling R-7, Vented
+#         costs:
+#           - value: 1.9
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Ceiling R-13, Vented
+#         costs:
+#           - value: 1.6
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Ceiling R-19, Vented
+#         costs:
+#           - value: 1.4
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Ceiling R-30, Vented
+#         costs:
+#           - value: 0.87
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+#       - option: Insulation Unfinished Attic|Ceiling R-49, Vented
+#        apply_logic: Insulation Unfinished Attic|Ceiling R-38, Vented
+#         costs:
+#           - value: 0.5
+#             multiplier: Floor Area, Attic (ft^2)
+#         lifetime: 999
+# #    package_apply_logic:
+# #    reference_scenario: baseline
 
   - upgrade_name: R-60 Attic Insulation
     options:
@@ -208,16 +208,16 @@ upgrades:
 #    package_apply_logic:
 #    reference_scenario: baseline
 
-  - upgrade_name: R-13 Wall Insulation
-    options:
-      - option: Insulation Wall|Wood Stud, R-13
-       apply_logic: Insulation Wall|Wood Stud, Uninsulated
-        costs:
-          - value: 2.21
-            multiplier: Wall Area, Above-Grade, Conditioned (ft^2)
-        lifetime: 999
-#    package_apply_logic:
-#    reference_scenario: baseline
+#   - upgrade_name: R-13 Wall Insulation
+#     options:
+#       - option: Insulation Wall|Wood Stud, R-13
+#        apply_logic: Insulation Wall|Wood Stud, Uninsulated
+#         costs:
+#           - value: 2.21
+#             multiplier: Wall Area, Above-Grade, Conditioned (ft^2)
+#         lifetime: 999
+# #    package_apply_logic:
+# #    reference_scenario: baseline
 
   - upgrade_name: Low-E Storm Window
     options:
@@ -284,201 +284,201 @@ upgrades:
         lifetime: 16
 #    package_apply_logic:
 
-  - upgrade_name: AC, SEER 18
-    options:
-      - option: HVAC System Cooling|AC, SEER 18
-       apply_logic: HVAC System Cooling|AC, SEER 8||HVAC System Cooling|AC, SEER 10||HVAC System Cooling|AC, SEER 11||HVAC System Cooling|AC, SEER 12||HVAC System Cooling|AC, SEER 13||HVAC System Cooling|AC, SEER 14||HVAC System Cooling|AC, SEER 15||HVAC System Cooling|AC, SEER 16||HVAC System Cooling|AC, SEER 17
-        costs:
-          - value: 42
-            multiplier: Size, Cooling System (kBtu/h)
-          - value: 3200
-            multiplier: Fixed (1)
-        lifetime: 16
-#    package_apply_logic:
-#    reference_scenario: AC, SEER 14 (Reference)
+#   - upgrade_name: AC, SEER 18
+#     options:
+#       - option: HVAC System Cooling|AC, SEER 18
+#         apply_logic: HVAC System Cooling|AC, SEER 8||HVAC System Cooling|AC, SEER 10||HVAC System Cooling|AC, SEER 11||HVAC System Cooling|AC, SEER 12||HVAC System Cooling|AC, SEER 13||HVAC System Cooling|AC, SEER 14||HVAC System Cooling|AC, SEER 15||HVAC System Cooling|AC, SEER 16||HVAC System Cooling|AC, SEER 17
+#         costs:
+#           - value: 42
+#             multiplier: Size, Cooling System (kBtu/h)
+#           - value: 3200
+#             multiplier: Fixed (1)
+#         lifetime: 16
+# #    package_apply_logic:
+# #    reference_scenario: AC, SEER 14 (Reference)
 
-  - upgrade_name: AC, SEER 14 (Reference)
-    options:
-      - option: HVAC System Cooling|AC, SEER 14
-       apply_logic: HVAC System Cooling|AC, SEER 8||HVAC System Cooling|AC, SEER 10||HVAC System Cooling|AC, SEER 11||HVAC System Cooling|AC, SEER 12||HVAC System Cooling|AC, SEER 13||HVAC System Cooling|AC, SEER 14
-        costs:
-          - value: 42
-            multiplier: Size, Cooling System (kBtu/h)
-          - value: 2700
-            multiplier: Fixed (1)
-        lifetime: 16
-      - option: HVAC System Cooling|AC, SEER 15
-       apply_logic: HVAC System Cooling|AC, SEER 15
-        costs:
-          - value: 42
-            multiplier: Size, Cooling System (kBtu/h)
-          - value: 2800
-            multiplier: Fixed (1)
-        lifetime: 16
-      - option: HVAC System Cooling|AC, SEER 16
-       apply_logic: HVAC System Cooling|AC, SEER 16
-        costs:
-          - value: 42
-            multiplier: Size, Cooling System (kBtu/h)
-          - value: 3000
-            multiplier: Fixed (1)
-        lifetime: 16
-      - option: HVAC System Cooling|AC, SEER 17
-       apply_logic: HVAC System Cooling|AC, SEER 17
-        costs:
-          - value: 42
-            multiplier: Size, Cooling System (kBtu/h)
-          - value: 3100
-            multiplier: Fixed (1)
-        lifetime: 16
-#    package_apply_logic:
+#   - upgrade_name: AC, SEER 14 (Reference)
+#     options:
+#       - option: HVAC System Cooling|AC, SEER 14
+#         apply_logic: HVAC System Cooling|AC, SEER 8||HVAC System Cooling|AC, SEER 10||HVAC System Cooling|AC, SEER 11||HVAC System Cooling|AC, SEER 12||HVAC System Cooling|AC, SEER 13||HVAC System Cooling|AC, SEER 14
+#         costs:
+#           - value: 42
+#             multiplier: Size, Cooling System (kBtu/h)
+#           - value: 2700
+#             multiplier: Fixed (1)
+#         lifetime: 16
+#       - option: HVAC System Cooling|AC, SEER 15
+#         apply_logic: HVAC System Cooling|AC, SEER 15
+#         costs:
+#           - value: 42
+#             multiplier: Size, Cooling System (kBtu/h)
+#           - value: 2800
+#             multiplier: Fixed (1)
+#         lifetime: 16
+#       - option: HVAC System Cooling|AC, SEER 16
+#         apply_logic: HVAC System Cooling|AC, SEER 16
+#         costs:
+#           - value: 42
+#             multiplier: Size, Cooling System (kBtu/h)
+#           - value: 3000
+#             multiplier: Fixed (1)
+#         lifetime: 16
+#       - option: HVAC System Cooling|AC, SEER 17
+#        apply_logic: HVAC System Cooling|AC, SEER 17
+#         costs:
+#           - value: 42
+#             multiplier: Size, Cooling System (kBtu/h)
+#           - value: 3100
+#             multiplier: Fixed (1)
+#         lifetime: 16
+# #    package_apply_logic:
 
-## Heating
+# ## Heating
 
-  - upgrade_name: Gas Furnace, 96% AFUE
-    options:
-      - option: HVAC System Heating Natural Gas|Gas Furnace, 96% AFUE
-       apply_logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 68% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 76% AFUE|| HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
-        costs:
-          - value: 3.9
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 2600
-            multiplier: Fixed (1)
-        lifetime: 20
-#    package_apply_logic:
-#    reference_scenario: Gas Furnace, 80% AFUE (Reference)
+#   - upgrade_name: Gas Furnace, 96% AFUE
+#     options:
+#       - option: HVAC System Heating Natural Gas|Gas Furnace, 96% AFUE
+#        apply_logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 68% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 76% AFUE|| HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
+#         costs:
+#           - value: 3.9
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 2600
+#             multiplier: Fixed (1)
+#         lifetime: 20
+# #    package_apply_logic:
+# #    reference_scenario: Gas Furnace, 80% AFUE (Reference)
 
-  - upgrade_name: Gas Furnace, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
-       apply_logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 68% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 76% AFUE|| HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
-        costs:
-          - value: 2.7
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 1900
-            multiplier: Fixed (1)
-        lifetime: 20
-#    package_apply_logic:
+#   - upgrade_name: Gas Furnace, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
+#        apply_logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 68% AFUE||HVAC System Heating Natural Gas|Gas Furnace, 76% AFUE|| HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
+#         costs:
+#           - value: 2.7
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 1900
+#             multiplier: Fixed (1)
+#         lifetime: 20
+# #    package_apply_logic:
 
-  - upgrade_name: Gas Boiler, 96% AFUE
-    options:
-      - option: HVAC System Heating Natural Gas|Gas Boiler, 96% AFUE
-       apply_logic: HVAC System Heating Natural Gas|Gas Boiler, 72% AFUE||HVAC System Heating Natural Gas|Gas Boiler, 76% AFUE|| HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
-        costs:
-          - value: 43
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 3100
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Gas Boiler, 96% AFUE
+#     options:
+#       - option: HVAC System Heating Natural Gas|Gas Boiler, 96% AFUE
+#        apply_logic: HVAC System Heating Natural Gas|Gas Boiler, 72% AFUE||HVAC System Heating Natural Gas|Gas Boiler, 76% AFUE|| HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
+#         costs:
+#           - value: 43
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 3100
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
-  - upgrade_name: Gas Boiler, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
-       apply_logic: HVAC System Heating Natural Gas|Gas Boiler, 72% AFUE||HVAC System Heating Natural Gas|Gas Boiler, 76% AFUE|| HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
-        costs:
-          - value: 21
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 1900
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Gas Boiler, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
+#        apply_logic: HVAC System Heating Natural Gas|Gas Boiler, 72% AFUE||HVAC System Heating Natural Gas|Gas Boiler, 76% AFUE|| HVAC System Heating Natural Gas|Gas Boiler, 80% AFUE
+#         costs:
+#           - value: 21
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 1900
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
-  - upgrade_name: Propane Furnace, 96% AFUE
-    options:
-      - option: HVAC System Heating Propane|Propane Furnace, 96% AFUE
-       apply_logic: HVAC System Heating Propane|Propane Furnace, 60% AFUE||HVAC System Heating Propane|Propane Furnace, 76% AFUE||HVAC System Heating Propane|Propane Furnace, 80% AFUE
-        costs:
-          - value: 3.9
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 4100
-            multiplier: Fixed (1)
-        lifetime: 20
-#    package_apply_logic:
+#   - upgrade_name: Propane Furnace, 96% AFUE
+#     options:
+#       - option: HVAC System Heating Propane|Propane Furnace, 96% AFUE
+#        apply_logic: HVAC System Heating Propane|Propane Furnace, 60% AFUE||HVAC System Heating Propane|Propane Furnace, 76% AFUE||HVAC System Heating Propane|Propane Furnace, 80% AFUE
+#         costs:
+#           - value: 3.9
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 4100
+#             multiplier: Fixed (1)
+#         lifetime: 20
+# #    package_apply_logic:
 
-  - upgrade_name: Propane Furnace, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Propane|Propane Furnace, 80% AFUE
-       apply_logic: HVAC System Heating Propane|Propane Furnace, 60% AFUE||HVAC System Heating Propane|Propane Furnace, 76% AFUE||HVAC System Heating Propane|Propane Furnace, 80% AFUE
-        costs:
-          - value: 2.7
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 1800
-            multiplier: Fixed (1)
-        lifetime: 20
-#    package_apply_logic:
+#   - upgrade_name: Propane Furnace, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Propane|Propane Furnace, 80% AFUE
+#        apply_logic: HVAC System Heating Propane|Propane Furnace, 60% AFUE||HVAC System Heating Propane|Propane Furnace, 76% AFUE||HVAC System Heating Propane|Propane Furnace, 80% AFUE
+#         costs:
+#           - value: 2.7
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 1800
+#             multiplier: Fixed (1)
+#         lifetime: 20
+# #    package_apply_logic:
 
-  - upgrade_name: Propane Boiler, 96% AFUE
-    options:
-      - option: HVAC System Heating Propane|Propane Boiler, 96% AFUE
-       apply_logic: HVAC System Heating Propane|Propane Boiler, 72% AFUE||HVAC System Heating Propane|Propane Boiler, 76% AFUE||HVAC System Heating Propane|Propane Boiler, 80% AFUE
-        costs:
-          - value: 43
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 3100
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Propane Boiler, 96% AFUE
+#     options:
+#       - option: HVAC System Heating Propane|Propane Boiler, 96% AFUE
+#        apply_logic: HVAC System Heating Propane|Propane Boiler, 72% AFUE||HVAC System Heating Propane|Propane Boiler, 76% AFUE||HVAC System Heating Propane|Propane Boiler, 80% AFUE
+#         costs:
+#           - value: 43
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 3100
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
-  - upgrade_name: Propane Boiler, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Propane|Propane Boiler, 80% AFUE
-       apply_logic: HVAC System Heating Propane|Propane Boiler, 72% AFUE||HVAC System Heating Propane|Propane Boiler, 76% AFUE||HVAC System Heating Propane|Propane Boiler, 80% AFUE
-        costs:
-          - value: 21
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 1900
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Propane Boiler, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Propane|Propane Boiler, 80% AFUE
+#        apply_logic: HVAC System Heating Propane|Propane Boiler, 72% AFUE||HVAC System Heating Propane|Propane Boiler, 76% AFUE||HVAC System Heating Propane|Propane Boiler, 80% AFUE
+#         costs:
+#           - value: 21
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 1900
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
-  - upgrade_name: Oil Furnace, 95% AFUE
-    options:
-      - option: HVAC System Heating Fuel Oil|Oil Furnace, 95% AFUE
-       apply_logic: HVAC System Heating Fuel Oil|Oil Furnace, 76% AFUE||HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
-        costs:
-          - value: 3.9
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 4100
-            multiplier: Fixed (1)
-        lifetime: 15
-#    package_apply_logic:
+#   - upgrade_name: Oil Furnace, 95% AFUE
+#     options:
+#       - option: HVAC System Heating Fuel Oil|Oil Furnace, 95% AFUE
+#        apply_logic: HVAC System Heating Fuel Oil|Oil Furnace, 76% AFUE||HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
+#         costs:
+#           - value: 3.9
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 4100
+#             multiplier: Fixed (1)
+#         lifetime: 15
+# #    package_apply_logic:
 
-  - upgrade_name: Oil Furnace, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
-       apply_logic: HVAC System Heating Fuel Oil|Oil Furnace, 76% AFUE||HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
-        costs:
-          - value: 2.7
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 1800
-            multiplier: Fixed (1)
-        lifetime: 15
-#    package_apply_logic:
+#   - upgrade_name: Oil Furnace, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
+#        apply_logic: HVAC System Heating Fuel Oil|Oil Furnace, 76% AFUE||HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
+#         costs:
+#           - value: 2.7
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 1800
+#             multiplier: Fixed (1)
+#         lifetime: 15
+# #    package_apply_logic:
 
-  - upgrade_name: Oil Boiler, 95% AFUE
-    options:
-      - option: HVAC System Heating Fuel Oil|Oil Boiler, 95% AFUE
-       apply_logic: HVAC System Heating Fuel Oil|Oil Boiler, 76% AFUE||HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
-        costs:
-          - value: 40
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 3100
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Oil Boiler, 95% AFUE
+#     options:
+#       - option: HVAC System Heating Fuel Oil|Oil Boiler, 95% AFUE
+#        apply_logic: HVAC System Heating Fuel Oil|Oil Boiler, 76% AFUE||HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
+#         costs:
+#           - value: 40
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 3100
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
-  - upgrade_name: Oil Boiler, 80% AFUE (Reference)
-    options:
-      - option: HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
-       apply_logic: HVAC System Heating Fuel Oil|Oil Boiler, 76% AFUE||HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
-        costs:
-          - value: 16
-            multiplier: Size, Heating System (kBtu/h)
-          - value: 3100
-            multiplier: Fixed (1)
-        lifetime: 24
-#    package_apply_logic:
+#   - upgrade_name: Oil Boiler, 80% AFUE (Reference)
+#     options:
+#       - option: HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
+#        apply_logic: HVAC System Heating Fuel Oil|Oil Boiler, 76% AFUE||HVAC System Heating Fuel Oil|Oil Boiler, 80% AFUE
+#         costs:
+#           - value: 16
+#             multiplier: Size, Heating System (kBtu/h)
+#           - value: 3100
+#             multiplier: Fixed (1)
+#         lifetime: 24
+# #    package_apply_logic:
 
 timeseries_csv_export:
   reporting_frequency: Hourly
