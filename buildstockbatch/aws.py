@@ -101,14 +101,14 @@ class AwsFirehose(AwsJobBase):
         self.firehose = self.session.client('firehose')
         #self.iam = self.session.client('iam')
         self.s3 = self.session.client('s3')
-        self.s3_results_bucket = self.get_name('s3_results_bucket')
-        self.s3_results_bucket_arn = self.get_name('s3_results_bucket_arn')
-        self.s3_results_backup_bucket = self.get_name('s3_results_backup_bucket')
-        self.s3_results_backup_bucket_arn = self.get_name('s3_results_backup_bucket_arn')
-        self.firehose_role = self.get_name('firehose_role')
-        self.firehose_name = self.get_name('firehose_name')
-        self.firehose_role_policy_name = self.get_name('firehose_role_policy_name')
-        self.firehost_task_policy_name = self.get_name('firehost_task_policy_name')
+        #self.s3_results_bucket = self.get_name('s3_results_bucket')
+        #self.s3_results_bucket_arn = self.get_name('s3_results_bucket_arn')
+        #self.s3_results_backup_bucket = self.get_name('s3_results_backup_bucket')
+        #self.s3_results_backup_bucket_arn = self.get_name('s3_results_backup_bucket_arn')
+        #self.firehose_role = self.get_name('firehose_role')
+        #self.firehose_name = self.get_name('firehose_name')
+        #self.firehose_role_policy_name = self.get_name('firehose_role_policy_name')
+        #self.firehost_task_policy_name = self.get_name('firehost_task_policy_name')
         # Initialize with create_firehose_delivery_role
         self.firehose_role_arn = None
         self.firehose_arn = None
@@ -343,12 +343,10 @@ class AWSGlueTransform(AwsJobBase):
         self.glue = self.session.client('glue')
         #self.s3_bucket = s3_bucket
         #self.s3_bucket prefix = s3_prefix
-        self.md_crawler_role_name = self.get_name('glue_metadata_crawler_role_name')
-        self.md_crawler_name = self.get_name('glue_metadata_crawler_name')
-        self.glue_metadata_parquet_crawler_name = self.get_name('glue_metadata_parquet_crawler_name')
-        self.glue_metadata_parqeut_results_s3_path = self.get_name('glue_metadata_parqeut_results_s3_path')
-        self.database_name = self.get_name('glue_database_name')
-        self.s3_results_bucket = self.get_name('s3_results_bucket')
+        self.md_crawler_role_name = self.glue_metadata_crawler_role_name
+        self.md_crawler_name = self.glue_metadata_crawler_name
+        self.database_name = self.glue_database_name
+        #self.s3_results_bucket = self.get_name('s3_results_bucket')
         self.md_crawler_role_arn = None
 
     def __repr__(self):
@@ -488,17 +486,6 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                         "Effect": "Allow",
                         "Action": [
                             "s3:Get*",
-                            "s3:List*"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::{self.s3_results_bucket}/*",
-                            "arn:aws:s3:::{self.s3_results_bucket}/*/*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:Get*",
                             "s3:List*",
                             "s3:Put*"
                         ],
@@ -520,9 +507,70 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         self.crawler_role_arn = self.iam_helper.role_stitcher(
             self.md_crawler_role_name,
             'glue',
-            f'IAM role for {self.md_crawler_role_name} and {self.glue_metadata_parquet_crawler_name}',
+            f'IAM role for {self.md_crawler_role_name} and {self.glue_metadata_summary_crawler_name}',
             policies_list=policies
         )
+
+        # ETL job role
+
+        etl_access_policy = f'''{{"Version": "2012-10-17",
+                "Statement": [
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:GetBucketLocation",
+                            "s3:ListBucket",
+                            "s3:ListAllMyBuckets",
+                            "s3:GetBucketAcl",
+                            "glue:*"
+                        ],
+                        "Resource": [
+                            "*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "s3:Get*",
+                            "s3:List*",
+                            "s3:Put*",
+                            "s3:Delete*"
+                        ],
+                        "Resource": [
+                            "arn:aws:s3:::{self.s3_results_bucket}/*",
+                            "arn:aws:s3:::{self.s3_results_bucket}/*/*",
+                            "arn:aws:s3:::{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/*"
+                        ]
+                    }},
+                    {{
+                        "Effect": "Allow",
+                        "Action": [
+                            "logs:CreateLogGroup",
+                            "logs:CreateLogStream",
+                            "logs:PutLogEvents"
+                        ],
+                        "Resource": [
+                            "arn:aws:logs:*:*:/aws-glue/*"
+                        ]
+                    }}
+
+                ]
+
+            }}
+            '''
+
+
+        etl_policies = []
+        etl_policies.append(etl_access_policy)
+        #policies.append(data_access_policy)
+
+        self.glue_metadata_etl_role_arn = self.iam_helper.role_stitcher(
+            self.glue_metadata_etl_role_name,
+            'glue',
+            f'IAM role for {self.glue_metadata_job_name}',
+            policies_list=etl_policies
+        )
+
 
     def create_crawler(self):
         # Identified a race condition here - will add some sleep time to work around it.
@@ -531,7 +579,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                 response = self.glue.create_crawler(
                     Name=self.md_crawler_name,
                     Role=self.md_crawler_role_name,
-                    DatabaseName=self.database_name,
+                    DatabaseName=self.glue_database_name,
                     Description=f"{self.job_name} crawler",
                     Targets={
                         'S3Targets': [
@@ -540,7 +588,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                             },
                         ],
                     },
-                    TablePrefix=self.s3_bucket_prefix,
+                    #TablePrefix=self.s3_bucket_prefix,
                     SchemaChangePolicy={
                         'UpdateBehavior': 'UPDATE_IN_DATABASE',
                         'DeleteBehavior': 'DELETE_FROM_DATABASE'
@@ -561,30 +609,29 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                     logger.error(str(e))
                     raise
 
-    def create_parquet_crawler(self):
+    def create_summary_crawler(self):
         # Identified a race condition here - will add some sleep time to work around it.
         while True:
             try:
                 response = self.glue.create_crawler(
-                    Name=self.md_crawler_name,
-                    Role=self.md_crawler_role_name,
-                    DatabaseName=self.database_name,
+                    Name=self.glue_metadata_summary_crawler_name,
+                    Role=self.glue_metadata_crawler_role_name,
+                    DatabaseName=self.glue_database_name,
                     Description=f"{self.job_name} crawler",
                     Targets={
                         'S3Targets': [
                             {
-                                'Path': f'{self.glue_metadata_parqeut_results_s3_path}',
+                                'Path': f'{self.glue_metadata_etl_results_s3_path}',
                             },
                         ],
                     },
-                    TablePrefix=self.s3_bucket_prefix,
                     SchemaChangePolicy={
                         'UpdateBehavior': 'UPDATE_IN_DATABASE',
                         'DeleteBehavior': 'DELETE_FROM_DATABASE'
                     }
                 )
 
-                logger.info(f'Crawler {self.md_crawler_name} created')
+                logger.info(f'Crawler {self.glue_metadata_summary_crawler_name} created')
                 break
 
             except Exception as e:
@@ -609,34 +656,24 @@ class AwsLambda(AwsJobBase):
     def __init__(self, job_name, s3_bucket, s3_prefix, region):
         super().__init__(job_name, s3_bucket, s3_prefix, region)
         self.aws_lambda = self.session.client('lambda')
-        self.md_crawler_function_name = self.get_name('lambda_metadata_crawler_function_name')
-        self.md_lambda_crawler_role_name = self.get_name('lambda_metadata_crawler_role_name')
-        self.md_crawler_name = self.get_name('glue_metadata_crawler_name')
+        self.md_crawler_function_name = self.lambda_metadata_crawler_function_name
+        self.md_lambda_crawler_role_name = self.lambda_metadata_crawler_role_name
+        self.md_crawler_name = self.glue_metadata_crawler_name
         self.s3 = self.session.client('s3')
         self.s3_res = self.session.resource('s3')
-        self.s3_lambda_code_bucket = self.get_name('s3_lambda_code_bucket')
-        self.s3_lambda_md_crawler_key = self.get_name('s3_lambda_code_metadata_crawler_key')
-        self.database_name = self.get_name('glue_database_name')
-        self.glue_md_table_name = self.get_name('glue_metadata_table_name')
-        self.s3_results_bucket = self.get_name('s3_results_bucket')
+        #self.s3_lambda_code_bucket = self.get_name('s3_lambda_code_bucket')
+        self.s3_lambda_md_crawler_key = self.s3_lambda_code_metadata_crawler_key
+        self.database_name = self.glue_database_name
+        #self.glue_md_table_name = self.glue_metadata_table_name
+        #self.s3_results_bucket = self.get_name('s3_results_bucket')
         self.md_lambda_crawler_role_arn = None
         self.lambda_metadata_etl_role_arn = None
-        self.lambda_metadata_etl_role_name = self.get_name('lambda_metadata_etl_role_name')
-        self.lambda_metadata_etl_function_name = self.get_name('lambda_metadata_etl_function_name')
-        self.glue_metadata_parquet_results_s3_prefix = self.get_name('glue_metadata_parquet_results_s3_prefix')
-        self.glue_metadata_parqeut_results_s3_path = self.get_name('glue_metadata_parqeut_results_s3_path')
-        self.s3_lambda_code_metadata_etl_key = self.get_name('s3_lambda_code_metadata_etl_key')
-        self.s3_lambda_code_metadata_parquet_crawler_key = self.get_name('s3_lambda_code_metadata_parquet_crawler_key')
-        self.lambda_metadata_parquet_crawler_function_name = self.get_name('lambda_metadata_parquet_crawler_function_name')
 
-        self.lambda_ts_crawler_function_name = self.get_name('lambda_ts_crawler_function_name')
-
-        #TODO write script to bucket for ETL job:
-        self.s3_glue_scripts_bucket = self.get_name('s3_glue_scripts_bucket')
-        self.s3_glue_scripts_md_etl_key = self.get_name('s3_glue_scripts_md_etl_key')
 
 
     def create_roles(self):
+
+        # Glue Crawler support
 
         lambda_policy = f'''{{"Version": "2012-10-17",
         "Statement": [
@@ -652,7 +689,10 @@ class AwsLambda(AwsJobBase):
           {{
             "Sid": "VisualEditor1",
             "Effect": "Allow",
-            "Action": "glue:StartCrawler",
+            "Action": [
+                "glue:StartCrawler",
+                "glue:GetTables"
+            ],
             "Resource": "*"
           }},
           {{
@@ -676,6 +716,8 @@ class AwsLambda(AwsJobBase):
                                                               f'Lambda execution role for {self.md_crawler_function_name}',
                                                               policies_list=[lambda_policy])
 
+        # Glue ETL support
+
         lambda_etl_policy = f'''{{"Version": "2012-10-17",
         "Statement": [
           {{
@@ -693,7 +735,8 @@ class AwsLambda(AwsJobBase):
             "Action": [
                 "glue:CreateJob",
                 "glue:CreateScript",
-                "glue:Get*"
+                "glue:Get*",
+                "iam:PassRole"
             ],
             "Resource": "*"
           }},
@@ -702,12 +745,18 @@ class AwsLambda(AwsJobBase):
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
             "Resource": "arn:aws:logs:*:*:*"
+          }},
+          {{
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "s3:PutObject",
+            "Resource": "arn:aws:s3:::{self.s3_glue_scripts_bucket}/*"
           }}
         ]
     }}
     '''
 
-        self.lambda_metadata_etl_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_etl_function_name,
+        self.lambda_metadata_etl_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_etl_role_name,
                                                                           'lambda',
                                                                           f'Lambda execution role for {self.md_lambda_crawler_role_name}',
                                                                           policies_list=[lambda_etl_policy])
@@ -752,12 +801,12 @@ def lambda_handler(event, context):
         print(response)
         if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
             tables_response = client.get_tables(
-                DatabaseName='{self.database_name}',
+                DatabaseName='{self.glue_database_name}',
                 Expression='*{self.s3_bucket_prefix}*'
             )
             for table in tables_response['TableList']:
                 if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.md_crawler_name}':
-                    return table
+                    return 'complete'
             print(tables_response)
             break
         else:
@@ -799,7 +848,7 @@ def lambda_handler(event, context):
                         'S3Bucket': self.s3_lambda_code_bucket,
                         'S3Key': self.s3_lambda_md_crawler_key
                     },
-                    Description=f'Lambda for crawler exection on job {self.job_name}',
+                    Description=f'Lambda for crawler execution on job {self.job_name}',
                     Timeout=900,
                     MemorySize=128,
                     Publish=True,
@@ -854,6 +903,7 @@ import boto3
 
 def lambda_handler(event, context):
     client = boto3.client('glue')
+    s3 = boto3.client('s3')
     response = client.get_table(DatabaseName='%s', Name='%s')
     pprint(response['Table']['StorageDescriptor']['Columns'])
 
@@ -861,8 +911,6 @@ def lambda_handler(event, context):
     for column in response['Table']['StorageDescriptor']['Columns']:
         columns.append((column['Name'], column['Type'], column['Name'], column['Type']))
         
-
-    
     response = client.create_script(
         DagNodes=[
             {
@@ -932,11 +980,11 @@ def lambda_handler(event, context):
                 }, {
                     'Param': False,
                     'Name': 'format',
-                    'Value': '"parquet"'
+                    'Value': '"%s"'
                 }, {
                     'Param': False,
                     'Name': 'connection_options',
-                    'Value': '%s'
+                    'Value':   '{"path": "%s", "compression": "gzip"}'
                 }, {
                     'Param': False,
                     'Name': 'transformation_ctx',
@@ -973,8 +1021,35 @@ def lambda_handler(event, context):
         Language='PYTHON')
     
     print(response['PythonScript'])
+    
+    s3.put_object(Body=response['PythonScript'], Bucket='%s', Key='%s')
+    
+    response = client.create_job(
+    Name='%s',
+    Description='etl for glue',
+    Role='%s',
+    Command={
+        'Name': 'glueetl',
+        'ScriptLocation': '%s'
+    },
 
-        '''  % (self.database_name, self.glue_md_table_name, self.database_name, self.glue_md_table_name, self.glue_metadata_parqeut_results_s3_path)
+    MaxRetries=1,
+    AllocatedCapacity=10,
+    )
+    print(response)
+
+        '''  % (self.glue_database_name,
+                self.glue_metadata_table_name,
+                self.glue_database_name,
+                self.glue_metadata_table_name,
+                self.glue_metadata_etl_output_type,
+                self.glue_metadata_etl_results_s3_path,
+                self.s3_glue_scripts_bucket,
+                self.s3_bucket_prefix + '/' + self.glue_etl_script_name,
+                self.glue_metadata_etl_job_name,
+                self.glue_metadata_etl_role_name,
+                self.s3_glue_etl_script_path
+                )
 
         self.zip_and_s3_load(function_script,
                              'run_etl_job_creation.py',
@@ -1018,7 +1093,7 @@ def lambda_handler(event, context):
                     logger.error(str(e))
                     raise
 
-    def create_parquet_crawler_function(self):
+    def create_metadata_summary_crawler_function(self):
         '''
         This is the crawler running on the Firehose JSON data to define the first table to seed our ETL job
         :return:
@@ -1044,23 +1119,23 @@ import time
 
 def lambda_handler(event, context):
     client = boto3.client('glue')
-    response = client.start_crawler(Name='{self.lambda_ts_crawler_function_name}')
+    response = client.start_crawler(Name='{self.glue_metadata_summary_crawler_name}')
 
     while True:
         response = client.get_crawler_metrics(
             CrawlerNameList=[
-                '{self.md_crawler_name}'
+                '{self.glue_metadata_summary_crawler_name}'
             ]
         )
         print(response)
         if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
             tables_response = client.get_tables(
-                DatabaseName='{self.database_name}',
+                DatabaseName='{self.glue_database_name}',
                 Expression='*{self.s3_bucket_prefix}*'
             )
             for table in tables_response['TableList']:
-                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.md_crawler_name}':
-                    return table
+                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.glue_metadata_summary_crawler_name}':
+                    return 'complete'
             print(tables_response)
             break
         else:
@@ -1070,22 +1145,22 @@ def lambda_handler(event, context):
         '''
 
         self.zip_and_s3_load(function_script,
-                             'run_md_crawler.py',
-                             'run_md_crawler.py.zip',
+                            'run_md_summary_crawler.py',
+                            'run_md_summary_crawler.py.zip',
                              self.s3_lambda_code_bucket,
-                             self.s3_lambda_code_metadata_parquet_crawler_key)
+                             self.s3_lambda_code_metadata_summary_crawler_key)
 
         while 1 == 1:
             try:
 
                 response = self.aws_lambda.create_function(
-                    FunctionName=self.lambda_metadata_parquet_crawler_function_name,
+                    FunctionName=self.lambda_metadata_summary_crawler_function_name,
                     Runtime='python3.7',
                     Role=self.md_lambda_crawler_role_arn,
                     Handler='run_md_crawler.lambda_handler',
                     Code={
                         'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_code_metadata_parquet_crawler_key
+                        'S3Key': self.s3_lambda_code_metadata_summary_crawler_key
                     },
                     Description=f'Lambda for crawler execution on job {self.job_name}',
                     Timeout=900,
@@ -1104,7 +1179,7 @@ def lambda_handler(event, context):
                     logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
                     time.sleep(5)
                 elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.lambda_metadata_parquet_crawler_function_name} exists, skipping...')
+                    logger.info(f'Lambda function {self.lambda_metadata_summary_crawler_function_name} exists, skipping...')
                     break
                 else:
                     logger.error(str(e))
@@ -1115,24 +1190,24 @@ class AwsBatchEnv(AwsJobBase):
 
     def __init__(self, job_name, s3_bucket, s3_prefix, region, use_spot=True):
         super().__init__(job_name, s3_bucket, s3_prefix, region)
-        self.job_name = job_name
-        self.s3_bucket = s3_bucket
+        #self.job_name = job_name
+        #self.s3_bucket = s3_bucket
         # TODO should build in more controls for names to comply with AWS standards:
-        self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
+        #self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
         self.use_spot = use_spot
         # AWS clients
         #self.region = self.session.region
         self.batch = self.session.client('batch')
         #self.iam = self.session.client('iam')
         # Naming conventions
-        self.compute_environment_name = self.get_name('batch_compute_environment_name')
-        self.job_queue_name = self.get_name('batch_job_queue_name')
-        self.service_role_name = self.get_name('batch_service_role_name')
-        self.instance_role_name = self.get_name('batch_instance_role_name')
-        self.instance_profile_name = self.get_name('batch_instance_profile_name')
-        self.spot_service_role_name = self.get_name('batch_spot_service_role_name')
-        self.task_role_name = self.get_name('batch_ecs_task_role_name')
-        self.task_policy_name = self.get_name('batch_task_policy_name')
+        self.compute_environment_name = self.batch_compute_environment_name
+        self.job_queue_name = self.batch_job_queue_name
+        self.service_role_name = self.batch_service_role_name
+        self.instance_role_name = self.batch_instance_role_name
+        self.instance_profile_name = self.batch_instance_profile_name
+        self.spot_service_role_name = self.batch_spot_service_role_name
+        self.task_role_name = self.batch_ecs_task_role_name
+        self.task_policy_name = self.batch_task_policy_name
         # Bucket information
         #self.s3_bucket_arn = self.get_name('batch_compute_environment_name')
         #self.s3_prefix = self.s3_bucket_prefix
@@ -1504,6 +1579,326 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     logger.error(str(e))
                     go = False
 
+class AwsSNS(AwsJobBase):
+
+    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
+        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
+        self.sns = self.session.client("sns")
+        self.sns_state_machine_topic_arn = None
+
+    def create_topic(self):
+        response = self.sns.create_topic(
+            Name=self.sns_state_machine_topic
+        )
+
+        print(response)
+
+        self.sns_state_machine_topic_arn = response
+
+    def subscribe_to_topic(self):
+        response = self.sns.subscribe(
+            TopicArn=self.sns_state_machine_topic_arn,
+            Protocol='email',
+            Endpoint=self.operator_email
+        )
+
+
+class AwsStepFunctions(AwsJobBase):
+
+    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
+        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
+
+
+        self.step_functions = self.session.client("stepfunctions")
+        self.state_machine_role_arn = None
+
+    def create_roles(self):
+
+        lambda_policy = f'''{{
+    "Version": "2012-10-17",
+    "Statement": [
+        {{
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:*:*:function:{self.lambda_metadata_crawler_function_name}",
+                "arn:aws:lambda:*:*:function:{self.lambda_metadata_summary_crawler_function_name}",
+                "arn:aws:lambda:*:*:function:{self.lambda_metadata_etl_function_name}"
+            ]
+        }}
+    ]
+}}
+
+        '''
+
+        batch_policy = f'''{{
+    "Version": "2012-10-17",
+    "Statement": [
+        {{
+            "Effect": "Allow",
+            "Action": [
+                "batch:SubmitJob",
+                "batch:DescribeJobs",
+                "batch:TerminateJob"
+            ],
+            "Resource": "*"
+        }},
+        {{
+            "Effect": "Allow",
+            "Action": [
+                "events:PutTargets",
+                "events:PutRule",
+                "events:DescribeRule"
+            ],
+            "Resource": [
+               "arn:aws:events:*:*:rule/StepFunctionsGetEventsForBatchJobsRule"
+            ]
+        }}
+    ]
+}}
+     
+        '''
+
+        glue_policy = f'''{{
+    "Version": "2012-10-17",
+    "Statement": [
+        {{
+            "Effect": "Allow",
+            "Action": [
+                "glue:StartJobRun",
+                "glue:GetJobRun",
+                "glue:GetJobRuns",
+                "glue:BatchStopJobRun"
+            ],
+            "Resource": "*"
+        }}
+    ]
+}}
+'''
+
+        sns_policy = f'''{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "sns:Publish"
+                    ],
+                    "Resource": "arn:aws:sns:*:*:{self.sns_state_machine_topic}"
+                }}
+            ]
+        }}
+        '''
+        policies_list = [glue_policy, lambda_policy, batch_policy, sns_policy]
+
+        self.state_machine_role_arn = self.iam_helper.role_stitcher(self.state_machine_role_name, 'states', 'Permissions for statemachine to run jobs', policies_list=policies_list)
+
+    def create_state_machine(self):
+        job_definition = '''
+{
+  "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
+  "StartAt": "Submit Batch Job",
+  "TimeoutSeconds": 3600,
+  "States": {
+    "Submit Batch Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::batch:submitJob.sync",
+      "Parameters": {
+        "JobDefinition": "arn:aws:batch:us-west-2:246460460343:job-definition/project_resstock_nationalx5:9",
+        "JobName": "TESTNAME",
+        "JobQueue": "arn:aws:batch:us-west-2:246460460343:job-queue/job_queue_project_resstock_nationalx5",
+         "ArrayProperties": {
+                        "Size.$": "$.array_size"
+                    }
+    },
+      "Next": "Notify Batch Success",
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "Notify Batch Failure"
+        }
+      ]
+    },
+    "Notify Batch Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Batch job submitted through Step Functions succeeded",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "Next": "Wait 16 Minutes"
+    },
+    "Notify Batch Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Batch job submitted through Step Functions failed",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    },
+    "Wait 16 Minutes": {
+      "Type": "Wait",
+      "Seconds": 30,
+      "Next": "Run Firehose JSON Crawler"
+    },
+    "Run Firehose JSON Crawler": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_start_metadata_crawler",
+      "Next": "Notify Firehose JSON Crawl Success",
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "Notify Firehose JSON Crawl Failure"
+        }
+      ]
+    },
+    "Notify Firehose JSON Crawl Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Crawl of Firehose data succeeded",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "Next": "Create Glue ETL Job"
+    },
+    "Notify Firehose JSON Crawl Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Crawl of Firehose data failed",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    },
+     "Create Glue ETL Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_lambda_metadata_etl",
+      "Next": "Notify Glue ETL Job Creation Success",
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "Notify Glue ETL Job Creation Failure"
+        }
+      ]
+    },
+    "Notify Glue ETL Job Creation Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Create of ETL job  succeeded",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "Next": "Run Glue ETL Job"
+    },
+    "Notify Glue ETL Job Creation Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Create of ETL job failed",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    },
+    "Run Glue ETL Job": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::glue:startJobRun.sync",
+      "Parameters": {
+        "JobName": "project_resstock_nationalx5_md_etl_job"
+      },
+      "Next": "Notify Glue ETL Job Run Success",
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "Notify Glue ETL Job Run Failure"
+        }
+      ]
+    },
+    "Notify Glue ETL Job Run Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Create of ETL job  succeeded",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "Next": "Run Summary Crawler"
+    },
+    "Notify Glue ETL Job Run Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Create of ETL job failed",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    },
+    "Run Summary Crawler": {
+      "Type": "Task",
+      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_lambda_metadata_summary_crawler",
+      "Next": "Notify Summary Crawl Success",
+      "Catch": [
+        {
+          "ErrorEquals": [ "States.ALL" ],
+          "Next": "Notify Summary Crawl Failure"
+        }
+      ]
+    },
+    "Notify Summary Crawl Success": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Crawl of summary data succeeded",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    },
+    "Notify Summary Crawl Failure": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::sns:publish",
+      "Parameters": {
+        "Message": "Crawl of summary data failed",
+        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
+      },
+      "End": true
+    }
+  }
+}
+        
+        '''
+
+        while True:
+
+            try:
+
+                response = self.step_functions.create_state_machine(
+                    name=self.state_machine_name,
+                    definition=job_definition,
+                    roleArn=self.state_machine_role_arn
+                )
+
+                print(response)
+                self.state_machine_arn = response['stateMachineArn']
+                break
+            except Exception as e:
+                if "AccessDeniedException" in str(e):
+                    logger.info("State machine role not yet registered, sleeping...")
+                    time.sleep(5)
+                else:
+                    logger.error(str(e))
+                    raise
+
+
+
+    def start_state_machine(self):
+
+        response = self.step_functions.start_execution(
+            stateMachineArn=self.state_machine_arn,
+            name=f'{self.state_machine_name} execution {time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())}',
+            input='{}'
+        )
+
 
 class AwsBatch(DockerBatchBase):
 
@@ -1706,7 +2101,7 @@ class AwsBatch(DockerBatchBase):
         glue_env.create_database()
         glue_env.create_roles()
         glue_env.create_crawler()
-        glue_env.create_parquet_crawler()
+        glue_env.create_summary_crawler()
 
 
         # Set up 3 functions to manage ETL after the Batch job completes
@@ -1714,9 +2109,18 @@ class AwsBatch(DockerBatchBase):
         lambda_env.create_roles()
         lambda_env.create_crawler_function()
         lambda_env.create_etl_script_function()
-        lambda_env.create_parquet_crawler_function()
+        lambda_env.create_metadata_summary_crawler_function()
 
-        batch_env.submit_job(array_size)
+        # SNS Topic
+        sns_env = AwsSNS(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        sns_env.create_topic()
+
+        # State machine
+        state_machine_env = AwsStepFunctions(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        state_machine_env.create_roles()
+        state_machine_env.create_state_machine()
+
+        #batch_env.submit_job(array_size)
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -1733,7 +2137,7 @@ class AwsBatch(DockerBatchBase):
         firehose = boto3.client('firehose', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
 
-        firehose_name = f"{job_name.replace(' ', '_')}_firehose"
+        firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
