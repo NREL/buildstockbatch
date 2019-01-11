@@ -115,8 +115,13 @@ class AWSIAMHelper():
 class AwsJobBase():
     def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
 
+        self.session = boto3.Session(region_name=region)
+        self.iam_helper = AWSIAMHelper(self.session)
+        self.iam = self.iam_helper.iam
+        self.s3 = self.session.client('s3')
         self.job_name = job_name
         self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name).replace('_yml','')
+        self.account = self.session.client('sts').get_caller_identity().get('Account')
         self.s3_bucket = s3_bucket
         self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_bucket_prefix = s3_bucket_prefix
@@ -138,6 +143,7 @@ class AwsJobBase():
         self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-result"
         self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
         self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
+        self.s3_athena_query_results_path = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
 
         self.s3_lambda_code_bucket = f'nrel-{self.job_identifier}_lambda_functions'.replace('_', '-')
         self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
@@ -149,6 +155,10 @@ class AwsJobBase():
         self.glue_etl_script_name = 'glue_etl_script'
         self.s3_glue_etl_script_path = f's3://{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/{self.glue_etl_script_name}'
 
+        self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
+
+        self.lambda_athena_function_name =  f'{self.job_identifier}_athena_summary_execution'
+        self.s3_lambda_code_athena_summary_key = f'{self.job_identifier}/create_table.py.zip'
 
         self.glue_metadata_crawler_name = f'{self.job_identifier}_md_crawler'
         self.glue_metadata_crawler_role_name = f'{self.job_identifier}_md_crawler_role'
@@ -166,7 +176,7 @@ class AwsJobBase():
         #self.glue_metadata_summary_crawler_role_name = f'{self.job_identifier}_md_parquet_crawler_role'
         #self.glue_metadata_summary_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/metadata/'
         self.glue_metadata_etl_output_type = "csv"
-        self.glue_metadata_etl_results_s3_path = f's3//{self.s3_bucket}-result/{self.s3_bucket_prefix}_summary/{self.glue_metadata_etl_output_type}/'
+        self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}-result/{self.s3_bucket_prefix}_summary/{self.glue_metadata_etl_output_type}/'
 
 
         self.s3_lambda_code_ts_crawler_key = f'{self.job_identifier}/run_crawler.py.zip'
@@ -277,10 +287,6 @@ class AwsJobBase():
         
         '''
 
-        self.session = boto3.Session(region_name=region)
-        self.iam_helper = AWSIAMHelper(self.session)
-        self.iam = self.iam_helper.iam
-        self.s3 = self.session.client('s3')
 
 
     def __repr__(self):

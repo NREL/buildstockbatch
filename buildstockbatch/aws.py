@@ -661,13 +661,11 @@ class AwsLambda(AwsJobBase):
         self.md_crawler_name = self.glue_metadata_crawler_name
         self.s3 = self.session.client('s3')
         self.s3_res = self.session.resource('s3')
-        #self.s3_lambda_code_bucket = self.get_name('s3_lambda_code_bucket')
         self.s3_lambda_md_crawler_key = self.s3_lambda_code_metadata_crawler_key
         self.database_name = self.glue_database_name
-        #self.glue_md_table_name = self.glue_metadata_table_name
-        #self.s3_results_bucket = self.get_name('s3_results_bucket')
         self.md_lambda_crawler_role_arn = None
         self.lambda_metadata_etl_role_arn = None
+        self.lambda_athena_metadata_summary_execution_role_arn = None
 
 
 
@@ -756,10 +754,35 @@ class AwsLambda(AwsJobBase):
     }}
     '''
 
+
+
         self.lambda_metadata_etl_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_etl_role_name,
                                                                           'lambda',
                                                                           f'Lambda execution role for {self.md_lambda_crawler_role_name}',
                                                                           policies_list=[lambda_etl_policy])
+
+        athena_s3_accesses = f'''{{"Version": "2012-10-17",
+        "Statement": [{{
+            "Sid": "VisualEditor3",
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": [
+                            "{self.s3_results_bucket_arn}",
+                            "{self.s3_athena_query_results_path}"
+                        ]
+          }}
+        ]
+    }}
+          
+          '''
+
+
+        self.lambda_athena_metadata_summary_execution_role_arn = self.iam_helper.role_stitcher(self.lambda_athena_metadata_summary_execution_role,
+                                                                          'lambda',
+                                                                          f'Lambda execution role for {self.lambda_athena_function_name}',
+                                                                          policies_list=[athena_s3_accesses],
+                                                                          managed_policie_arns=['arn:aws:iam::aws:policy/AmazonAthenaFullAccess'])
+
 
     def delete_roles(self):
         self.iam.delete_role(self.md_lambda_crawler_role_name)
@@ -871,296 +894,61 @@ def lambda_handler(event, context):
                     logger.error(str(e))
                     raise
 
-    def create_etl_script_function(self):
-
-        try:
-            self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
-                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
-            logger.info(f'{self.s3_lambda_code_bucket} s3 bucket created')
-
-        except Exception as e:
-            if 'BucketAlreadyOwnedByYou' in str(e):
-                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
-            else:
-                logger.error(str(e))
-                raise
-        try:
-            self.s3.create_bucket(Bucket=self.s3_glue_scripts_bucket,
-                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
-            logger.info(f'{self.s3_glue_scripts_bucket} s3 bucket created')
-
-        except Exception as e:
-            if 'BucketAlreadyOwnedByYou' in str(e):
-                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
-            else:
-                logger.error(str(e))
-                raise
-
-        function_script = '''
-import json
-from pprint import pprint
-import boto3
-
-def lambda_handler(event, context):
-    client = boto3.client('glue')
-    s3 = boto3.client('s3')
-    response = client.get_table(DatabaseName='%s', Name='%s')
-    pprint(response['Table']['StorageDescriptor']['Columns'])
-
-    columns = []
-    for column in response['Table']['StorageDescriptor']['Columns']:
-        columns.append((column['Name'], column['Type'], column['Name'], column['Type']))
-        
-    response = client.create_script(
-        DagNodes=[
-            {
-                'NodeType': 'DataSource',
-                'Id': 'datasource0',
-                'Args': [{
-                    'Param': False,
-                    'Name': 'database',
-                    'Value': '"%s"'
-                }, {
-                    'Param': False,
-                    'Name': 'table_name',
-                    'Value': '"%s"'
-                }, {
-                    'Param': False,
-                    'Name': 'transformation_ctx',
-                    'Value': '"datasource0"'
-                }],
-                'LineNumber': 18
-            },
-            {
-                'NodeType': 'ApplyMapping',
-                'Id': 'applymapping1',
-                'Args': [{
-                    'Param': False,
-                    'Name': 'mappings',
-                    'Value': f'{columns}'
-                }, {
-                    'Param': False,
-                    'Name': 'transformation_ctx',
-                    'Value': '"applymapping1"'
-                }],
-    
-                'LineNumber': 20
-            },
-            {
-                'Args': [{
-                    'Param': False,
-                    'Name': 'choice',
-                    'Value': '"make_struct"'
-                }, {
-                    'Param': False,
-                    'Name': 'transformation_ctx',
-                    'Value': '"resolvechoice2"'
-                }],
-                'NodeType': 'ResolveChoice',
-                'Id': 'resolvechoice2',
-                'LineNumber': 22
-            },
-            {
-                'Args': [{
-                    'Param': False,
-                    'Name': 'transformation_ctx',
-                    'Value': '"dropnullfields3"'
-                }],
-                'NodeType': 'DropNullFields',
-                'Id': 'dropnullfields3',
-                'LineNumber': 25
-            },
-            {
-                'NodeType': 'DataSink',
-                'Id': 'datasink4',
-                'Args': [{
-                    'Param': False,
-                    'Name': 'connection_type',
-                    'Value': '"s3"'
-                }, {
-                    'Param': False,
-                    'Name': 'format',
-                    'Value': '"%s"'
-                }, {
-                    'Param': False,
-                    'Name': 'connection_options',
-                    'Value':   '{"path": "%s", "compression": "gzip"}'
-                }, {
-                    'Param': False,
-                    'Name': 'transformation_ctx',
-                    'Value': '"datasink4"'
-                }],
-    
-                'LineNumber': 27
-            }
-        ],
-    
-        DagEdges=[
-            {
-                'Source': 'datasource0',
-                'TargetParameter': 'frame',
-                'Target': 'applymapping1'
-            },
-            {
-                'Source': 'applymapping1',
-                'TargetParameter': 'frame',
-                'Target': 'resolvechoice2'
-            },
-            {
-                'Source': 'resolvechoice2',
-                'TargetParameter': 'frame',
-                'Target': 'dropnullfields3'
-            },
-            {
-                'Source': 'dropnullfields3',
-                'TargetParameter': 'frame',
-                'Target': 'datasink4'
-            }
-        ],
-    
-        Language='PYTHON')
-    
-    print(response['PythonScript'])
-    
-    s3.put_object(Body=response['PythonScript'], Bucket='%s', Key='%s')
-    
-    response = client.create_job(
-    Name='%s',
-    Description='etl for glue',
-    Role='%s',
-    Command={
-        'Name': 'glueetl',
-        'ScriptLocation': '%s'
-    },
-
-    MaxRetries=1,
-    AllocatedCapacity=10,
-    )
-    print(response)
-
-        '''  % (self.glue_database_name,
-                self.glue_metadata_table_name,
-                self.glue_database_name,
-                self.glue_metadata_table_name,
-                self.glue_metadata_etl_output_type,
-                self.glue_metadata_etl_results_s3_path,
-                self.s3_glue_scripts_bucket,
-                self.s3_bucket_prefix + '/' + self.glue_etl_script_name,
-                self.glue_metadata_etl_job_name,
-                self.glue_metadata_etl_role_name,
-                self.s3_glue_etl_script_path
-                )
-
-        self.zip_and_s3_load(function_script,
-                             'run_etl_job_creation.py',
-                             'run_etl_job_creation.py.zip',
-                             self.s3_lambda_code_bucket,
-                             self.s3_lambda_code_metadata_etl_key)
-
-        while True:
-            try:
-                response = self.aws_lambda.create_function(
-                    FunctionName=self.lambda_metadata_etl_function_name,
-                    Runtime='python3.7',
-                    Role=self.lambda_metadata_etl_role_arn,
-                    Handler='run_etl_job_creation.lambda_handler',
-                    Code={
-                        'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_code_metadata_etl_key
-                    },
-                    Description=f'Lambda for etl job creation on job {self.job_name}',
-                    Timeout=900,
-                    MemorySize=128,
-                    Publish=True,
-                    Tags={
-                        'job': self.job_name
-                    }
-                )
-
-                print(response)
-                break
-
-            except Exception as e:
-                if 'role defined for the function cannot be assumed' in str(e):
-                    logger.info(f"Lamda role not registered for {self.lambda_metadata_etl_role_name} - sleeping ...")
-                    time.sleep(5)
-
-                elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.lambda_metadata_etl_function_name} exists, skipping...')
-                    break
-
-                else:
-                    logger.error(str(e))
-                    raise
-
-    def create_metadata_summary_crawler_function(self):
-        '''
-        This is the crawler running on the Firehose JSON data to define the first table to seed our ETL job
-        :return:
-        '''
-
-        try:
-            self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
-                                  CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
-            logger.info(f'{self.s3_lambda_code_bucket} s3 bucket created')
-
-        except Exception as e:
-            if 'BucketAlreadyOwnedByYou' in str(e):
-                logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
-            else:
-                logger.error(str(e))
-                raise
+    def create_athena_etl_function(self):
 
         function_script = f'''
 import json
-from pprint import pprint
 import boto3
-import time
+from pprint import pprint
 
 def lambda_handler(event, context):
-    client = boto3.client('glue')
-    response = client.start_crawler(Name='{self.glue_metadata_summary_crawler_name}')
-
+    athena = boto3.client('athena')
+    athena.start_query_execution(
+        QueryString="""CREATE TABLE "{self.glue_database_name}"."{self.glue_metadata_summary_table_name}"
+        WITH (
+          format='TEXTFILE',
+          external_location='{self.glue_metadata_etl_results_s3_path}'
+        ) AS
+        SELECT * FROM "{self.glue_database_name}"."{self.s3_bucket_prefix}";""",
+        ResultConfiguration={{
+            'OutputLocation': '{self.s3_athena_query_results_path}'
+        }}
+    )
+    
+    print(response['QueryExecutionId'])
+    
+    
+    
     while True:
-        response = client.get_crawler_metrics(
-            CrawlerNameList=[
-                '{self.glue_metadata_summary_crawler_name}'
-            ]
+        response2 = athena.get_query_execution(
+            QueryExecutionId=response['QueryExecutionId']
         )
-        print(response)
-        if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
-            tables_response = client.get_tables(
-                DatabaseName='{self.glue_database_name}',
-                Expression='*{self.s3_bucket_prefix}*'
-            )
-            for table in tables_response['TableList']:
-                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.glue_metadata_summary_crawler_name}':
-                    return 'complete'
-            print(tables_response)
+    
+        pprint(response2)
+        if response2['QueryExecution']['Status']['State'] != "RUNNING":
+            if response2['QueryExecution']['Status']['State'] == "FAILED":
+                raise Exception(response2['QueryExecution']['Status']['StateChangeReason'])
             break
-        else:
-            print("Crawler still running")
-            time.sleep(5)
-
+     
+       
         '''
-
         self.zip_and_s3_load(function_script,
-                            'run_md_summary_crawler.py',
-                            'run_md_summary_crawler.py.zip',
+                             'create_table.py',
+                             'create_table.py.zip',
                              self.s3_lambda_code_bucket,
-                             self.s3_lambda_code_metadata_summary_crawler_key)
+                             self.s3_lambda_code_athena_summary_key)
 
         while 1 == 1:
             try:
 
                 response = self.aws_lambda.create_function(
-                    FunctionName=self.lambda_metadata_summary_crawler_function_name,
+                    FunctionName=self.lambda_athena_function_name,
                     Runtime='python3.7',
-                    Role=self.md_lambda_crawler_role_arn,
-                    Handler='run_md_crawler.lambda_handler',
+                    Role=self.lambda_athena_metadata_summary_execution_role_arn,
+                    Handler='create_table.lambda_handler',
                     Code={
                         'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_code_metadata_summary_crawler_key
+                        'S3Key': self.s3_lambda_code_athena_summary_key
                     },
                     Description=f'Lambda for crawler execution on job {self.job_name}',
                     Timeout=900,
@@ -1179,7 +967,7 @@ def lambda_handler(event, context):
                     logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
                     time.sleep(5)
                 elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.lambda_metadata_summary_crawler_function_name} exists, skipping...')
+                    logger.info(f'Lambda function {self.md_crawler_function_name} exists, skipping...')
                     break
                 else:
                     logger.error(str(e))
@@ -1190,16 +978,10 @@ class AwsBatchEnv(AwsJobBase):
 
     def __init__(self, job_name, s3_bucket, s3_prefix, region, use_spot=True):
         super().__init__(job_name, s3_bucket, s3_prefix, region)
-        #self.job_name = job_name
-        #self.s3_bucket = s3_bucket
-        # TODO should build in more controls for names to comply with AWS standards:
-        #self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name)
         self.use_spot = use_spot
-        # AWS clients
-        #self.region = self.session.region
         self.batch = self.session.client('batch')
-        #self.iam = self.session.client('iam')
-        # Naming conventions
+        self.step_functions = self.session.client('stepfunctions')
+
         self.compute_environment_name = self.batch_compute_environment_name
         self.job_queue_name = self.batch_job_queue_name
         self.service_role_name = self.batch_service_role_name
@@ -1208,16 +990,14 @@ class AwsBatchEnv(AwsJobBase):
         self.spot_service_role_name = self.batch_spot_service_role_name
         self.task_role_name = self.batch_ecs_task_role_name
         self.task_policy_name = self.batch_task_policy_name
-        # Bucket information
-        #self.s3_bucket_arn = self.get_name('batch_compute_environment_name')
-        #self.s3_prefix = self.s3_bucket_prefix
-        # These are populated by functions below - although there is no controller the order of operation is reflected by order in the file.
+
         self.task_role_arn = None
         self.job_definition_arn = None
         self.instance_role_arn = None
         self.spot_service_role_arn = None
         self.service_role_arn = None
         self.instance_profile_arn = None
+        self.job_queue_arn = None
 
         logger.propagate = False
 
@@ -1265,7 +1045,7 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                                                                "ec2",
                                                                f"Instance role for Batch compute environment {self.job_identifier}",
                                                                managed_policie_arns=[
-                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
+                                                               'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
 
 
         # Instance Profile
@@ -1504,12 +1284,21 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     ]
                 )
 
+                print("JOB QUEUE")
+                print(response)
+                self.job_queue_arn = response['jobQueueArn']
                 logger.info('Job queue created')
                 go = False
 
             except Exception as e:
                 if 'Object already exists' in str(e):
                     logger.info('Job queue not created - already exists')
+                    response = self.batch.describe_job_queues(
+                        jobQueues=[
+                            self.job_queue_name,
+                        ]
+                    )
+                    self.job_queue_arn = response['jobQueues'][0]['jobQueueArn']
                     go = False
 
                 elif 'is not valid' in str(e):
@@ -1579,40 +1368,7 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     logger.error(str(e))
                     go = False
 
-class AwsSNS(AwsJobBase):
-
-    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
-        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
-        self.sns = self.session.client("sns")
-        self.sns_state_machine_topic_arn = None
-
-    def create_topic(self):
-        response = self.sns.create_topic(
-            Name=self.sns_state_machine_topic
-        )
-
-        print(response)
-
-        self.sns_state_machine_topic_arn = response
-
-    def subscribe_to_topic(self):
-        response = self.sns.subscribe(
-            TopicArn=self.sns_state_machine_topic_arn,
-            Protocol='email',
-            Endpoint=self.operator_email
-        )
-
-
-class AwsStepFunctions(AwsJobBase):
-
-    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
-        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
-
-
-        self.step_functions = self.session.client("stepfunctions")
-        self.state_machine_role_arn = None
-
-    def create_roles(self):
+    def create_state_machine_roles(self):
 
         lambda_policy = f'''{{
     "Version": "2012-10-17",
@@ -1625,7 +1381,8 @@ class AwsStepFunctions(AwsJobBase):
             "Resource": [
                 "arn:aws:lambda:*:*:function:{self.lambda_metadata_crawler_function_name}",
                 "arn:aws:lambda:*:*:function:{self.lambda_metadata_summary_crawler_function_name}",
-                "arn:aws:lambda:*:*:function:{self.lambda_metadata_etl_function_name}"
+                "arn:aws:lambda:*:*:function:{self.lambda_metadata_etl_function_name}",
+                "arn:aws:lambda:*:*:function:{self.lambda_athena_function_name}"
             ]
         }}
     ]
@@ -1658,7 +1415,7 @@ class AwsStepFunctions(AwsJobBase):
         }}
     ]
 }}
-     
+
         '''
 
         glue_policy = f'''{{
@@ -1693,179 +1450,121 @@ class AwsStepFunctions(AwsJobBase):
         '''
         policies_list = [glue_policy, lambda_policy, batch_policy, sns_policy]
 
-        self.state_machine_role_arn = self.iam_helper.role_stitcher(self.state_machine_role_name, 'states', 'Permissions for statemachine to run jobs', policies_list=policies_list)
+        self.state_machine_role_arn = self.iam_helper.role_stitcher(self.state_machine_role_name, 'states',
+                                                                    'Permissions for statemachine to run jobs',
+                                                                    policies_list=policies_list)
 
     def create_state_machine(self):
-        job_definition = '''
-{
+
+
+        job_definition = f'''{{
   "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
   "StartAt": "Submit Batch Job",
   "TimeoutSeconds": 3600,
-  "States": {
-    "Submit Batch Job": {
+  "States": {{
+    "Submit Batch Job": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::batch:submitJob.sync",
-      "Parameters": {
-        "JobDefinition": "arn:aws:batch:us-west-2:246460460343:job-definition/project_resstock_nationalx5:9",
-        "JobName": "TESTNAME",
-        "JobQueue": "arn:aws:batch:us-west-2:246460460343:job-queue/job_queue_project_resstock_nationalx5",
-         "ArrayProperties": {
+      "Parameters": {{
+        "JobDefinition": "{self.job_definition_arn}",
+        "JobName": "{self.job_identifier}",
+        "JobQueue": "{self.job_queue_arn}",
+         "ArrayProperties": {{
                         "Size.$": "$.array_size"
-                    }
-    },
+                    }}
+    }},
       "Next": "Notify Batch Success",
       "Catch": [
-        {
+        {{
           "ErrorEquals": [ "States.ALL" ],
           "Next": "Notify Batch Failure"
-        }
+        }}
       ]
-    },
-    "Notify Batch Success": {
+    }},
+    "Notify Batch Success": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
+      "Parameters": {{
         "Message": "Batch job submitted through Step Functions succeeded",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
       "Next": "Wait 16 Minutes"
-    },
-    "Notify Batch Failure": {
+    }},
+    "Notify Batch Failure": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
+      "Parameters": {{
         "Message": "Batch job submitted through Step Functions failed",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
       "End": true
-    },
-    "Wait 16 Minutes": {
+    }},
+    "Wait 16 Minutes": {{
       "Type": "Wait",
       "Seconds": 30,
       "Next": "Run Firehose JSON Crawler"
-    },
-    "Run Firehose JSON Crawler": {
+    }},
+    "Run Firehose JSON Crawler": {{
       "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_start_metadata_crawler",
+      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_metadata_crawler_function_name}",
       "Next": "Notify Firehose JSON Crawl Success",
       "Catch": [
-        {
+        {{
           "ErrorEquals": [ "States.ALL" ],
           "Next": "Notify Firehose JSON Crawl Failure"
-        }
+        }}
       ]
-    },
-    "Notify Firehose JSON Crawl Success": {
+    }},
+    "Notify Firehose JSON Crawl Success": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
+      "Parameters": {{
         "Message": "Crawl of Firehose data succeeded",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
-      "Next": "Create Glue ETL Job"
-    },
-    "Notify Firehose JSON Crawl Failure": {
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
+      "Next": "Run Athena Table Creation Function"
+    }},
+    "Notify Firehose JSON Crawl Failure": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
+      "Parameters": {{
         "Message": "Crawl of Firehose data failed",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
       "End": true
-    },
-     "Create Glue ETL Job": {
+    }},
+    "Run Athena Table Creation Function": {{
       "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_lambda_metadata_etl",
-      "Next": "Notify Glue ETL Job Creation Success",
+      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_athena_function_name}",
+      "Next": "Notify Table Create Success",
       "Catch": [
-        {
+        {{
           "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Glue ETL Job Creation Failure"
-        }
+          "Next": "Notify Table Create Failed"
+        }}
       ]
-    },
-    "Notify Glue ETL Job Creation Success": {
+    }},
+    "Notify Table Create Success": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Create of ETL job  succeeded",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
-      "Next": "Run Glue ETL Job"
-    },
-    "Notify Glue ETL Job Creation Failure": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Create of ETL job failed",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
+      "Parameters": {{
+        "Message": "Create of summary data table succeeded",
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
       "End": true
-    },
-    "Run Glue ETL Job": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::glue:startJobRun.sync",
-      "Parameters": {
-        "JobName": "project_resstock_nationalx5_md_etl_job"
-      },
-      "Next": "Notify Glue ETL Job Run Success",
-      "Catch": [
-        {
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Glue ETL Job Run Failure"
-        }
-      ]
-    },
-    "Notify Glue ETL Job Run Success": {
+    }},
+    "Notify Table Create Failed": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Create of ETL job  succeeded",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
-      "Next": "Run Summary Crawler"
-    },
-    "Notify Glue ETL Job Run Failure": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Create of ETL job failed",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
+      "Parameters": {{
+        "Message": "Create of summary data table failed",
+        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+      }},
       "End": true
-    },
-    "Run Summary Crawler": {
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:us-west-2:246460460343:function:project_resstock_nationalx5_lambda_metadata_summary_crawler",
-      "Next": "Notify Summary Crawl Success",
-      "Catch": [
-        {
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Summary Crawl Failure"
-        }
-      ]
-    },
-    "Notify Summary Crawl Success": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Crawl of summary data succeeded",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
-      "End": true
-    },
-    "Notify Summary Crawl Failure": {
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {
-        "Message": "Crawl of summary data failed",
-        "TopicArn": "arn:aws:sns:us-west-2:246460460343:x5"
-      },
-      "End": true
-    }
-  }
-}
-        
+    }}
+  }}
+}}
+
         '''
 
         while True:
@@ -1885,19 +1584,47 @@ class AwsStepFunctions(AwsJobBase):
                 if "AccessDeniedException" in str(e):
                     logger.info("State machine role not yet registered, sleeping...")
                     time.sleep(5)
+                elif "StateMachineAlreadyExists" in str(e):
+                    logger.info("State machine already exists, skipping...")
+                    break
                 else:
                     logger.error(str(e))
                     raise
 
-
-
-    def start_state_machine(self):
+    def start_state_machine_execution(self, array_size):
 
         response = self.step_functions.start_execution(
             stateMachineArn=self.state_machine_arn,
-            name=f'{self.state_machine_name} execution {time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())}',
-            input='{}'
+            name=f'{self.state_machine_name}_execution',
+            input=f'{{"array_size": {array_size}}}'
         )
+        print(response)
+
+class AwsSNS(AwsJobBase):
+
+    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
+        super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
+        self.sns = self.session.client("sns")
+        self.sns_state_machine_topic_arn = None
+
+    def create_topic(self):
+        response = self.sns.create_topic(
+            Name=self.sns_state_machine_topic
+        )
+
+        print(response)
+
+        self.sns_state_machine_topic_arn = response
+
+    def subscribe_to_topic(self):
+        response = self.sns.subscribe(
+            TopicArn=self.sns_state_machine_topic_arn,
+            Protocol='email',
+            Endpoint=self.operator_email
+        )
+
+
+
 
 
 class AwsBatch(DockerBatchBase):
@@ -2062,7 +1789,6 @@ class AwsBatch(DockerBatchBase):
                 self.cfg['aws']['s3']['prefix']
             )
 
-        # TODO: Review Compute Environment, Job queue, IAM Roles, Job Defn, Start Job
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
@@ -2103,22 +1829,21 @@ class AwsBatch(DockerBatchBase):
         glue_env.create_crawler()
         glue_env.create_summary_crawler()
 
-
         # Set up 3 functions to manage ETL after the Batch job completes
         lambda_env = AwsLambda(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
         lambda_env.create_roles()
         lambda_env.create_crawler_function()
-        lambda_env.create_etl_script_function()
-        lambda_env.create_metadata_summary_crawler_function()
+        lambda_env.create_athena_etl_function()
 
         # SNS Topic
         sns_env = AwsSNS(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
         sns_env.create_topic()
 
         # State machine
-        state_machine_env = AwsStepFunctions(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
-        state_machine_env.create_roles()
-        state_machine_env.create_state_machine()
+        #state_machine_env = AwsStepFunctions(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        batch_env.create_state_machine_roles()
+        batch_env.create_state_machine()
+        batch_env.start_state_machine_execution(array_size)
 
         #batch_env.submit_job(array_size)
 
