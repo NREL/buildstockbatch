@@ -11,6 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 class AWSIAMHelper():
+
+    logger.propagate = False
+
     def __init__(self, session):
         '''
         Initialize the AWSIAM class with a boto3 Session
@@ -54,7 +57,7 @@ class AWSIAMHelper():
             p_counter = 1
             for policy in policies_list:
                 # print(p_counter)
-                print(policy)
+                # print(policy)
                 response = self.iam.put_role_policy(
                     RoleName=role_name,
                     PolicyName=f'{role_name}_policy_{p_counter}',
@@ -63,6 +66,7 @@ class AWSIAMHelper():
                 p_counter = p_counter + 1
 
             for managed_policy_arn in managed_policie_arns:
+                print(managed_policy_arn)
                 response = self.iam.attach_role_policy(
                     PolicyArn=managed_policy_arn,
                     RoleName=role_name
@@ -82,7 +86,6 @@ class AWSIAMHelper():
                 return role_arn
 
             else:
-                logger.error(str(e))
                 raise
 
     def delete_role(self, role_name):
@@ -91,28 +94,80 @@ class AWSIAMHelper():
         :param role_name: name of the role to delete
         :return: None
         '''
+        try:
+            response = self.iam.list_role_policies(
+                RoleName=role_name
+            )
+            #print(response)
 
-        response = self.iam.list_role_policies(
-            RoleName=role_name
-        )
-        print(response)
+            for policy in response['PolicyNames']:
+                del_response = self.iam.delete_role_policy(
+                    RoleName=role_name,
+                    PolicyName=policy
+                )
 
-        for policy in response['PolicyNames']:
-            del_response = self.iam.delete_role_policy(
-                RoleName=role_name,
-                PolicyName=policy
+            response = self.iam.list_attached_role_policies(
+                RoleName=role_name
             )
 
-        logger.info(f'Policies removed from role {role_name}.')
+            #print(response)
 
-        response = self.iam.delete_role(
-            RoleName=role_name
-        )
-        logger.info(f'Role {role_name} deleted.')
+            for policy in response['AttachedPolicies']:
+                rm_response = self.iam.detach_role_policy(
+                        RoleName=role_name,
+                        PolicyArn=policy['PolicyArn']
+                    )
 
+            logger.info(f'Policies detached from role {role_name}.')
+
+            response = self.iam.delete_role(
+                RoleName=role_name
+            )
+            logger.info(f'Role {role_name} deleted.')
+        except Exception as e:
+            if 'NoSuchEntity' in str(e):
+                logger.info(f'Role {role_name} missing, skipping...')
+            else:
+                raise
+
+    def delete_instance_profile(self, instance_profile_name):
+
+        try:
+
+            response = self.iam.delete_instance_profile(
+                InstanceProfileName=instance_profile_name
+            )
+            logger.info(f"Instance profile {instance_profile_name} deleted.")
+        except Exception as e:
+            if 'NoSuchEntity' in str(e):
+                logger.info(f"Instance profile {instance_profile_name} missing, skipping...")
+            else:
+                raise
+
+    def remove_role_from_instance_profile(self, instance_profile_name):
+        try:
+            response = self.iam.get_instance_profile(
+                InstanceProfileName=instance_profile_name
+            )
+            # print(response)
+
+            for role in response['InstanceProfile']['Roles']:
+                response = self.iam.remove_role_from_instance_profile(
+                    InstanceProfileName=instance_profile_name,
+                    RoleName=role['RoleName']
+                )
+            logger.info(f"Roles removed from instance profile {instance_profile_name}")
+        except Exception as e:
+            if 'NoSuchEntity' in str(e):
+                logger.info(f"Instance profile {instance_profile_name} does not exist. Skipping...")
+            else:
+                raise
 
 
 class AwsJobBase():
+
+    logger.propagate = False
+
     def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
 
         self.session = boto3.Session(region_name=region)
@@ -143,17 +198,18 @@ class AwsJobBase():
         self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-result"
         self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
         self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
-        self.s3_athena_query_results_path = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
+        self.s3_athena_query_results_path = f"s3://aws-athena-query-results-{self.account}-{self.region}"
+        self.s3_athena_query_results_arn = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
 
         self.s3_lambda_code_bucket = f'nrel-{self.job_identifier}_lambda_functions'.replace('_', '-')
         self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
         self.s3_lambda_code_metadata_etl_key = f'{self.job_identifier}/run_md_etl.py.zip'
-        self.s3_lambda_code_metadata_summary_crawler_key = f'{self.job_identifier}/run_md_summary_crawler.py.zip'
+        self.s3_lambda_code_metadata_summary_crawler_key = f'{self.job_identifier}/run_md_summary_crawler.py.zip'''
 
-        self.s3_glue_scripts_bucket = f'nrel-{self.job_identifier}_glue_scripts'.replace('_', '-')
-        self.s3_glue_scripts_md_etl_key = f'nrel-{self.job_identifier}_glue_etl'.replace('_', '-')
-        self.glue_etl_script_name = 'glue_etl_script'
-        self.s3_glue_etl_script_path = f's3://{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/{self.glue_etl_script_name}'
+        #self.s3_glue_scripts_bucket = f'nrel-{self.job_identifier}_glue_scripts'.replace('_', '-')
+        #self.s3_glue_scripts_md_etl_key = f'nrel-{self.job_identifier}_glue_etl'.replace('_', '-')
+        #self.glue_etl_script_name = 'glue_etl_script'
+        #self.s3_glue_etl_script_path = f's3://{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/{self.glue_etl_script_name}'
 
         self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
 

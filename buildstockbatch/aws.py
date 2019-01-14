@@ -13,7 +13,6 @@ import argparse
 import base64
 import boto3
 import gzip
-import io
 import itertools
 from joblib import Parallel, delayed
 import json
@@ -29,9 +28,7 @@ import tarfile
 import tempfile
 import re
 import time
-import zipfile
 import io
-import stat
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import (
@@ -84,7 +81,6 @@ def compress_file(in_filename, out_filename):
 
 
 class AwsFirehose(AwsJobBase):
-
     logger.propagate = False
 
     def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
@@ -99,17 +95,7 @@ class AwsFirehose(AwsJobBase):
         super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
 
         self.firehose = self.session.client('firehose')
-        #self.iam = self.session.client('iam')
         self.s3 = self.session.client('s3')
-        #self.s3_results_bucket = self.get_name('s3_results_bucket')
-        #self.s3_results_bucket_arn = self.get_name('s3_results_bucket_arn')
-        #self.s3_results_backup_bucket = self.get_name('s3_results_backup_bucket')
-        #self.s3_results_backup_bucket_arn = self.get_name('s3_results_backup_bucket_arn')
-        #self.firehose_role = self.get_name('firehose_role')
-        #self.firehose_name = self.get_name('firehose_name')
-        #self.firehose_role_policy_name = self.get_name('firehose_role_policy_name')
-        #self.firehost_task_policy_name = self.get_name('firehost_task_policy_name')
-        # Initialize with create_firehose_delivery_role
         self.firehose_role_arn = None
         self.firehose_arn = None
 
@@ -166,7 +152,9 @@ Firehose Role Name: {self.firehose_role}
                         ]
                     }}'''
 
-        self.firehose_role_arn = self.iam_helper.role_stitcher(self.firehose_role, 'firehose', f"Service role for Firehose support {self.job_identifier}", policies_list=[delivery_role_policy])
+        self.firehose_role_arn = self.iam_helper.role_stitcher(self.firehose_role, 'firehose',
+                                                               f"Service role for Firehose support {self.job_identifier}",
+                                                               policies_list=[delivery_role_policy])
 
     def create_firehose_buckets(self):
         """
@@ -175,7 +163,6 @@ Firehose Role Name: {self.firehose_role}
         """
 
         try:
-
             self.s3.create_bucket(
                 Bucket=self.s3_results_bucket,
                 CreateBucketConfiguration={
@@ -184,15 +171,12 @@ Firehose Role Name: {self.firehose_role}
             )
 
         except Exception as e:
-
             if 'BucketAlreadyOwnedByYou' in str(e):
                 logger.info(f'Bucket {self.s3_results_bucket}  not created - already exists')
-
             else:
-                logger.error(str(e))
+                logger.info(str(e))
 
         try:
-
             self.s3.create_bucket(
                 Bucket=self.s3_results_backup_bucket,
                 CreateBucketConfiguration={
@@ -200,12 +184,10 @@ Firehose Role Name: {self.firehose_role}
                 }
             )
         except Exception as e:
-
             if 'BucketAlreadyOwnedByYou' in str(e):
                 logger.info(f'Bucket {self.s3_results_backup_bucket} not created - already exists')
-
             else:
-                logger.error(str(e))
+                logger.warning(str(e))
 
     def create_firehose(self):
         """
@@ -266,8 +248,8 @@ Firehose Role Name: {self.firehose_role}
                     logger.info('Firehose stream operation in progress...')
                     break
                 else:
-                    logger.error("Problem creating stream - retrying after 5 seconds.  Error is:")
-                    logger.error(str(e))
+                    logger.warning(
+                        f"Problem creating stream {self.firehose_name} - retrying after 5 seconds.  Error is: {str(e)}")
                     time.sleep(5)
 
         logger.info('Waiting for firehose delivery stream activation')
@@ -281,19 +263,20 @@ Firehose Role Name: {self.firehose_role}
                     DeliveryStreamName=self.firehose_name,
                     Limit=1
                 )
+
+                if cresponse['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
+                    self.firehose_arn = cresponse['DeliveryStreamDescription']['DeliveryStreamARN']
+                    logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
+                    break
+
             except Exception as e:
                 if 'ResourceNotFoundException' in str(e):
                     logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
                     time.sleep(5)
                 else:
-                    logger.error(str(e))
+                    raise
 
 
-            # If this fails there is an issue with creation
-            if cresponse['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
-                self.firehose_arn = cresponse['DeliveryStreamDescription']['DeliveryStreamARN']
-                logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
-                break
 
     def add_firehose_task_permissions(self, task_role):
         delivery_role_policy = f'''{{
@@ -312,7 +295,6 @@ Firehose Role Name: {self.firehose_role}
             ]
         }}'''
 
-        # TODO: probably adding duplicate policies - may need a manual check for existance
         response = self.iam.put_role_policy(
             RoleName=task_role,
             PolicyName=self.firehost_task_policy_name,
@@ -332,7 +314,23 @@ Firehose Role Name: {self.firehose_role}
                 }
             )
         except Exception as e:
-            logger.debug(str(e))
+            logger.error(str(e))
+
+    def clean(self):
+        logger.info("Cleaning up firehose stream.")
+        try:
+            response = self.firehose.delete_delivery_stream(
+                DeliveryStreamName=self.firehose_name
+            )
+            logger.info(f"Firehose {self.firehose_name} deleted.")
+        except Exception as e:
+            if 'ResourceNotFoundException' in str(e):
+                logger.info(f"Firehose {self.firehose_name} already MIA - skipping...")
+
+        self.iam_helper.delete_role(self.firehose_role)
+
+        logger.info(
+            f"Firehose clean complete.  Results bucket and data {self.s3_results_bucket} have not been deleted.")
 
 
 class AWSGlueTransform(AwsJobBase):
@@ -341,18 +339,15 @@ class AWSGlueTransform(AwsJobBase):
         super().__init__(job_name, s3_bucket, s3_prefix, region)
 
         self.glue = self.session.client('glue')
-        #self.s3_bucket = s3_bucket
-        #self.s3_bucket prefix = s3_prefix
-        self.md_crawler_role_name = self.glue_metadata_crawler_role_name
-        self.md_crawler_name = self.glue_metadata_crawler_name
-        self.database_name = self.glue_database_name
-        #self.s3_results_bucket = self.get_name('s3_results_bucket')
+        # self.md_crawler_role_name = self.glue_metadata_crawler_role_name
+        #self.md_crawler_name = self.glue_metadata_crawler_name
+        #self.database_name = self.glue_database_name
         self.md_crawler_role_arn = None
 
     def __repr__(self):
         return f"""
 The following objects compose the Glue to support the Batch run for {self.job_name}:
-Crawler Role Name: {self.md_crawler_role_name}
+Crawler Role Name: {self.glue_metadata_crawler_role_name}
 S3 Bucket For Source Data and Glue Tables: {self.s3_results_bucket}
 Source S3 Bucket Prefix: {self.s3_bucket_prefix}
     """
@@ -362,15 +357,14 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         try:
             response = self.glue.create_database(
                 DatabaseInput={
-                    'Name': self.database_name,
+                    'Name': self.glue_database_name,
                     'Description': f'Database created for job: {self.job_name}'
                 }
             )
         except Exception as e:
             if 'AlreadyExistsException' in str(e):
-                logger.info(f'Database {self.database_name} already exists, skipping...')
+                logger.info(f'Database {self.glue_database_name} already exists, skipping...')
             else:
-                logger.error(str(e))
                 raise
 
     def create_roles(self):
@@ -505,80 +499,19 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         policies.append(data_access_policy)
 
         self.crawler_role_arn = self.iam_helper.role_stitcher(
-            self.md_crawler_role_name,
+            self.glue_metadata_crawler_role_name,
             'glue',
-            f'IAM role for {self.md_crawler_role_name} and {self.glue_metadata_summary_crawler_name}',
+            f'IAM role for {self.glue_metadata_crawler_role_name}',
             policies_list=policies
         )
-
-        # ETL job role
-
-        etl_access_policy = f'''{{"Version": "2012-10-17",
-                "Statement": [
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:GetBucketLocation",
-                            "s3:ListBucket",
-                            "s3:ListAllMyBuckets",
-                            "s3:GetBucketAcl",
-                            "glue:*"
-                        ],
-                        "Resource": [
-                            "*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:Get*",
-                            "s3:List*",
-                            "s3:Put*",
-                            "s3:Delete*"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::{self.s3_results_bucket}/*",
-                            "arn:aws:s3:::{self.s3_results_bucket}/*/*",
-                            "arn:aws:s3:::{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "logs:CreateLogGroup",
-                            "logs:CreateLogStream",
-                            "logs:PutLogEvents"
-                        ],
-                        "Resource": [
-                            "arn:aws:logs:*:*:/aws-glue/*"
-                        ]
-                    }}
-
-                ]
-
-            }}
-            '''
-
-
-        etl_policies = []
-        etl_policies.append(etl_access_policy)
-        #policies.append(data_access_policy)
-
-        self.glue_metadata_etl_role_arn = self.iam_helper.role_stitcher(
-            self.glue_metadata_etl_role_name,
-            'glue',
-            f'IAM role for {self.glue_metadata_job_name}',
-            policies_list=etl_policies
-        )
-
 
     def create_crawler(self):
         # Identified a race condition here - will add some sleep time to work around it.
         while True:
             try:
                 response = self.glue.create_crawler(
-                    Name=self.md_crawler_name,
-                    Role=self.md_crawler_role_name,
+                    Name=self.glue_metadata_crawler_name,
+                    Role=self.glue_metadata_crawler_role_name,
                     DatabaseName=self.glue_database_name,
                     Description=f"{self.job_name} crawler",
                     Targets={
@@ -588,14 +521,14 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                             },
                         ],
                     },
-                    #TablePrefix=self.s3_bucket_prefix,
+                    # TablePrefix=self.s3_bucket_prefix,
                     SchemaChangePolicy={
                         'UpdateBehavior': 'UPDATE_IN_DATABASE',
                         'DeleteBehavior': 'DELETE_FROM_DATABASE'
                     }
                 )
 
-                logger.info(f'Crawler {self.md_crawler_name} created')
+                logger.info(f'Crawler {self.glue_metadata_crawler_name} created')
                 break
 
             except Exception as e:
@@ -603,71 +536,31 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                     logger.info('Sleeping to allow role to register correctly before crawler creation...')
                     time.sleep(5)
                 elif 'AlreadyExistsException' in str(e):
-                    logger.info(f'Crawler {self.md_crawler_name} already exists, skipping...')
+                    logger.info(f'Crawler {self.glue_metadata_crawler_name} already exists, skipping...')
                     break
                 else:
-                    logger.error(str(e))
-                    raise
-
-    def create_summary_crawler(self):
-        # Identified a race condition here - will add some sleep time to work around it.
-        while True:
-            try:
-                response = self.glue.create_crawler(
-                    Name=self.glue_metadata_summary_crawler_name,
-                    Role=self.glue_metadata_crawler_role_name,
-                    DatabaseName=self.glue_database_name,
-                    Description=f"{self.job_name} crawler",
-                    Targets={
-                        'S3Targets': [
-                            {
-                                'Path': f'{self.glue_metadata_etl_results_s3_path}',
-                            },
-                        ],
-                    },
-                    SchemaChangePolicy={
-                        'UpdateBehavior': 'UPDATE_IN_DATABASE',
-                        'DeleteBehavior': 'DELETE_FROM_DATABASE'
-                    }
-                )
-
-                logger.info(f'Crawler {self.glue_metadata_summary_crawler_name} created')
-                break
-
-            except Exception as e:
-                if "Service is unable to assume role" in str(e):
-                    logger.info('Sleeping to allow role to register correctly before crawler creation...')
-                    time.sleep(5)
-                elif 'AlreadyExistsException' in str(e):
-                    logger.info(f'Crawler {self.md_crawler_name} already exists, skipping...')
-                    break
-                else:
-                    logger.error(str(e))
                     raise
 
     def delete_crawler(self):
         response = self.glue.delete_crawler(
-            Name=self.md_crawler_name
+            Name=self.glue_metadata_crawler_name
         )
-        logger.info(f'Crawler {self.md_crawler_name} deleted')
+        logger.info(f'Crawler {self.glue_metadata_crawler_name} deleted')
+
+    def clean(self):
+
+        self.iam_helper.delete_role(self.glue_metadata_crawler_role_name)
 
 
 class AwsLambda(AwsJobBase):
     def __init__(self, job_name, s3_bucket, s3_prefix, region):
         super().__init__(job_name, s3_bucket, s3_prefix, region)
         self.aws_lambda = self.session.client('lambda')
-        self.md_crawler_function_name = self.lambda_metadata_crawler_function_name
-        self.md_lambda_crawler_role_name = self.lambda_metadata_crawler_role_name
-        self.md_crawler_name = self.glue_metadata_crawler_name
         self.s3 = self.session.client('s3')
         self.s3_res = self.session.resource('s3')
-        self.s3_lambda_md_crawler_key = self.s3_lambda_code_metadata_crawler_key
-        self.database_name = self.glue_database_name
         self.md_lambda_crawler_role_arn = None
         self.lambda_metadata_etl_role_arn = None
         self.lambda_athena_metadata_summary_execution_role_arn = None
-
-
 
     def create_roles(self):
 
@@ -710,56 +603,9 @@ class AwsLambda(AwsJobBase):
 
 
         '''
-        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(self.md_lambda_crawler_role_name, 'lambda',
-                                                              f'Lambda execution role for {self.md_crawler_function_name}',
-                                                              policies_list=[lambda_policy])
-
-        # Glue ETL support
-
-        lambda_etl_policy = f'''{{"Version": "2012-10-17",
-        "Statement": [
-          {{
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-              "logs:CreateLogStream",
-              "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-          }},
-          {{
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": [
-                "glue:CreateJob",
-                "glue:CreateScript",
-                "glue:Get*",
-                "iam:PassRole"
-            ],
-            "Resource": "*"
-          }},
-          {{
-            "Sid": "VisualEditor2",
-            "Effect": "Allow",
-            "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:*:*:*"
-          }},
-          {{
-            "Sid": "VisualEditor3",
-            "Effect": "Allow",
-            "Action": "s3:PutObject",
-            "Resource": "arn:aws:s3:::{self.s3_glue_scripts_bucket}/*"
-          }}
-        ]
-    }}
-    '''
-
-
-
-        self.lambda_metadata_etl_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_etl_role_name,
-                                                                          'lambda',
-                                                                          f'Lambda execution role for {self.md_lambda_crawler_role_name}',
-                                                                          policies_list=[lambda_etl_policy])
+        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_crawler_role_name, 'lambda',
+                                                                        f'Lambda execution role for {self.lambda_metadata_crawler_function_name}',
+                                                                        policies_list=[lambda_policy])
 
         athena_s3_accesses = f'''{{"Version": "2012-10-17",
         "Statement": [{{
@@ -767,25 +613,23 @@ class AwsLambda(AwsJobBase):
             "Effect": "Allow",
             "Action": "s3:*",
             "Resource": [
-                            "{self.s3_results_bucket_arn}",
-                            "{self.s3_athena_query_results_path}"
+                            "{self.s3_results_bucket_arn}/*",
+                            "{self.s3_athena_query_results_arn}/*",
+                            "{self.s3_results_bucket_arn}*",
+                            "arn:aws:s3:::aws-athena-query-results*"
                         ]
           }}
         ]
     }}
           
           '''
-
-
-        self.lambda_athena_metadata_summary_execution_role_arn = self.iam_helper.role_stitcher(self.lambda_athena_metadata_summary_execution_role,
-                                                                          'lambda',
-                                                                          f'Lambda execution role for {self.lambda_athena_function_name}',
-                                                                          policies_list=[athena_s3_accesses],
-                                                                          managed_policie_arns=['arn:aws:iam::aws:policy/AmazonAthenaFullAccess'])
-
-
-    def delete_roles(self):
-        self.iam.delete_role(self.md_lambda_crawler_role_name)
+        print("CREATING ROLE WITH POLSSSSSSSSs.....")
+        self.lambda_athena_metadata_summary_execution_role_arn = self.iam_helper.role_stitcher(
+            self.lambda_athena_metadata_summary_execution_role,
+            'lambda',
+            f'Lambda execution role for {self.lambda_athena_function_name}',
+            policies_list=[athena_s3_accesses],
+            managed_policie_arns=['arn:aws:iam::aws:policy/AmazonAthenaFullAccess'])
 
     def create_crawler_function(self):
         '''
@@ -802,7 +646,6 @@ class AwsLambda(AwsJobBase):
             if 'BucketAlreadyOwnedByYou' in str(e):
                 logger.info(f'{self.s3_lambda_code_bucket} s3 bucket not created - already exists')
             else:
-                logger.error(str(e))
                 raise
 
         function_script = f'''
@@ -813,12 +656,12 @@ import time
 
 def lambda_handler(event, context):
     client = boto3.client('glue')
-    response = client.start_crawler(Name='{self.md_crawler_name}')
+    response = client.start_crawler(Name='{self.glue_metadata_crawler_name}')
     
     while True:
         response = client.get_crawler_metrics(
             CrawlerNameList=[
-                '{self.md_crawler_name}'
+                '{self.glue_metadata_crawler_name}'
             ]
         )
         print(response)
@@ -828,7 +671,7 @@ def lambda_handler(event, context):
                 Expression='*{self.s3_bucket_prefix}*'
             )
             for table in tables_response['TableList']:
-                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.md_crawler_name}':
+                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.glue_metadata_crawler_name}':
                     return 'complete'
             print(tables_response)
             break
@@ -842,34 +685,21 @@ def lambda_handler(event, context):
                              'run_md_crawler.py',
                              'run_md_crawler.py.zip',
                              self.s3_lambda_code_bucket,
-                             self.s3_lambda_md_crawler_key)
-        '''
-        zip_archive = zipfile.ZipFile('run_md_crawler.py.zip', mode='w', compression=zipfile.ZIP_STORED)
+                             self.s3_lambda_code_metadata_crawler_key)
 
-        info = zipfile.ZipInfo('run_md_crawler.py')
-        info.external_attr = 0o777 << 16
-        zip_archive.writestr(info, function_script)
-
-        zip_archive.close()
-        '''
-
-        #os.chmod('run_crawler.py.zip', stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
-        #self.s3.upload_file('run_md_crawler.py.zip', self.s3_lambda_code_bucket, self.s3_lambda_md_crawler_key)
-
-        print(self.md_lambda_crawler_role_arn)
+        # print(self.md_lambda_crawler_role_arn)
 
         while 1 == 1:
             try:
 
                 response = self.aws_lambda.create_function(
-                    FunctionName=self.md_crawler_function_name,
+                    FunctionName=self.lambda_metadata_crawler_function_name,
                     Runtime='python3.7',
                     Role=self.md_lambda_crawler_role_arn,
                     Handler='run_md_crawler.lambda_handler',
                     Code={
                         'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_md_crawler_key
+                        'S3Key': self.s3_lambda_code_metadata_crawler_key
                     },
                     Description=f'Lambda for crawler execution on job {self.job_name}',
                     Timeout=900,
@@ -880,18 +710,18 @@ def lambda_handler(event, context):
                     }
                 )
 
-                print(response)
+                # print(response)
+                logger.info(f"Lambda function {self.lambda_metadata_crawler_function_name} created.")
                 break
 
             except Exception as e:
                 if 'role defined for the function cannot be assumed' in str(e):
-                    logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
+                    logger.info(f"Lamda role not registered for {self.lambda_metadata_crawler_role_name} - sleeping ...")
                     time.sleep(5)
                 elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.md_crawler_function_name} exists, skipping...')
+                    logger.info(f'Lambda function {self.lambda_metadata_crawler_function_name} exists, skipping...')
                     break
                 else:
-                    logger.error(str(e))
                     raise
 
     def create_athena_etl_function(self):
@@ -903,7 +733,7 @@ from pprint import pprint
 
 def lambda_handler(event, context):
     athena = boto3.client('athena')
-    athena.start_query_execution(
+    response = athena.start_query_execution(
         QueryString="""CREATE TABLE "{self.glue_database_name}"."{self.glue_metadata_summary_table_name}"
         WITH (
           format='TEXTFILE',
@@ -916,8 +746,6 @@ def lambda_handler(event, context):
     )
     
     print(response['QueryExecutionId'])
-    
-    
     
     while True:
         response2 = athena.get_query_execution(
@@ -959,19 +787,61 @@ def lambda_handler(event, context):
                     }
                 )
 
-                print(response)
+                logger.info(f"Lambda function {self.lambda_athena_function_name} created.")
                 break
 
             except Exception as e:
                 if 'role defined for the function cannot be assumed' in str(e):
-                    logger.info(f"Lamda role not registered for {self.md_lambda_crawler_role_name} - sleeping ...")
+                    logger.info(f"Lamda role not registered for {self.lambda_metadata_crawler_role_name} - sleeping ...")
                     time.sleep(5)
                 elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.md_crawler_function_name} exists, skipping...')
+                    logger.info(f'Lambda function {self.lambda_metadata_crawler_function_name} exists, skipping...')
                     break
                 else:
-                    logger.error(str(e))
                     raise
+
+    def clean(self):
+        self.iam_helper.delete_role(self.lambda_metadata_crawler_role_name)
+        self.iam_helper.delete_role(self.lambda_athena_metadata_summary_execution_role)
+        try:
+            self.aws_lambda.delete_function(
+                FunctionName=self.lambda_metadata_crawler_function_name
+            )
+        except Exception as e:
+            if 'Function not found' in str(e):
+                logger.info(f"Function {self.lambda_metadata_crawler_function_name} not found, skipping...")
+            else:
+                raise
+        try:
+            self.aws_lambda.delete_function(
+                FunctionName=self.lambda_athena_function_name
+            )
+        except Exception as e:
+            if 'Function not found' in str(e):
+                logger.info(f"Function {self.lambda_athena_function_name} not found, skipping...")
+            else:
+                raise
+        try:
+            self.s3.delete_object(Bucket=self.s3_lambda_code_bucket, Key=self.s3_lambda_code_metadata_crawler_key)
+            logger.info(
+                f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} deleted.")
+        except Exception as e:
+            if 'NoSuchBucket' in str(e):
+                logger.info(
+                    f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted.")
+            else:
+                raise
+
+        try:
+            self.s3.delete_object(Bucket=self.s3_lambda_code_bucket, Key=self.s3_lambda_code_athena_summary_key)
+            logger.info(
+                f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} deleted.")
+        except Exception as e:
+            if 'NoSuchBucket' in str(e):
+                logger.info(
+                    f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted.")
+            else:
+                raise
 
 
 class AwsBatchEnv(AwsJobBase):
@@ -1035,9 +905,10 @@ S3 Bucket ARN: {self.s3_bucket_arn}
         Creates the IAM roles used in the various areas of the batch service. This currently will not try to overwrite or update existing roles.
         """
         self.service_role_arn = self.iam_helper.role_stitcher(self.service_role_name,
-                                      "batch",
-                                      f"Service role for Batch environment {self.job_identifier}",
-                                      managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole'])
+                                                              "batch",
+                                                              f"Service role for Batch environment {self.job_identifier}",
+                                                              managed_policie_arns=[
+                                                                  'arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole'])
 
         ## Instance Role for Batch compute environment
 
@@ -1045,8 +916,7 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                                                                "ec2",
                                                                f"Instance role for Batch compute environment {self.job_identifier}",
                                                                managed_policie_arns=[
-                                                               'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
-
+                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
 
         # Instance Profile
 
@@ -1074,11 +944,8 @@ S3 Bucket ARN: {self.s3_bucket_arn}
 
         # ECS Task Policy
 
-        print(self.s3_bucket)
-        print(self.s3_bucket_arn)
-
-        # TODO: slim this down
-
+        # print(self.s3_bucket)
+        # print(self.s3_bucket_arn)
 
         task_permissions_policy = f'''{{
                 "Version": "2012-10-17",
@@ -1168,20 +1035,17 @@ S3 Bucket ARN: {self.s3_bucket_arn}
             }}'''
 
         self.task_role_arn = self.iam_helper.role_stitcher(self.task_role_name,
-                                                               "ecs-tasks",
-                                                               f"Task role for Batch job {self.job_identifier}",
-                                                               policies_list=[task_permissions_policy])
-
+                                                           "ecs-tasks",
+                                                           f"Task role for Batch job {self.job_identifier}",
+                                                           policies_list=[task_permissions_policy])
 
         if self.use_spot:
-
             # Spot Fleet Role
             self.spot_service_role_arn = self.iam_helper.role_stitcher(self.spot_service_role_name,
-                                                               "spotfleet",
-                                                               f"Spot Fleet role for Batch compute environment {self.job_identifier}",
-                                                               managed_policie_arns=[
-                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'])
-
+                                                                       "spotfleet",
+                                                                       f"Spot Fleet role for Batch compute environment {self.job_identifier}",
+                                                                       managed_policie_arns=[
+                                                                           'arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'])
 
     def create_compute_environment(self, subnets, security_groups, maxCPUs=10000):
         """
@@ -1232,7 +1096,7 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                 if 'Object already exists' in str(e):
                     logger.info('Compute environment not created - already exists')
                 else:
-                    logger.error(str(e))
+                    raise
 
         else:
             type = 'EC2'
@@ -1257,20 +1121,20 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     serviceRole=self.service_role_arn
                 )
 
-                logger.info('Service Role created')
+                logger.info(f'Compute environment {self.compute_environment_name} created.')
 
             except Exception as e:
                 if 'Object already exists' in str(e):
-                    logger.info('Compute environment not created - already exists')
+                    logger.info(f'Compute environment {self.compute_environment_name} not created - already exists')
                 else:
-                    logger.error(str(e))
+                    raise
 
     def create_job_queue(self):
         """
         Creates a job queue based on the Batch environment definition
         """
-        go = True
-        while go:
+
+        while True:
             try:
                 response = self.batch.create_job_queue(
                     jobQueueName=self.job_queue_name,
@@ -1284,32 +1148,31 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     ]
                 )
 
-                print("JOB QUEUE")
-                print(response)
+                # print("JOB QUEUE")
+                # print(response)
                 self.job_queue_arn = response['jobQueueArn']
-                logger.info('Job queue created')
-                go = False
+                logger.info(f'Job queue {self.job_queue_name} created')
+                break
 
             except Exception as e:
                 if 'Object already exists' in str(e):
-                    logger.info('Job queue not created - already exists')
+                    logger.info(f'Job queue {self.job_queue_name} not created - already exists')
                     response = self.batch.describe_job_queues(
                         jobQueues=[
                             self.job_queue_name,
                         ]
                     )
                     self.job_queue_arn = response['jobQueues'][0]['jobQueueArn']
-                    go = False
+                    break
 
                 elif 'is not valid' in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.error(
+                    logger.warning(
                         '5 second sleep initiated to wait for compute environment creation due to error: ' + str(e))
                     time.sleep(5)
 
                 else:
-                    logger.error(str(e))
-                    go = False
+                    raise
 
     def create_job_definition(self, docker_image, vcpus, memory, command, env_vars):
         """
@@ -1342,8 +1205,8 @@ S3 Bucket ARN: {self.s3_bucket_arn}
         """
         Submits the created job definition and version to be run.
         """
-        go = True
-        while go:
+
+        while True:
             try:
                 response = self.batch.submit_job(
                     jobName=self.job_identifier,
@@ -1354,19 +1217,17 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     jobDefinition=self.job_definition_arn
                 )
 
-                go = False
-
                 logger.info(f"Job {self.job_identifier} submitted.")
+                break
 
             except Exception as e:
 
                 if 'not in VALID state' in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.error('5 second sleep initiated to wait for job queue creation due to error: ' + str(e))
+                    logger.warning('5 second sleep initiated to wait for job queue creation due to error: ' + str(e))
                     time.sleep(5)
                 else:
-                    logger.error(str(e))
-                    go = False
+                    raise
 
     def create_state_machine_roles(self):
 
@@ -1456,7 +1317,6 @@ S3 Bucket ARN: {self.s3_bucket_arn}
 
     def create_state_machine(self):
 
-
         job_definition = f'''{{
   "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
   "StartAt": "Submit Batch Job",
@@ -1501,7 +1361,7 @@ S3 Bucket ARN: {self.s3_bucket_arn}
     }},
     "Wait 16 Minutes": {{
       "Type": "Wait",
-      "Seconds": 30,
+      "Seconds": 60,
       "Next": "Run Firehose JSON Crawler"
     }},
     "Run Firehose JSON Crawler": {{
@@ -1577,8 +1437,9 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     roleArn=self.state_machine_role_arn
                 )
 
-                print(response)
+                # print(response)
                 self.state_machine_arn = response['stateMachineArn']
+                logging.info(f"State machine {self.state_machine_name} created.")
                 break
             except Exception as e:
                 if "AccessDeniedException" in str(e):
@@ -1586,9 +1447,10 @@ S3 Bucket ARN: {self.s3_bucket_arn}
                     time.sleep(5)
                 elif "StateMachineAlreadyExists" in str(e):
                     logger.info("State machine already exists, skipping...")
+                    self.state_machine_arn = f"arn:aws:states:{self.region}:{self.account}:stateMachine:{self.state_machine_name}"
+
                     break
                 else:
-                    logger.error(str(e))
                     raise
 
     def start_state_machine_execution(self, array_size):
@@ -1598,11 +1460,89 @@ S3 Bucket ARN: {self.s3_bucket_arn}
             name=f'{self.state_machine_name}_execution',
             input=f'{{"array_size": {array_size}}}'
         )
-        print(response)
+
+        logging.info(f"Starting state machine {self.state_machine_name}.")
+
+    def clean(self):
+
+        state_machines = self.step_functions.list_state_machines(
+        )
+
+        for sm in state_machines['stateMachines']:
+            if sm['name'] == self.state_machine_name:
+                self.state_machine_arn = sm['stateMachineArn']
+                self.step_functions.delete_state_machine(
+                    stateMachineArn=self.state_machine_arn
+                )
+                logger.info(f"Deleted state machine {self.state_machine_name}.")
+                break
+
+        self.iam_helper.delete_role(self.state_machine_role_name)
+
+        try:
+
+            jq_disable_response = self.batch.update_job_queue(
+                jobQueue=self.job_queue_name,
+                state='DISABLED'
+            )
+
+            while True:
+                try:
+                    response = self.batch.delete_job_queue(
+                        jobQueue=self.job_queue_name
+                    )
+                    logger.info(f"Job queue {self.job_queue_name} deleted.")
+                    break
+                except Exception as e:
+                    if 'Cannot delete, resource is being modified' in str(e):
+                        logger.info("Job queue being modified - sleeping until ready...")
+                        time.sleep(5)
+                    else:
+                        raise
+        except Exception as e:
+            if 'does not exist' in str(e):
+                logger.info(f"Job queue {self.job_queue_name} missing, skipping...")
+
+        # Delete compute enviornment
+
+        try:
+
+            ce_disable_response = self.batch.update_compute_environment(
+                computeEnvironment=self.compute_environment_name,
+                state='DISABLED'
+            )
+
+            while True:
+                try:
+                    response = self.batch.delete_compute_environment(
+                        computeEnvironment=self.compute_environment_name
+                    )
+                    logger.info(f"Compute environment {self.compute_environment_name} deleted.")
+                    break
+                except Exception as e:
+                    if 'Cannot delete, resource is being modified' in str(e) or 'found existing JobQueue' in str(e):
+                        logger.info("Compute environment being modified - sleeping until ready...")
+                        time.sleep(5)
+                    else:
+                        raise
+        except Exception as e:
+            if 'does not exist' in str(e):
+                logger.info(f"Compute environment {self.compute_environment_name} missing, skipping...")
+            else:
+                raise
+
+        self.iam_helper.delete_role(self.batch_service_role_name)
+        self.iam_helper.delete_role(self.batch_spot_service_role_name)
+        self.iam_helper.delete_role(self.batch_ecs_task_role_name)
+        # Instance profile order of removal
+        self.iam_helper.remove_role_from_instance_profile(self.batch_instance_profile_name)
+        self.iam_helper.delete_role(self.batch_instance_role_name)
+        self.iam_helper.delete_instance_profile(self.batch_instance_profile_name)
+
 
 class AwsSNS(AwsJobBase):
 
-    def __init__(self,job_name, s3_bucket, s3_bucket_prefix, region):
+    def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
         super().__init__(job_name, s3_bucket, s3_bucket_prefix, region)
         self.sns = self.session.client("sns")
         self.sns_state_machine_topic_arn = None
@@ -1612,9 +1552,9 @@ class AwsSNS(AwsJobBase):
             Name=self.sns_state_machine_topic
         )
 
-        print(response)
+        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} created.")
 
-        self.sns_state_machine_topic_arn = response
+        self.sns_state_machine_topic_arn = response['TopicArn']
 
     def subscribe_to_topic(self):
         response = self.sns.subscribe(
@@ -1623,8 +1563,15 @@ class AwsSNS(AwsJobBase):
             Endpoint=self.operator_email
         )
 
+        logger.info(
+            f"Operator {self.operator_email} subscribed to topic - please confirm via email to recieve state machine progress messages.")
 
+    def clean(self):
+        response = self.sns.delete_topic(
+            TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
+        )
 
+        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} deleted.")
 
 
 class AwsBatch(DockerBatchBase):
@@ -1643,7 +1590,6 @@ class AwsBatch(DockerBatchBase):
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
         self.security_group = self.cfg['aws']['security_group']
         self.batch_array_size = self.cfg['aws']['batch_array_size']
-
 
     @classmethod
     def docker_image(cls):
@@ -1689,6 +1635,29 @@ class AwsBatch(DockerBatchBase):
                 if y.get('status') is not None and y.get('status') != last_status:
                     logger.debug(y['status'])
                     last_status = y['status']
+
+    def clean(self):
+        """
+        Clean up the AWS environment
+        :return:
+        """
+        logger.info("Beginning cleanup of AWS resources...")
+
+        firehose_env = AwsFirehose(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        firehose_env.clean()
+
+        lambda_env = AwsLambda(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        lambda_env.clean()
+
+        batch_env = AwsBatchEnv(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region,
+                                self.batch_env_use_spot)
+        batch_env.clean()
+
+        glue_env = AWSGlueTransform(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        glue_env.clean()
+
+        sns_env = AwsSNS(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        sns_env.clean()
 
     def run_batch(self):
         """
@@ -1789,9 +1758,9 @@ class AwsBatch(DockerBatchBase):
                 self.cfg['aws']['s3']['prefix']
             )
 
-
         # Define the batch environment
-        batch_env = AwsBatchEnv(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region, self.batch_env_use_spot)
+        batch_env = AwsBatchEnv(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region,
+                                self.batch_env_use_spot)
         logger.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
         logger.debug(str(batch_env))
@@ -1800,7 +1769,8 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_job_queue()
 
         # Pass through config for the Docker containers
-        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier, REGION=self.region)
+        env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier,
+                        REGION=self.region)
 
         image_url = '{}:latest'.format(
             self.container_repo['repositoryUri']
@@ -1827,7 +1797,6 @@ class AwsBatch(DockerBatchBase):
         glue_env.create_database()
         glue_env.create_roles()
         glue_env.create_crawler()
-        glue_env.create_summary_crawler()
 
         # Set up 3 functions to manage ETL after the Batch job completes
         lambda_env = AwsLambda(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
@@ -1838,14 +1807,15 @@ class AwsBatch(DockerBatchBase):
         # SNS Topic
         sns_env = AwsSNS(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
         sns_env.create_topic()
+        sns_env.subscribe_to_topic()
 
         # State machine
-        #state_machine_env = AwsStepFunctions(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
+        # state_machine_env = AwsStepFunctions(self.job_identifier, self.s3_bucket, self.s3_bucket_prefix, self.region)
         batch_env.create_state_machine_roles()
         batch_env.create_state_machine()
         batch_env.start_state_machine_execution(array_size)
 
-        #batch_env.submit_job(array_size)
+        # batch_env.submit_job(array_size)
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -1942,7 +1912,6 @@ class AwsBatch(DockerBatchBase):
                 dp_out['_id'] = sim_id
                 for key in dp_out.keys():
                     dp_out[to_camelcase(key)] = dp_out.pop(key)
-                # TODO: write dp_out to firehose
 
                 try:
                     response = firehose.put_record(
@@ -1955,7 +1924,6 @@ class AwsBatch(DockerBatchBase):
 
                 except Exception as e:
                     logger.error(str(e))
-
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
@@ -2007,7 +1975,11 @@ if __name__ == '__main__':
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
+        parser.add_argument('-c', '--clean', action='store_true')
         args = parser.parse_args()
         batch = AwsBatch(args.project_filename)
-        batch.push_image()
-        batch.run_batch()
+        if args.clean == True:
+            batch.clean()
+        else:
+            batch.push_image()
+            batch.run_batch()
