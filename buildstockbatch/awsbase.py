@@ -182,68 +182,29 @@ class AwsJobBase():
         self.s3_bucket_prefix = s3_bucket_prefix
         self.region = region
 
-        self.lambda_metadata_crawler_function_name = f'{self.job_identifier}_start_metadata_crawler'
-        self.lambda_metadata_crawler_role_name = f'{self.job_identifier}_lambda_metadata_execution_role'
-        self.lambda_metadata_etl_function_name = f'{self.job_identifier}_lambda_metadata_etl'
-        self.lambda_metadata_etl_role_name = f'{self.job_identifier}_lambda_metadata_etl_role'
-        self.lambda_metadata_summary_crawler_function_name = f'{self.job_identifier}_lambda_metadata_summary_crawler'
-
-
-        self.lambda_ts_crawler_function_name = f'{self.job_identifier}_start_ts_crawler'
-        self.lambda_ts_crawler_role_name = f'{self.job_identifier}_lambda_ts_execution_role'
-
-
-        self.batch_job_name = f'{self.job_identifier}_batch_job'
         self.s3_results_bucket = f'{self.s3_bucket}-result'
         self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-result"
         self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
         self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
         self.s3_athena_query_results_path = f"s3://aws-athena-query-results-{self.account}-{self.region}"
         self.s3_athena_query_results_arn = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
-
         self.s3_lambda_code_bucket = f'nrel-{self.job_identifier}_lambda_functions'.replace('_', '-')
         self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
-        self.s3_lambda_code_metadata_etl_key = f'{self.job_identifier}/run_md_etl.py.zip'
-        self.s3_lambda_code_metadata_summary_crawler_key = f'{self.job_identifier}/run_md_summary_crawler.py.zip'''
-
-        #self.s3_glue_scripts_bucket = f'nrel-{self.job_identifier}_glue_scripts'.replace('_', '-')
-        #self.s3_glue_scripts_md_etl_key = f'nrel-{self.job_identifier}_glue_etl'.replace('_', '-')
-        #self.glue_etl_script_name = 'glue_etl_script'
-        #self.s3_glue_etl_script_path = f's3://{self.s3_glue_scripts_bucket}/{self.s3_bucket_prefix}/{self.glue_etl_script_name}'
-
-        self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
-
-        self.lambda_athena_function_name =  f'{self.job_identifier}_athena_summary_execution'
         self.s3_lambda_code_athena_summary_key = f'{self.job_identifier}/create_table.py.zip'
+
+        self.lambda_metadata_crawler_function_name = f'{self.job_identifier}_start_metadata_crawler'
+        self.lambda_metadata_crawler_role_name = f'{self.job_identifier}_lambda_metadata_execution_role'
+        self.lambda_metadata_etl_function_name = f'{self.job_identifier}_lambda_metadata_etl'
+        self.lambda_metadata_summary_crawler_function_name = f'{self.job_identifier}_lambda_metadata_summary_crawler'
+        self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
+        self.lambda_athena_function_name =  f'{self.job_identifier}_athena_summary_execution'
 
         self.glue_metadata_crawler_name = f'{self.job_identifier}_md_crawler'
         self.glue_metadata_crawler_role_name = f'{self.job_identifier}_md_crawler_role'
         self.glue_database_name = f'{self.job_identifier}_data'
-        self.glue_metadata_job_name = f'{self.job_identifier}_glue_job'
-        self.glue_metadata_etl_role_name = f'{self.job_identifier}_md_etl_role'
-        self.glue_metadata_etl_job_name = f'{self.job_identifier}_md_etl_job'
-
-        #self.glue_metadata_table_name = f'{self.job_identifier}_md_table'
-        # Set by crawler - should be this:
-        self.glue_metadata_table_name = self.s3_bucket_prefix
-
         self.glue_metadata_summary_table_name = f'{self.job_identifier}_md_summary_table'
-        self.glue_metadata_summary_crawler_name = f'{self.job_identifier}_md_summary_crawler'
-        #self.glue_metadata_summary_crawler_role_name = f'{self.job_identifier}_md_parquet_crawler_role'
-        #self.glue_metadata_summary_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/metadata/'
         self.glue_metadata_etl_output_type = "csv"
         self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}-result/{self.s3_bucket_prefix}_summary/{self.glue_metadata_etl_output_type}/'
-
-
-        self.s3_lambda_code_ts_crawler_key = f'{self.job_identifier}/run_crawler.py.zip'
-        self.glue_ts_table_name = f'{self.job_identifier}_ts_table'
-        self.glue_ts_parquet_table_name = f'{self.job_identifier}_ts_parquet_table'
-        self.glue_ts_parquet_crawler_name = f'{self.job_identifier}_ts_parquet_crawler'
-        self.glue_ts_parquet_crawler_role_name = f'{self.job_identifier}_ts_parquet_crawler_role'
-        self.glue_ts_parquet_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/timeseries/'
-
-        # crawler=f'{self.job_identifier}',
-        # crawler=f'{self.job_identifier}',
 
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
@@ -254,12 +215,8 @@ class AwsJobBase():
         self.batch_ecs_task_role_name = f"ecs_task_role_{self.job_identifier}"
         self.batch_task_policy_name = f"ecs_task_policy_{self.job_identifier}"
 
-        # crawler=f'{self.job_identifier}',
-        # crawler=f'{self.job_identifier}'
-
         self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
         self.firehose_name = f"{self.job_identifier}_firehose"
-        self.firehose_role_policy_name = f"{self.job_identifier}_firehose_delivery_policy"
         self.firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
 
         self.state_machine_name = f"{self.job_identifier}_state_machine"
@@ -270,78 +227,18 @@ class AwsJobBase():
 
 
         '''
-        self.named_items = dict(
-
-            lambda_metadata_crawler_function_name=f'{self.job_identifier}_start_metadata_crawler',
-            lambda_metadata_crawler_role_name=f'{self.job_identifier}_lambda_metadata_execution_role',
-            lambda_metadata_etl_function_name=f'{self.job_identifier}_lambda_metadata_etl',
-            lambda_metadata_etl_role_name=f'{self.job_identifier}_lambda_metadata_etl_role',
-            lambda_metadata_parquet_crawler_function_name=f'{self.job_identifier}_lambda_metadata_parquet_crawler',
-
-            #TODO:
-            lambda_ts_crawler_function_name=f'{self.job_identifier}_start_ts_crawler',
-            lambda_ts_crawler_role_name=f'{self.job_identifier}_lambda_ts_execution_role',
-
-            batch_job_name=f'{self.job_identifier}_batch_job',
-            s3_results_bucket=f'{self.s3_bucket}-result',
-            s3_results_bucket_arn=f"arn:aws:s3:::{self.s3_bucket}-result",
-            s3_results_backup_bucket=f"{self.s3_bucket}-backups",
-            s3_results_backup_bucket_arn=f"arn:aws:s3:::{self.s3_bucket}-backups",
-
-            s3_lambda_code_bucket=f'nrel-{self.job_identifier}_lambda_functions'.replace('_','-'),
-            s3_lambda_code_metadata_crawler_key= f'{self.job_identifier}/run_md_crawler.py.zip',
-            s3_lambda_code_metadata_etl_key=f'{self.job_identifier}/run_md_etl.py.zip',
-            s3_lambda_code_metadata_parquet_crawler_key=f'{self.job_identifier}/run_md_parquet_crawler.py.zip',
-
-            s3_glue_scripts_bucket=f'nrel-{self.job_identifier}_glue_scripts'.replace('_','-'),
-            s3_glue_scripts_md_etl_key=f'nrel-{self.job_identifier}_glue_etl'.replace('_', '-'),
-
-            glue_metadata_crawler_name=f'{self.job_identifier}_md_crawler',
-            glue_metadata_crawler_role_name=f'{self.job_identifier}_md_crawler_role',
-            glue_metadata_etl_role_name=f'{self.job_identifier}_md_crawler_role',
-            glue_database_name=f'{self.job_identifier}_data',
-            glue_metadata_job_name=f'{self.job_identifier}_glue_job',
-            glue_metadata_table_name = f'{self.job_identifier}_md_table',
-            glue_metadata_consolidated_table_name = f'{self.job_identifier}_md_parquet_table',
-            glue_metadata_consolidated_crawler_name = f'{self.job_identifier}_md_parquet_crawler',
-            glue_metadata_parquet_crawler_role_name = f'{self.job_identifier}_md_parquet_crawler_role',
-            glue_metadata_parquet_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/metadata/',
-            glue_metadata_parqeut_results_s3_path = f's3//{self.s3_bucket}-result/{self.s3_bucket_prefix}_parquet/metadata/',
-
-
-            s3_lambda_code_ts_crawler_key=f'{self.job_identifier}/run_crawler.py.zip',
-            glue_ts_table_name=f'{self.job_identifier}_ts_table',
-            glue_ts_parquet_table_name=f'{self.job_identifier}_ts_parquet_table',
-            glue_ts_parquet_crawler_name=f'{self.job_identifier}_ts_parquet_crawler',
-            glue_ts_parquet_crawler_role_name=f'{self.job_identifier}_ts_parquet_crawler_role',
-            glue_ts_parquet_results_s3_prefix=f'{self.s3_bucket_prefix}_parquet/timeseries/',
-
-
-            #crawler=f'{self.job_identifier}',
-            #crawler=f'{self.job_identifier}',
-
-            batch_compute_environment_name = f"computeenvionment_{self.job_identifier}",
-            batch_job_queue_name=f"job_queue_{self.job_identifier}",
-            batch_service_role_name=f"batch_service_role_{self.job_identifier}",
-            batch_instance_role_name=f"batch_instance_role_{self.job_identifier}",
-            batch_instance_profile_name = f"batch_instance_profile_{self.job_identifier}",
-            batch_spot_service_role_name=f"spot_fleet_role_{self.job_identifier}",
-            batch_ecs_task_role_name=f"ecs_task_role_{self.job_identifier}",
-            batch_task_policy_name = f"ecs_task_policy_{self.job_identifier}",
-
-            #crawler=f'{self.job_identifier}',
-            #crawler=f'{self.job_identifier}'
-
-
-
-
-            firehose_role=f"{self.job_identifier}_firehose_delivery_role",
-            firehose_name=f"{self.job_identifier}_firehose",
-            firehose_role_policy_name = f"{self.job_identifier}_firehose_delivery_policy",
-            firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
-        )
-        
+        self.glue_metadata_summary_crawler_name = f'{self.job_identifier}_md_summary_crawler'
+        self.glue_metadata_summary_crawler_role_name = f'{self.job_identifier}_md_parquet_crawler_role'
+        self.glue_metadata_summary_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/metadata/'
+        self.glue_metadata_etl_output_type = "csv"
+        self.s3_lambda_code_ts_crawler_key = f'{self.job_identifier}/run_crawler.py.zip'
+        self.glue_ts_table_name = f'{self.job_identifier}_ts_table'
+        self.glue_ts_parquet_table_name = f'{self.job_identifier}_ts_parquet_table'
+        self.glue_ts_parquet_crawler_name = f'{self.job_identifier}_ts_parquet_crawler'
+        self.glue_ts_parquet_crawler_role_name = f'{self.job_identifier}_ts_parquet_crawler_role'
+        self.glue_ts_parquet_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/timeseries/'
         '''
+
 
 
 
@@ -350,8 +247,17 @@ class AwsJobBase():
         return f"""
 Job Identifier: {self.job_identifier}
 Job Name: {self.job_name}
-S3 Bucket for Source:  {self.s3_bucket}
-S3 Prefix for Source:  {self.s3_bucket_prefix}
+S3 Bucket for Source Data:  {self.s3_bucket}
+S3 Prefix for Source Data:  {self.s3_bucket_prefix}
+
+A state machine {self.state_machine_name} will execute an AWS Batch job {self.job_identifier} against the source data.
+Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
+Summary results are transimitted via the Firehose stream {self.firehose_name} to S3 in JSON format.
+Athena table {self.glue_database_name}.{self.s3_bucket_prefix} will be created from the source JSON.
+The summary results will be transformed into a set of csv files placed in S3 at {glue_metadata_etl_results_s3_path}.
+Additionally, an Athena table {self.glue_database_name}.{glue_metadata_summary_table_name} will be created on the csv
+output.
+
 """
     '''
     def get_name(self,type):
