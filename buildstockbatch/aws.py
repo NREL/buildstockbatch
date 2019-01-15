@@ -1401,7 +1401,7 @@ class AwsBatchEnv(AwsJobBase):
     }},
     "Wait 16 Minutes": {{
       "Type": "Wait",
-      "Seconds": 60,
+      "Seconds": 960,
       "Next": "Run Firehose JSON Crawler"
     }},
     "Run Firehose JSON Crawler": {{
