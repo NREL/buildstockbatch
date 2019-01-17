@@ -254,8 +254,8 @@ A state machine {self.state_machine_name} will execute an AWS Batch job {self.jo
 Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
 Summary results are transimitted via the Firehose stream {self.firehose_name} to S3 in JSON format.
 Athena table {self.glue_database_name}.{self.s3_bucket_prefix} will be created from the source JSON.
-The summary results will be transformed into a set of csv files placed in S3 at {glue_metadata_etl_results_s3_path}.
-Additionally, an Athena table {self.glue_database_name}.{glue_metadata_summary_table_name} will be created on the csv
+The summary results will be transformed into a set of csv files placed in S3 at {self.glue_metadata_etl_results_s3_path}.
+Additionally, an Athena table {self.glue_database_name}.{self.glue_metadata_summary_table_name} will be created on the csv
 output.
 
 """

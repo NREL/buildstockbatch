@@ -1497,7 +1497,7 @@ class AwsBatchEnv(AwsJobBase):
 
         response = self.step_functions.start_execution(
             stateMachineArn=self.state_machine_arn,
-            name=f'{self.state_machine_name}_execution',
+            name=f'{self.state_machine_name}_execution_{int(time.time())}',
             input=f'{{"array_size": {array_size}}}'
         )
 
@@ -1505,8 +1505,7 @@ class AwsBatchEnv(AwsJobBase):
 
     def clean(self):
 
-        state_machines = self.step_functions.list_state_machines(
-        )
+        state_machines = self.step_functions.list_state_machines()
 
         for sm in state_machines['stateMachines']:
             if sm['name'] == self.state_machine_name:
