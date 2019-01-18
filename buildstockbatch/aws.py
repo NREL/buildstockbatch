@@ -908,15 +908,6 @@ class AwsBatchEnv(AwsJobBase):
         self.batch = self.session.client('batch')
         self.step_functions = self.session.client('stepfunctions')
 
-        #self.compute_environment_name = self.batch_compute_environment_name
-        #self.job_queue_name = self.batch_job_queue_name
-        #self.service_role_name = self.batch_service_role_name
-        #self.instance_role_name = self.batch_instance_role_name
-        #self.instance_profile_name = self.batch_instance_profile_name
-        #self.spot_service_role_name = self.batch_spot_service_role_name
-        #self.task_role_name = self.batch_ecs_task_role_name
-        #self.task_policy_name = self.batch_task_policy_name
-
         self.task_role_arn = None
         self.job_definition_arn = None
         self.instance_role_arn = None
@@ -1120,6 +1111,7 @@ class AwsBatchEnv(AwsJobBase):
                         'instanceTypes': [
                             'optimal',
                         ],
+                        'imageId': self.batch_compute_environment_ami,
                         'subnets': subnets,
                         'securityGroupIds': security_groups,
                         # 'ec2KeyPair': key_pair,
@@ -1153,6 +1145,7 @@ class AwsBatchEnv(AwsJobBase):
                         'instanceTypes': [
                             'optimal',
                         ],
+                        'imageId': self.batch_compute_environment_ami,
                         'subnets': subnets,
                         'securityGroupIds': security_groups,
                         # 'ec2KeyPair': key_pair,

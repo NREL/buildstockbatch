@@ -207,6 +207,7 @@ class AwsJobBase():
         self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}-result/{self.s3_bucket_prefix}_summary/{self.glue_metadata_etl_output_type}/'
 
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
+        self.batch_compute_environment_ami = 'ami-0a859713f8259be72'
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
         self.batch_service_role_name = f"batch_service_role_{self.job_identifier}"
         self.batch_instance_role_name = f"batch_instance_role_{self.job_identifier}"
