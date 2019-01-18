@@ -1,9 +1,9 @@
 #!/bin/bash
-#PBS -l nodes=1
-#PBS -l walltime=1:00:00
-#PBS -q short
-#PBS -j oe
-#PBS -o create_environment.out
+#SBATCH --job-name=create_buildstock_env
+#SBATCH --output=create_env.out
+#SBATCH --ntasks=1
+#SBATCH --nodes=1
+#SBATCH --time=15:00
 
 module load conda
 conda remove -y --name buildstock --all

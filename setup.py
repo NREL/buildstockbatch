@@ -63,7 +63,8 @@ setuptools.setup(
         'dask[complete]',
         'docker',
         'awscli',
-        'boto3>=1.9.66'
+        'boto3>=1.9.66',
+        'tables'
     ],
     extras_require={
         'dev': [
@@ -78,7 +79,6 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
-            'buildstock_peregrine=buildstockbatch.peregrine:main'
         ]
     },
     cmdclass={'test': PyTest},

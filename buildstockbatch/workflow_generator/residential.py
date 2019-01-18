@@ -93,7 +93,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     apply_upgrade_measure['arguments']['option_{}_lifetime'.format(opt_num)] = option['lifetime']
                 if 'apply_logic' in option:
                     apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
-                        self._make_apply_logic_arg(option['apply_logic'])
+                        self.make_apply_logic_arg(option['apply_logic'])
                 for cost_num, cost in enumerate(option['costs'], 1):
                     for arg in ('value', 'multiplier'):
                         if arg not in cost:
