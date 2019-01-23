@@ -61,7 +61,8 @@ setuptools.setup(
         'joblib',
         'pyarrow>=0.10.0',
         'dask[complete]',
-        'docker'
+        'docker',
+        'tables'
     ],
     extras_require={
         'dev': [
@@ -76,7 +77,6 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
-            'buildstock_peregrine=buildstockbatch.peregrine:main'
         ]
     },
     cmdclass={'test': PyTest},

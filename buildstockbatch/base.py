@@ -10,8 +10,10 @@ This is the base class mixed into the deployment specific classes (i.e. peregrin
 :license: BSD-3
 """
 
+from collections import defaultdict
 import dask.bag as db
 from dask.distributed import Client
+import dask
 import datetime as dt
 from glob import glob
 import gzip
@@ -38,7 +40,7 @@ def read_data_point_out_json(filename):
     try:
         with open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError):
+    except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
         return None
     else:
         d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
@@ -247,6 +249,8 @@ class BuildStockBatchBase(object):
                 shutil.copyfileobj(f_in, f_out)
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
+        if len(df_new.index) == 0:
+            raise RuntimeError('There are no buildings left after the down select!')
         if downselect_resample:
             old_index_name = df_new.index.name
             df_new.index = np.arange(len(df_new)) + 1
@@ -301,21 +305,85 @@ class BuildStockBatchBase(object):
         client = self.get_dask_client()  # noqa: F841
         results_dir = self.results_dir
 
-        logger.debug('Creating Dask Dataframe of results')
-        datapoint_output_jsons = db.from_sequence(os.listdir(results_dir), partition_size=500).\
-            map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json'))
-        df_d = datapoint_output_jsons.map(read_data_point_out_json).filter(lambda x: x is not None).\
-            map(flatten_datapoint_json).to_dataframe().rename(columns=to_camelcase)
-        out_osws = db.from_sequence(os.listdir(results_dir), partition_size=500).\
-            map(lambda x: os.path.join(results_dir, x, 'out.osw'))
-        df2_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+        results_by_upgrade = defaultdict(list)
+        for item in os.listdir(results_dir):
+            m = re.match(r'bldg(\d+)up(\d+)', item)
+            if not m:
+                continue
+            building_id, upgrade_id = map(int, m.groups())
+            results_by_upgrade[upgrade_id].append(item)
 
-        logger.debug('Computing Dask Dataframe')
-        df = df2_d.merge(df_d, how='left', on='_id').compute()
-        for col in ('started_at', 'completed_at'):
-            df[col] = df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+        store = pd.HDFStore(os.path.join(results_dir, 'results.h5'), complevel=9, complib='blosc:snappy')
 
-        logger.debug('Saving as csv')
-        df.to_csv(os.path.join(results_dir, 'results.csv'), index=False)
-        logger.debug('Saving as parquet')
-        df.to_parquet(os.path.join(results_dir, 'results.parquet'), engine='pyarrow', flavor='spark')
+        for upgrade_id, sim_dir_list in results_by_upgrade.items():
+
+            logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
+
+            datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
+                map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json')).\
+                map(read_data_point_out_json).\
+                filter(lambda x: x is not None)
+
+            meta = pd.DataFrame(list(
+                datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
+                map(flatten_datapoint_json).take(10)
+            ))
+            if meta.shape == (0, 0):
+                meta = None
+
+            data_point_out_df_d = datapoint_output_jsons.map(flatten_datapoint_json).\
+                to_dataframe(meta=meta).rename(columns=to_camelcase)
+
+            out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
+                map(lambda x: os.path.join(results_dir, x, 'out.osw'))
+
+            out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+
+            data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
+
+            results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
+            results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].\
+                astype('int')
+            cols_to_remove = (
+                'build_existing_model.weight',
+                'simulation_output_report.weight',
+                'build_existing_model.workflow_json',
+                'simulation_output_report.upgrade_name'
+            )
+            for col in cols_to_remove:
+                if col in results_df.columns:
+                    del results_df[col]
+            for col in ('started_at', 'completed_at'):
+                results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+
+            if upgrade_id > 0:
+                cols_to_keep = list(
+                    filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
+                )
+                results_df = results_df[cols_to_keep]
+
+            logger.debug('Saving to csv.gz')
+            csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
+            with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
+                results_df.to_csv(f, index=False)
+
+            logger.debug('Saving to parquet')
+            results_df.to_parquet(
+                os.path.join(results_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
+                engine='pyarrow',
+                flavor='spark'
+            )
+
+            logger.debug('Categorizing variables')
+            logger.debug('memory before categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
+            for col in results_df.columns:
+                if results_df[col].dtype == 'object' and (col.startswith('build_existing_model.') or
+                                                          col.startswith('apply_upgrade.') or
+                                                          col == 'completed_status'):
+                    results_df[col] = results_df[col].astype('category')
+            logger.debug('memory after categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
+
+            logger.debug('Saving to HDF5')
+            store.put('upgrade/{}'.format(upgrade_id), results_df, format='table', append=False)
+
+        store.close()
