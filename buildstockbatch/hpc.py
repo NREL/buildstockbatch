@@ -87,18 +87,37 @@ class HPCBatchBase(BuildStockBatchBase):
     def output_dir(self):
         raise NotImplementedError
 
-    # TODO Rewrite this - the order here allows nobody but Noel to run without a screwy project fs... sys_image_dir?
     @property
     def singularity_image(self):
+        """
+        Find or download the required singularity image for the analysis. The order of precedence is the project yaml
+        file, the hpc environment specific self.sys_image_dir default, an openstudio.simg file in the output_dir, and
+        finally a simg file hosted in the official OpenStudio S3 release bucket.
+        :return:
+        """
+        # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
+        if 'sys_image_dir' in self.cfg.keys():
+            sys_image_dir = self.cfg['sys_image_dir']
+            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                ver=self.OS_VERSION,
+                sha=self.OS_SHA
+            ))
+            if os.path.isfile(sys_image):
+                return sys_image
+            else:
+                raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
+        # Check the default location for the appropriate HPC environment
         sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
             ver=self.OS_VERSION,
             sha=self.OS_SHA
         ))
         if os.path.isfile(sys_image):
             return sys_image
+        # Check the output dir folder for an openstudio.simg file TODO consider if this shouldn't come second
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
+                # Attempt to download the appropriate official OpenStudio release simg
                 logger.debug('Downloading singularity image')
                 simg_url = \
                     'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
@@ -106,6 +125,9 @@ class HPCBatchBase(BuildStockBatchBase):
                         sha=self.OS_SHA
                     )
                 r = requests.get(simg_url, stream=True)
+                if r.status_code != requests.codes.ok:
+                    logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
+                    r.raise_for_status()
                 with open(singularity_image_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
