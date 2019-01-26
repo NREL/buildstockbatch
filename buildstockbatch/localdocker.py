@@ -20,6 +20,7 @@ import logging
 import os
 import pandas as pd
 import shutil
+import yamale
 
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -55,6 +56,12 @@ class LocalDockerBatch(BuildStockBatchBase):
                 raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'docker.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @classmethod
     def docker_image(cls):

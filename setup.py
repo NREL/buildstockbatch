@@ -62,7 +62,8 @@ setuptools.setup(
         'pyarrow>=0.10.0',
         'dask[complete]',
         'docker',
-        'tables'
+        'tables',
+        'yamale'
     ],
     extras_require={
         'dev': [

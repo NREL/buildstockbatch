@@ -1,0 +1,26 @@
+buildstock_directory: str(required=True)
+project_directory: str(required=True)
+weather_files_path: str(required=True)
+stock_type: enum('residential', 'commercial', required=True)
+eagle: include('hpc-spec', required=True)
+output_directory: str(required=False)
+sys_image_dir: str(required=False)
+baseline: include('sim-spec', required=False)
+timeseries_csv_export: include('tscsvexport', required=False)
+---
+hpc-spec:
+  account: str(required=True)
+  minutes_per_sim: int(max=120, required=False)
+  n_jobs: int(required=False)
+sim-spec:
+  n_datapoints: int(required=False)
+  n_buildings_represented: int(required=False)
+  measures: list(include('measure-spec'), required=False)
+measure-spec:
+  measure_dir_name: str(requried=True)
+  arguments: map()
+tscsvexport:
+  reporting_frequency: enum('Hourly', 'Timestep')
+  inc_end_use_subcategories: bool()
+  inc_output_variables: bool()
+  output_variables: list(str())

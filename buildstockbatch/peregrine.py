@@ -12,12 +12,16 @@ This class contains the object & methods that allow for usage of the library wit
 
 import argparse
 from dask.distributed import Client, LocalCluster
+from glob import glob
 import json
 import logging as logging_
 import math
 import os
 import re
+import shutil
 import subprocess
+import yamale
+
 from .hpc import HPCBatchBase
 
 logger = logging_.getLogger(__name__)
@@ -25,9 +29,15 @@ logger = logging_.getLogger(__name__)
 
 class PeregrineBatch(HPCBatchBase):
 
-    sys_image_dir = '/projects/enduse/openstudio_singularity_images' # TODO ???
+    sys_image_dir = '/projects/enduse/openstudio_singularity_images'  # TODO sys_image_dir needs to be reimplemented
     hpc_name = 'peregrine'
-    min_sims_per_job = 48
+    min_sims_per_job = 48  # TODO This should be exposed via the yaml
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'peregrine.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @property
     def output_dir(self):
@@ -189,6 +199,15 @@ class PeregrineBatch(HPCBatchBase):
     def get_dask_client(self):
         cl = LocalCluster(local_dir=os.path.join(self.output_dir, 'dask_worker_space'))
         return Client(cl)
+
+    @staticmethod
+    def modify_fs_metadata(sim_dir, cfg):
+        to_modify = [y for x in os.walk(sim_dir) for y in glob(os.path.join(x[0], '*.*'))]
+        try:
+            _ = [os.chmod(file, 0o664) for file in to_modify]
+            _ = [shutil.chown(file, group=cfg['peregrine']['allocation']) for file in to_modify]
+        except:
+            logger.warn('Unable to chmod/chown results of simulation in directory {}'.format(sim_dir))
 
 
 def main():

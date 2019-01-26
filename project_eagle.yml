@@ -1,0 +1,18 @@
+buildstock_directory: /lustre/eaglefs/projects/eedr/repos/la100-comstock
+project_directory: project_la100com
+weather_files_path: /lustre/eaglefs/projects/eedr/weather/com_init_epws.zip
+baseline:
+  n_datapoints: 24996
+  n_buildings_represented: 50000
+  sampling_algorithm: precomputed
+  precomputed_sample: /lustre/eaglefs/projects/eedr/calibrate/samples/buildstock_reference_2015.csv
+  osw_template: default
+output_directory: /lustre/eaglefs/projects/eedr/calibrate/reference_2015
+stock_type: commercial
+os_sha: la100v1.0
+sys_image_dir: /lustre/eaglefs/projects/eedr/singularity_images
+eagle:
+  account: eedr
+  minutes_per_sim: 15
+  n_jobs: 15
+

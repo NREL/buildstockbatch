@@ -10,7 +10,6 @@ This is the base class for high performance computing environments
 :license: BSD-3
 """
 
-from dask.distributed import Client, LocalCluster
 import functools
 import itertools
 from joblib import delayed, Parallel
@@ -80,10 +79,15 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+    @staticmethod
+    def validate_project(project_file):
+        raise NotImplementedError
+
     @property
     def output_dir(self):
         raise NotImplementedError
 
+    # TODO Rewrite this - the order here allows nobody but Noel to run without a screwy project fs... sys_image_dir?
     @property
     def singularity_image(self):
         sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
@@ -186,6 +190,8 @@ class HPCBatchBase(BuildStockBatchBase):
         # Check to see if the simulation is done already and skip it if so.
         sim_dir = os.path.join(base_dir, sim_id)
         if os.path.exists(sim_dir):
+            if overwrite_existing:
+                shutil.rmtree(sim_dir)
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
                 raise SimulationExists('{} exists and finished successfully'.format(sim_id))
             elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
@@ -264,7 +270,13 @@ class HPCBatchBase(BuildStockBatchBase):
                     except FileNotFoundError:
                         pass
 
+                # Clean up the simulation directory and reset metadata to allow group access
                 cls.cleanup_sim_dir(sim_dir)
+                cls.modify_fs_metadata(sim_dir, cfg)
+
+    @staticmethod
+    def modify_fs_metadata(sim_dir, cfg):
+        raise NotImplementedError
 
     def get_dask_client(self):
         raise NotImplementedError

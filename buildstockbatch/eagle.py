@@ -12,6 +12,7 @@ This class contains the object & methods that allow for usage of the library wit
 
 import argparse
 from dask.distributed import Client, LocalCluster
+from glob import glob
 import json
 import os
 import logging
@@ -20,6 +21,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import yamale
 
 from .hpc import HPCBatchBase, SimulationExists
 
@@ -28,9 +30,9 @@ logger = logging.getLogger(__name__)
 
 class EagleBatch(HPCBatchBase):
 
-    sys_image_dir = '/home/nmerket/buildstock/assets'
+    sys_image_dir = '/home/nmerket/buildstock/assets'  # TODO ??? A bad idea for portability - sys_image_dir much?
     hpc_name = 'eagle'
-    min_sims_per_job = 36 * 2
+    min_sims_per_job = 36 * 2  # TODO This interface needs to be exposed via the yaml
 
     local_scratch = pathlib.Path('/tmp/scratch')
     local_project_dir = local_scratch / 'project'
@@ -38,6 +40,12 @@ class EagleBatch(HPCBatchBase):
     local_weather_dir = local_scratch / 'weather'
     local_output_dir = local_scratch
     local_singularity_img = local_scratch / 'openstudio.simg'
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'eagle.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @property
     def output_dir(self):
@@ -220,6 +228,15 @@ class EagleBatch(HPCBatchBase):
             local_dir='/tmp/scratch/dask_worker_space'
         )
         return Client(cl)
+
+    @staticmethod
+    def modify_fs_metadata(sim_dir, cfg):
+        to_modify = [y for x in os.walk(sim_dir) for y in glob(os.path.join(x[0], '*.*'))]
+        try:
+            _ = [os.chmod(file, 0o664) for file in to_modify]
+            _ = [shutil.chown(file, group=cfg['eagle']['account']) for file in to_modify]
+        except:
+            logger.warning('Unable to chmod/chown results of simulation in directory {}'.format(sim_dir))
 
 
 def main():
