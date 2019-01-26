@@ -118,6 +118,7 @@ class EagleBatch(HPCBatchBase):
         )
 
         # Copy the results to the remote directory
+        cls.modify_fs_metadata(local_sim_dir, cfg)
         cls.clear_and_copy_dir(local_sim_dir, remote_sim_dir)
         shutil.rmtree(local_sim_dir, ignore_errors=True)
 

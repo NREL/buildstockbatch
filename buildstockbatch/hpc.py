@@ -294,7 +294,6 @@ class HPCBatchBase(BuildStockBatchBase):
 
                 # Clean up the simulation directory and reset metadata to allow group access
                 cls.cleanup_sim_dir(sim_dir)
-                cls.modify_fs_metadata(sim_dir, cfg)
 
     @staticmethod
     def modify_fs_metadata(sim_dir, cfg):

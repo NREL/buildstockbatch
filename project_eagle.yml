@@ -1,18 +1,18 @@
-buildstock_directory: /lustre/eaglefs/projects/eedr/repos/la100-comstock
-project_directory: project_la100com
-weather_files_path: /lustre/eaglefs/projects/eedr/weather/com_init_epws.zip
+buildstock_directory: /for/eagle/make/sure/to/begin/with/lustre/eaglefs/whatever-projects-or-scratch
+project_directory: project_descriptor-goes-here
+weather_files_path: /for/eagle/make/sure/to/begin/with/lustre/eaglefs/whatever-projects-or-scratch
 baseline:
-  n_datapoints: 24996
-  n_buildings_represented: 50000
-  sampling_algorithm: precomputed
-  precomputed_sample: /lustre/eaglefs/projects/eedr/calibrate/samples/buildstock_reference_2015.csv
-  osw_template: default
-output_directory: /lustre/eaglefs/projects/eedr/calibrate/reference_2015
-stock_type: commercial
-os_sha: la100v1.0
-sys_image_dir: /lustre/eaglefs/projects/eedr/singularity_images
+  n_datapoints: 24996-pick-your-datapoint-number-here
+  n_buildings_represented: 50000-pick-your-results-csv-scalar-here
+  sampling_algorithm: precomputed-or-sobol-or-not-required-for-residential
+  precomputed_sample: only-used-by-commercial-at-present
+  osw_template: default-is-almost-always-write-for-this
+output_directory: /for/eagle/make/sure/to/begin/with/lustre/eaglefs/whatever-projects-or-scratch
+stock_type: commercial-or-residential-your-choice
+os_sha: v1.2.3.pre-alpha.beta-rc0
+sys_image_dir: /for/eagle/make/sure/to/begin/with/lustre/eaglefs/whatever-projects-or-scratch
 eagle:
-  account: eedr
-  minutes_per_sim: 15
-  n_jobs: 15
+  account: allocation-name-required-here
+  minutes_per_sim: 15-for-com-?-for-res
+  n_jobs: 15-for-com-200-for-res
 
