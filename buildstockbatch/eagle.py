@@ -104,6 +104,7 @@ class EagleBatch(HPCBatchBase):
         # Clear the local directory if it exists for some reason
         local_sim_dir = cls.local_output_dir / 'results' / sim_id
         shutil.rmtree(local_sim_dir, ignore_errors=True)
+        local_sim_dir.mkdir(parents=True, exist_ok=True)
 
         # Run the building using the local copies of the resources
         HPCBatchBase.run_building(

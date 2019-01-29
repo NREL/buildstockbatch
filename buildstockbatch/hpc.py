@@ -241,6 +241,7 @@ class HPCBatchBase(BuildStockBatchBase):
             json.dump(osw, f, indent=4)
 
         # Copy other necessary stuff into the simulation directory
+        # logger.debug('{}, {}, {}, {}'.format(project_dir, buildstock_dir, weather_dir, output_dir))
         dirs_to_mount = [
             os.path.join(buildstock_dir, 'measures'),
             os.path.join(project_dir, 'seeds'),
@@ -251,6 +252,7 @@ class HPCBatchBase(BuildStockBatchBase):
         args = [
             'singularity', 'exec',
             '--contain',
+            '-e',
             '--pwd', '/var/simdata/openstudio',
             '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
             '-B', '{}:/lib/resources'.format(os.path.join(buildstock_dir, 'resources')),
@@ -271,7 +273,8 @@ class HPCBatchBase(BuildStockBatchBase):
             singularity_image,
             'bash', '-x'
         ])
-        logger.debug(' '.join(args))
+        # logger.debug(' '.join(args))
+        # logger.debug(' '.join(runscript))
         with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
             try:
                 subprocess.run(
