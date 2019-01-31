@@ -200,7 +200,7 @@ class HPCBatchBase(BuildStockBatchBase):
             self.cfg
         )
         tick = time.time()
-        with Parallel(n_jobs=1, verbose=9) as parallel:
+        with Parallel(n_jobs=-1, verbose=9) as parallel:
             parallel(itertools.starmap(run_building_d, args['batch']))
         tick = time.time() - tick
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
