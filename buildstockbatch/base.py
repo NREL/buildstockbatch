@@ -308,8 +308,6 @@ class BuildStockBatchBase(object):
             building_id, upgrade_id = map(int, m.groups())
             results_by_upgrade[upgrade_id].append(item)
 
-        store = pd.HDFStore(os.path.join(results_dir, 'results.h5'), complevel=9, complib='blosc:snappy')
-
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
             logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
@@ -337,6 +335,7 @@ class BuildStockBatchBase(object):
             data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
             results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
+            results_df = results_df.drop(results_df.loc[results_df['build_existing_model.building_id'].isna(), :].index, axis=0)
             results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].\
                 astype('int')
             cols_to_remove = (
@@ -368,17 +367,3 @@ class BuildStockBatchBase(object):
                 engine='pyarrow',
                 flavor='spark'
             )
-
-            logger.debug('Categorizing variables')
-            logger.debug('memory before categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
-            for col in results_df.columns:
-                if results_df[col].dtype == 'object' and (col.startswith('build_existing_model.') or
-                                                          col.startswith('apply_upgrade.') or
-                                                          col == 'completed_status'):
-                    results_df[col] = results_df[col].astype('category')
-            logger.debug('memory after categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
-
-            logger.debug('Saving to HDF5')
-            store.put('upgrade/{}'.format(upgrade_id), results_df, format='table', append=False)
-
-        store.close()
