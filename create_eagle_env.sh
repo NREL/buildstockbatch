@@ -1,17 +1,21 @@
 #!/bin/bash
 
 DEV=0
-while getopts dev option
+while getopts de: option
 do
 case "${option}"
 in
-d) DEV=1
+d) DEV=1;;
+e) CONDA_ENVS_DIR=${OPTARG};;
 esac
 done
 
-MY_CONDA_ENV_NAME=${@:$OPTIND:1}
+if [ -z "$CONDA_ENVS_DIR" ]
+then
+    CONDA_ENVS_DIR=/shared-projects/buildstock/envs
+fi
 
-CONDA_ENVS_DIR=/shared-projects/buildstock/envs
+MY_CONDA_ENV_NAME=${@:$OPTIND:1}
 MY_CONDA_PREFIX="$CONDA_ENVS_DIR/$MY_CONDA_ENV_NAME"
 module load conda
 conda remove -y --prefix "$MY_CONDA_PREFIX" --all
