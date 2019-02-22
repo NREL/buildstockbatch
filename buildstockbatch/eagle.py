@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class EagleBatch(HPCBatchBase):
 
-    sys_image_dir = '/home/nmerket/buildstock/assets'
+    sys_image_dir = '/shared-projects/buildstock/singularity_images'
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2
 
