@@ -275,6 +275,7 @@ def user_cli():
         raise FileExistsError(
             'The output directory {} already exists. Please delete it or choose another.'.format(out_dir)
         )
+    logger.info('Creating output directory {}'.format(out_dir))
     os.makedirs(out_dir)
     env = {}
     env.update(os.environ)
@@ -289,7 +290,9 @@ def user_cli():
         '--output=sampling.out',
         eagle_sh
     ]
+    logger.info('Submitting sampling job to task scheduler')
     subprocess.run(args, env=env, cwd=out_dir, check=True)
+    logger.info('Run squeue -u $USER to monitor the progress of your jobs')
 
 
 def main():
