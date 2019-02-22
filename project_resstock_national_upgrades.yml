@@ -498,8 +498,10 @@ peregrine:
   queue: batch-h
   n_jobs: 200
 eagle:
-  account: es5
+  account: enduse
   n_jobs: 500
   minutes_per_sim: 2
+  sampling:
+    time: 60
   postprocessing:
     time: 300

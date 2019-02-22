@@ -77,6 +77,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
+            'buildstock_eagle=buildstockbatch.eagle:user_cli',
         ]
     },
     cmdclass={'test': PyTest},
