@@ -324,6 +324,7 @@ class BuildStockBatchBase(object):
             data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
             results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
+            results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].fillna(0)
             results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].\
                 astype('int')
             cols_to_remove = (
@@ -343,7 +344,7 @@ class BuildStockBatchBase(object):
                     filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
-
+            results_df['simulation_output_report.applicable'] = results_df['simulation_output_report.applicable'].astype(str)
             logger.debug('Saving to csv.gz')
             csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
             with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
