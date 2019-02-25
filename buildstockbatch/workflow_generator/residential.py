@@ -101,7 +101,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                         apply_upgrade_measure['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
                             cost[arg]
             if 'package_apply_logic' in measure_d:
-                apply_upgrade_measure['package_apply_logic'] = \
+                apply_upgrade_measure['arguments']['package_apply_logic'] = \
                     self.make_apply_logic_arg(measure_d['package_apply_logic'])
 
             build_existing_model_idx = \
