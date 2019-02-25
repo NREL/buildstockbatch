@@ -69,21 +69,9 @@ following properties;
         - ``multiplier``: The cost above is multiplied by this value, which is a function of the buiding.
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
-
-            - Fixed (1) 
-            - Conditioned Floor Area (ft^2) 
-            - Conditioned Foundation Slab Area (ft^2) 
-            - Lighting Floor Area (ft^2) 
-            - Above-Grade Conditioned Wall Area (ft^2) 
-            - Above-Grade Total Wall Area (ft^2) 
-            - Below-Grade Conditioned Wall Area (ft^2) 
-            - Below-Grade Total Wall Area (ft^2) 
-            - Window Area (ft^2) 
-            - Roof Area (ft^2) 
-            - Door Area (ft^2) 
-            - Water Heater Tank Size (gal) 
-            - HVAC Cooling Capacity (kBtuh) 
-            - HVAC Heating Capacity (kBtuh)
+          The multiplier needs to be from 
+          `this enumeration list in OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
+          or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
 - ``package_apply_logic``: The conditions under which this package of upgrades should be performed.
@@ -93,13 +81,11 @@ Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Include the ``timeseries_csv_export`` key to include hourly or subhourly results along with the usual
-annual simulation results.
-
-- ``reporting_frequency``: either "Hourly", "Timestep" or some other reporting frequency to pass
-  to EnergyPlus.
-- ``inc_end_use_subcategories``: boolean on whether to include the end use sub categories.
-- ``inc_output_variables``: boolean on whether to include output variables.
-- ``output_variables``: output variables to include if above is true.
+annual simulation results. These arguments are passed directly to the 
+`TimeseriesCSVExport measure <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/TimeseriesCSVExport/measure.xml>`_
+in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
+Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you're using.
+The best thing you can do is to verify that it works with what is in your branch.
 
 Output Directory
 ~~~~~~~~~~~~~~~~

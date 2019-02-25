@@ -20,6 +20,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import yaml
 
 from .hpc import HPCBatchBase, SimulationExists
 
@@ -129,7 +130,7 @@ class EagleBatch(HPCBatchBase):
                 filter(lambda m: m is not None, map(jobjson_re.match, (os.listdir(self.output_dir))))
             ))
             array_spec = '1-{}'.format(array_max)
-        account = eagle_cfg.get('account')
+        account = eagle_cfg['account']
 
         # Estimate the wall time in minutes
         cores_per_node = 36
@@ -141,17 +142,17 @@ class EagleBatch(HPCBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
+        env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
         args = [
             'sbatch',
+            '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE',
+            '--export=PROJECTFILE,MY_CONDA_ENV',
             '--array={}'.format(array_spec),
             '--output=job.out-%a',
             '--job-name=bstk',
             eagle_sh
         ]
-        if account:
-            args.insert(1, '--account={}'.format(account))
         logger.debug(' '.join(args))
         resp = subprocess.run(
             args,
@@ -178,29 +179,29 @@ class EagleBatch(HPCBatchBase):
     def queue_post_processing(self, after_jobids):
 
         # Configuration values
-        account = self.cfg['eagle'].get('account')
+        account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
 
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
         env['POSTPROCESS'] = '1'
+        env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
 
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_sh = os.path.join(here, 'eagle.sh')
 
         args = [
             'sbatch',
+            '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,POSTPROCESS',
+            '--export=PROJECTFILE,POSTPROCESS,MY_CONDA_ENV',
             '--dependency=afterany:{}'.format(':'.join(after_jobids)),
             '--mem=184000',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             eagle_sh
         ]
-        if account:
-            args.insert(1, '--account={}'.format(account))
 
         resp = subprocess.run(
             args,
@@ -222,8 +223,7 @@ class EagleBatch(HPCBatchBase):
         return Client(cl)
 
 
-def main():
-    logging.config.dictConfig({
+logging_config = {
         'version': 1,
         'disable_existing_loggers': True,
         'formatters': {
@@ -252,9 +252,52 @@ def main():
                 'handlers': ['console']
             }
         },
-    })
-    parser = argparse.ArgumentParser()
+    }
+
+
+def user_cli():
+    logging.config.dictConfig(logging_config)
     print(HPCBatchBase.LOGO)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('project_filename')
+    args = parser.parse_args()
+    if not os.path.isfile(args.project_filename):
+        raise FileNotFoundError(
+            'The project file {} doesn\'t exist'.format(args.project_filename)
+        )
+    project_filename = os.path.abspath(args.project_filename)
+    with open(project_filename, 'r') as f:
+        cfg = yaml.load(f)
+    eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
+    assert(os.path.exists(eagle_sh))
+    out_dir = cfg['output_directory']
+    if os.path.exists(out_dir):
+        raise FileExistsError(
+            'The output directory {} already exists. Please delete it or choose another.'.format(out_dir)
+        )
+    logger.info('Creating output directory {}'.format(out_dir))
+    os.makedirs(out_dir)
+    env = {}
+    env.update(os.environ)
+    env['PROJECTFILE'] = project_filename
+    env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
+    args = [
+        'sbatch',
+        '--time={}'.format(cfg['eagle'].get('sampling', {}).get('time', 60)),
+        '--account={}'.format(cfg['eagle']['account']),
+        '--nodes=1',
+        '--export=PROJECTFILE,MY_CONDA_ENV',
+        '--output=sampling.out',
+        eagle_sh
+    ]
+    logger.info('Submitting sampling job to task scheduler')
+    subprocess.run(args, env=env, cwd=out_dir, check=True)
+    logger.info('Run squeue -u $USER to monitor the progress of your jobs')
+
+
+def main():
+    logging.config.dictConfig(logging_config)
+    parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = EagleBatch(args.project_filename)
