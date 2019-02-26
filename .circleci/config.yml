@@ -27,6 +27,12 @@ jobs:
             coverage run --source=buildstockbatch -m pytest > /dev/null 2>&1
             coverage report -m
             coverage html -d /tmp/coverage_report
+      - run:
+          name: Run style checks
+          when: always
+          command: |
+            source env/bin/activate
+            flake8 buildstockbatch
       - store_artifacts:
           path: /tmp/coverage_report
           destination: coverage-report
