@@ -70,8 +70,6 @@ setuptools.setup(
             'codecov',
             'Sphinx',
             'flake8',
-            'tox',
-            'detox'
         ]
     },
     entry_points={
