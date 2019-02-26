@@ -1,5 +1,7 @@
 # BuildStock Batch
 
+[![CircleCI](https://circleci.com/gh/NREL/buildstockbatch.svg?style=svg)](https://circleci.com/gh/NREL/buildstockbatch)
+
 This set of tools provides an alternative means to PAT to run and manage the batch
 simulations for the
 [OpenStudio-BuildStock](https://github.com/NREL/OpenStudio-BuildStock)
