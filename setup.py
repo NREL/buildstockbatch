@@ -69,6 +69,7 @@ setuptools.setup(
             'pytest>=2.8.0',
             'codecov',
             'Sphinx',
+            'sphinx_rtd_theme',
             'flake8',
         ]
     },

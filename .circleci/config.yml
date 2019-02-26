@@ -8,6 +8,7 @@ jobs:
       - run:
           name: Install buildstock
           command: |
+            echo $CIRCLE_BRANCHdocker
             sudo apt-get install libhdf5-serial-dev
             python3 -m venv env
             source env/bin/activate
@@ -36,3 +37,16 @@ jobs:
       - store_artifacts:
           path: /tmp/coverage_report
           destination: coverage-report
+      - run:
+          name: Build documentation
+          command: |
+            if [ "$CIRCLE_BRANCH" = "master" ]
+            then
+            source env/bin/activate
+            pip install awscli
+            cd docs
+            make html
+            cd _build/html
+            aws s3 rm s3://buildstock-batch --recursive
+            aws s3 sync . s3://buildstock-batch
+            fi
