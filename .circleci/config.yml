@@ -1,0 +1,31 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/python:3
+    steps:
+      - checkout
+      - run:
+        name: Install buildstock
+        command: |
+          python3 -m venv env
+          source env/bin/activate
+          pip install .[dev]
+          pip install coverage pytest-cov
+      - run:
+        name: Run PyTest
+        command: |
+          source env/bin/activate
+          pytest --cov=buildstockbatch
+      - run:
+        name: Run coverage tests
+        when: always
+        command: |
+          set +e
+          source env/bin/activate
+          coverage run --source=buildstockbatch -m pytest > /dev/null 2>&1
+          coverage report -m
+          coverage html -d /tmp/coverage_report
+      - store_artifacts:
+        path: /tmp/coverage_report
+        destination: coverage-report
