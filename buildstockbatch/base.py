@@ -344,7 +344,8 @@ class BuildStockBatchBase(object):
                     filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
-            results_df['simulation_output_report.applicable'] = results_df['simulation_output_report.applicable'].astype(str)
+            results_df['simulation_output_report.applicable'] = \
+                results_df['simulation_output_report.applicable'].astype(str)
             logger.debug('Saving to csv.gz')
             csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
             with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:

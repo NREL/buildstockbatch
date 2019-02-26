@@ -71,4 +71,4 @@ def test_residential_package_apply():
     upg_step = osw['steps'][2]
     assert(upg_step['measure_dir_name'] == 'ApplyUpgrade')
     assert(upg_step['arguments']['option_1'] == cfg['upgrades'][0]['options'][0]['option'])
-    assert(upg_step['arguments']['package_apply_logic'] == WorkflowGeneratorBase.make_apply_logic_arg(cfg['upgrades'][0]['package_apply_logic']))
+    assert(upg_step['arguments']['package_apply_logic'] == WorkflowGeneratorBase.make_apply_logic_arg(cfg['upgrades'][0]['package_apply_logic']))  # noqa E501

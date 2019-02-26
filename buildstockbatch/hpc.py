@@ -10,7 +10,6 @@ This is the base class for high performance computing environments
 :license: BSD-3
 """
 
-from dask.distributed import Client, LocalCluster
 import functools
 import itertools
 from joblib import delayed, Parallel
