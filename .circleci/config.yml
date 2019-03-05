@@ -39,10 +39,13 @@ jobs:
           destination: coverage-report
       - run:
           name: Build documentation
+          when: always
           command: |
             source env/bin/activate
             cd docs
             make html
+            mkdir /tmp/docs
+            cp -r _build/html/* /tmp/docs
             if [ "$CIRCLE_BRANCH" = "master" ]
             then
             pip install awscli
@@ -50,3 +53,6 @@ jobs:
             aws s3 rm s3://buildstock-batch --recursive
             aws s3 sync . s3://buildstock-batch
             fi
+      - store_artifacts:
+          path: /tmp/docs
+          destination: docs
