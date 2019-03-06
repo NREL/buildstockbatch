@@ -295,8 +295,6 @@ class BuildStockBatchBase(object):
             building_id, upgrade_id = map(int, m.groups())
             results_by_upgrade[upgrade_id].append(item)
 
-        store = pd.HDFStore(os.path.join(results_dir, 'results.h5'), complevel=9, complib='blosc:snappy')
-
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
             logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
@@ -346,28 +344,17 @@ class BuildStockBatchBase(object):
                 results_df = results_df[cols_to_keep]
             results_df['simulation_output_report.applicable'] = \
                 results_df['simulation_output_report.applicable'].astype(str)
+
+            # Save to CSV
             logger.debug('Saving to csv.gz')
             csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
             with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
                 results_df.to_csv(f, index=False)
 
+            # Save to parquet
             logger.debug('Saving to parquet')
             results_df.to_parquet(
                 os.path.join(results_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
                 engine='pyarrow',
                 flavor='spark'
             )
-
-            logger.debug('Categorizing variables')
-            logger.debug('memory before categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
-            for col in results_df.columns:
-                if results_df[col].dtype == 'object' and (col.startswith('build_existing_model.') or
-                                                          col.startswith('apply_upgrade.') or
-                                                          col == 'completed_status'):
-                    results_df[col] = results_df[col].astype('category')
-            logger.debug('memory after categoricals: {:.1f}MB'.format(results_df.memory_usage(deep=True).sum() / 1e6))
-
-            logger.debug('Saving to HDF5')
-            store.put('upgrade/{}'.format(upgrade_id), results_df, format='table', append=False)
-
-        store.close()

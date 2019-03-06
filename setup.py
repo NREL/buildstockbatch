@@ -62,7 +62,6 @@ setuptools.setup(
         'pyarrow>=0.10.0',
         'dask[complete]',
         'docker',
-        'tables'
     ],
     extras_require={
         'dev': [
