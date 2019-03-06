@@ -90,8 +90,8 @@ def read_out_osw(filename):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.7.0'
-    OS_SHA = '544f363db5'
+    OS_VERSION = '2.7.1'
+    OS_SHA = '2b00619665'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
