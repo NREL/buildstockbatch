@@ -56,8 +56,7 @@ class AWSIAMHelper():
 
             p_counter = 1
             for policy in policies_list:
-                # print(p_counter)
-                # print(policy)
+
                 response = self.iam.put_role_policy(
                     RoleName=role_name,
                     PolicyName=f'{role_name}_policy_{p_counter}',
@@ -66,7 +65,7 @@ class AWSIAMHelper():
                 p_counter = p_counter + 1
 
             for managed_policy_arn in managed_policie_arns:
-                print(managed_policy_arn)
+
                 response = self.iam.attach_role_policy(
                     PolicyArn=managed_policy_arn,
                     RoleName=role_name
@@ -98,7 +97,7 @@ class AWSIAMHelper():
             response = self.iam.list_role_policies(
                 RoleName=role_name
             )
-            #print(response)
+
 
             for policy in response['PolicyNames']:
                 del_response = self.iam.delete_role_policy(
@@ -110,7 +109,6 @@ class AWSIAMHelper():
                 RoleName=role_name
             )
 
-            #print(response)
 
             for policy in response['AttachedPolicies']:
                 rm_response = self.iam.detach_role_policy(
@@ -149,7 +147,7 @@ class AWSIAMHelper():
             response = self.iam.get_instance_profile(
                 InstanceProfileName=instance_profile_name
             )
-            # print(response)
+
 
             for role in response['InstanceProfile']['Roles']:
                 response = self.iam.remove_role_from_instance_profile(
@@ -168,22 +166,22 @@ class AwsJobBase():
 
     logger.propagate = False
 
-    def __init__(self, job_name, s3_bucket, s3_bucket_prefix, region):
-
-        self.session = boto3.Session(region_name=region)
+    def __init__(self, job_identifier, aws_config, boto3_session):
+        self.aws_config = aws_config
+        self.session = boto3_session
         self.iam_helper = AWSIAMHelper(self.session)
         self.iam = self.iam_helper.iam
         self.s3 = self.session.client('s3')
-        self.job_name = job_name
-        self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.job_name).replace('_yml','')
+        self.job_identifier = job_identifier
         self.account = self.session.client('sts').get_caller_identity().get('Account')
-        self.s3_bucket = s3_bucket
+        self.s3_bucket = aws_config['s3']['bucket']
         self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_bucket_prefix = s3_bucket_prefix
-        self.region = region
+        self.s3_bucket_prefix = aws_config['s3']['prefix']
+        self.region = aws_config['region']
+        self.operator_email = aws_config['notifications_email']
 
-        self.s3_results_bucket = f'{self.s3_bucket}-result'
-        self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-result"
+        self.s3_results_bucket = f'{self.s3_bucket}'
+        self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
         self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
         self.s3_athena_query_results_path = f"s3://aws-athena-query-results-{self.account}-{self.region}"
@@ -204,7 +202,7 @@ class AwsJobBase():
         self.glue_database_name = f'{self.job_identifier}_data'
         self.glue_metadata_summary_table_name = f'{self.job_identifier}_md_summary_table'
         self.glue_metadata_etl_output_type = "csv"
-        self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}-result/{self.s3_bucket_prefix}_summary/{self.glue_metadata_etl_output_type}/'
+        self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/summary-results/{self.glue_metadata_etl_output_type}/'
 
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
         self.batch_compute_environment_ami = 'ami-0a859713f8259be72'
@@ -215,6 +213,8 @@ class AwsJobBase():
         self.batch_spot_service_role_name = f"spot_fleet_role_{self.job_identifier}"
         self.batch_ecs_task_role_name = f"ecs_task_role_{self.job_identifier}"
         self.batch_task_policy_name = f"ecs_task_policy_{self.job_identifier}"
+        self.batch_use_spot = aws_config['use_spot']
+        self.batch_spot_bid_percent = aws_config['spot_bid_percent']
 
         self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
         self.firehose_name = f"{self.job_identifier}_firehose"
@@ -224,7 +224,13 @@ class AwsJobBase():
         self.state_machine_role_name = f"{self.job_identifier}_state_machine_role"
 
         self.sns_state_machine_topic =  f"{self.job_identifier}_state_machine_notifications"
-        self.operator_email = 'david.rager@nrel.gov'
+
+        self.dynamo_table_name = f"{self.job_identifier}_summary_table"
+        self.dynamo_table_arn = f"arn:aws:dynamodb:{self.region}:{self.account}:table/{self.dynamo_table_name}"
+        self.dynamo_task_policy_name = f"{self.job_identifier}_dynamod_db_task_policy"
+
+        self.vpc_name = self.job_identifier
+        self.vpc_cidr = aws_config['vpc_cidr']
 
 
         '''
@@ -247,7 +253,6 @@ class AwsJobBase():
 
         return f"""
 Job Identifier: {self.job_identifier}
-Job Name: {self.job_name}
 S3 Bucket for Source Data:  {self.s3_bucket}
 S3 Prefix for Source Data:  {self.s3_bucket_prefix}
 
