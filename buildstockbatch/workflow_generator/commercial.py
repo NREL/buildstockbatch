@@ -54,13 +54,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend([
             {
-                "measure_dir_name": "saturate_internal_load_design_day_schedules",
-                "arguments": {
-                    "saturate_load_profiles": True
-                },
-                "measure_type": "ModelMeasure"
-            },
-            {
                 "measure_dir_name": "SimulationOutputReport",
                 "arguments": {},
                 "measure_type": "ReportingMeasure"
