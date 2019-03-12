@@ -11,10 +11,6 @@ timeseries_csv_export:
   reporting_frequency: Hourly
   inc_end_use_subcategories: true
   inc_output_variables: true
-  output_variables:
-    - Zone Mean Air Temperature
-    - Zone Mean Air Humidity Ratio
-    - Fan Runtime Fraction
 output_directory: /scratch/nmerket/multifamily10k
 peregrine:
   minutes_per_sim: 60
