@@ -47,6 +47,19 @@ Information about baseline simulations are listed under tyhe
 -  ``n_buildings_represented``: The number of buildings that this sample
    is meant to represent.
 
+Residential Simulation Controls
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If the key ``residential_simulation_controls`` is in the project yaml file, the parameters to the
+`ResidentialSimulationControls <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ResidentialSimulationControls/measure.xml>`_
+measure will be modified from their defaults to what is specified there. The defaults are:
+
+.. include:: ../buildstockbatch/workflow_generator/residential.py
+   :code: python
+   :start-after: res_sim_ctl_args = {
+   :end-before: }
+
+
 Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
 

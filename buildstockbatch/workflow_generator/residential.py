@@ -29,19 +29,21 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         :param building_id: integer building id to use from the sampled buildstock.csv
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
+        res_sim_ctl_args = {
+            'timesteps_per_hr': 6,
+            'begin_month': 1,
+            'begin_day_of_month': 1,
+            'end_month': 12,
+            'end_day_of_month': 31
+        }
+        res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
         osw = {
             'id': sim_id,
             'steps': [
                 {
                     'measure_dir_name': 'ResidentialSimulationControls',
-                    'arguments': {
-                        'timesteps_per_hr': 6,
-                        'begin_month': 1,
-                        'begin_day_of_month': 1,
-                        'end_month': 12,
-                        'end_day_of_month': 31
-                    }
+                    'arguments': res_sim_ctl_args,
                 },
                 {
                     'measure_dir_name': 'BuildExistingModel',
