@@ -34,6 +34,10 @@ from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialD
 logger = logging.getLogger(__name__)
 
 
+class SimulationExists(Exception):
+    pass
+
+
 def read_data_point_out_json(filename):
     try:
         with open(filename, 'r') as f:
@@ -153,7 +157,7 @@ class BuildStockBatchBase(object):
     @property
     def weather_dir(self):
         if self._weather_dir is None:
-            self._weather_dir = tempfile.TemporaryDirectory(dir=self.project_dir, prefix='weather')
+            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
             self._get_weather_files()
         return self._weather_dir.name
 
@@ -258,6 +262,26 @@ class BuildStockBatchBase(object):
         return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod
+    def make_sim_dir(building_id, upgrade_idx, base_dir, overwrite_existing=False):
+        real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
+        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, real_upgrade_idx)
+
+        # Check to see if the simulation is done already and skip it if so.
+        sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
+        if os.path.exists(sim_dir):
+            if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
+                raise SimulationExists('{} exists and finished successfully'.format(sim_id))
+            elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
+                raise SimulationExists('{} exists and failed'.format(sim_id))
+            else:
+                shutil.rmtree(sim_dir)
+
+        # Create the simulation directory
+        os.makedirs(sim_dir)
+
+        return sim_id, sim_dir
+
+    @staticmethod
     def cleanup_sim_dir(sim_dir):
 
         # Convert the timeseries data to parquet
@@ -285,22 +309,33 @@ class BuildStockBatchBase(object):
 
     def process_results(self):
         client = self.get_dask_client()  # noqa: F841
-        results_dir = self.results_dir
+        sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
+        results_csvs_dir = os.path.join(self.results_dir, 'results_csvs')
+        if os.path.exists(results_csvs_dir):
+            shutil.rmtree(results_csvs_dir)
+        os.makedirs(results_csvs_dir)
+        parquet_dir = os.path.join(self.results_dir, 'parquet')
+        if os.path.exists(parquet_dir):
+            shutil.rmtree(parquet_dir)
 
         results_by_upgrade = defaultdict(list)
-        for item in os.listdir(results_dir):
-            m = re.match(r'bldg(\d+)up(\d+)', item)
+        for item in os.listdir(sim_out_dir):
+            m = re.match(r'up(\d+)', item)
             if not m:
                 continue
-            building_id, upgrade_id = map(int, m.groups())
-            results_by_upgrade[upgrade_id].append(item)
+            upgrade_id = int(m.group(1))
+            for subitem in os.listdir(os.path.join(sim_out_dir, item)):
+                m = re.match(r'bldg(\d+)', subitem)
+                if not m:
+                    continue
+                results_by_upgrade[upgrade_id].append(os.path.join(item, subitem))
 
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
             logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
 
             datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
-                map(lambda x: os.path.join(results_dir, x, 'run', 'data_point_out.json')).\
+                map(lambda x: os.path.join(sim_out_dir, x, 'run', 'data_point_out.json')).\
                 map(read_data_point_out_json).\
                 filter(lambda x: x is not None)
 
@@ -315,7 +350,7 @@ class BuildStockBatchBase(object):
                 to_dataframe(meta=meta).rename(columns=to_camelcase)
 
             out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
-                map(lambda x: os.path.join(results_dir, x, 'out.osw'))
+                map(lambda x: os.path.join(sim_out_dir, x, 'out.osw'))
 
             out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
 
@@ -347,14 +382,16 @@ class BuildStockBatchBase(object):
 
             # Save to CSV
             logger.debug('Saving to csv.gz')
-            csv_filename = os.path.join(results_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
+            csv_filename = os.path.join(results_csvs_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
             with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
                 results_df.to_csv(f, index=False)
 
             # Save to parquet
             logger.debug('Saving to parquet')
+            baseline_or_upgrade = 'baseline' if upgrade_id == 0 else 'upgrade'
+            os.makedirs(os.path.join(parquet_dir, baseline_or_upgrade), exist_ok=True)
             results_df.to_parquet(
-                os.path.join(results_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
+                os.path.join(parquet_dir, baseline_or_upgrade, 'results_up{:02d}.parquet'.format(upgrade_id)),
                 engine='pyarrow',
                 flavor='spark'
             )
