@@ -20,10 +20,6 @@ upgrades:
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
-  output_variables:
-    - Zone Mean Air Temperature
-    - Zone Mean Air Humidity Ratio
-    - Fan Runtime Fraction
 # downselect:
 #   resample: false
 #   logic:

@@ -115,8 +115,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 'measure_dir_name': 'TimeseriesCSVExport',
                 'arguments': deepcopy(self.cfg['timeseries_csv_export'])
             }
-            timeseries_measure['arguments']['output_variables'] = \
-                ','.join(self.cfg['timeseries_csv_export']['output_variables'])
             osw['steps'].insert(-1, timeseries_measure)
 
         return osw
