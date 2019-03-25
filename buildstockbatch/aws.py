@@ -1594,6 +1594,9 @@ class AwsBatchEnv(AwsJobBase):
                 'command': command,
                 'jobRoleArn': self.task_role_arn,
                 'environment': self.generate_name_value_inputs(env_vars)
+            },
+            retryStrategy={
+                'attempts': 5
             }
         )
 
