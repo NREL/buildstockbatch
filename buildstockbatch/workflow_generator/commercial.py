@@ -40,7 +40,11 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     },
                     "measure_type": "ModelMeasure"
                 },
-
+                {
+                    "measure_dir_name": "set_space_type_load_subcategories",
+                    "arguments": {},
+                    "measure_type": "ModelMeasure"
+                }
             ],
             'created_at': dt.datetime.now().isoformat(),
             'measure_paths': [
@@ -53,13 +57,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
         osw['steps'].extend([
-            {
-                "measure_dir_name": "saturate_internal_load_design_day_schedules",
-                "arguments": {
-                    "saturate_load_profiles": True
-                },
-                "measure_type": "ModelMeasure"
-            },
             {
                 "measure_dir_name": "SimulationOutputReport",
                 "arguments": {},
@@ -100,6 +97,20 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 },
                 "measure_type": "ReportingMeasure"
             }
+            # {
+            #     "measure_dir_name": "la_100_qaqc",
+            #     "arguments": {
+            #         "run_qaqc": True
+            #     },
+            #     "measure_type": "ReportingMeasure"
+            # },
+            # {
+            #     "measure_dir_name": "simulation_settings_check",
+            #     "arguments": {
+            #         "run_sim_settings_checks": True
+            #     },
+            #     "measure_type": "ReportingMeasure"
+            # }
         ])
 
         return osw
