@@ -150,7 +150,7 @@ def test_output_variables_csv_export():
         },
         'output_variables_csv_export': {
             'reporting_frequency': 'Monthly',
-            'output_variables': '' 
+            'output_variables': ''
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
