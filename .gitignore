@@ -4,4 +4,5 @@ __pycache__
 docs/_build
 dask-worker-space
 .pytest_cache
+*.pyc
 
