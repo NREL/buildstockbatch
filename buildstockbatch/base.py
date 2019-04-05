@@ -266,6 +266,12 @@ class BuildStockBatchBase(object):
             tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
             tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
 
+        # Convert the output variables data to parquet
+        output_variables_filename = os.path.join(sim_dir, 'run', 'output_variables.csv')
+        if os.path.isfile(output_variables_filename):
+            ovdf = pd.read_csv(output_variables_filename, parse_dates=['Time'])
+            ovdf.to_parquet(os.path.splitext(output_variables_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
+
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
         if os.path.isfile(zipfilename):
