@@ -108,3 +108,62 @@ def test_residential_simulation_controls_config():
     assert(args['begin_month'] == 7)
     for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month'):
         assert(args[argname] == default_args[argname])
+
+
+def test_timeseries_csv_export():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'timeseries_csv_export': {
+            'reporting_frequency': 'Timestep'
+        }
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    timeseries_step = osw['steps'][-2]
+    assert(timeseries_step['measure_dir_name'] == 'TimeseriesCSVExport')
+    default_args = {
+        'reporting_frequency': 'Hourly',
+        'include_enduse_subcategories': False
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    args = osw['steps'][-2]['arguments']
+    assert(args['reporting_frequency'] == 'Timestep')
+    for argname in ('include_enduse_subcategories',):
+        assert(args[argname] == default_args[argname])
+
+
+def test_output_variables_csv_export():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'output_variables_csv_export': {
+            'reporting_frequency': 'Monthly',
+            'output_variables': '' 
+        }
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    output_variables_step = osw['steps'][-2]
+    assert(output_variables_step['measure_dir_name'] == 'OutputVariablesCSVExport')
+    default_args = {
+        'reporting_frequency': 'Hourly',
+        'output_variables': ''
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    args = osw['steps'][-2]['arguments']
+    assert(args['reporting_frequency'] == 'Monthly')
+    for argname in ('output_variables',):
+        assert(args[argname] == default_args[argname])
