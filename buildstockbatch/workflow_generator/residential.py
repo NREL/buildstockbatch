@@ -111,10 +111,27 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'timeseries_csv_export' in self.cfg:
+            timeseries_csv_export_args = {
+                'reporting_frequency': 'Hourly',
+                'include_enduse_subcategories': False
+            }
+            timeseries_csv_export_args.update(self.cfg.get('timeseries_csv_export', {}))
             timeseries_measure = {
                 'measure_dir_name': 'TimeseriesCSVExport',
-                'arguments': deepcopy(self.cfg['timeseries_csv_export'])
+                'arguments': timeseries_csv_export_args
             }
             osw['steps'].insert(-1, timeseries_measure)
+
+        if 'output_variables_csv_export' in self.cfg:
+            output_variables_csv_export_args = {
+                'reporting_frequency': 'Hourly',
+                'output_variables': ''
+            }
+            output_variables_csv_export_args.update(self.cfg.get('output_variables_csv_export', {}))
+            output_variables_measure = {
+                'measure_dir_name': 'OutputVariablesCSVExport',
+                'arguments': output_variables_csv_export_args
+            }
+            osw['steps'].insert(-1, output_variables_measure)
 
         return osw
