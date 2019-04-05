@@ -227,7 +227,7 @@ class BuildStockBatchBase(object):
             n_samples_init = 350000
             buildstock_csv_filename = self.run_sampling(n_samples_init)
             df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+            df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
             downselected_n_samples_init = df_new.shape[0]
             n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
             os.remove(buildstock_csv_filename)
