@@ -232,6 +232,8 @@ class HPCBatchBase(BuildStockBatchBase):
 
                 cls.cleanup_sim_dir(sim_dir)
 
+        return sim_dir
+
     def get_dask_client(self):
         raise NotImplementedError
 

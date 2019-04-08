@@ -90,16 +90,16 @@ class EagleBatch(HPCBatchBase):
 
         # Check for an existing results directory
         try:
-            sim_id, remote_sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+            sim_id, remote_sim_dir = cls.make_sim_dir(
+                i,
+                upgrade_idx,
+                os.path.join(output_dir, 'results', 'simulation_output')
+            )
         except SimulationExists:
             return
 
-        # Clear the local directory if it exists for some reason
-        local_sim_dir = cls.local_output_dir / 'results' / sim_id
-        shutil.rmtree(local_sim_dir, ignore_errors=True)
-
         # Run the building using the local copies of the resources
-        HPCBatchBase.run_building(
+        local_sim_dir = HPCBatchBase.run_building(
             str(cls.local_project_dir),
             str(cls.local_buildstock_dir),
             str(cls.local_weather_dir),
