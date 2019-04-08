@@ -10,7 +10,6 @@ This object contains the residential classes for generating OSW files from indiv
 :license: BSD-3
 """
 
-from copy import deepcopy
 import datetime as dt
 import logging
 
