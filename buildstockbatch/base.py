@@ -45,7 +45,6 @@ def read_data_point_out_json(filename):
     except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
         return None
     else:
-        d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
         return d
 
 
@@ -55,9 +54,7 @@ def to_camelcase(x):
 
 
 def flatten_datapoint_json(d):
-    new_d = {
-        '_id': d['_id'],
-    }
+    new_d = {}
     cols_to_keep = {
         'ApplyUpgrade': [
             'upgrade_name',
@@ -70,6 +67,8 @@ def flatten_datapoint_json(d):
     for k1 in ('BuildExistingModel', 'SimulationOutputReport'):
         for k2, v in d.get(k1, {}).items():
             new_d['{}.{}'.format(k1, k2)] = v
+    new_d['building_id'] = new_d['BuildExistingModel.building_id']
+    del new_d['BuildExistingModel.building_id']
     return new_d
 
 
@@ -81,7 +80,6 @@ def read_out_osw(filename):
         return None
     else:
         out_d = {}
-        out_d['_id'] = os.path.basename(os.path.dirname(os.path.abspath(filename)))
         keys_to_copy = [
             'started_at',
             'completed_at',
@@ -89,6 +87,9 @@ def read_out_osw(filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d[key]
+        for step in d['steps']:
+            if step['measure_dir_name'] == 'BuildExistingModel':
+                out_d['building_id'] = step['arguments']['building_id']
         return out_d
 
 
@@ -356,10 +357,7 @@ class BuildStockBatchBase(object):
 
             data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
-            results_df = out_osw_df.merge(data_point_out_df, how='left', on='_id')
-            results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].fillna(0)
-            results_df['build_existing_model.building_id'] = results_df['build_existing_model.building_id'].\
-                astype('int')
+            results_df = out_osw_df.merge(data_point_out_df, how='left', on='building_id')
             cols_to_remove = (
                 'build_existing_model.weight',
                 'simulation_output_report.weight',
@@ -374,7 +372,7 @@ class BuildStockBatchBase(object):
 
             if upgrade_id > 0:
                 cols_to_keep = list(
-                    filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
+                    filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
             results_df['simulation_output_report.applicable'] = \
@@ -388,10 +386,13 @@ class BuildStockBatchBase(object):
 
             # Save to parquet
             logger.debug('Saving to parquet')
-            baseline_or_upgrade = 'baseline' if upgrade_id == 0 else 'upgrade'
-            os.makedirs(os.path.join(parquet_dir, baseline_or_upgrade), exist_ok=True)
+            if upgrade_id == 0:
+                results_parquet_dir = os.path.join(parquet_dir, 'baseline')
+            else:
+                results_parquet_dir = os.path.join(parquet_dir, 'upgrades', 'upgrade={}'.format(upgrade_id))
+            os.makedirs(results_parquet_dir, exist_ok=True)
             results_df.to_parquet(
-                os.path.join(parquet_dir, baseline_or_upgrade, 'results_up{:02d}.parquet'.format(upgrade_id)),
+                os.path.join(results_parquet_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
                 engine='pyarrow',
                 flavor='spark'
             )
