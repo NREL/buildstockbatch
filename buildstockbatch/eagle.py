@@ -267,7 +267,7 @@ def user_cli():
         )
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
-        cfg = yaml.load(f)
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
     out_dir = cfg['output_directory']

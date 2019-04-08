@@ -108,7 +108,7 @@ class BuildStockBatchBase(object):
     def __init__(self, project_filename):
         self.project_filename = os.path.abspath(project_filename)
         with open(self.project_filename, 'r') as f:
-            self.cfg = yaml.load(f)
+            self.cfg = yaml.load(f, Loader=yaml.SafeLoader)
         if 'stock_type' not in self.cfg.keys():
             raise KeyError('Key `stock_type` not specified in project file `{}`'.format(project_filename))
         elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
