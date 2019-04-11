@@ -187,20 +187,25 @@ class EagleBatch(HPCBatchBase):
         env['PROJECTFILE'] = self.project_filename
         env['POSTPROCESS'] = '1'
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
+        env['OUT_DIR'] = self.output_dir
 
         here = os.path.dirname(os.path.abspath(__file__))
-        eagle_sh = os.path.join(here, 'eagle.sh')
+        eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
         args = [
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,POSTPROCESS,MY_CONDA_ENV',
+            '--export=PROJECTFILE,POSTPROCESS,MY_CONDA_ENV,OUT_DIR',
             '--dependency=afterany:{}'.format(':'.join(after_jobids)),
-            '--mem=184000',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
-            eagle_sh
+            '--nodes=1',
+            ':',
+            '--mem=180000',
+            '--output=dask_workers.out',
+            '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
+            eagle_post_sh
         ]
 
         resp = subprocess.run(
@@ -215,12 +220,7 @@ class EagleBatch(HPCBatchBase):
             logger.debug('sbatch: {}'.format(line))
 
     def get_dask_client(self):
-        cl = LocalCluster(
-            n_workers=18,
-            threads_per_worker=2,
-            local_dir='/tmp/scratch/dask_worker_space'
-        )
-        return Client(cl)
+        return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
 
 logging_config = {
