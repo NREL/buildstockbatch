@@ -150,11 +150,11 @@ class CommercialSobolSampler(BuildStockSampler):
                 tsv_lkup = tsv_lkup.loc[tsv_lkup.loc[:, 'Dependency=' + dependency] ==
                                         sample_dependency_hash[dependency]]
                 tsv_lkup = tsv_lkup.drop('Dependency=' + dependency, axis=1)
-            if tsv_lkup.shape[0] is 0:
+            if tsv_lkup.shape[0] == 0:
                 warn('TSV lookup reduced to 0 for {}, index {}, dep hash {}'.format(attr, sample_index,
                                                                                     sample_dependency_hash))
                 return
-            if tsv_lkup.shape[0] is not 1:
+            if tsv_lkup.shape[0] != 1:
                 raise RuntimeError('Unable to reduce tsv for {} to 1 row, index {}'.format(attr, sample_index))
             tsv_lkup_cdf = tsv_lkup.values.cumsum() > tsv_dist_val
             option_values = [item.replace('Option=', '') for item in list(tsv_lkup) if 'Option=' in item]

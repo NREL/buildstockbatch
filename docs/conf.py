@@ -15,18 +15,24 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+import os
 
+here = os.path.abspath(os.path.dirname(__file__))
+metadata = {}
+
+with open(os.path.join(here, '..', 'buildstockbatch', '__version__.py'), 'r', encoding='utf-8') as f:
+    exec(f.read(), metadata)
 
 # -- Project information -----------------------------------------------------
 
-project = 'BuildStock Batch'
-copyright = '2018, Noel Merket (NREL)'
-author = 'Noel Merket (NREL)'
+project = metadata['__title__']
+copyright = metadata['__copyright__']
+author = metadata['__author__']
 
 # The short X.Y version
-version = '0.4'
+version = metadata['__version__']
 # The full version, including alpha/beta/rc tags
-release = '0.4'
+release = metadata['__version__']
 
 
 # -- General configuration ---------------------------------------------------

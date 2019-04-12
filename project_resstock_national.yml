@@ -1,42 +1,40 @@
+stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
-output_directory: /scratch/nmerket/national_baseline5
+output_directory: /scratch/nmerket/national_test_outputs
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   n_datapoints: 20000
   n_buildings_represented: 80000000
-# upgrades:
-#   - upgrade_name: Triple-Pane Windows
-#     options:
-#       - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
-# #        apply_logic:
-#         costs:
-#           - value: 45.77
-#             multiplier: Window Area (ft^2)
-#         lifetime: 30
-# #    package_apply_logic:
+upgrades:
+  - upgrade_name: Triple-Pane Windows
+    options:
+      - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
+#        apply_logic:
+        costs:
+          - value: 45.77
+            multiplier: Window Area (ft^2)
+        lifetime: 30
+#    package_apply_logic:
 timeseries_csv_export:
   reporting_frequency: Hourly
-  inc_end_use_subcategories: true
-  inc_output_variables: true
-  output_variables:
-    - Zone Mean Air Temperature
-    - Zone Mean Air Humidity Ratio
-    - Fan Runtime Fraction
-# downselect:--
+  include_enduse_subcategories: true
+# downselect:
 #   resample: false
 #   logic:
 #     - not: Heating Fuel|Natural Gas
-stock_type: residential
 peregrine:
   nodetype: 24core
   queue: short
   n_jobs: 2
   allocation: la100
 eagle:
-  n_jobs: 250
-  minutes_per_sim: 4
+  n_jobs: 1
+  minutes_per_sim: 3
+  account: enduse
+  sampling:
+    time: 10
   postprocessing:
     time: 180
 aws:

@@ -1,13 +1,30 @@
 #!/bin/bash
-#SBATCH --job-name=create_buildstock_env
-#SBATCH --output=create_env.out
-#SBATCH --ntasks=1
-#SBATCH --nodes=1
-#SBATCH --time=15:00
 
+DEV=0
+while getopts de: option
+do
+case "${option}"
+in
+d) DEV=1;;
+e) CONDA_ENVS_DIR=${OPTARG};;
+esac
+done
+
+if [ -z "$CONDA_ENVS_DIR" ]
+then
+    CONDA_ENVS_DIR=/shared-projects/buildstock/envs
+fi
+
+MY_CONDA_ENV_NAME=${@:$OPTIND:1}
+MY_CONDA_PREFIX="$CONDA_ENVS_DIR/$MY_CONDA_ENV_NAME"
 module load conda
-conda remove -y --name buildstock --all
-conda create -y --name buildstock python=3.6 pandas hdf5 pytables
-source activate buildstock
+conda remove -y --prefix "$MY_CONDA_PREFIX" --all
+conda create -y --prefix "$MY_CONDA_PREFIX" python=3.6 pandas hdf5 pytables
+source activate "$MY_CONDA_PREFIX"
 pip install --upgrade pip
-pip install -e .
+if [ $DEV -eq 1 ]
+then
+    pip install -e .
+else
+    pip install .
+fi

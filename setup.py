@@ -33,7 +33,7 @@ class PyTest(testing_cmd):
 here = os.path.abspath(os.path.dirname(__file__))
 metadata = {}
 
-with open(os.path.join(here, 'buildstockbatch', '__version__.py'), 'r', 'utf-8') as f:
+with open(os.path.join(here, 'buildstockbatch', '__version__.py'), 'r', encoding='utf-8') as f:
     exec(f.read(), metadata)
 
 with open('README.md', 'r', 'utf-8') as f:
@@ -64,21 +64,20 @@ setuptools.setup(
         'docker',
         'awscli',
         'boto3>=1.9.66',
-        'tables'
     ],
     extras_require={
         'dev': [
             'pytest>=2.8.0',
             'codecov',
             'Sphinx',
+            'sphinx_rtd_theme',
             'flake8',
-            'tox',
-            'detox'
         ]
     },
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
+            'buildstock_eagle=buildstockbatch.eagle:user_cli',
         ]
     },
     cmdclass={'test': PyTest},

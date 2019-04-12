@@ -45,12 +45,12 @@ class WorkflowGeneratorBase(object):
             key = list(logic.keys())[0]
             val = logic[key]
             if key == 'and':
-                return cls._make_apply_logic_arg(val)
+                return cls.make_apply_logic_arg(val)
             elif key == 'or':
-                return '(' + '||'.join(map(cls._make_apply_logic_arg, val)) + ')'
+                return '(' + '||'.join(map(cls.make_apply_logic_arg, val)) + ')'
             elif key == 'not':
-                return '!' + cls._make_apply_logic_arg(val)
+                return '!' + cls.make_apply_logic_arg(val)
         elif isinstance(logic, list):
-            return '(' + '&&'.join(map(cls._make_apply_logic_arg, logic)) + ')'
+            return '(' + '&&'.join(map(cls.make_apply_logic_arg, logic)) + ')'
         elif isinstance(logic, str):
             return logic
