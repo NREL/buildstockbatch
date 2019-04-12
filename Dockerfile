@@ -1,4 +1,4 @@
-FROM nrel/openstudio:2.7.0
+FROM nrel/openstudio:2.7.1
 RUN sudo apt-get update && \
     sudo apt-get install -y build-essential wget libpq-dev openssl libffi-dev zlib1g-dev \
         libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev \
