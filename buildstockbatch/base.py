@@ -42,6 +42,8 @@ def read_data_point_out_json(filename):
         return None
     else:
         d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
+        if 'SimulationOutputReport' not in d:
+            d['SimulationOutputReport'] = {'applicable': False}
         return d
 
 
@@ -342,8 +344,6 @@ class BuildStockBatchBase(object):
                     filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
-            results_df['simulation_output_report.applicable'] = \
-                results_df['simulation_output_report.applicable'].astype(str)
 
             # Save to CSV
             logger.debug('Saving to csv.gz')
