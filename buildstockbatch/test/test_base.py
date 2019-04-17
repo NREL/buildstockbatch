@@ -1,3 +1,4 @@
+import dask
 import json
 import os
 from unittest.mock import patch
@@ -8,6 +9,9 @@ import tempfile
 import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
+
+
+dask.config.set(scheduler='synchronous')
 
 
 @pytest.fixture
