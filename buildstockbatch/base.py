@@ -42,6 +42,8 @@ def read_data_point_out_json(filename):
         return None
     else:
         d['_id'] = os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(filename))))
+        if 'SimulationOutputReport' not in d:
+            d['SimulationOutputReport'] = {'applicable': False}
         return d
 
 
@@ -227,7 +229,7 @@ class BuildStockBatchBase(object):
             n_samples_init = 350000
             buildstock_csv_filename = self.run_sampling(n_samples_init)
             df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+            df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
             downselected_n_samples_init = df_new.shape[0]
             n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
             os.remove(buildstock_csv_filename)
@@ -342,8 +344,6 @@ class BuildStockBatchBase(object):
                     filter(lambda x: not re.match(r'build_existing_model\.(?!building_id)', x), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
-            results_df['simulation_output_report.applicable'] = \
-                results_df['simulation_output_report.applicable'].astype(str)
 
             # Save to CSV
             logger.debug('Saving to csv.gz')

@@ -70,6 +70,7 @@ setuptools.setup(
             'Sphinx',
             'sphinx_rtd_theme',
             'flake8',
+            'coverage'
         ]
     },
     entry_points={
