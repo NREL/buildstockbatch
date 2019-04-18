@@ -11,7 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client
 import json
 import os
 import logging

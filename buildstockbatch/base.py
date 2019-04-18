@@ -311,7 +311,6 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
-
     def process_results(self):
         client = self.get_dask_client()  # noqa: F841
 
@@ -319,14 +318,13 @@ class BuildStockBatchBase(object):
 
         results_csvs_dir = os.path.join(self.results_dir, 'results_csvs')
         parquet_dir = os.path.join(self.results_dir, 'parquet')
-        ts_dir = os.path.join(self.results_dir, 'parquet','timeseries')
+        ts_dir = os.path.join(self.results_dir, 'parquet', 'timeseries')
 
-        #clear and create the postprocessing results directories
+        # clear and create the postprocessing results directories
         for dr in [results_csvs_dir, parquet_dir, ts_dir]:
             if os.path.exists(dr):
                 shutil.rmtree(dr)
             os.makedirs(dr)
-
 
         results_by_upgrade = defaultdict(list)
         all_dirs = list()
@@ -343,7 +341,7 @@ class BuildStockBatchBase(object):
                 results_by_upgrade[upgrade_id].append(full_path)
                 all_dirs.append(full_path)
 
-        #create the results.csv and results.parquet files
+        # create the results.csv and results.parquet files
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
             logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
@@ -410,7 +408,7 @@ class BuildStockBatchBase(object):
                 flavor='spark'
             )
 
-        #find the avg size of time_series parqeut files
+        # find the avg size of time_series parqeut files
         total_size = 0
         count = 0
         for i in range(10):
@@ -420,16 +418,17 @@ class BuildStockBatchBase(object):
                 pq = pd.read_parquet(full_path)
                 total_size += sys.getsizeof(pq)
                 count += 1
-            except:
+            except OSError:
+                logger.warning(f" Time series file does not exist: {full_path}")
                 continue
+
         avg_parquet_size = total_size / count
 
         group_size = int(2*1024*1024*1024 / avg_parquet_size)
         if group_size < 1:
             group_size = 1
 
-
-        logger.info(f"Each parquet file is {avg_parquet_size/(1024*1024):.2f} in memory. \n"+
+        logger.info(f"Each parquet file is {avg_parquet_size / (1024 * 1024) :.2f} in memory. \n" +
                     f"Combining {group_size} of them together, so that the size in memory is around 2 GB")
 
         def bldg_group(directory_name):
@@ -453,7 +452,7 @@ class BuildStockBatchBase(object):
                 upgrade, groupname = group.split('_')
                 m = re.match(r'up(\d+)', upgrade)
                 upgrade_id = int(m.group(1))
-            except:
+            except (ValueError, AttributeError):
                 logger.error(f"The group labels created from bldg_group function should "
                              f"have 'up([0-9]+)_GroupXX' format. Found: {group}")
                 return
@@ -473,7 +472,11 @@ class BuildStockBatchBase(object):
                 new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
                 parquets.append(new_pq)
 
+            pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
+            logger.warning(f"{group}: list of {len(parquets)} parquets is consuming "
+                        f"{pq_size:.2f} MB memory on a dask worker process.")
             pq = pd.concat(parquets)
+            logger.warning(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
             pq.to_parquet(file_path)
 
         directory_bags = db.from_sequence(all_dirs).foldby(bldg_group, directory_name_append, initial=None,
@@ -486,5 +489,3 @@ class BuildStockBatchBase(object):
         write_file.compute()
         diff = time.time() - t
         logger.info(f"Took {diff:.2f} seconds")
-
-
