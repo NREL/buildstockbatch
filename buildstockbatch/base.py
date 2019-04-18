@@ -474,7 +474,7 @@ class BuildStockBatchBase(object):
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
             logger.warning(f"{group}: list of {len(parquets)} parquets is consuming "
-                        f"{pq_size:.2f} MB memory on a dask worker process.")
+                           f"{pq_size:.2f} MB memory on a dask worker process.")
             pq = pd.concat(parquets)
             logger.warning(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
             pq.to_parquet(file_path)
