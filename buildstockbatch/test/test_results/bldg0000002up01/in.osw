@@ -1,0 +1,59 @@
+{
+    "id": "bldg0000002up01",
+    "steps": [
+        {
+            "measure_dir_name": "ResidentialSimulationControls",
+            "arguments": {
+                "timesteps_per_hr": 6,
+                "begin_month": 1,
+                "begin_day_of_month": 1,
+                "end_month": 12,
+                "end_day_of_month": 31
+            }
+        },
+        {
+            "measure_dir_name": "BuildExistingModel",
+            "arguments": {
+                "building_id": 2,
+                "workflow_json": "measure-info.json",
+                "sample_weight": 20000000.0
+            }
+        },
+        {
+            "measure_dir_name": "ApplyUpgrade",
+            "arguments": {
+                "upgrade_name": "Triple-Pane Windows",
+                "run_measure": 1,
+                "option_1": "Windows|Low-E, Triple, Non-metal, Air, L-Gain",
+                "option_1_lifetime": 30,
+                "option_1_cost_1_value": 45.77,
+                "option_1_cost_1_multiplier": "Window Area (ft^2)"
+            }
+        },
+        {
+            "measure_dir_name": "BuildingCharacteristicsReport",
+            "arguments": {}
+        },
+        {
+            "measure_dir_name": "SimulationOutputReport",
+            "arguments": {}
+        },
+        {
+            "measure_dir_name": "TimeseriesCSVExport",
+            "arguments": {
+                "reporting_frequency": "Hourly",
+                "include_enduse_subcategories": true
+            }
+        },
+        {
+            "measure_dir_name": "ServerDirectoryCleanup",
+            "arguments": {}
+        }
+    ],
+    "created_at": "2019-04-17T11:27:00.889721",
+    "measure_paths": [
+        "measures"
+    ],
+    "seed_file": "seeds/EmptySeedModel.osm",
+    "weather_file": "weather/Placeholder.epw"
+}

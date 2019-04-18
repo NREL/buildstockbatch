@@ -48,6 +48,8 @@ def read_data_point_out_json(filename):
     except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
         return None
     else:
+        if 'SimulationOutputReport' not in d:
+            d['SimulationOutputReport'] = {'applicable': False}
         return d
 
 
@@ -98,8 +100,8 @@ def read_out_osw(filename):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.7.1'
-    OS_SHA = '2b00619665'
+    OS_VERSION = '2.8.0'
+    OS_SHA = 'a7a1f79e98'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -235,7 +237,7 @@ class BuildStockBatchBase(object):
             n_samples_init = 350000
             buildstock_csv_filename = self.run_sampling(n_samples_init)
             df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            df_new = df[self.downselect_logic(df, self.cfg['downselect'])]
+            df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
             downselected_n_samples_init = df_new.shape[0]
             n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
             os.remove(buildstock_csv_filename)
@@ -386,8 +388,6 @@ class BuildStockBatchBase(object):
                     filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
                 )
                 results_df = results_df[cols_to_keep]
-            results_df['simulation_output_report.applicable'] = \
-                results_df['simulation_output_report.applicable'].astype(str)
 
             # Save to CSV
             logger.debug('Saving to csv.gz')

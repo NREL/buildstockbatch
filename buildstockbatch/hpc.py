@@ -189,6 +189,7 @@ class HPCBatchBase(BuildStockBatchBase):
         args = [
             'singularity', 'exec',
             '--contain',
+            '-e',
             '--pwd', '/var/simdata/openstudio',
             '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
             '-B', '{}:/lib/resources'.format(os.path.join(buildstock_dir, 'resources')),
