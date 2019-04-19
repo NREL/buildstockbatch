@@ -411,8 +411,7 @@ class BuildStockBatchBase(object):
         # find the avg size of time_series parqeut files
         total_size = 0
         count = 0
-        for i in range(10):
-            rnd_ts_index = random.randint(0, len(all_dirs)-1)
+        for rnd_ts_index in random.sample(range(len(all_dirs)), 10):
             full_path = os.path.join(sim_out_dir, all_dirs[rnd_ts_index], 'run', 'enduse_timeseries.parquet')
             try:
                 pq = pd.read_parquet(full_path)
@@ -424,12 +423,12 @@ class BuildStockBatchBase(object):
 
         avg_parquet_size = total_size / count
 
-        group_size = int(2*1024*1024*1024 / avg_parquet_size)
+        group_size = int(1.5*1024*1024*1024 / avg_parquet_size)
         if group_size < 1:
             group_size = 1
 
         logger.info(f"Each parquet file is {avg_parquet_size / (1024 * 1024) :.2f} in memory. \n" +
-                    f"Combining {group_size} of them together, so that the size in memory is around 2 GB")
+                    f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
 
         def bldg_group(directory_name):
             mtch = re.search('up([0-9]+)/bldg([0-9]+)', directory_name)
@@ -473,10 +472,10 @@ class BuildStockBatchBase(object):
                 parquets.append(new_pq)
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
-            logger.warning(f"{group}: list of {len(parquets)} parquets is consuming "
+            logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
                            f"{pq_size:.2f} MB memory on a dask worker process.")
             pq = pd.concat(parquets)
-            logger.warning(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
+            logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
             pq.to_parquet(file_path, engine='pyarrow', flavor='spark')
 
         directory_bags = db.from_sequence(all_dirs).foldby(bldg_group, directory_name_append, initial=None,
