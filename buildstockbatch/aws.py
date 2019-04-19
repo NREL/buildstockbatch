@@ -1478,7 +1478,6 @@ class AwsBatchEnv(AwsJobBase):
                         'imageId': self.batch_compute_environment_ami,
                         'subnets': [self.priv_vpc_subnet_id],
                         'securityGroupIds': [self.batch_security_group],
-                        'ec2KeyPair': 'nrel-aws-dev-us-west-2',
                         'instanceRole': self.instance_profile_arn,
                         'bidPercentage': 100,
                         'spotIamFleetRole': self.spot_service_role_arn
