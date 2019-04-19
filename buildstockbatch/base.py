@@ -466,7 +466,7 @@ class BuildStockBatchBase(object):
                 full_path = os.path.join(sim_out_dir, folder, 'run', 'enduse_timeseries.parquet')
                 if not os.path.isfile(full_path):
                     continue
-                new_pq = pd.read_parquet(full_path)
+                new_pq = pd.read_parquet(full_path, engine='pyarrow')
 
                 new_pq['building_id'] = folder.split('/')[1]
                 new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
