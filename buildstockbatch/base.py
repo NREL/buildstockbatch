@@ -477,7 +477,7 @@ class BuildStockBatchBase(object):
                            f"{pq_size:.2f} MB memory on a dask worker process.")
             pq = pd.concat(parquets)
             logger.warning(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
-            pq.to_parquet(file_path)
+            pq.to_parquet(file_path, engine='pyarrow', flavor='spark')
 
         directory_bags = db.from_sequence(all_dirs).foldby(bldg_group, directory_name_append, initial=None,
                                                            combine=directory_name_append)
