@@ -411,7 +411,8 @@ class BuildStockBatchBase(object):
         # find the avg size of time_series parqeut files
         total_size = 0
         count = 0
-        for rnd_ts_index in random.sample(range(len(all_dirs)), 10):
+        sample_size = 10 if len(all_dirs) >= 10 else len(all_dirs)
+        for rnd_ts_index in random.sample(range(len(all_dirs)), sample_size):
             full_path = os.path.join(sim_out_dir, all_dirs[rnd_ts_index], 'run', 'enduse_timeseries.parquet')
             try:
                 pq = pd.read_parquet(full_path)
@@ -473,7 +474,7 @@ class BuildStockBatchBase(object):
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
             logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
-                           f"{pq_size:.2f} MB memory on a dask worker process.")
+                         f"{pq_size:.2f} MB memory on a dask worker process.")
             pq = pd.concat(parquets)
             logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
             pq.to_parquet(file_path, engine='pyarrow', flavor='spark')
