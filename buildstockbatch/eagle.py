@@ -185,7 +185,6 @@ class EagleBatch(HPCBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        env['POSTPROCESS'] = '1'
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
         env['OUT_DIR'] = self.output_dir
 
@@ -196,7 +195,7 @@ class EagleBatch(HPCBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,POSTPROCESS,MY_CONDA_ENV,OUT_DIR',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR',
             '--dependency=afterany:{}'.format(':'.join(after_jobids)),
             '--job-name=bstkpost',
             '--output=postprocessing.out',
