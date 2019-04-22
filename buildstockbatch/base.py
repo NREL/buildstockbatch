@@ -468,7 +468,9 @@ class BuildStockBatchBase(object):
                     continue
                 new_pq = pd.read_parquet(full_path, engine='pyarrow')
 
-                new_pq['building_id'] = folder.split('/')[1]
+                building_id_match = re.search('bldg(\d+)', folder)
+                assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
+                new_pq['building_id'] = int(building_id_match.group(1))
                 new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
                 parquets.append(new_pq)
 
