@@ -196,7 +196,6 @@ class EagleBatch(HPCBatchBase):
             '--account={}'.format(account),
             '--time={}'.format(walltime),
             '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR',
-            '--dependency=afterany:{}'.format(':'.join(after_jobids)),
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
@@ -206,6 +205,9 @@ class EagleBatch(HPCBatchBase):
             '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
             eagle_post_sh
         ]
+
+        if after_jobids:
+            args.insert(4, '--dependency=afterany:{}'.format(':'.join(after_jobids)))
 
         resp = subprocess.run(
             args,
@@ -259,6 +261,10 @@ def user_cli():
     print(HPCBatchBase.LOGO)
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
+    parser.add_argument(
+        '--postprocessonly',
+        action='store_true'
+    )
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
@@ -267,6 +273,10 @@ def user_cli():
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    if args.postprocessonly:
+        eagle_batch = EagleBatch(project_filename)
+        eagle_batch.queue_post_processing(False)
+        return
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
     out_dir = cfg['output_directory']

@@ -424,7 +424,7 @@ class BuildStockBatchBase(object):
 
         avg_parquet_size = total_size / count
 
-        group_size = int(1.5*1024*1024*1024 / avg_parquet_size)
+        group_size = int(1.3*1024*1024*1024 / avg_parquet_size)
         if group_size < 1:
             group_size = 1
 
