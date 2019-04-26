@@ -10,7 +10,6 @@ This object contains the residential classes for generating OSW files from indiv
 :license: BSD-3
 """
 
-from copy import deepcopy
 import datetime as dt
 import logging
 
@@ -111,9 +110,15 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'timeseries_csv_export' in self.cfg:
+            timeseries_csv_export_args = {
+                'reporting_frequency': 'Hourly',
+                'include_enduse_subcategories': False,
+                'output_variables': ''
+            }
+            timeseries_csv_export_args.update(self.cfg.get('timeseries_csv_export', {}))
             timeseries_measure = {
                 'measure_dir_name': 'TimeseriesCSVExport',
-                'arguments': deepcopy(self.cfg['timeseries_csv_export'])
+                'arguments': timeseries_csv_export_args
             }
             osw['steps'].insert(-1, timeseries_measure)
 

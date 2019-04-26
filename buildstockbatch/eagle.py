@@ -11,7 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client
 import json
 import os
 import logging
@@ -90,16 +90,16 @@ class EagleBatch(HPCBatchBase):
 
         # Check for an existing results directory
         try:
-            sim_id, remote_sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+            sim_id, remote_sim_dir = cls.make_sim_dir(
+                i,
+                upgrade_idx,
+                os.path.join(output_dir, 'results', 'simulation_output')
+            )
         except SimulationExists:
             return
 
-        # Clear the local directory if it exists for some reason
-        local_sim_dir = cls.local_output_dir / 'results' / sim_id
-        shutil.rmtree(local_sim_dir, ignore_errors=True)
-
         # Run the building using the local copies of the resources
-        HPCBatchBase.run_building(
+        local_sim_dir = HPCBatchBase.run_building(
             str(cls.local_project_dir),
             str(cls.local_buildstock_dir),
             str(cls.local_weather_dir),
@@ -185,22 +185,26 @@ class EagleBatch(HPCBatchBase):
         env = {}
         env.update(os.environ)
         env['PROJECTFILE'] = self.project_filename
-        env['POSTPROCESS'] = '1'
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
+        env['OUT_DIR'] = self.output_dir
 
         here = os.path.dirname(os.path.abspath(__file__))
-        eagle_sh = os.path.join(here, 'eagle.sh')
+        eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
         args = [
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,POSTPROCESS,MY_CONDA_ENV',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR',
             '--dependency=afterany:{}'.format(':'.join(after_jobids)),
-            '--mem=184000',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
-            eagle_sh
+            '--nodes=1',
+            ':',
+            '--mem=180000',
+            '--output=dask_workers.out',
+            '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
+            eagle_post_sh
         ]
 
         resp = subprocess.run(
@@ -215,12 +219,7 @@ class EagleBatch(HPCBatchBase):
             logger.debug('sbatch: {}'.format(line))
 
     def get_dask_client(self):
-        cl = LocalCluster(
-            n_workers=18,
-            threads_per_worker=2,
-            local_dir='/tmp/scratch/dask_worker_space'
-        )
-        return Client(cl)
+        return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
 
 logging_config = {
@@ -267,7 +266,7 @@ def user_cli():
         )
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
-        cfg = yaml.load(f)
+        cfg = yaml.load(f, Loader=yaml.SafeLoader)
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
     out_dir = cfg['output_directory']
