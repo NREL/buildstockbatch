@@ -183,12 +183,12 @@ def main():
     parser.add_argument('-j', type=int,
                         help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
                         default=-1)
-    parser.add_argument('--skipsims',
-                        help='Skip simulating buildings, useful for when the simulations are already done',
+    parser.add_argument('--postprocessonly',
+                        help='Only do postprocessing, useful for when the simulations are already done',
                         action='store_true')
     args = parser.parse_args()
     batch = LocalDockerBatch(args.project_filename)
-    if not args.skipsims:
+    if not args.postprocessonly:
         batch.run_batch(n_jobs=args.j)
     batch.process_results()
 
