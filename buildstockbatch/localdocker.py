@@ -188,7 +188,7 @@ def main():
                         action='store_true')
     args = parser.parse_args()
     batch = LocalDockerBatch(args.project_filename)
-    if not args.skipsims:
+    if not args.postprocessonly:
         batch.run_batch(n_jobs=args.j)
     batch.process_results()
 

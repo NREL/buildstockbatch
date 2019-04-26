@@ -176,7 +176,7 @@ class EagleBatch(HPCBatchBase):
         job_id = m.group(1)
         return [job_id]
 
-    def queue_post_processing(self, after_jobids):
+    def queue_post_processing(self, after_jobids=[]):
 
         # Configuration values
         account = self.cfg['eagle']['account']
@@ -276,7 +276,7 @@ def user_cli():
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
     if args.postprocessonly:
         eagle_batch = EagleBatch(project_filename)
-        eagle_batch.queue_post_processing(False)
+        eagle_batch.queue_post_processing()
         return
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
