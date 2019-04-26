@@ -263,6 +263,7 @@ def user_cli():
     parser.add_argument('project_filename')
     parser.add_argument(
         '--postprocessonly',
+        help='Only do postprocessing, useful for when the simulations are already done',
         action='store_true'
     )
     args = parser.parse_args()
