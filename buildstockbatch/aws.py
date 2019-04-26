@@ -2459,7 +2459,7 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug('Getting weather files')
         df = pd.read_csv(str(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv'), index_col=0)
-        epws_to_download = df.loc[[x[0] for x in jobs_d['batch']], 'Location EPW'].unique().tolist()
+        epws_to_download = df.loc[[x[0] for x in jobs_d['batch']], 'Location Weather Filename'].unique().tolist()
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))
