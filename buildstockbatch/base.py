@@ -31,6 +31,7 @@ import zipfile
 import time
 import sys
 import random
+import boto3
 
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 
@@ -195,6 +196,10 @@ class BuildStockBatchBase(object):
     def results_dir(self):
         raise NotImplementedError
 
+    @property
+    def output_dir(self):
+        raise NotImplementedError
+
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
@@ -313,11 +318,54 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
-    def process_results(self):
-        client = self.get_dask_client()  # noqa: F841
+    def upload_results(self):
+        logger.info("Uploading the parquet files to s3")
 
+        output_folder_name = os.path.basename(self.output_dir)
+        parquet_dir = os.path.join(self.results_dir, 'parquet')
+
+        if not os.path.isdir(parquet_dir):
+            logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
+            raise FileNotFoundError(parquet_dir)
+
+        all_files = []
+        for path, subdirs, files in os.walk(parquet_dir):
+            for name in files:
+                full_path = os.path.join(path, name)
+                partial_path = re.match(parquet_dir + r'/?(.*)', full_path)
+                all_files.append(partial_path.group(1))
+
+        s3_prefix = self.cfg.get('postprocessing', {}).get('s3_prefix', None)
+        s3_bucket = self.cfg.get('postprocessing', {}).get('s3_bucket', None)
+        if not (s3_prefix or s3_bucket):
+            logger.error("YAML file missing postprocessing:s3_prefix entry.")
+            return
+        s3_prefix = s3_prefix + '/' + output_folder_name + '/'
+
+        def upload_file(filepath):
+            full_path = os.path.join(parquet_dir, filepath)
+            s3 = boto3.resource('s3')
+            bucket = s3.Bucket(s3_bucket)
+            s3key = s3_prefix + filepath
+            bucket.upload_file(full_path, s3key)
+
+        files_bag = db. \
+            from_sequence(all_files, partition_size=500).map(upload_file)
+        files_bag.compute()
+        logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix}")
+
+    def process_results(self, skip_combine=False, force_upload=False):
+        self.get_dask_client()  # noqa: F841
+
+        if not skip_combine:
+            self._combine_results()
+
+        aws_upload_flag = self.cfg.get('postprocessing', {}).get('s3_upload', False)
+        if aws_upload_flag or force_upload:
+            self.upload_results()
+
+    def _combine_results(self):
         sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
-
         results_csvs_dir = os.path.join(self.results_dir, 'results_csvs')
         parquet_dir = os.path.join(self.results_dir, 'parquet')
         ts_dir = os.path.join(self.results_dir, 'parquet', 'timeseries')
@@ -328,8 +376,8 @@ class BuildStockBatchBase(object):
                 shutil.rmtree(dr)
             os.makedirs(dr)
 
-        results_by_upgrade = defaultdict(list)
-        all_dirs = list()
+        all_dirs = list()  # get the list of all the building simulation results directories
+        results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
         for item in os.listdir(sim_out_dir):
             m = re.match(r'up(\d+)', item)
             if not m:
