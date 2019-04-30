@@ -337,7 +337,7 @@ class BuildStockBatchBase(object):
 
         s3_prefix = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('prefix', None)
         s3_bucket = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('bucket', None)
-        if not (s3_prefix or s3_bucket):
+        if not (s3_prefix and s3_bucket):
             logger.error("YAML file missing postprocessing:s3_upload:prefix and/or bucket entry.")
             return
         s3_prefix = s3_prefix + '/' + output_folder_name + '/'
