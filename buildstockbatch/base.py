@@ -41,6 +41,14 @@ class SimulationExists(Exception):
     pass
 
 
+def is_quantity(column_name):
+    units = ['_kwh', '_therm', '_mbtu', '_w', '_kw', '_usd']
+    for unit in units:
+        if column_name.lower().endswith(unit):
+            return True
+    return False
+
+
 def read_data_point_out_json(filename):
     try:
         with open(filename, 'r') as f:
@@ -68,12 +76,36 @@ def flatten_datapoint_json(d):
     }
     for k1, k2s in cols_to_keep.items():
         for k2 in k2s:
-            new_d['{}.{}'.format(k1, k2)] = d.get(k1, {}).get(k2)
-    for k1 in ('BuildExistingModel', 'SimulationOutputReport'):
-        for k2, v in d.get(k1, {}).items():
-            new_d['{}.{}'.format(k1, k2)] = v
+            new_d[f'{k1}.{k2}'] = d.get(k1, {}).get(k2)
+
+    # copy over all the key and values from BuildExistingModel
+    col1 = 'BuildExistingModel'
+    for k, v in d.get(col1, {}).items():
+        new_d[f'{col1}.{k}'] = v
+
+    # if there are some key, values in BuildingCharacteristicsReport that aren't part of BuildExistingModel, copy them
+    # and make it part of BuildExistingModel
+    col2 = 'BuildingCharacteristicsReport'
+    for k, v in d.get(col2, {}).items():
+        if k not in d.get(col1, {}):
+            new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
+
+    # Scale all the SimulationOutputReport measurements by the number of units represented, to get per unit figures
+    col3 = 'SimulationOutputReport'
+    units = int(new_d.get(f'{col1}.units_represented', 1))
+    new_d[f'{col1}.units_represented'] = units
+    for k, v in d.get(col3, {}).items():
+        if is_quantity(k):
+            if not v:
+                v = 0
+            v = float(v)
+            new_d[f'{col3}.{k}'] = v / units
+        else:
+            new_d[f'{col3}.{k}'] = v
+
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
+
     return new_d
 
 
@@ -343,6 +375,7 @@ class BuildStockBatchBase(object):
                 results_by_upgrade[upgrade_id].append(full_path)
                 all_dirs.append(full_path)
 
+        base_results_df = None
         # create the results.csv and results.parquet files
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
@@ -399,6 +432,7 @@ class BuildStockBatchBase(object):
             logger.debug('Saving to parquet')
             if upgrade_id == 0:
                 results_parquet_dir = os.path.join(parquet_dir, 'baseline')
+                base_results_df = results_df.set_index('building_id')
             else:
                 results_parquet_dir = os.path.join(parquet_dir, 'upgrades', 'upgrade={}'.format(upgrade_id))
             os.makedirs(results_parquet_dir, exist_ok=True)
@@ -467,11 +501,17 @@ class BuildStockBatchBase(object):
                 if not os.path.isfile(full_path):
                     continue
                 new_pq = pd.read_parquet(full_path, engine='pyarrow')
+                new_pq.rename(columns=to_camelcase, inplace=True)
 
+                # Scale the timeseries by the number of units represented to make it per unit measurement
                 building_id_match = re.search(r'bldg(\d+)', folder)
                 assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
-                new_pq['building_id'] = int(building_id_match.group(1))
-                new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
+                building_id = int(building_id_match.group(1))
+                assert building_id in base_results_df.index, f"Building id {building_id} not present in results.csv"
+                new_pq['building_id'] = building_id
+                units_represented = int(base_results_df.at[building_id, 'build_existing_model.units_represented'])
+                new_pq.loc[:, new_pq.columns.map(is_quantity)] /= units_represented
+
                 parquets.append(new_pq)
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
