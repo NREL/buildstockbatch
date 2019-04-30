@@ -128,10 +128,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @property
     def output_dir(self):
-        output_dir = self.cfg.get(
-            'output_directory',
-            os.path.join('/scratch/{}'.format(os.environ['USER']), os.path.basename(self.project_dir))
-        )
+        output_dir = self.cfg.get('output_directory', self.results_dir)
         return output_dir
 
     @property

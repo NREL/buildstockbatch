@@ -335,10 +335,10 @@ class BuildStockBatchBase(object):
                 partial_path = re.match(parquet_dir + r'/?(.*)', full_path)
                 all_files.append(partial_path.group(1))
 
-        s3_prefix = self.cfg.get('postprocessing', {}).get('s3_prefix', None)
-        s3_bucket = self.cfg.get('postprocessing', {}).get('s3_bucket', None)
+        s3_prefix = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('prefix', None)
+        s3_bucket = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('bucket', None)
         if not (s3_prefix or s3_bucket):
-            logger.error("YAML file missing postprocessing:s3_prefix entry.")
+            logger.error("YAML file missing postprocessing:s3_upload:prefix and/or bucket entry.")
             return
         s3_prefix = s3_prefix + '/' + output_folder_name + '/'
 
@@ -360,7 +360,7 @@ class BuildStockBatchBase(object):
         if not skip_combine:
             self._combine_results()
 
-        aws_upload_flag = self.cfg.get('postprocessing', {}).get('s3_upload', False)
+        aws_upload_flag = bool(self.cfg.get('postprocessing', {}).get('s3_upload', False))
         if aws_upload_flag or force_upload:
             self.upload_results()
 

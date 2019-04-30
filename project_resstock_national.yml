@@ -40,6 +40,6 @@ eagle:
     n_workers: 3
 
 postprocessing:
-  s3_upload: true
-  s3_bucket: resbldg-datasets
-  s3_prefix: resstock-athena/calibration_runs
+  s3_upload:
+    bucket: resbldg-datasets
+    prefix: resstock-athena/calibration_runs
