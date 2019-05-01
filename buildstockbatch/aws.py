@@ -80,359 +80,6 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
-# class AwsEc2(AwsJobBase):
-#    def __init__(self, job_name, aws_config, boto3_session):
-#        super().__init__(job_name, aws_config, boto3_session)
-#        self.ec2 = self.session.client('ec2')
-
-
-class AwsDynamo(AwsJobBase):
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        super().__init__(job_name, aws_config, boto3_session)
-        self.dynamodb = self.session.client('dynamodb')
-
-    def create_summary_table(self):
-
-        # Does the table exist?  If so it will be replaced.
-
-        # Does the table exist?  If so it will be replaced.
-        try:
-            d_response = self.dynamodb.delete_table(
-                TableName=self.dynamo_table_name
-            )
-
-            logger.warning("Previously existing dynamo table deleted.")
-
-        except Exception as e:
-            if 'ResourceNotFoundException' not in str(e):
-                raise
-
-        while True:
-            try:
-                response = self.dynamodb.create_table(
-                    AttributeDefinitions=[
-                        {
-                            'AttributeName': 'upgrade_idx',
-                            'AttributeType': 'S'
-                        },
-                        {
-                            'AttributeName': 'building_id',
-                            'AttributeType': 'S'
-                        },
-                    ],
-                    TableName=self.dynamo_table_name,
-                    KeySchema=[
-                        {
-                            'AttributeName': 'upgrade_idx',
-                            'KeyType': 'HASH'
-                        },
-                        {
-                            'AttributeName': 'building_id',
-                            'KeyType': 'RANGE'
-                        },
-                    ],
-                    BillingMode='PAY_PER_REQUEST',
-                )
-                logger.info(f"Dynamo table {self.dynamo_table_name} created.")
-                break
-            except Exception as e:
-                if 'ResourceInUseException' in str(e):
-                    logger.info('Waiting for deletion of existing Dynamo table.  Sleeping...')
-                    time.sleep(5)
-                else:
-                    raise
-
-    def add_dynamo_task_permissions(self):
-        dynamo_role_policy = f'''{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Sid": "TaskFH",
-                    "Effect": "Allow",
-                    "Action": [
-                        "dynamodb:PutItem"
-                    ],
-                    "Resource": [
-                        "{self.dynamo_table_arn}"
-                    ]
-                }}
-            ]
-        }}'''
-
-        response = self.iam.put_role_policy(
-            RoleName=self.batch_ecs_task_role_name,
-            PolicyName=self.dynamo_task_policy_name,
-            PolicyDocument=dynamo_role_policy
-        )
-
-    def clean(self):
-        try:
-            d_response = self.dynamodb.delete_table(
-                TableName=self.dynamo_table_name
-            )
-
-            logger.info("Dynamo table deleted.")
-
-        except Exception as e:
-            if 'ResourceNotFoundException' not in str(e):
-                raise
-
-
-class AwsFirehose(AwsJobBase):
-    logger.propagate = False
-
-    def __init__(self, job_name, aws_config, boto3_session):
-
-        """
-        Initializes the Firehose configuration.
-        :param job_name:  Name of the job being run
-        :param s3_bucket: Bucket to land results into
-        :param s3_bucket_prefix: Prefix to land results into
-        :param region: the AWS region to run jobs in
-
-        """
-        super().__init__(job_name, aws_config, boto3_session)
-
-        self.firehose = self.session.client('firehose')
-        self.s3 = self.session.client('s3')
-        self.firehose_role_arn = None
-        self.firehose_arn = None
-
-    def __repr__(self):
-
-        return f"""
-The following objects compose the environment to support the Firehose collection for {self.job_identifier}:
-Job Definition Name: {self.job_identifier}
-Firehose: {self.firehose_name}
-s3 Results Bucket: {self.s3_results_bucket}
-s3 Backup Bucket: {self.s3_results_backup_bucket}
-Firehose Role Name: {self.firehose_role}
-
-"""
-
-    def create_firehose_delivery_role(self):
-        """
-        Generate the firehose role with permissions to the endpoints - in this case cloudwatch and project s3 buckets.
-        """
-
-        delivery_role_policy = f'''{{
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {{
-                                "Sid": "S3AllowForFH",
-                                "Effect": "Allow",
-                                "Action": [
-                                    "s3:AbortMultipartUpload",
-                                    "s3:GetBucketLocation",
-                                    "s3:GetObject",
-                                    "s3:ListBucket",
-                                    "s3:ListBucketMultipartUploads",
-                                    "s3:PutObject"
-                                ],
-                                "Resource": [
-                                    "{self.s3_results_bucket_arn}",
-                                    "{self.s3_results_bucket_arn}/*",
-                                    "{self.s3_results_backup_bucket_arn}",
-                                    "{self.s3_results_backup_bucket_arn}/*"
-                                ]
-                            }},
-
-                            {{
-                                "Sid": "CWAllowForCW",
-                                "Effect": "Allow",
-                                "Action": [
-                                    "logs:PutLogEvents"
-                                ],
-                                "Resource": [
-                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*",
-                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*"
-                                ]
-                            }}    
-                        ]
-                    }}'''
-
-        self.firehose_role_arn = self.iam_helper.role_stitcher(self.firehose_role, 'firehose',
-                                                               f"Service role for Firehose support {self.job_identifier}",
-                                                               policies_list=[delivery_role_policy])
-
-    def create_firehose_buckets(self):
-        """
-        Creates the output and backup buckets for the data.
-        Failed processing stream events will land in the backup.
-        """
-
-        # try:
-        #    self.s3.create_bucket(
-        #        Bucket=self.s3_results_bucket,
-        #        CreateBucketConfiguration={
-        #            'LocationConstraint': self.session.region_name
-        #        }
-        #    )
-
-        # except Exception as e:
-        #    if 'BucketAlreadyOwnedByYou' in str(e):
-        #        logger.info(f'Bucket {self.s3_results_bucket}  not created - already exists')
-        #    else:
-        #        logger.info(str(e))
-
-        try:
-            self.s3.create_bucket(
-                Bucket=self.s3_results_backup_bucket,
-                CreateBucketConfiguration={
-                    'LocationConstraint': self.session.region_name
-                }
-            )
-        except Exception as e:
-            if 'BucketAlreadyOwnedByYou' in str(e):
-                logger.info(f'Bucket {self.s3_results_backup_bucket} not created - already exists')
-            else:
-                logger.warning(str(e))
-
-    def create_firehose(self):
-        """
-        Creates a simple firehose with S3 endpoints in AWS and waits for success.
-        There appears to be a race condition with creation of the role, so firehose
-        will re-try until created.
-        """
-        while 1 == 1:
-            time.sleep(5)
-            try:
-                response = self.firehose.create_delivery_stream(
-                    DeliveryStreamName=self.firehose_name,
-                    DeliveryStreamType='DirectPut',
-                    ExtendedS3DestinationConfiguration={
-                        'RoleARN': self.firehose_role_arn,
-                        'BucketARN': self.s3_results_bucket_arn,
-                        'Prefix': self.s3_bucket_prefix + '/',
-                        'BufferingHints': {
-                            'SizeInMBs': 128,
-                            'IntervalInSeconds': 900
-                        },
-                        'CompressionFormat': 'GZIP',
-                        'CloudWatchLoggingOptions': {
-                            'Enabled': True,
-                            'LogGroupName': self.job_identifier,
-                            'LogStreamName': self.s3_results_bucket
-                        },
-
-                        'S3BackupMode': 'Enabled',
-                        'S3BackupConfiguration': {
-                            'RoleARN': self.firehose_role_arn,
-                            'BucketARN': self.s3_results_backup_bucket_arn,
-                            'Prefix': self.s3_bucket_prefix,
-                            'BufferingHints': {
-                                'SizeInMBs': 128,
-                                'IntervalInSeconds': 900
-                            },
-                            'CompressionFormat': 'GZIP',
-
-                            'CloudWatchLoggingOptions': {
-                                'Enabled': True,
-                                'LogGroupName': self.job_identifier,
-                                'LogStreamName': self.s3_results_backup_bucket
-                            }
-                        },
-                    },
-
-                    Tags=[
-                        {
-                            'Key': 'batch_job',
-                            'Value': self.job_identifier
-                        },
-                    ]
-                )
-
-            except Exception as e:
-                if 'ResourceInUseException' in str(e):
-                    logger.info('Firehose stream operation in progress...')
-                    break
-                else:
-                    logger.warning(
-                        f"Problem creating stream {self.firehose_name} - retrying after 5 seconds.  Error is: {str(e)}")
-                    time.sleep(5)
-
-        logger.info('Waiting for firehose delivery stream activation')
-
-        while 1 == 1:
-            time.sleep(5)
-            try:
-                # We need to give it a second to start
-
-                cresponse = self.firehose.describe_delivery_stream(
-                    DeliveryStreamName=self.firehose_name,
-                    Limit=1
-                )
-
-                if cresponse['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
-                    self.firehose_arn = cresponse['DeliveryStreamDescription']['DeliveryStreamARN']
-                    logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
-                    break
-
-            except Exception as e:
-                if 'ResourceNotFoundException' in str(e):
-                    logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
-                    time.sleep(5)
-                else:
-                    raise
-
-    def add_firehose_task_permissions(self, task_role):
-        delivery_role_policy = f'''{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Sid": "TaskFH",
-                    "Effect": "Allow",
-                    "Action": [
-                        "firehose:PutRecord"
-                    ],
-                    "Resource": [
-                        "{self.firehose_arn}"
-                    ]
-                }}
-            ]
-        }}'''
-
-        response = self.iam.put_role_policy(
-            RoleName=task_role,
-            PolicyName=self.firehost_task_policy_name,
-            PolicyDocument=delivery_role_policy
-        )
-
-    def put_record(self, data):
-        """
-        :param data: dictionary of data to record in the firehose
-        """
-        try:
-            response = self.firehose.put_record(
-                DeliveryStreamName=self.firehose_name,
-                Record={
-                    'Data': json.dumps(data)
-                }
-            )
-        except Exception as e:
-            logger.error(str(e))
-
-    def clean(self):
-        """
-        Responsible for cleaning artifacts for the firehose.
-        """
-        logger.info("Cleaning up firehose stream.")
-        try:
-            response = self.firehose.delete_delivery_stream(
-                DeliveryStreamName=self.firehose_name
-            )
-            logger.info(f"Firehose {self.firehose_name} deleted.")
-        except Exception as e:
-            if 'ResourceNotFoundException' in str(e):
-                logger.info(f"Firehose {self.firehose_name} already MIA - skipping...")
-
-        self.iam_helper.delete_role(self.firehose_role)
-
-        logger.info(
-            f"Firehose clean complete.  Results bucket and data {self.s3_results_bucket} have not been deleted.")
-
-
 class AWSGlueTransform(AwsJobBase):
     """
     Handles Glue crawlers, ETL and databases
@@ -2218,9 +1865,6 @@ class AwsBatch(DockerBatchBase):
         """
         logger.info("Beginning cleanup of AWS resources...")
 
-        # firehose_env = AwsFirehose(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        # firehose_env.clean()
-
         # lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
         # lambda_env.clean()
 
@@ -2232,9 +1876,6 @@ class AwsBatch(DockerBatchBase):
 
         sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
         sns_env.clean()
-
-        # dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        # dynamo_env.clean()
 
     def run_batch(self):
         """
@@ -2363,15 +2004,6 @@ class AwsBatch(DockerBatchBase):
             env_vars=env_vars
         )
 
-        # Initialize the firehose environment and try to create it
-        '''
-        firehose_env = AwsFirehose(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        logger.debug(str(firehose_env))
-        firehose_env.create_firehose_delivery_role()
-        firehose_env.create_firehose_buckets()
-        firehose_env.create_firehose()
-        firehose_env.add_firehose_task_permissions(batch_env.batch_ecs_task_role_name)
-        '''
         # Create database and 2 crawlers to manage the resulting data
         '''
         glue_env = AWSGlueTransform(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -2398,33 +2030,7 @@ class AwsBatch(DockerBatchBase):
         batch_env.start_state_machine_execution(array_size)
         '''
 
-        '''
-        dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        dynamo_env.create_summary_table()
-        dynamo_env.add_dynamo_task_permissions()
-        '''
-
         batch_env.submit_job(array_size)
-
-    @classmethod
-    def create_dynamo_field(cls, key, value):
-
-        if value == '':
-            value = ' '
-
-        if isinstance(value, bool):
-            this_type = 'BOOL'
-        elif isinstance(value, (int, float)):
-            this_type = 'N'
-        else:
-            this_type = "S"
-
-        if this_type == 'BOOL':
-            this_item = {key: {this_type: value}}
-        else:
-            this_item = {key: {this_type: str(value)}}
-
-        return this_item
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -2564,7 +2170,7 @@ if __name__ == '__main__':
         parser.add_argument('-c', '--clean', action='store_true')
         args = parser.parse_args()
         batch = AwsBatch(args.project_filename)
-        if args.clean == True:
+        if args.clean:
             batch.clean()
         else:
             batch.push_image()
