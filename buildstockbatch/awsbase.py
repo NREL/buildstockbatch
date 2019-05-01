@@ -1,13 +1,9 @@
-import boto3
 import logging
-import re
 import time
 import zipfile
 
-from buildstockbatch.localdocker import DockerBatchBase
 
 logger = logging.getLogger(__name__)
-
 
 
 class AWSIAMHelper():
@@ -98,9 +94,8 @@ class AWSIAMHelper():
                 RoleName=role_name
             )
 
-
             for policy in response['PolicyNames']:
-                del_response = self.iam.delete_role_policy(
+                self.iam.delete_role_policy(
                     RoleName=role_name,
                     PolicyName=policy
                 )
@@ -109,9 +104,8 @@ class AWSIAMHelper():
                 RoleName=role_name
             )
 
-
             for policy in response['AttachedPolicies']:
-                rm_response = self.iam.detach_role_policy(
+                self.iam.detach_role_policy(
                         RoleName=role_name,
                         PolicyArn=policy['PolicyArn']
                     )
@@ -131,8 +125,7 @@ class AWSIAMHelper():
     def delete_instance_profile(self, instance_profile_name):
 
         try:
-
-            response = self.iam.delete_instance_profile(
+            self.iam.delete_instance_profile(
                 InstanceProfileName=instance_profile_name
             )
             logger.info(f"Instance profile {instance_profile_name} deleted.")
@@ -147,7 +140,6 @@ class AWSIAMHelper():
             response = self.iam.get_instance_profile(
                 InstanceProfileName=instance_profile_name
             )
-
 
             for role in response['InstanceProfile']['Roles']:
                 response = self.iam.remove_role_from_instance_profile(
@@ -195,14 +187,14 @@ class AwsJobBase():
         self.lambda_metadata_etl_function_name = f'{self.job_identifier}_lambda_metadata_etl'
         self.lambda_metadata_summary_crawler_function_name = f'{self.job_identifier}_lambda_metadata_summary_crawler'
         self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
-        self.lambda_athena_function_name =  f'{self.job_identifier}_athena_summary_execution'
+        self.lambda_athena_function_name = f'{self.job_identifier}_athena_summary_execution'
 
         self.glue_metadata_crawler_name = f'{self.job_identifier}_md_crawler'
         self.glue_metadata_crawler_role_name = f'{self.job_identifier}_md_crawler_role'
         self.glue_database_name = f'{self.job_identifier}_data'
         self.glue_metadata_summary_table_name = f'{self.job_identifier}_md_summary_table'
         self.glue_metadata_etl_output_type = "csv"
-        self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/summary-results/{self.glue_metadata_etl_output_type}/'
+        self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/summary-results/{self.glue_metadata_etl_output_type}/'  # noqa 501
 
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
         self.batch_compute_environment_ami = 'ami-0a859713f8259be72'
@@ -223,7 +215,7 @@ class AwsJobBase():
         self.state_machine_name = f"{self.job_identifier}_state_machine"
         self.state_machine_role_name = f"{self.job_identifier}_state_machine_role"
 
-        self.sns_state_machine_topic =  f"{self.job_identifier}_state_machine_notifications"
+        self.sns_state_machine_topic = f"{self.job_identifier}_state_machine_notifications"
 
         self.dynamo_table_name = f"{self.job_identifier}_summary_table"
         self.dynamo_table_arn = f"arn:aws:dynamodb:{self.region}:{self.account}:table/{self.dynamo_table_name}"
@@ -231,23 +223,6 @@ class AwsJobBase():
 
         self.vpc_name = self.job_identifier
         self.vpc_cidr = aws_config['vpc_cidr']
-
-
-        '''
-        self.glue_metadata_summary_crawler_name = f'{self.job_identifier}_md_summary_crawler'
-        self.glue_metadata_summary_crawler_role_name = f'{self.job_identifier}_md_parquet_crawler_role'
-        self.glue_metadata_summary_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/metadata/'
-        self.glue_metadata_etl_output_type = "csv"
-        self.s3_lambda_code_ts_crawler_key = f'{self.job_identifier}/run_crawler.py.zip'
-        self.glue_ts_table_name = f'{self.job_identifier}_ts_table'
-        self.glue_ts_parquet_table_name = f'{self.job_identifier}_ts_parquet_table'
-        self.glue_ts_parquet_crawler_name = f'{self.job_identifier}_ts_parquet_crawler'
-        self.glue_ts_parquet_crawler_role_name = f'{self.job_identifier}_ts_parquet_crawler_role'
-        self.glue_ts_parquet_results_s3_prefix = f'{self.s3_bucket_prefix}_parquet/timeseries/'
-        '''
-
-
-
 
     def __repr__(self):
 
@@ -260,17 +235,17 @@ A state machine {self.state_machine_name} will execute an AWS Batch job {self.jo
 Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
 Summary results are transimitted via the Firehose stream {self.firehose_name} to S3 in JSON format.
 Athena table {self.glue_database_name}.{self.s3_bucket_prefix} will be created from the source JSON.
-The summary results will be transformed into a set of csv files placed in S3 at {self.glue_metadata_etl_results_s3_path}.
-Additionally, an Athena table {self.glue_database_name}.{self.glue_metadata_summary_table_name} will be created on the csv
-output.
-
+The summary results will be transformed into a set of csv files placed in S3 at
+{self.glue_metadata_etl_results_s3_path}.
+Additionally, an Athena table {self.glue_database_name}.{self.glue_metadata_summary_table_name} will be created on the
+csv output.
 """
     '''
     def get_name(self,type):
 
         return self.named_items[type]
     '''
-    def set_name(self,type, name):
+    def set_name(self, type, name):
         self.named_items[type] = name
 
     def zip_and_s3_load(self, string_to_zip, file_name, zip_name, s3_destination_bucket, s3_destination_key):
@@ -284,8 +259,6 @@ output.
 
         zip_archive.close()
 
-        #os.chmod('run_crawler.py.zip', stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
-
         self.s3.upload_file(zip_name, s3_destination_bucket, s3_destination_key)
 
-        logger.info(f'{zip_name} uploaded to bucket {s3_destination_bucket} under key {s3_destination_key}' )
+        logger.info(f'{zip_name} uploaded to bucket {s3_destination_bucket} under key {s3_destination_key}')

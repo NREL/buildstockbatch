@@ -31,12 +31,6 @@ import time
 import io
 
 from buildstockbatch.localdocker import DockerBatchBase
-from buildstockbatch.base import (
-    read_data_point_out_json,
-    to_camelcase,
-    flatten_datapoint_json,
-    read_out_osw
-)
 
 from buildstockbatch.awsbase import (
     AwsJobBase
@@ -116,7 +110,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         """
 
         try:
-            response = self.glue.create_database(
+            self.glue.create_database(
                 DatabaseInput={
                     'Name': self.glue_database_name,
                     'Description': f'Database created for job: {self.job_identifier}'
@@ -234,7 +228,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
                             "s3:GetBucketLocation",
                             "s3:ListBucket",
                             "s3:ListAllMyBuckets",
-                            "s3:GetBucketAcl" 
+                            "s3:GetBucketAcl"
                         ],
                         "Resource": [
                             "*"
@@ -275,7 +269,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         """
         while True:
             try:
-                response = self.glue.create_crawler(
+                self.glue.create_crawler(
                     Name=self.glue_metadata_crawler_name,
                     Role=self.glue_metadata_crawler_role_name,
                     DatabaseName=self.glue_database_name,
@@ -312,7 +306,7 @@ Source S3 Bucket Prefix: {self.s3_bucket_prefix}
         Method to delete the summary metadata crawler crawler.
         """
         try:
-            response = self.glue.delete_crawler(
+            self.glue.delete_crawler(
                 Name=self.glue_metadata_crawler_name
             )
             logger.info(f'Crawler {self.glue_metadata_crawler_name} deleted')
@@ -394,10 +388,12 @@ class AwsLambda(AwsJobBase):
 
 
         '''
-        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(self.lambda_metadata_crawler_role_name,
-                                                                        'lambda',
-                                                                        f'Lambda execution role for {self.lambda_metadata_crawler_function_name}',
-                                                                        policies_list=[lambda_policy])
+        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(
+            self.lambda_metadata_crawler_role_name,
+            'lambda',
+            f'Lambda execution role for {self.lambda_metadata_crawler_function_name}',
+            policies_list=[lambda_policy]
+        )
 
         athena_s3_accesses = f'''{{"Version": "2012-10-17",
         "Statement": [{{
@@ -413,7 +409,6 @@ class AwsLambda(AwsJobBase):
           }}
         ]
     }}
-          
           '''
 
         self.lambda_athena_metadata_summary_execution_role_arn = self.iam_helper.role_stitcher(
@@ -448,7 +443,7 @@ import time
 def lambda_handler(event, context):
     client = boto3.client('glue')
     response = client.start_crawler(Name='{self.glue_metadata_crawler_name}')
-    
+
     while True:
         response = client.get_crawler_metrics(
             CrawlerNameList=[
@@ -456,7 +451,8 @@ def lambda_handler(event, context):
             ]
         )
         print(response)
-        if response['CrawlerMetricsList'][0]['StillEstimating'] == False and response['CrawlerMetricsList'][0]['TimeLeftSeconds'] == 0.0:
+        crawler_metric = response['CrawlerMetricsList'][0]
+        if rcrawler_metric['StillEstimating'] == False and crawler_metric['TimeLeftSeconds'] == 0.0:
             tables_response = client.get_tables(
                 DatabaseName='{self.glue_database_name}',
                 Expression='*{self.s3_bucket_prefix}*'
@@ -481,7 +477,7 @@ def lambda_handler(event, context):
         while True:
             try:
 
-                response = self.aws_lambda.create_function(
+                self.aws_lambda.create_function(
                     FunctionName=self.lambda_metadata_crawler_function_name,
                     Runtime='python3.7',
                     Role=self.md_lambda_crawler_role_arn,
@@ -536,21 +532,21 @@ def lambda_handler(event, context):
             'OutputLocation': '{self.s3_athena_query_results_path}'
         }}
     )
-    
+
     print(response['QueryExecutionId'])
-    
+
     while True:
         response2 = athena.get_query_execution(
             QueryExecutionId=response['QueryExecutionId']
         )
-    
+
         pprint(response2)
         if response2['QueryExecution']['Status']['State'] != "RUNNING":
             if response2['QueryExecution']['Status']['State'] == "FAILED":
                 raise Exception(response2['QueryExecution']['Status']['StateChangeReason'])
             break
-     
-       
+
+
         '''
         self.zip_and_s3_load(function_script,
                              'create_table.py',
@@ -561,7 +557,7 @@ def lambda_handler(event, context):
         while True:
             try:
 
-                response = self.aws_lambda.create_function(
+                self.aws_lambda.create_function(
                     FunctionName=self.lambda_athena_function_name,
                     Runtime='python3.7',
                     Role=self.lambda_athena_metadata_summary_execution_role_arn,
@@ -617,11 +613,13 @@ def lambda_handler(event, context):
         try:
             self.s3.delete_object(Bucket=self.s3_lambda_code_bucket, Key=self.s3_lambda_code_metadata_crawler_key)
             logger.info(
-                f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} deleted.")
+                f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} deleted."  # noqa E501
+            )
         except Exception as e:
             if 'NoSuchBucket' in str(e):
                 logger.info(
-                    f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted.")
+                    f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted."  # noqa E501
+                )
             else:
                 raise
 
@@ -632,7 +630,8 @@ def lambda_handler(event, context):
         except Exception as e:
             if 'NoSuchBucket' in str(e):
                 logger.info(
-                    f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted.")
+                    f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted."  # noqa E501
+                )
             else:
                 raise
 
@@ -676,7 +675,7 @@ class AwsBatchEnv(AwsJobBase):
         self.pub_subnet_cidr = self.vpc_cidr.replace('/16', '/17')
         self.priv_subnet_cidr = self.vpc_cidr.replace('.0.0/16', '.128.0/17')
 
-        ## Create the VPC
+        # Create the VPC
 
         try:
 
@@ -690,13 +689,13 @@ class AwsBatchEnv(AwsJobBase):
 
             logger.info(f"VPC {self.vpc_id} created")
 
-        ## Creating a spot here to catch other seen errors - VPC limit should block the job, however.
+        # Creating a spot here to catch other seen errors - VPC limit should block the job, however.
         except Exception as e:
             if 'VpcLimitExceeded' in str(e):
                 raise
         while True:
             try:
-                t_response = self.ec2.create_tags(
+                self.ec2.create_tags(
                     Resources=[
                         self.vpc_id
                     ],
@@ -761,7 +760,7 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        t3_response = self.ec2.create_tags(
+        self.ec2.create_tags(
             Resources=[
                 self.priv_vpc_subnet_id
             ],
@@ -777,7 +776,7 @@ class AwsBatchEnv(AwsJobBase):
 
         self.internet_gateway_id = ig_response['InternetGateway']['InternetGatewayId']
 
-        t3_response = self.ec2.create_tags(
+        self.ec2.create_tags(
             Resources=[
                 self.internet_gateway_id
             ],
@@ -802,7 +801,7 @@ class AwsBatchEnv(AwsJobBase):
 
         self.pub_vpc_subnet_id = pub_response['Subnet']['SubnetId']
 
-        t4_response = self.ec2.create_tags(
+        self.ec2.create_tags(
             Resources=[
                 self.pub_vpc_subnet_id
             ],
@@ -826,7 +825,7 @@ class AwsBatchEnv(AwsJobBase):
 
             logger.info("EIP allocated.")
 
-            t2_response = self.ec2.create_tags(
+            self.ec2.create_tags(
                 Resources=[
                     self.nat_ip_allocation
                 ],
@@ -844,7 +843,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create an internet gateway
 
-        aig_response = self.ec2.attach_internet_gateway(
+        self.ec2.attach_internet_gateway(
             InternetGatewayId=self.internet_gateway_id,
             VpcId=self.vpc_id
         )
@@ -870,7 +869,7 @@ class AwsBatchEnv(AwsJobBase):
 
         while True:
             try:
-                pr_response = self.ec2.create_route(
+                self.ec2.create_route(
                     DestinationCidrBlock='0.0.0.0/0',
                     GatewayId=self.internet_gateway_id,
                     RouteTableId=self.pub_route_table_id
@@ -906,7 +905,7 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Route table created.")
 
-        t2_response = self.ec2.create_tags(
+        self.ec2.create_tags(
             Resources=[
                 self.priv_route_table_id
             ],
@@ -920,7 +919,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Associate the private route to the private subnet
 
-        art_response = self.ec2.associate_route_table(
+        self.ec2.associate_route_table(
             RouteTableId=self.priv_route_table_id,
             SubnetId=self.priv_vpc_subnet_id
         )
@@ -930,7 +929,7 @@ class AwsBatchEnv(AwsJobBase):
 
         while True:
             try:
-                r_response = self.ec2.create_route(
+                self.ec2.create_route(
                     DestinationCidrBlock='0.0.0.0/0',
                     NatGatewayId=self.nat_gateway_id,
                     RouteTableId=self.priv_route_table_id
@@ -957,21 +956,24 @@ class AwsBatchEnv(AwsJobBase):
 
     def create_batch_service_roles(self):
         """
-        Creates the IAM roles used in the various areas of the batch service. This currently will not try to overwrite or update existing roles.
+        Creates the IAM roles used in the various areas of the batch service.
+        This currently will not try to overwrite or update existing roles.
         """
-        self.service_role_arn = self.iam_helper.role_stitcher(self.batch_service_role_name,
-                                                              "batch",
-                                                              f"Service role for Batch environment {self.job_identifier}",
-                                                              managed_policie_arns=[
-                                                                  'arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole'])
+        self.service_role_arn = self.iam_helper.role_stitcher(
+            self.batch_service_role_name,
+            "batch",
+            f"Service role for Batch environment {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole']
+        )
 
-        ## Instance Role for Batch compute environment
+        # Instance Role for Batch compute environment
 
-        self.instance_role_arn = self.iam_helper.role_stitcher(self.batch_instance_role_name,
-                                                               "ec2",
-                                                               f"Instance role for Batch compute environment {self.job_identifier}",
-                                                               managed_policie_arns=[
-                                                                   'arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role'])
+        self.instance_role_arn = self.iam_helper.role_stitcher(
+            self.batch_instance_role_name,
+            "ec2",
+            f"Instance role for Batch compute environment {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role']
+        )
 
         # Instance Profile
 
@@ -1093,11 +1095,12 @@ class AwsBatchEnv(AwsJobBase):
 
         if self.batch_use_spot != 'false':
             # Spot Fleet Role
-            self.spot_service_role_arn = self.iam_helper.role_stitcher(self.batch_spot_service_role_name,
-                                                                       "spotfleet",
-                                                                       f"Spot Fleet role for Batch compute environment {self.job_identifier}",
-                                                                       managed_policie_arns=[
-                                                                           'arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole'])
+            self.spot_service_role_arn = self.iam_helper.role_stitcher(
+                self.batch_spot_service_role_name,
+                "spotfleet",
+                f"Spot Fleet role for Batch compute environment {self.job_identifier}",
+                managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole']
+            )
 
     def create_compute_environment(self, maxCPUs=10000):
         """
@@ -1110,7 +1113,7 @@ class AwsBatchEnv(AwsJobBase):
         if self.batch_use_spot == 'true':
             type = 'SPOT'
             try:
-                response = self.batch.create_compute_environment(
+                self.batch.create_compute_environment(
                     computeEnvironmentName=self.batch_compute_environment_name,
                     type='MANAGED',
                     state='ENABLED',
@@ -1143,7 +1146,7 @@ class AwsBatchEnv(AwsJobBase):
         else:
             type = 'EC2'
             try:
-                response = self.batch.create_compute_environment(
+                self.batch.create_compute_environment(
                     computeEnvironmentName=self.batch_compute_environment_name,
                     type='MANAGED',
                     state='ENABLED',
@@ -1255,7 +1258,7 @@ class AwsBatchEnv(AwsJobBase):
 
         while True:
             try:
-                response = self.batch.submit_job(
+                self.batch.submit_job(
                     jobName=self.job_identifier,
                     jobQueue=self.batch_job_queue_name,
                     arrayProperties={
@@ -1494,7 +1497,7 @@ class AwsBatchEnv(AwsJobBase):
                     time.sleep(5)
                 elif "StateMachineAlreadyExists" in str(e):
                     logger.info("State machine already exists, skipping...")
-                    self.state_machine_arn = f"arn:aws:states:{self.region}:{self.account}:stateMachine:{self.state_machine_name}"
+                    self.state_machine_arn = f"arn:aws:states:{self.region}:{self.account}:stateMachine:{self.state_machine_name}"  # noqa E501
 
                     break
                 else:
@@ -1502,7 +1505,7 @@ class AwsBatchEnv(AwsJobBase):
 
     def start_state_machine_execution(self, array_size):
 
-        response = self.step_functions.start_execution(
+        self.step_functions.start_execution(
             stateMachineArn=self.state_machine_arn,
             name=f'{self.state_machine_name}_execution_{int(time.time())}',
             input=f'{{"array_size": {array_size}}}'
@@ -1527,7 +1530,7 @@ class AwsBatchEnv(AwsJobBase):
 
         try:
 
-            jq_disable_response = self.batch.update_job_queue(
+            self.batch.update_job_queue(
                 jobQueue=self.batch_job_queue_name,
                 state='DISABLED'
             )
@@ -1553,7 +1556,7 @@ class AwsBatchEnv(AwsJobBase):
 
         try:
 
-            ce_disable_response = self.batch.update_compute_environment(
+            self.batch.update_compute_environment(
                 computeEnvironment=self.batch_compute_environment_name,
                 state='DISABLED'
             )
@@ -1599,10 +1602,8 @@ class AwsBatchEnv(AwsJobBase):
 
         )
 
-
         for vpc in response['Vpcs']:
             this_vpc = vpc['VpcId']
-
 
             ng_response = self.ec2.describe_nat_gateways(
                 Filters=[
@@ -1615,15 +1616,13 @@ class AwsBatchEnv(AwsJobBase):
                 ]
             )
 
-
             for natgw in ng_response['NatGateways']:
                 this_natgw = natgw['NatGatewayId']
 
                 if natgw['State'] != 'deleted':
-                    dnat_response = self.ec2.delete_nat_gateway(
+                    self.ec2.delete_nat_gateway(
                         NatGatewayId=this_natgw
                     )
-
 
             rtas_response = self.ec2.describe_route_tables(
                 Filters=[
@@ -1637,13 +1636,11 @@ class AwsBatchEnv(AwsJobBase):
 
             )
 
-
-
             for route_table in rtas_response['RouteTables']:
                 route_table_id = route_table['RouteTableId']
                 for association in route_table['Associations']:
 
-                    if association['Main'] == False:
+                    if not association['Main']:
                         response = self.ec2.disassociate_route_table(
                             AssociationId=association['RouteTableAssociationId']
                         )
@@ -1664,22 +1661,20 @@ class AwsBatchEnv(AwsJobBase):
                 ]
             )
 
-
-
             for internet_gateway in igw_response['InternetGateways']:
                 for attachment in internet_gateway['Attachments']:
                     if attachment['VpcId'] == this_vpc:
                         while True:
                             try:
                                 try:
-                                    dig_response = self.ec2.detach_internet_gateway(
+                                    self.ec2.detach_internet_gateway(
                                         InternetGatewayId=internet_gateway['InternetGatewayId'],
                                         VpcId=attachment['VpcId']
                                     )
                                 except Exception as e:
                                     logger.info(f"Error on Internet Gateway disassociation - ignoring... {str(e)}")
 
-                                dig2_response = self.ec2.delete_internet_gateway(
+                                self.ec2.delete_internet_gateway(
                                     InternetGatewayId=internet_gateway['InternetGatewayId']
                                 )
                                 logger.info("Internet Gateway deleted.")
@@ -1704,7 +1699,6 @@ class AwsBatchEnv(AwsJobBase):
                 ]
             )
 
-
             for subnet in subn_response['Subnets']:
                 while True:
                     try:
@@ -1722,19 +1716,13 @@ class AwsBatchEnv(AwsJobBase):
             while True:
                 try:
 
-                    delv_response = self.ec2.delete_vpc(
+                    self.ec2.delete_vpc(
                         VpcId=this_vpc
                     )
 
                     break
 
-                except Exception as e:
-                    #print('exception')
-                    # if 'DependencyViolation' in str(e):
-                    #    print('Sleep')
-                    #    logging.info("Cannot delete VPC, still waiting for NAT Gateway deletion.  Sleeping...")
-                    #    time.sleep(5)
-                    # else:
+                except Exception:
                     raise
 
         # Find the Elastic IP from the NAT
@@ -1751,7 +1739,6 @@ class AwsBatchEnv(AwsJobBase):
         )
         for address in response['Addresses']:
             this_address = address['AllocationId']
-
 
             response = self.ec2.release_address(
                 AllocationId=this_address
@@ -1775,17 +1762,18 @@ class AwsSNS(AwsJobBase):
         self.sns_state_machine_topic_arn = response['TopicArn']
 
     def subscribe_to_topic(self):
-        response = self.sns.subscribe(
+        self.sns.subscribe(
             TopicArn=self.sns_state_machine_topic_arn,
             Protocol='email',
             Endpoint=self.operator_email
         )
 
         logger.info(
-            f"Operator {self.operator_email} subscribed to topic - please confirm via email to recieve state machine progress messages.")
+            f"Operator {self.operator_email} subscribed to topic - please confirm via email to recieve state machine progress messages."  # noqa 501
+        )
 
     def clean(self):
-        response = self.sns.delete_topic(
+        self.sns.delete_topic(
             TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
         )
 
@@ -1981,7 +1969,8 @@ class AwsBatch(DockerBatchBase):
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         logger.info(
-            "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):")
+            "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):"  # noqa 501
+        )
         logger.debug(str(batch_env))
         batch_env.create_batch_service_roles()
         batch_env.create_vpc()
@@ -2044,12 +2033,7 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
-        # firehose = boto3.client('firehose', region_name=region)
-        dynamo = boto3.client('dynamodb', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
-
-        # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
-        dynamo_table_name = job_name
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
