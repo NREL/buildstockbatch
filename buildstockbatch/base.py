@@ -360,7 +360,7 @@ class BuildStockBatchBase(object):
         if not skip_combine:
             self._combine_results()
 
-        aws_upload_flag = bool(self.cfg.get('postprocessing', {}).get('s3_upload', False))
+        aws_upload_flag = 's3_upload' in self.cfg.get('postprocessing', {})
         if aws_upload_flag or force_upload:
             self.upload_results()
 
