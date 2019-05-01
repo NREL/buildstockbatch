@@ -1,15 +1,23 @@
-FROM nrel/openstudio:2.7.1
-RUN sudo apt-get update && \
-    sudo apt-get install -y build-essential wget libpq-dev openssl libffi-dev zlib1g-dev \
-        libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev \
-        libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev
-RUN wget https://www.python.org/ftp/python/3.6.7/Python-3.6.7.tgz && \
-    tar -xvf Python-3.6.7.tgz && \
-    cd Python-3.6.7 && \
-    sudo ./configure --enable-optimizations && \
-    sudo make && \
-    sudo make install && \
-    cd .. && \
-    rm -rf Python-3.6.7
+FROM nrel/openstudio:2.8.0
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV PATH /opt/conda/bin:$PATH
+
+RUN apt-get update --fix-missing && \
+    apt-get install -y wget bzip2 ca-certificates curl git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    rm ~/miniconda.sh && \
+    /opt/conda/bin/conda clean -tipsy && \
+    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc
+
+RUN conda install -c conda-forge -y pandas dask pyarrow && \
+    python -m pip install --upgrade pip
+
 COPY . /buildstock-batch/
-RUN sudo pip3 install --upgrade pip && sudo pip3 install -e /buildstock-batch
+RUN python -m pip install /buildstock-batch

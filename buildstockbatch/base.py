@@ -120,10 +120,6 @@ class BuildStockBatchBase(object):
         elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
-        self._weather_dir = None
-        # Call property to create directory and copy weather files there
-        _ = self.weather_dir  # noqa: F841
-
         self.sampler = None
 
     def _get_weather_files(self):
@@ -162,10 +158,7 @@ class BuildStockBatchBase(object):
 
     @property
     def weather_dir(self):
-        if self._weather_dir is None:
-            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
-            self._get_weather_files()
-        return self._weather_dir.name
+        raise NotImplementedError
 
     @property
     def buildstock_dir(self):

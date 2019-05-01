@@ -62,7 +62,6 @@ setuptools.setup(
         'pyarrow>=0.10.0',
         'dask[complete]',
         'docker',
-        'awscli',
         'boto3>=1.9.66',
     ],
     extras_require={

@@ -20,6 +20,7 @@ import logging
 import os
 import pandas as pd
 import shutil
+import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -54,6 +55,8 @@ class DockerBatchBase(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+        self._weather_dir = None
+
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
@@ -65,6 +68,13 @@ class LocalDockerBatch(DockerBatchBase):
         super().__init__(project_filename)
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
+
+    @property
+    def weather_dir(self):
+        if self._weather_dir is None:
+            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
+            self._get_weather_files()
+        return self._weather_dir.name
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):

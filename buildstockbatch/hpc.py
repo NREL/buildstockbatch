@@ -113,6 +113,9 @@ class HPCBatchBase(BuildStockBatchBase):
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        self.weather_dir  # Call this to download and/or extract the weather files
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)

@@ -2167,6 +2167,10 @@ class AwsBatch(DockerBatchBase):
         return 'nrel/buildstockbatch'
 
     @property
+    def weather_dir(self):
+        return self._weather_dir
+
+    @property
     def container_repo(self):
         repo_name = self.docker_image()
         repos = self.ecr.describe_repositories()
@@ -2229,8 +2233,8 @@ class AwsBatch(DockerBatchBase):
         sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
         sns_env.clean()
 
-        dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        dynamo_env.clean()
+        # dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        # dynamo_env.clean()
 
     def run_batch(self):
         """
@@ -2249,7 +2253,9 @@ class AwsBatch(DockerBatchBase):
             buildstock_csv_filename = self.run_sampling()
 
         # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as tmp_weather_dir:
+            self._weather_dir = tmp_weather_dir
+            self._get_weather_files()
             tmppath = pathlib.Path(tmpdir)
             logger.debug('Creating assets tarfile')
             with tarfile.open(tmppath / 'assets.tar.gz', 'x:gz') as tar_f:
@@ -2392,9 +2398,11 @@ class AwsBatch(DockerBatchBase):
         batch_env.start_state_machine_execution(array_size)
         '''
 
+        '''
         dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
         dynamo_env.create_summary_table()
         dynamo_env.add_dynamo_task_permissions()
+        '''
 
         batch_env.submit_job(array_size)
 
@@ -2502,58 +2510,6 @@ class AwsBatch(DockerBatchBase):
                         bucket,
                         str(pathlib.Path(prefix, 'results', sim_id, filepath.relative_to(sim_dir)))
                     )
-
-            logger.debug('Writing output data to Firehose')
-            datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
-            out_osw_filepath = sim_dir / 'out.osw'
-            if os.path.isfile(out_osw_filepath):
-                out_osw = read_out_osw(out_osw_filepath)
-                dp_out = flatten_datapoint_json(read_data_point_out_json(datapoint_out_filepath))
-                if dp_out is None:
-                    dp_out = {}
-                dp_out.update(out_osw)
-                dp_out['_id'] = sim_id
-                for key in dp_out.keys():
-                    dp_out[to_camelcase(key)] = dp_out.pop(key)
-                '''
-                try:
-                    response = firehose.put_record(
-                        DeliveryStreamName=firehose_name,
-                        Record={
-                            'Data': json.dumps(dp_out) + '\n'
-                        }
-                    )
-                    logger.info(response)
-
-                except Exception as e:
-                    logger.error(str(e))
-                '''
-
-                item_def = {}
-
-                item_def.update(cls.create_dynamo_field('building_id', str(building_id)))
-                item_def.update(cls.create_dynamo_field('upgrade_idx', str(upgrade_idx)))
-
-                for key, value in dp_out.items():
-                    item_def.update(cls.create_dynamo_field(key, value))
-
-                response = dynamo.put_item(
-                    TableName=f"{job_name}_summary_table",
-                    Item=item_def
-                )
-                '''
-                try:
-                    response = dynamo.put_record(
-                        DeliveryStreamName=firehose_name,
-                        Record={
-                            'Data': json.dumps(dp_out) + '\n'
-                        }
-                    )
-                    logger.info(response)
-
-                except Exception as e:
-                    logger.error(str(e))
-                '''
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
