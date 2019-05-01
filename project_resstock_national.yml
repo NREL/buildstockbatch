@@ -1,7 +1,7 @@
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_national  # Relative to buildstock_directory
-output_directory: ../national_test_outputs_2
+output_directory: ../national_output
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
@@ -40,6 +40,12 @@ eagle:
     n_workers: 3
 
 postprocessing:
-  s3_upload:
-    bucket: resbldg-datasets
-    prefix: resstock-athena/calibration_runs
+  aws:
+    region_name: 'us-west-2'
+    s3:
+      bucket: resbldg-datasets
+      prefix: resstock-athena/calibration_runs_new
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: calibration_runs_testing
+      table_prefix: my_national_output_

@@ -335,10 +335,10 @@ class BuildStockBatchBase(object):
                 partial_path = re.match(parquet_dir + r'/?(.*)', full_path)
                 all_files.append(partial_path.group(1))
 
-        s3_prefix = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('prefix', None)
-        s3_bucket = self.cfg.get('postprocessing', {}).get('s3_upload', {}).get('bucket', None)
+        s3_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('prefix', None)
+        s3_bucket = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('bucket', None)
         if not (s3_prefix and s3_bucket):
-            logger.error("YAML file missing postprocessing:s3_upload:prefix and/or bucket entry.")
+            logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
             return
         s3_prefix = s3_prefix + '/' + output_folder_name + '/'
 
@@ -353,6 +353,49 @@ class BuildStockBatchBase(object):
             from_sequence(all_files, partition_size=500).map(upload_file)
         files_bag.compute()
         logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix}")
+        athena_flag = 'athena' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if athena_flag:
+            self._create_athena_tables(s3_bucket, s3_prefix)
+
+    def _create_athena_tables(self, s3_bucket, s3_prefix):
+        logger.info("Creating Athena tables using glue crawler")
+        region_name = self.cfg.get('postprocessing', {}).get('aws', {}).get('region_name', 'us-west-2')
+        db_name = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('database_name', None)
+        tbl_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('table_prefix', '')
+        role = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('glue_service_role', None)
+        assert db_name, "athena:database_name not supplied"
+        assert role, "athena:glue_service_role not defined"
+
+        glueClient = boto3.client('glue', region_name=region_name)
+        crawlTarget = {
+            'S3Targets': [{
+                'Path': f's3://{s3_bucket}/{s3_prefix}',
+                'Exclusions': []
+            }]
+        }
+        crawler_name = db_name+'_'+tbl_prefix if tbl_prefix else db_name
+        glueClient.create_crawler(Name=crawler_name,
+                                  Role=role,
+                                  Targets=crawlTarget,
+                                  DatabaseName=db_name,
+                                  TablePrefix=tbl_prefix)
+        glueClient.start_crawler(Name=crawler_name)
+        logger.info("Crawler started")
+
+        t = time.time()
+        while time.time() - t < 15*60:
+            time.sleep(60)
+            metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
+            if glueClient.get_crawler(Name=crawler_name)['Crawler']['State'] == 'READY':
+                logger.info("Crawling has completed.")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
+                break
+            elif time.time() - t > 10*60:
+                logger.info("Crawler taking too long. Aborting ...")
+                glueClient.stop_crawler(Name=crawler_name)
+                break
 
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
@@ -360,8 +403,8 @@ class BuildStockBatchBase(object):
         if not skip_combine:
             self._combine_results()
 
-        aws_upload_flag = 's3_upload' in self.cfg.get('postprocessing', {})
-        if aws_upload_flag or force_upload:
+        s3_upload_flag = 's3' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if s3_upload_flag or force_upload:
             self.upload_results()
 
     def _combine_results(self):
@@ -400,7 +443,6 @@ class BuildStockBatchBase(object):
                 map(lambda x: os.path.join(sim_out_dir, x, 'run', 'data_point_out.json')).\
                 map(read_data_point_out_json).\
                 filter(lambda x: x is not None)
-
             meta = pd.DataFrame(list(
                 datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
                 map(flatten_datapoint_json).take(10)
