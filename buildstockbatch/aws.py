@@ -2098,7 +2098,13 @@ class AwsBatch(DockerBatchBase):
                     s3.upload_file(
                         str(filepath),
                         bucket,
-                        str(pathlib.Path(prefix, 'results', sim_id, filepath.relative_to(sim_dir)))
+                        str(pathlib.Path(
+                            prefix,
+                            'results',
+                            'simulation_output',
+                            'up{:02d}'.format(0 if upgrade_idx is None else upgrade_idx + 1),
+                            'bldg{:07d}'.format(building_id), filepath.relative_to(sim_dir)
+                        ))
                     )
 
             logger.debug('Clearing out simulation directory')
