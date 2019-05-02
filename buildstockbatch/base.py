@@ -342,6 +342,13 @@ class BuildStockBatchBase(object):
             return
         s3_prefix = s3_prefix + '/' + output_folder_name + '/'
 
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(s3_bucket)
+        n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
+        if n_existing_files > 0:
+            logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix}.")
+            raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix}")
+
         def upload_file(filepath):
             full_path = os.path.join(parquet_dir, filepath)
             s3 = boto3.resource('s3')
@@ -355,16 +362,17 @@ class BuildStockBatchBase(object):
         logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix}")
         athena_flag = 'athena' in self.cfg.get('postprocessing', {}).get('aws', {})
         if athena_flag:
-            self._create_athena_tables(s3_bucket, s3_prefix)
+            self.create_athena_tables(s3_bucket, s3_prefix)
 
-    def _create_athena_tables(self, s3_bucket, s3_prefix):
+    def create_athena_tables(self, s3_bucket, s3_prefix):
         logger.info("Creating Athena tables using glue crawler")
-        region_name = self.cfg.get('postprocessing', {}).get('aws', {}).get('region_name', 'us-west-2')
-        db_name = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('database_name', None)
-        tbl_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('table_prefix', '')
-        role = self.cfg.get('postprocessing', {}).get('aws', {}).get('athena', {}).get('glue_service_role', None)
+
+        aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
+        region_name = aws_conf.get('region_name', 'us-west-2')
+        db_name = aws_conf.get('athena', {}).get('database_name', None)
+        role = aws_conf.get('athena', {}).get('glue_service_role', 'service-role/AWSGlueServiceRole-default')
+        max_crawling_time = aws_conf.get('athena', {}).get('max_crawling_time', 600)
         assert db_name, "athena:database_name not supplied"
-        assert role, "athena:glue_service_role not defined"
 
         glueClient = boto3.client('glue', region_name=region_name)
         crawlTarget = {
@@ -373,27 +381,54 @@ class BuildStockBatchBase(object):
                 'Exclusions': []
             }]
         }
-        crawler_name = db_name+'_'+tbl_prefix if tbl_prefix else db_name
-        glueClient.create_crawler(Name=crawler_name,
-                                  Role=role,
-                                  Targets=crawlTarget,
-                                  DatabaseName=db_name,
-                                  TablePrefix=tbl_prefix)
+        output_folder_name = os.path.basename(self.output_dir)
+        crawler_name = db_name+'_'+output_folder_name
+        tbl_prefix = output_folder_name + '_'
+
+        def create_crawler():
+            glueClient.create_crawler(Name=crawler_name,
+                                      Role=role,
+                                      Targets=crawlTarget,
+                                      DatabaseName=db_name,
+                                      TablePrefix=tbl_prefix)
+
+        try:
+            create_crawler()
+        except glueClient.exceptions.AlreadyExistsException:
+            logger.info(f"Deleting existing crawler: {crawler_name}. And creating new one.")
+            glueClient.delete_crawler(Name=crawler_name)
+            time.sleep(1)  # A small delay after deleting is required to prevent AlreadyExistsException again
+            create_crawler()
+
+        try:
+            existing_tables = [x['Name'] for x in glueClient.get_tables(DatabaseName=db_name)['TableList']]
+        except glueClient.exceptions.EntityNotFoundException:
+            existing_tables = []
+
+        to_be_deleted_tables = [x for x in existing_tables if x.startswith(tbl_prefix)]
+        if to_be_deleted_tables:
+            logger.info(f"Deleting existing tables in db {db_name}: {to_be_deleted_tables}. And creating new ones.")
+            glueClient.batch_delete_table(DatabaseName=db_name, TablesToDelete=to_be_deleted_tables)
+
         glueClient.start_crawler(Name=crawler_name)
         logger.info("Crawler started")
 
         t = time.time()
-        while time.time() - t < 15*60:
-            time.sleep(60)
+        while time.time() - t < (max_crawling_time+60):
+            time.sleep(30)
+            crawler_state = glueClient.get_crawler(Name=crawler_name)['Crawler']['State']
             metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
-            if glueClient.get_crawler(Name=crawler_name)['Crawler']['State'] == 'READY':
-                logger.info("Crawling has completed.")
+            if crawler_state != 'RUNNING':
+                logger.info(f"Crawling has completed running. It is {crawler_state}.")
                 logger.info(f"TablesCreated: {metrics['TablesCreated']} "
                             f"TablesUpdated: {metrics['TablesUpdated']} "
                             f"TablesDeleted: {metrics['TablesDeleted']} ")
                 break
-            elif time.time() - t > 10*60:
-                logger.info("Crawler taking too long. Aborting ...")
+            elif time.time() - t > max_crawling_time:
+                logger.info("Crawler is taking too long. Aborting ...")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
                 glueClient.stop_crawler(Name=crawler_name)
                 break
 

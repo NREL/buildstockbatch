@@ -48,4 +48,4 @@ postprocessing:
     athena:
       glue_service_role: service-role/AWSGlueServiceRole-default
       database_name: calibration_runs_testing
-      table_prefix: my_national_output_
+      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
