@@ -31,6 +31,12 @@ import time
 import io
 
 from buildstockbatch.localdocker import DockerBatchBase
+from buildstockbatch.base import (
+    read_data_point_out_json,
+    to_camelcase,
+    flatten_datapoint_json,
+    read_out_osw
+)
 
 from buildstockbatch.awsbase import (
     AwsJobBase
@@ -2425,7 +2431,12 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
+        # firehose = boto3.client('firehose', region_name=region)
+        dynamo = boto3.client('dynamodb', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
+
+        # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
+        dynamo_table_name = job_name
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
