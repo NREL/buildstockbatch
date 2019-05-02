@@ -128,8 +128,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @property
     def output_dir(self):
-        output_dir = self.cfg.get('output_directory', self.results_dir)
-        return output_dir
+        return self.results_dir
 
     @property
     def results_dir(self):
