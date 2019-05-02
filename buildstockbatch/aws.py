@@ -2115,7 +2115,7 @@ class AwsBatch(DockerBatchBase):
                     os.remove(item)
 
 
-if __name__ == '__main__':
+def main():
     logging.config.dictConfig({
         'version': 1,
         'disable_existing_loggers': True,
@@ -2165,3 +2165,7 @@ if __name__ == '__main__':
         else:
             batch.push_image()
             batch.run_batch()
+
+
+if __name__ == '__main__':
+    main()
