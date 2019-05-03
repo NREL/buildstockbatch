@@ -95,10 +95,8 @@ class AwsDynamo(AwsJobBase):
     def create_summary_table(self):
 
         # Does the table exist?  If so it will be replaced.
-
-        # Does the table exist?  If so it will be replaced.
         try:
-            d_response = self.dynamodb.delete_table(
+            self.dynamodb.delete_table(
                 TableName=self.dynamo_table_name
             )
 
@@ -110,7 +108,7 @@ class AwsDynamo(AwsJobBase):
 
         while True:
             try:
-                response = self.dynamodb.create_table(
+                self.dynamodb.create_table(
                     AttributeDefinitions=[
                         {
                             'AttributeName': 'upgrade_idx',
@@ -160,7 +158,7 @@ class AwsDynamo(AwsJobBase):
             ]
         }}'''
 
-        response = self.iam.put_role_policy(
+        self.iam.put_role_policy(
             RoleName=self.batch_ecs_task_role_name,
             PolicyName=self.dynamo_task_policy_name,
             PolicyDocument=dynamo_role_policy
@@ -168,7 +166,7 @@ class AwsDynamo(AwsJobBase):
 
     def clean(self):
         try:
-            d_response = self.dynamodb.delete_table(
+            self.dynamodb.delete_table(
                 TableName=self.dynamo_table_name
             )
 
@@ -248,13 +246,15 @@ Firehose Role Name: {self.firehose_role}
                                     "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*",
                                     "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*"
                                 ]
-                            }}    
+                            }}
                         ]
                     }}'''
 
-        self.firehose_role_arn = self.iam_helper.role_stitcher(self.firehose_role, 'firehose',
-                                                               f"Service role for Firehose support {self.job_identifier}",
-                                                               policies_list=[delivery_role_policy])
+        self.firehose_role_arn = self.iam_helper.role_stitcher(
+            self.firehose_role, 'firehose',
+            f"Service role for Firehose support {self.job_identifier}",
+            policies_list=[delivery_role_policy]
+        )
 
     def create_firehose_buckets(self):
         """
@@ -298,7 +298,7 @@ Firehose Role Name: {self.firehose_role}
         while 1 == 1:
             time.sleep(5)
             try:
-                response = self.firehose.create_delivery_stream(
+                self.firehose.create_delivery_stream(
                     DeliveryStreamName=self.firehose_name,
                     DeliveryStreamType='DirectPut',
                     ExtendedS3DestinationConfiguration={
@@ -393,7 +393,7 @@ Firehose Role Name: {self.firehose_role}
             ]
         }}'''
 
-        response = self.iam.put_role_policy(
+        self.iam.put_role_policy(
             RoleName=task_role,
             PolicyName=self.firehost_task_policy_name,
             PolicyDocument=delivery_role_policy
@@ -404,7 +404,7 @@ Firehose Role Name: {self.firehose_role}
         :param data: dictionary of data to record in the firehose
         """
         try:
-            response = self.firehose.put_record(
+            self.firehose.put_record(
                 DeliveryStreamName=self.firehose_name,
                 Record={
                     'Data': json.dumps(data)
@@ -419,7 +419,7 @@ Firehose Role Name: {self.firehose_role}
         """
         logger.info("Cleaning up firehose stream.")
         try:
-            response = self.firehose.delete_delivery_stream(
+            self.firehose.delete_delivery_stream(
                 DeliveryStreamName=self.firehose_name
             )
             logger.info(f"Firehose {self.firehose_name} deleted.")
@@ -2436,7 +2436,6 @@ class AwsBatch(DockerBatchBase):
         sim_dir = pathlib.Path('/var/simdata/openstudio')
 
         # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
-        dynamo_table_name = job_name
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
@@ -2544,7 +2543,7 @@ class AwsBatch(DockerBatchBase):
                 for key, value in dp_out.items():
                     item_def.update(cls.create_dynamo_field(key, value))
 
-                response = dynamo.put_item(
+                dynamo.put_item(
                     TableName=f"{job_name}_summary_table",
                     Item=item_def
                 )
@@ -2615,7 +2614,7 @@ def main():
         parser.add_argument('-c', '--clean', action='store_true')
         args = parser.parse_args()
         batch = AwsBatch(args.project_filename)
-        if args.clean == True:
+        if args.clean:
             batch.clean()
         else:
             batch.push_image()
