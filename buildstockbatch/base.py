@@ -415,7 +415,6 @@ class BuildStockBatchBase(object):
 
         t = time.time()
         while time.time() - t < (max_crawling_time+60):
-            time.sleep(30)
             crawler_state = glueClient.get_crawler(Name=crawler_name)['Crawler']['State']
             metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
             if crawler_state != 'RUNNING':
@@ -431,6 +430,7 @@ class BuildStockBatchBase(object):
                             f"TablesDeleted: {metrics['TablesDeleted']} ")
                 glueClient.stop_crawler(Name=crawler_name)
                 break
+            time.sleep(30)
 
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
