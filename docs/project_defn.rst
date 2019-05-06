@@ -197,3 +197,49 @@ These constructs can be combined to declare arbitrarily complex logic. Here is a
 
 This will select homes that were built before 1970, don't have three car garages, are less 
 than 3500 sq.ft., and have only one storey.
+
+Eagle Configuration
+~~~~~~~~~~~~~~~~~~~
+
+Under the ``eagle`` key is a list of configuration for running the batch job on the Eagle.
+
+*  ``n_jobs``: Number of eagle jobs to parallelize the simulation into
+*  ``minutes_per_sim``: Maximum allocated simulation time in minutes
+*  ``account``: Eagle allocation account to charge the job to
+*  ``sampling``: Configuration for the sampling in eagle
+
+    *  ``time``: Maximum time in minutes to allocate to sampling job
+
+*  ``postprocessing``: Eagle configuration for the postprocessing step
+
+    *  ``time``: Maximum time in minutes to allocate postprocessing job
+    *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into
+
+
+Postprocessing
+~~~~~~~~~~~~~~
+The metadata is combined into a single results file and the time series data is combined into a small group of files
+during the postprocessing step. These are the configuration it.
+
+*  ``postprocessing``: postprocessing configuration
+
+    *  ``aws``: configuration related to uploading and managing data to the amazon web services
+
+        *  ``region_name``: The name of the aws region to use for database creation and other services
+        *  ``s3``: Configurations for data upload to Amazon S3 data storage service. If this section is
+           missing/commented-out, the data is not uploaded to s3.
+
+            * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
+            *  ``prefix``: S3 prefix at which the data is to be uploaded.
+            The complete path would become: s3:\\bucket\prefix\output_directory_name
+
+        *  ``athena``: configurations for Amazon Athena database creation. If this section is missing/commented-out, no
+           Athena tables are created.
+
+            *  ``glue_service_role``: The data in s3 is catalogued using Amazon Glue data crawler. An IAM role must be
+               present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
+               name of that IAM role must be provided here. Default is: service-role/AWSGlueServiceRole-default. Consult
+               your AWS administrator for help
+            *  ``database_name``: The name of the Athena database to which the data is to be placed.
+            *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
+               before aborting it.
