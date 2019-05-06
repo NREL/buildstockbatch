@@ -95,32 +95,44 @@ def test_combine_files(basic_residential_project_file):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
     test_path = os.path.join(results_dir, 'results_csvs')
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz'))
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz'))
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).sort_values('building_id').reset_index()\
+        .drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).sort_values('building_id')\
+        .reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz'))
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).sort_values('building_id').reset_index()\
+        .drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).sort_values('building_id')\
+        .reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
     # test parquet files
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
     test_path = os.path.join(results_dir, 'parquet')
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet'))
-    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))
+    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).sort_values('building_id')\
+        .reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet'))
+    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))\
+        .sort_values('building_id').reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet'))\
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet'))
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet'))
+    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
+        sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet'))\
+        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1', 'Group0.parquet'))
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1', 'Group0.parquet'))
+    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1', 'Group0.parquet'))\
+        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1', 'Group0.parquet'))\
+        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
