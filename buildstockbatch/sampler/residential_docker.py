@@ -33,6 +33,10 @@ class ResidentialDockerSampler(BuildStockSampler):
         super().__init__(*args, **kwargs)
         self.docker_image = docker_image
 
+    @property
+    def csv_path(self):
+        return os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+
     def run_sampling(self, n_datapoints):
         """
         Run the residential sampling in a docker container.
@@ -61,7 +65,7 @@ class ResidentialDockerSampler(BuildStockSampler):
         for line in container_output.decode('utf-8').split('\n'):
             logger.debug(line)
         logger.debug('Sampling took {:.1f} seconds'.format(tick))
-        destination_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        destination_filename = self.csv_path
         if os.path.exists(destination_filename):
             os.remove(destination_filename)
         shutil.move(

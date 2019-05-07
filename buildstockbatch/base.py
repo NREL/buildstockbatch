@@ -196,9 +196,38 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        return self.sampler.run_sampling(n_datapoints)
+        if 'buildstock_csv' in self.cfg['baseline']:
+            if n_datapoints is not None or self.cfg['baseline'].get('n_datapoints') is not None:
+                raise RuntimeError(
+                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided. '
+                    'Remove or comment out baseline->n_datapoints and set the downselect->resample key to '
+                    'false or remove.'
+                )
+            buildstock_csv = self.cfg['baseline']['buildstock_csv']
+            if os.path.isabs(buildstock_csv):
+                buildstock_csv = os.path.abspath(buildstock_csv)
+            else:
+                buildstock_csv = os.path.abspath(
+                    os.path.join(
+                        os.path.dirname(self.project_filename),
+                        buildstock_csv
+                    )
+                )
+            if not os.path.exists(buildstock_csv):
+                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
+            destination_filename = self.sampler.csv_path
+            if destination_filename != buildstock_csv:
+                if os.path.exists(destination_filename):
+                    os.remove(destination_filename)
+                shutil.copy(
+                    buildstock_csv,
+                    destination_filename
+                )
+            return destination_filename
+        else:
+            if n_datapoints is None:
+                n_datapoints = self.cfg['baseline']['n_datapoints']
+            return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError

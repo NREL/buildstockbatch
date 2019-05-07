@@ -37,6 +37,10 @@ class ResidentialSingularitySampler(BuildStockSampler):
         self.singularity_image = singularity_image
         self.output_dir = output_dir
 
+    @property
+    def csv_path(self):
+        return os.path.join(self.output_dir, 'housing_characteristics', 'buildstock.csv')
+
     def run_sampling(self, n_datapoints):
         """
         Run the residential sampling in a singularity container.
@@ -58,7 +62,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
             '-o', 'buildstock.csv'
         ]
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_dir = os.path.join(self.output_dir, 'housing_characteristics')
+        destination_dir = os.path.dirname(self.csv_path)
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
         shutil.copytree(
@@ -70,4 +74,4 @@ class ResidentialSingularitySampler(BuildStockSampler):
             os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
             destination_dir
         )
-        return os.path.join(destination_dir, 'buildstock.csv')
+        return self.csv_path
