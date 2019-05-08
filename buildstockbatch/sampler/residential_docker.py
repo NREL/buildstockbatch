@@ -32,10 +32,7 @@ class ResidentialDockerSampler(BuildStockSampler):
         """
         super().__init__(*args, **kwargs)
         self.docker_image = docker_image
-
-    @property
-    def csv_path(self):
-        return os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
 
     def run_sampling(self, n_datapoints):
         """

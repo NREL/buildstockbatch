@@ -124,7 +124,32 @@ class BuildStockBatchBase(object):
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
 
+        if 'buildstock_csv' in self.cfg['baseline']:
+            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
+            if not os.path.exists(buildstock_csv):
+                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
+            df = pd.read_csv(buildstock_csv)
+            n_datapoints = self.cfg['baseline'].get('n_datapoints', df.shape[0])
+            self.cfg['baseline']['n_datapoints'] = n_datapoints
+            if n_datapoints != df.shape[0]:
+                raise RuntimeError(
+                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be '
+                    'equal to the number of rows in the buildstock.csv file. Remove or comment out '
+                    'baseline->n_datapoints from your project file.'
+                )
+            if 'downselect' in self.cfg:
+                raise RuntimeError(
+                    'A buildstock_csv was provided, which isn\'t compatible with downselecting.'
+                    'Remove or comment out the downselect key from your project file.'
+                )
+
         self.sampler = None
+
+    def path_rel_to_projectfile(self, x):
+        if os.path.isabs(x):
+            return os.path.abspath(x)
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
 
     def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
@@ -132,15 +157,7 @@ class BuildStockBatchBase(object):
             shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
-            if os.path.isabs(self.cfg['weather_files_path']):
-                weather_file_path = os.path.abspath(self.cfg['weather_files_path'])
-            else:
-                weather_file_path = os.path.abspath(
-                    os.path.join(
-                        os.path.dirname(self.project_filename),
-                        self.cfg['weather_files_path']
-                    )
-                )
+            weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
                 logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
@@ -169,15 +186,7 @@ class BuildStockBatchBase(object):
 
     @property
     def buildstock_dir(self):
-        if os.path.isabs(self.cfg['buildstock_directory']):
-            d = os.path.abspath(self.cfg['buildstock_directory'])
-        else:
-            d = os.path.abspath(
-                os.path.join(
-                    os.path.dirname(self.project_filename),
-                    self.cfg['buildstock_directory']
-                )
-            )
+        d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
         # logger.debug('buildstock_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
@@ -196,25 +205,10 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     def run_sampling(self, n_datapoints=None):
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
         if 'buildstock_csv' in self.cfg['baseline']:
-            if n_datapoints is not None or self.cfg['baseline'].get('n_datapoints') is not None:
-                raise RuntimeError(
-                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided. '
-                    'Remove or comment out baseline->n_datapoints and set the downselect->resample key to '
-                    'false or remove.'
-                )
-            buildstock_csv = self.cfg['baseline']['buildstock_csv']
-            if os.path.isabs(buildstock_csv):
-                buildstock_csv = os.path.abspath(buildstock_csv)
-            else:
-                buildstock_csv = os.path.abspath(
-                    os.path.join(
-                        os.path.dirname(self.project_filename),
-                        buildstock_csv
-                    )
-                )
-            if not os.path.exists(buildstock_csv):
-                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
+            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
             destination_filename = self.sampler.csv_path
             if destination_filename != buildstock_csv:
                 if os.path.exists(destination_filename):
@@ -225,8 +219,6 @@ class BuildStockBatchBase(object):
                 )
             return destination_filename
         else:
-            if n_datapoints is None:
-                n_datapoints = self.cfg['baseline']['n_datapoints']
             return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):

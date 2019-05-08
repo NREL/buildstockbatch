@@ -106,19 +106,17 @@ def test_provide_buildstock_csv(basic_residential_project_file):
             assert(df3.shape == df2.shape)
             assert((df3['Vintage'] == '<1950').all())
 
-        # Test mutually exclusive failure
+        # Test n_datapoints do not match
         with open(project_filename, 'r') as f:
             cfg = yaml.safe_load(f)
-        cfg['baseline']['n_datapoints'] = 10
+        cfg['baseline']['n_datapoints'] = 100
         with open(project_filename, 'w') as f:
             yaml.dump(cfg, f)
 
         with patch.object(BuildStockBatchBase, 'weather_dir', None), \
                 patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            bsb = BuildStockBatchBase(project_filename)
-            bsb.sampler = sampler
             with pytest.raises(RuntimeError) as ex:
-                bsb.run_sampling()
+                bsb = BuildStockBatchBase(project_filename)
             assert('n_datapoints for sampling should not be provided' in str(ex.value))
 
         # Test file missing
@@ -131,7 +129,19 @@ def test_provide_buildstock_csv(basic_residential_project_file):
 
         with patch.object(BuildStockBatchBase, 'weather_dir', None), \
                 patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            bsb = BuildStockBatchBase(project_filename)
-            bsb.sampler = sampler
             with pytest.raises(FileNotFoundError) as ex:
-                bsb.run_sampling()
+                bsb = BuildStockBatchBase(project_filename)
+
+        # Test downselect mutually exclusive
+        with open(project_filename, 'r') as f:
+            cfg = yaml.safe_load(f)
+        cfg['baseline']['buildstock_csv'] = buildstock_csv
+        cfg['downselect'] = {'resample': True, 'logic': []}
+        with open(project_filename, 'w') as f:
+            yaml.dump(cfg, f)
+
+        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+            with pytest.raises(RuntimeError) as ex:
+                bsb = BuildStockBatchBase(project_filename)
+            assert('Remove or comment out the downselect key' in str(ex.value))
