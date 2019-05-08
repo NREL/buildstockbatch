@@ -39,13 +39,14 @@ following keys:
 Baseline simulations
 ~~~~~~~~~~~~~~~~~~~~
 
-Information about baseline simulations are listed under tyhe
+Information about baseline simulations are listed under the
 ``baseline`` key.
 
 -  ``n_datapoints``: The number of buildings to sample and run for the
    baseline case.
 -  ``n_buildings_represented``: The number of buildings that this sample
    is meant to represent.
+-  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
