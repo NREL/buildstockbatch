@@ -132,15 +132,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             'output_directory',
             os.path.join(self.project_dir, 'localResults')
         )
-        if os.path.isabs(results_dir):
-            results_dir = os.path.abspath(results_dir)
-        else:
-            results_dir = os.path.abspath(
-                os.path.join(
-                    os.path.dirname(self.project_filename),
-                    results_dir
-                )
-            )
+        results_dir = self.path_rel_to_projectfile(results_dir)
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
         return results_dir
