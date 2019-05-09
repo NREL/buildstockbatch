@@ -219,11 +219,12 @@ Under the ``eagle`` key is a list of configuration for running the batch job on 
 Postprocessing
 ~~~~~~~~~~~~~~
 The metadata is combined into a single results file and the time series data is combined into a small group of files
-during the postprocessing step. These are the configuration it.
+during the postprocessing step. The configuration options are:
 
 *  ``postprocessing``: postprocessing configuration
 
-    *  ``aws``: configuration related to uploading and managing data to the amazon web services
+    *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
+       `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
 
         *  ``region_name``: The name of the aws region to use for database creation and other services
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service. If this section is
