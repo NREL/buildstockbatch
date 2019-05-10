@@ -21,18 +21,13 @@ import pandas as pd
 import random
 import requests
 import shlex
-import shutil
 import subprocess
 import time
 
-from .base import BuildStockBatchBase
+from .base import BuildStockBatchBase, SimulationExists
 from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 
 logger = logging_.getLogger(__name__)
-
-
-class SimulationExists(Exception):
-    pass
 
 
 class HPCBatchBase(BuildStockBatchBase):
@@ -118,6 +113,9 @@ class HPCBatchBase(BuildStockBatchBase):
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        self.weather_dir  # Call this to download and/or extract the weather files
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
@@ -169,31 +167,12 @@ class HPCBatchBase(BuildStockBatchBase):
         tick = time.time() - tick
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
-    @staticmethod
-    def make_sim_dir(building_id, upgrade_idx, base_dir, overwrite_existing=False):
-        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
-
-        # Check to see if the simulation is done already and skip it if so.
-        sim_dir = os.path.join(base_dir, sim_id)
-        if os.path.exists(sim_dir):
-            if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
-                raise SimulationExists('{} exists and finished successfully'.format(sim_id))
-            elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
-                raise SimulationExists('{} exists and failed'.format(sim_id))
-            else:
-                shutil.rmtree(sim_dir)
-
-        # Create the simulation directory
-        os.makedirs(sim_dir)
-
-        return sim_id, sim_dir
-
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
                      upgrade_idx=None):
 
         try:
-            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'results'))
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(output_dir, 'simulation_output'))
         except SimulationExists:
             return
 
@@ -213,6 +192,7 @@ class HPCBatchBase(BuildStockBatchBase):
         args = [
             'singularity', 'exec',
             '--contain',
+            '-e',
             '--pwd', '/var/simdata/openstudio',
             '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
             '-B', '{}:/lib/resources'.format(os.path.join(buildstock_dir, 'resources')),
@@ -255,6 +235,8 @@ class HPCBatchBase(BuildStockBatchBase):
                         pass
 
                 cls.cleanup_sim_dir(sim_dir)
+
+        return sim_dir
 
     def get_dask_client(self):
         raise NotImplementedError

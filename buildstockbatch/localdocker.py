@@ -20,8 +20,9 @@ import logging
 import os
 import pandas as pd
 import shutil
+import tempfile
 
-from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,8 @@ class DockerBatchBase(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+        self._weather_dir = None
+
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
@@ -66,10 +69,19 @@ class LocalDockerBatch(DockerBatchBase):
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
 
+    @property
+    def weather_dir(self):
+        if self._weather_dir is None:
+            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
+            self._get_weather_files()
+        return self._weather_dir.name
+
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
-        sim_id = 'bldg{:07d}up{:02d}'.format(i, 0 if upgrade_idx is None else upgrade_idx + 1)
-        sim_dir = os.path.join(results_dir, sim_id)
+        try:
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
+        except SimulationExists:
+            return
 
         bind_mounts = [
             (sim_dir, '/var/simdata/openstudio', 'rw'),
@@ -84,7 +96,6 @@ class LocalDockerBatch(DockerBatchBase):
 
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
-        os.makedirs(sim_dir)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 

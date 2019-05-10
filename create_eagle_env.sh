@@ -19,7 +19,7 @@ MY_CONDA_ENV_NAME=${@:$OPTIND:1}
 MY_CONDA_PREFIX="$CONDA_ENVS_DIR/$MY_CONDA_ENV_NAME"
 module load conda
 conda remove -y --prefix "$MY_CONDA_PREFIX" --all
-conda create -y --prefix "$MY_CONDA_PREFIX" python=3.6 pandas hdf5 pytables
+conda create -y --prefix "$MY_CONDA_PREFIX" python=3.7 pandas hdf5
 source activate "$MY_CONDA_PREFIX"
 pip install --upgrade pip
 if [ $DEV -eq 1 ]

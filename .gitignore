@@ -7,3 +7,4 @@ venv/*
 *.DS_Store
 *.zip
 .pytest_cache
+*.pyc

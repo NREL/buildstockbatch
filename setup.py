@@ -62,7 +62,6 @@ setuptools.setup(
         'pyarrow>=0.10.0',
         'dask[complete]',
         'docker',
-        'awscli',
         'boto3>=1.9.66',
     ],
     extras_require={
@@ -72,12 +71,14 @@ setuptools.setup(
             'Sphinx',
             'sphinx_rtd_theme',
             'flake8',
+            'coverage'
         ]
     },
     entry_points={
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
+            'buildstock_aws=buildstockbatch.aws:main'
         ]
     },
     cmdclass={'test': PyTest},
