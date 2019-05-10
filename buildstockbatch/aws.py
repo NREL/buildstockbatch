@@ -1027,7 +1027,8 @@ class AwsBatchEnv(AwsJobBase):
             self.vpc_cidr = self.vpc_cidr.replace('XXX', str(random.randrange(100, 200)))
 
         self.pub_subnet_cidr = self.vpc_cidr.replace('/16', '/17')
-        self.priv_subnet_cidr = self.vpc_cidr.replace('.0.0/16', '.128.0/17')
+        self.priv_subnet_cidr_1 = self.vpc_cidr.replace('.0.0/16', '.128.0/18')
+        self.priv_subnet_cidr_2 = self.vpc_cidr.replace('.0.0/16', '.192.0/18')
 
         ## Create the VPC
 
@@ -1103,20 +1104,44 @@ class AwsBatchEnv(AwsJobBase):
             ]
         )
 
-        # Create the private subnet (just split the VPC in half)
+        # Create the private subnets
 
-        priv_response = self.ec2.create_subnet(
-            CidrBlock=self.priv_subnet_cidr,
+        priv_response_1 = self.ec2.create_subnet(
+            CidrBlock=self.priv_subnet_cidr_1,
+            AvailabilityZone = f"{self.region}a",
             VpcId=self.vpc_id
         )
 
-        self.priv_vpc_subnet_id = priv_response['Subnet']['SubnetId']
+        self.priv_vpc_subnet_id_1 = priv_response_1['Subnet']['SubnetId']
+
+        logger.info("Private subnet created.")
+
+        priv_response_2 = self.ec2.create_subnet(
+            CidrBlock=self.priv_subnet_cidr_2,
+            AvailabilityZone=f"{self.region}b",
+            VpcId=self.vpc_id
+        )
+
+        self.priv_vpc_subnet_id_2 = priv_response_2['Subnet']['SubnetId']
 
         logger.info("Private subnet created.")
 
         t3_response = self.ec2.create_tags(
             Resources=[
-                self.priv_vpc_subnet_id
+                self.priv_vpc_subnet_id_1
+            ],
+            Tags=[
+                {
+                    'Key': 'Name',
+                    'Value': self.job_identifier
+                }
+            ]
+        )
+
+
+        t3_response = self.ec2.create_tags(
+            Resources=[
+                self.priv_vpc_subnet_id_2
             ],
             Tags=[
                 {
@@ -1275,7 +1300,14 @@ class AwsBatchEnv(AwsJobBase):
 
         art_response = self.ec2.associate_route_table(
             RouteTableId=self.priv_route_table_id,
-            SubnetId=self.priv_vpc_subnet_id
+            SubnetId=self.priv_vpc_subnet_id_1
+        )
+        logger.info("Route table associated with subnet.")
+
+
+        art_response_2 = self.ec2.associate_route_table(
+            RouteTableId=self.priv_route_table_id,
+            SubnetId=self.priv_vpc_subnet_id_2
         )
         logger.info("Route table associated with subnet.")
 
@@ -1476,7 +1508,7 @@ class AwsBatchEnv(AwsJobBase):
                             'optimal',
                         ],
                         'imageId': self.batch_compute_environment_ami,
-                        'subnets': [self.priv_vpc_subnet_id],
+                        'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                         'securityGroupIds': [self.batch_security_group],
                         'instanceRole': self.instance_profile_arn,
                         'bidPercentage': 100,
@@ -1509,7 +1541,7 @@ class AwsBatchEnv(AwsJobBase):
                             'optimal',
                         ],
                         'imageId': self.batch_compute_environment_ami,
-                        'subnets': [self.priv_vpc_subnet_id],
+                        'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                         'securityGroupIds': [self.batch_security_group],
                         'ec2KeyPair': 'nrel-aws-dev-us-west-2',
                         'instanceRole': self.instance_profile_arn
