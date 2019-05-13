@@ -70,6 +70,7 @@ setuptools.setup(
             'codecov',
             'Sphinx',
             'sphinx_rtd_theme',
+            'sphinx-autobuild',
             'flake8',
             'coverage'
         ]
