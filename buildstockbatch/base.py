@@ -41,14 +41,6 @@ class SimulationExists(Exception):
     pass
 
 
-def is_quantity(column_name):
-    units = ['_kwh', '_therm', '_mbtu', '_w', '_kw', '_usd']
-    for unit in units:
-        if column_name.lower().endswith(unit):
-            return True
-    return False
-
-
 def read_data_point_out_json(filename):
     try:
         with open(filename, 'r') as f:
@@ -89,19 +81,6 @@ def flatten_datapoint_json(d):
     for k, v in d.get(col2, {}).items():
         if k not in d.get(col1, {}):
             new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
-
-    # Scale all the SimulationOutputReport measurements by the number of units represented, to get per unit figures
-    col3 = 'SimulationOutputReport'
-    units = int(new_d.get(f'{col1}.units_represented', 1))
-    new_d[f'{col1}.units_represented'] = units
-    for k, v in d.get(col3, {}).items():
-        if is_quantity(k):
-            if not v:
-                v = 0
-            v = float(v)
-            new_d[f'{col3}.{k}'] = v / units
-        else:
-            new_d[f'{col3}.{k}'] = v
 
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
@@ -510,7 +489,7 @@ class BuildStockBatchBase(object):
                 assert building_id in base_results_df.index, f"Building id {building_id} not present in results.csv"
                 new_pq['building_id'] = building_id
                 units_represented = int(base_results_df.at[building_id, 'build_existing_model.units_represented'])
-                new_pq.loc[:, new_pq.columns.map(is_quantity)] /= units_represented
+                new_pq['units_represented'] = units_represented
 
                 parquets.append(new_pq)
 
