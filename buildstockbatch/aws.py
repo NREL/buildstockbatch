@@ -1037,22 +1037,14 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the VPC
 
-        try:
+        response = self.ec2.create_vpc(
+            CidrBlock=self.vpc_cidr,
+            AmazonProvidedIpv6CidrBlock=False,
+            InstanceTenancy='default'
+        )
+        self.vpc_id = response['Vpc']['VpcId']
+        logger.info(f"VPC {self.vpc_id} created")
 
-            response = self.ec2.create_vpc(
-                CidrBlock=self.vpc_cidr,
-                AmazonProvidedIpv6CidrBlock=False,
-                InstanceTenancy='default'
-            )
-
-            self.vpc_id = response['Vpc']['VpcId']
-
-            logger.info(f"VPC {self.vpc_id} created")
-
-        # Creating a spot here to catch other seen errors - VPC limit should block the job, however.
-        except Exception as e:
-            if 'VpcLimitExceeded' in str(e):
-                raise
         while True:
             try:
                 self.ec2.create_tags(
