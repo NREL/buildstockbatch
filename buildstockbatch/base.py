@@ -83,6 +83,13 @@ def flatten_datapoint_json(d):
         if k not in d.get(col1, {}):
             new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
 
+    # if there is no units_represented key, default to 1
+    units = int(new_d.get(f'{col1}.units_represented', 1))
+    new_d[f'{col1}.units_represented'] = units
+    col3 = 'SimulationOutputReport'
+    for k, v in d.get(col3, {}).items():
+        new_d[f'{col3}.{k}'] = v
+
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
