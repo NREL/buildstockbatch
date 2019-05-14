@@ -2444,6 +2444,11 @@ class AwsBatch(DockerBatchBase):
         else:
             this_type = "S"
 
+        # this is an override fix for our keys - not yet sure what changed
+        if key == 'building_id' or key == 'upgrade_idx':
+            this_type = "S"
+
+
         if this_type == 'BOOL':
             this_item = {key: {this_type: value}}
         else:
