@@ -219,7 +219,7 @@ Under the ``eagle`` key is a list of configuration for running the batch job on 
 Postprocessing
 ~~~~~~~~~~~~~~
 
-After a batch of simulation completes, to analyze BuildStock results the invdividual simulation results are aggregated in a postprocessing step as follows:
+After a batch of simulation completes, to analyze BuildStock results the individual simulation results are aggregated in a postprocessing step as follows:
 
 1. The inputs and annual outputs of each simulation are gathered together into one table for each upgrade scenario. In older versions that ran on PAT, this was known as the ``results.csv``. This table is now made available in both csv and parquet format. 
 2. Time series results for each simulation are gathered and concatenated into fewer larger parquet files that are better suited for querying using big data analysis tools. 
