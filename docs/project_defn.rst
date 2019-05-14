@@ -197,3 +197,63 @@ These constructs can be combined to declare arbitrarily complex logic. Here is a
 
 This will select homes that were built before 1970, don't have three car garages, are less 
 than 3500 sq.ft., and have only one storey.
+
+Eagle Configuration
+~~~~~~~~~~~~~~~~~~~
+
+Under the ``eagle`` key is a list of configuration for running the batch job on the Eagle.
+
+*  ``n_jobs``: Number of eagle jobs to parallelize the simulation into
+*  ``minutes_per_sim``: Maximum allocated simulation time in minutes
+*  ``account``: Eagle allocation account to charge the job to
+*  ``sampling``: Configuration for the sampling in eagle
+
+    *  ``time``: Maximum time in minutes to allocate to sampling job
+
+*  ``postprocessing``: Eagle configuration for the postprocessing step
+
+    *  ``time``: Maximum time in minutes to allocate postprocessing job
+    *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into
+
+
+Postprocessing
+~~~~~~~~~~~~~~
+
+After a batch of simulation completes, to analyze BuildStock results the individual simulation results are aggregated in a postprocessing step as follows:
+
+1. The inputs and annual outputs of each simulation are gathered together into one table for each upgrade scenario. In older versions that ran on PAT, this was known as the ``results.csv``. This table is now made available in both csv and parquet format. 
+2. Time series results for each simulation are gathered and concatenated into fewer larger parquet files that are better suited for querying using big data analysis tools. 
+
+Uploading to AWS Athena
+.......................
+
+BuildStock results can optionally be uploaded to AWS for further analysis using Athena. This process requires appropriate access to an AWS account to be configured on your machine. `These instructions <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_ cover how to set that up once you have your AWS access keys. If you don't have keys, consult your AWS administrator to get them set up.
+
+Postprocessing Configuration Options
+....................................
+
+The configuration options for postprocessing and AWS upload are:
+
+*  ``postprocessing``: postprocessing configuration
+
+    *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
+       `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+       Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
+
+        *  ``region_name``: The name of the aws region to use for database creation and other services
+        *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
+
+            * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
+            * ``prefix``: S3 prefix at which the data is to be uploaded.
+            The complete path will become: ``s3://bucket/prefix/output_directory_name``
+
+        *  ``athena``: configurations for Amazon Athena database creation. If this section is missing/commented-out, no
+           Athena tables are created.
+
+            *  ``glue_service_role``: The data in s3 is catalogued using Amazon Glue data crawler. An IAM role must be
+               present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
+               name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default". Consult
+               your AWS administrator for help.
+            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
+            *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
+               before aborting it.

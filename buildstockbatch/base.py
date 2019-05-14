@@ -31,6 +31,7 @@ import zipfile
 import time
 import sys
 import random
+import boto3
 
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 
@@ -206,6 +207,10 @@ class BuildStockBatchBase(object):
     def results_dir(self):
         raise NotImplementedError
 
+    @property
+    def output_dir(self):
+        raise NotImplementedError
+
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
@@ -324,11 +329,132 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
-    def process_results(self):
-        client = self.get_dask_client()  # noqa: F841
+    def upload_results(self):
+        logger.info("Uploading the parquet files to s3")
 
+        output_folder_name = os.path.basename(self.output_dir)
+        parquet_dir = os.path.join(self.results_dir, 'parquet')
+
+        if not os.path.isdir(parquet_dir):
+            logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
+            raise FileNotFoundError(parquet_dir)
+
+        all_files = []
+        for path, subdirs, files in os.walk(parquet_dir):
+            for name in files:
+                full_path = os.path.join(path, name)
+                partial_path = re.match(parquet_dir + r'/?(.*)', full_path)
+                all_files.append(partial_path.group(1))
+
+        s3_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('prefix', None)
+        s3_bucket = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('bucket', None)
+        if not (s3_prefix and s3_bucket):
+            logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
+            return
+        s3_prefix = s3_prefix + '/' + output_folder_name + '/'
+
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(s3_bucket)
+        n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
+        if n_existing_files > 0:
+            logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix}.")
+            raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix}")
+
+        def upload_file(filepath):
+            full_path = os.path.join(parquet_dir, filepath)
+            s3 = boto3.resource('s3')
+            bucket = s3.Bucket(s3_bucket)
+            s3key = s3_prefix + filepath
+            bucket.upload_file(full_path, s3key)
+
+        files_bag = db. \
+            from_sequence(all_files, partition_size=500).map(upload_file)
+        files_bag.compute()
+        logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix}")
+        athena_flag = 'athena' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if athena_flag:
+            self.create_athena_tables(s3_bucket, s3_prefix)
+
+    def create_athena_tables(self, s3_bucket, s3_prefix):
+        logger.info("Creating Athena tables using glue crawler")
+
+        aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
+        region_name = aws_conf.get('region_name', 'us-west-2')
+        db_name = aws_conf.get('athena', {}).get('database_name', None)
+        role = aws_conf.get('athena', {}).get('glue_service_role', 'service-role/AWSGlueServiceRole-default')
+        max_crawling_time = aws_conf.get('athena', {}).get('max_crawling_time', 600)
+        assert db_name, "athena:database_name not supplied"
+
+        glueClient = boto3.client('glue', region_name=region_name)
+        crawlTarget = {
+            'S3Targets': [{
+                'Path': f's3://{s3_bucket}/{s3_prefix}',
+                'Exclusions': []
+            }]
+        }
+        output_folder_name = os.path.basename(self.output_dir)
+        crawler_name = db_name+'_'+output_folder_name
+        tbl_prefix = output_folder_name + '_'
+
+        def create_crawler():
+            glueClient.create_crawler(Name=crawler_name,
+                                      Role=role,
+                                      Targets=crawlTarget,
+                                      DatabaseName=db_name,
+                                      TablePrefix=tbl_prefix)
+
+        try:
+            create_crawler()
+        except glueClient.exceptions.AlreadyExistsException:
+            logger.info(f"Deleting existing crawler: {crawler_name}. And creating new one.")
+            glueClient.delete_crawler(Name=crawler_name)
+            time.sleep(1)  # A small delay after deleting is required to prevent AlreadyExistsException again
+            create_crawler()
+
+        try:
+            existing_tables = [x['Name'] for x in glueClient.get_tables(DatabaseName=db_name)['TableList']]
+        except glueClient.exceptions.EntityNotFoundException:
+            existing_tables = []
+
+        to_be_deleted_tables = [x for x in existing_tables if x.startswith(tbl_prefix)]
+        if to_be_deleted_tables:
+            logger.info(f"Deleting existing tables in db {db_name}: {to_be_deleted_tables}. And creating new ones.")
+            glueClient.batch_delete_table(DatabaseName=db_name, TablesToDelete=to_be_deleted_tables)
+
+        glueClient.start_crawler(Name=crawler_name)
+        logger.info("Crawler started")
+
+        t = time.time()
+        while time.time() - t < (max_crawling_time+60):
+            crawler_state = glueClient.get_crawler(Name=crawler_name)['Crawler']['State']
+            metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
+            if crawler_state != 'RUNNING':
+                logger.info(f"Crawling has completed running. It is {crawler_state}.")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
+                break
+            elif time.time() - t > max_crawling_time:
+                logger.info("Crawler is taking too long. Aborting ...")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
+                glueClient.stop_crawler(Name=crawler_name)
+                break
+            time.sleep(30)
+
+    def process_results(self, skip_combine=False, force_upload=False):
+        self.get_dask_client()  # noqa: F841
+
+        if not skip_combine:
+            self._combine_results()
+
+        s3_upload_flag = 's3' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if s3_upload_flag or force_upload:
+            self.upload_results()
+
+    def _combine_results(self):
         sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
-
         results_csvs_dir = os.path.join(self.results_dir, 'results_csvs')
         parquet_dir = os.path.join(self.results_dir, 'parquet')
         ts_dir = os.path.join(self.results_dir, 'parquet', 'timeseries')
@@ -339,8 +465,8 @@ class BuildStockBatchBase(object):
                 shutil.rmtree(dr)
             os.makedirs(dr)
 
-        results_by_upgrade = defaultdict(list)
-        all_dirs = list()
+        all_dirs = list()  # get the list of all the building simulation results directories
+        results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
         for item in os.listdir(sim_out_dir):
             m = re.match(r'up(\d+)', item)
             if not m:
@@ -364,7 +490,6 @@ class BuildStockBatchBase(object):
                 map(lambda x: os.path.join(sim_out_dir, x, 'run', 'data_point_out.json')).\
                 map(read_data_point_out_json).\
                 filter(lambda x: x is not None)
-
             meta = pd.DataFrame(list(
                 datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
                 map(flatten_datapoint_json).take(10)

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "begin eagle_postprocessing.sh"
+
 echo "Job ID: $SLURM_JOB_ID"
 echo "Hostname: $HOSTNAME"
 
@@ -7,6 +9,8 @@ module load conda singularity-container
 source activate "$MY_CONDA_ENV"
 
 export POSTPROCESS=1
+
+echo "UPLOADONLY: ${UPLOADONLY}"
 
 SCHEDULER_FILE=$OUT_DIR/dask_scheduler.json
 
