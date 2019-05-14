@@ -193,15 +193,15 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
-        sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
