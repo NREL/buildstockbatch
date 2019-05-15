@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 class BuildStockSampler(object):
 
+    csv_path = None
+
     def __init__(self, cfg, buildstock_dir, project_dir):
         """
         Create the buildstock.csv file required for batch simulations using this class.
