@@ -32,6 +32,7 @@ import time
 import sys
 import random
 import boto3
+from pathlib import Path
 
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 
@@ -342,19 +343,16 @@ class BuildStockBatchBase(object):
     def upload_results(self):
         logger.info("Uploading the parquet files to s3")
 
-        output_folder_name = os.path.basename(self.output_dir)
-        parquet_dir = os.path.join(self.results_dir, 'parquet')
+        output_folder_name = Path(self.output_dir).name
+        parquet_dir = Path(self.results_dir).joinpath('parquet')
 
-        if not os.path.isdir(parquet_dir):
+        if not parquet_dir.is_dir():
             logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
             raise FileNotFoundError(parquet_dir)
 
         all_files = []
-        for path, subdirs, files in os.walk(parquet_dir):
-            for name in files:
-                full_path = os.path.join(path, name)
-                partial_path = re.match(parquet_dir + r'/?(.*)', full_path)
-                all_files.append(partial_path.group(1))
+        for files in parquet_dir.rglob('*.parquet'):
+            all_files.append(files.relative_to(parquet_dir))
 
         s3_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('prefix', None)
         s3_bucket = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('bucket', None)
@@ -371,11 +369,11 @@ class BuildStockBatchBase(object):
             raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix}")
 
         def upload_file(filepath):
-            full_path = os.path.join(parquet_dir, filepath)
+            full_path = parquet_dir.joinpath(filepath)
             s3 = boto3.resource('s3')
             bucket = s3.Bucket(s3_bucket)
-            s3key = s3_prefix + filepath
-            bucket.upload_file(full_path, s3key)
+            s3key = Path(s3_prefix).joinpath(filepath).as_posix()
+            bucket.upload_file(str(full_path), str(s3key))
 
         files_bag = db. \
             from_sequence(all_files, partition_size=500).map(upload_file)
@@ -578,10 +576,12 @@ class BuildStockBatchBase(object):
                     f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
 
         def bldg_group(directory_name):
-            mtch = re.search('up([0-9]+)/bldg([0-9]+)', directory_name)
-            assert mtch, f"list of directories passed should be properly formatted as: 'up([0-9]+)/bldg([0-9]+)'. " \
-                         f"Got {directory_name}"
-            group = 'up' + mtch[1] + '_Group' + str(int(mtch[2]) // group_size)
+            directory_path = Path(directory_name)
+            upgrade_match = re.search(r'up([0-9]+)', str(directory_path.parent))
+            bldg_match = re.search(r'bldg([0-9]+)', directory_path.name)
+            assert upgrade_match and bldg_match, f"list of directories passed should be properly formatted as: " \
+                f"'up([0-9]+)*bldg([0-9]+)'. Got {directory_name}"
+            group = 'up' + upgrade_match[1] + '_Group' + str(int(bldg_match[1]) // group_size)
             return group
 
         def directory_name_append(name1, name2):
