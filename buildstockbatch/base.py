@@ -508,7 +508,6 @@ class BuildStockBatchBase(object):
                 results_by_upgrade[upgrade_id].append(full_path)
                 all_dirs.append(full_path)
 
-        base_results_df = None
         # create the results.csv and results.parquet files
         for upgrade_id, sim_dir_list in results_by_upgrade.items():
 
@@ -564,7 +563,6 @@ class BuildStockBatchBase(object):
             logger.debug('Saving to parquet')
             if upgrade_id == 0:
                 results_parquet_dir = os.path.join(parquet_dir, 'baseline')
-                base_results_df = results_df.set_index('building_id')
             else:
                 results_parquet_dir = os.path.join(parquet_dir, 'upgrades', 'upgrade={}'.format(upgrade_id))
             os.makedirs(results_parquet_dir, exist_ok=True)
