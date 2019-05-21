@@ -635,15 +635,10 @@ class BuildStockBatchBase(object):
                 new_pq = pd.read_parquet(full_path, engine='pyarrow')
                 new_pq.rename(columns=to_camelcase, inplace=True)
 
-                # Scale the timeseries by the number of units represented to make it per unit measurement
                 building_id_match = re.search(r'bldg(\d+)', folder)
                 assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
                 building_id = int(building_id_match.group(1))
-                assert building_id in base_results_df.index, f"Building id {building_id} not present in results.csv"
                 new_pq['building_id'] = building_id
-                units_represented = int(base_results_df.at[building_id, 'build_existing_model.units_represented'])
-                new_pq['units_represented'] = units_represented
-
                 parquets.append(new_pq)
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
