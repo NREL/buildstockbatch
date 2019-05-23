@@ -70,12 +70,30 @@ def flatten_datapoint_json(d):
     }
     for k1, k2s in cols_to_keep.items():
         for k2 in k2s:
-            new_d['{}.{}'.format(k1, k2)] = d.get(k1, {}).get(k2)
-    for k1 in ('BuildExistingModel', 'SimulationOutputReport'):
-        for k2, v in d.get(k1, {}).items():
-            new_d['{}.{}'.format(k1, k2)] = v
+            new_d[f'{k1}.{k2}'] = d.get(k1, {}).get(k2)
+
+    # copy over all the key and values from BuildExistingModel
+    col1 = 'BuildExistingModel'
+    for k, v in d.get(col1, {}).items():
+        new_d[f'{col1}.{k}'] = v
+
+    # if there are some key, values in BuildingCharacteristicsReport that aren't part of BuildExistingModel, copy them
+    # and make it part of BuildExistingModel
+    col2 = 'BuildingCharacteristicsReport'
+    for k, v in d.get(col2, {}).items():
+        if k not in d.get(col1, {}):
+            new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
+
+    # if there is no units_represented key, default to 1
+    units = int(new_d.get(f'{col1}.units_represented', 1))
+    new_d[f'{col1}.units_represented'] = units
+    col3 = 'SimulationOutputReport'
+    for k, v in d.get(col3, {}).items():
+        new_d[f'{col3}.{k}'] = v
+
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
+
     return new_d
 
 
@@ -613,11 +631,12 @@ class BuildStockBatchBase(object):
                 if not os.path.isfile(full_path):
                     continue
                 new_pq = pd.read_parquet(full_path, engine='pyarrow')
+                new_pq.rename(columns=to_camelcase, inplace=True)
 
                 building_id_match = re.search(r'bldg(\d+)', folder)
                 assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
-                new_pq['building_id'] = int(building_id_match.group(1))
-                new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
+                building_id = int(building_id_match.group(1))
+                new_pq['building_id'] = building_id
                 parquets.append(new_pq)
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)

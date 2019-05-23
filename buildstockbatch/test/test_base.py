@@ -82,6 +82,75 @@ def test_missing_simulation_output_report_applicable(basic_residential_project_f
     assert((~df['simulation_output_report.applicable']).any())
 
 
+def test_combine_files_flexible(basic_residential_project_file):
+    # Allows addition/removable/rename of columns. For columns that remain unchanged, verifies that the data matches
+    # with stored test_results. If this test passes but test_combine_files fails, then test_results/parquet and
+    # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
+    # removed/renamed.
+
+    project_filename, results_dir = basic_residential_project_file()
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    def simplify_columns(colname):
+        return colname.lower().replace('_', '')
+
+    # test results.csv files
+    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
+    test_path = os.path.join(results_dir, 'results_csvs')
+
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
+        sort_values('buildingid').reset_index().drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
+        sort_values('buildingid').reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
+    pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
+
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
+        sort_values('buildingid').reset_index().drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
+        sort_values('buildingid').reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
+    pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
+
+    # test parquet files
+    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
+    test_path = os.path.join(results_dir, 'parquet')
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
+        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
+        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
+        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet')).\
+        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
+        rename(columns=simplify_columns).sort_values(['buildingid', 'time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet')).\
+        rename(columns=simplify_columns).sort_values(['buildingid', 'time']).reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1', 'Group0.parquet')).\
+        rename(columns=simplify_columns).sort_values(['buildingid', 'time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1', 'Group0.parquet')).\
+        rename(columns=simplify_columns).sort_values(['buildingid', 'time']).reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+
 def test_provide_buildstock_csv(basic_residential_project_file):
     with tempfile.TemporaryDirectory() as buildstock_csv_dir:
         buildstock_csv = os.path.join(buildstock_csv_dir, 'buildstock.csv')
@@ -192,15 +261,15 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
-        sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1', 'Group0.parquet'))\
-        .sort_values(['building_id', 'Time']).reset_index().drop(columns=['index'])
+        .sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
