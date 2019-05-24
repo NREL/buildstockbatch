@@ -143,20 +143,16 @@ class LocalDockerBatch(DockerBatchBase):
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
     @property
+    def output_dir(self):
+        return self.results_dir
+
+    @property
     def results_dir(self):
         results_dir = self.cfg.get(
             'output_directory',
             os.path.join(self.project_dir, 'localResults')
         )
-        if os.path.isabs(results_dir):
-            results_dir = os.path.abspath(results_dir)
-        else:
-            results_dir = os.path.abspath(
-                os.path.join(
-                    os.path.dirname(self.project_filename),
-                    results_dir
-                )
-            )
+        results_dir = self.path_rel_to_projectfile(results_dir)
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
         return results_dir
@@ -199,14 +195,21 @@ def main():
     parser.add_argument('-j', type=int,
                         help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
                         default=-1)
-    parser.add_argument('--skipsims',
-                        help='Skip simulating buildings, useful for when the simulations are already done',
-                        action='store_true')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--postprocessonly',
+                       help='Only do postprocessing, useful for when the simulations are already done',
+                       action='store_true')
+    group.add_argument('--uploadonly',
+                       help='Only upload to S3, useful when postprocessing is already done. Ignores the '
+                       'upload flag in yaml', action='store_true')
     args = parser.parse_args()
     batch = LocalDockerBatch(args.project_filename)
-    if not args.skipsims:
+    if not (args.postprocessonly or args.uploadonly):
         batch.run_batch(n_jobs=args.j)
-    batch.process_results()
+    if args.uploadonly:
+        batch.process_results(skip_combine=True, force_upload=True)
+    else:
+        batch.process_results()
 
 
 if __name__ == '__main__':

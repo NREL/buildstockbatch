@@ -21,6 +21,7 @@ import pandas as pd
 import random
 import requests
 import shlex
+import shutil
 import subprocess
 import time
 
@@ -109,6 +110,13 @@ class HPCBatchBase(BuildStockBatchBase):
         return results_dir
 
     def run_batch(self):
+        destination_dir = os.path.dirname(self.sampler.csv_path)
+        if os.path.exists(destination_dir):
+            shutil.rmtree(destination_dir)
+        shutil.copytree(
+            os.path.join(self.project_dir, 'housing_characteristics'),
+            destination_dir
+        )
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:

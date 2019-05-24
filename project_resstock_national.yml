@@ -5,7 +5,8 @@ output_directory: /scratch/nmerket/national_test_outputs
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  n_datapoints: 20
+  #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
+  n_datapoints: 3000  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -53,3 +54,14 @@ aws:
   vpc_cidr: 172.134.0.0/16
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: noel.merket@nrel.gov
+
+postprocessing:
+  aws:
+    region_name: 'us-west-2'
+    s3:
+      bucket: resbldg-datasets
+      prefix: resstock-athena/calibration_runs_new
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: calibration_runs_testing
+      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it

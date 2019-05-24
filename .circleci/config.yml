@@ -16,7 +16,7 @@ jobs:
           name: Run PyTest
           command: |
             source env/bin/activate
-            pytest
+            pytest -v
       - run:
           name: Run coverage tests
           when: always

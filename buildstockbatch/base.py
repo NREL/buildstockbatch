@@ -31,6 +31,8 @@ import zipfile
 import time
 import sys
 import random
+import boto3
+from pathlib import Path
 
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 
@@ -68,12 +70,30 @@ def flatten_datapoint_json(d):
     }
     for k1, k2s in cols_to_keep.items():
         for k2 in k2s:
-            new_d['{}.{}'.format(k1, k2)] = d.get(k1, {}).get(k2)
-    for k1 in ('BuildExistingModel', 'SimulationOutputReport'):
-        for k2, v in d.get(k1, {}).items():
-            new_d['{}.{}'.format(k1, k2)] = v
+            new_d[f'{k1}.{k2}'] = d.get(k1, {}).get(k2)
+
+    # copy over all the key and values from BuildExistingModel
+    col1 = 'BuildExistingModel'
+    for k, v in d.get(col1, {}).items():
+        new_d[f'{col1}.{k}'] = v
+
+    # if there are some key, values in BuildingCharacteristicsReport that aren't part of BuildExistingModel, copy them
+    # and make it part of BuildExistingModel
+    col2 = 'BuildingCharacteristicsReport'
+    for k, v in d.get(col2, {}).items():
+        if k not in d.get(col1, {}):
+            new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
+
+    # if there is no units_represented key, default to 1
+    units = int(new_d.get(f'{col1}.units_represented', 1))
+    new_d[f'{col1}.units_represented'] = units
+    col3 = 'SimulationOutputReport'
+    for k, v in d.get(col3, {}).items():
+        new_d[f'{col3}.{k}'] = v
+
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
+
     return new_d
 
 
@@ -120,7 +140,32 @@ class BuildStockBatchBase(object):
         elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
+        if 'buildstock_csv' in self.cfg['baseline']:
+            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
+            if not os.path.exists(buildstock_csv):
+                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
+            df = pd.read_csv(buildstock_csv)
+            n_datapoints = self.cfg['baseline'].get('n_datapoints', df.shape[0])
+            self.cfg['baseline']['n_datapoints'] = n_datapoints
+            if n_datapoints != df.shape[0]:
+                raise RuntimeError(
+                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be '
+                    'equal to the number of rows in the buildstock.csv file. Remove or comment out '
+                    'baseline->n_datapoints from your project file.'
+                )
+            if 'downselect' in self.cfg:
+                raise RuntimeError(
+                    'A buildstock_csv was provided, which isn\'t compatible with downselecting.'
+                    'Remove or comment out the downselect key from your project file.'
+                )
+
         self.sampler = None
+
+    def path_rel_to_projectfile(self, x):
+        if os.path.isabs(x):
+            return os.path.abspath(x)
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
 
     def _get_weather_files(self):
         local_weather_dir = os.path.join(self.project_dir, 'weather')
@@ -128,15 +173,7 @@ class BuildStockBatchBase(object):
             shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
-            if os.path.isabs(self.cfg['weather_files_path']):
-                weather_file_path = os.path.abspath(self.cfg['weather_files_path'])
-            else:
-                weather_file_path = os.path.abspath(
-                    os.path.join(
-                        os.path.dirname(self.project_filename),
-                        self.cfg['weather_files_path']
-                    )
-                )
+            weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
                 logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
@@ -162,15 +199,7 @@ class BuildStockBatchBase(object):
 
     @property
     def buildstock_dir(self):
-        if os.path.isabs(self.cfg['buildstock_directory']):
-            d = os.path.abspath(self.cfg['buildstock_directory'])
-        else:
-            d = os.path.abspath(
-                os.path.join(
-                    os.path.dirname(self.project_filename),
-                    self.cfg['buildstock_directory']
-                )
-            )
+        d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
         # logger.debug('buildstock_dir = {}'.format(d))
         assert(os.path.isdir(d))
         return d
@@ -188,10 +217,26 @@ class BuildStockBatchBase(object):
     def results_dir(self):
         raise NotImplementedError
 
+    @property
+    def output_dir(self):
+        raise NotImplementedError
+
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
-        return self.sampler.run_sampling(n_datapoints)
+        if 'buildstock_csv' in self.cfg['baseline']:
+            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
+            destination_filename = self.sampler.csv_path
+            if destination_filename != buildstock_csv:
+                if os.path.exists(destination_filename):
+                    os.remove(destination_filename)
+                shutil.copy(
+                    buildstock_csv,
+                    destination_filename
+                )
+            return destination_filename
+        else:
+            return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError
@@ -306,11 +351,129 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
-    def process_results(self):
-        client = self.get_dask_client()  # noqa: F841
+    def upload_results(self):
+        logger.info("Uploading the parquet files to s3")
 
+        output_folder_name = Path(self.output_dir).name
+        parquet_dir = Path(self.results_dir).joinpath('parquet')
+
+        if not parquet_dir.is_dir():
+            logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
+            raise FileNotFoundError(parquet_dir)
+
+        all_files = []
+        for files in parquet_dir.rglob('*.parquet'):
+            all_files.append(files.relative_to(parquet_dir))
+
+        s3_prefix = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('prefix', None)
+        s3_bucket = self.cfg.get('postprocessing', {}).get('aws', {}).get('s3', {}).get('bucket', None)
+        if not (s3_prefix and s3_bucket):
+            logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
+            return
+        s3_prefix = s3_prefix + '/' + output_folder_name + '/'
+
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(s3_bucket)
+        n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
+        if n_existing_files > 0:
+            logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix}.")
+            raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix}")
+
+        def upload_file(filepath):
+            full_path = parquet_dir.joinpath(filepath)
+            s3 = boto3.resource('s3')
+            bucket = s3.Bucket(s3_bucket)
+            s3key = Path(s3_prefix).joinpath(filepath).as_posix()
+            bucket.upload_file(str(full_path), str(s3key))
+
+        files_bag = db. \
+            from_sequence(all_files, partition_size=500).map(upload_file)
+        files_bag.compute()
+        logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix}")
+        athena_flag = 'athena' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if athena_flag:
+            self.create_athena_tables(s3_bucket, s3_prefix)
+
+    def create_athena_tables(self, s3_bucket, s3_prefix):
+        logger.info("Creating Athena tables using glue crawler")
+
+        aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
+        region_name = aws_conf.get('region_name', 'us-west-2')
+        db_name = aws_conf.get('athena', {}).get('database_name', None)
+        role = aws_conf.get('athena', {}).get('glue_service_role', 'service-role/AWSGlueServiceRole-default')
+        max_crawling_time = aws_conf.get('athena', {}).get('max_crawling_time', 600)
+        assert db_name, "athena:database_name not supplied"
+
+        glueClient = boto3.client('glue', region_name=region_name)
+        crawlTarget = {
+            'S3Targets': [{
+                'Path': f's3://{s3_bucket}/{s3_prefix}',
+                'Exclusions': []
+            }]
+        }
+        output_folder_name = os.path.basename(self.output_dir)
+        crawler_name = db_name+'_'+output_folder_name
+        tbl_prefix = output_folder_name + '_'
+
+        def create_crawler():
+            glueClient.create_crawler(Name=crawler_name,
+                                      Role=role,
+                                      Targets=crawlTarget,
+                                      DatabaseName=db_name,
+                                      TablePrefix=tbl_prefix)
+
+        try:
+            create_crawler()
+        except glueClient.exceptions.AlreadyExistsException:
+            logger.info(f"Deleting existing crawler: {crawler_name}. And creating new one.")
+            glueClient.delete_crawler(Name=crawler_name)
+            time.sleep(1)  # A small delay after deleting is required to prevent AlreadyExistsException again
+            create_crawler()
+
+        try:
+            existing_tables = [x['Name'] for x in glueClient.get_tables(DatabaseName=db_name)['TableList']]
+        except glueClient.exceptions.EntityNotFoundException:
+            existing_tables = []
+
+        to_be_deleted_tables = [x for x in existing_tables if x.startswith(tbl_prefix)]
+        if to_be_deleted_tables:
+            logger.info(f"Deleting existing tables in db {db_name}: {to_be_deleted_tables}. And creating new ones.")
+            glueClient.batch_delete_table(DatabaseName=db_name, TablesToDelete=to_be_deleted_tables)
+
+        glueClient.start_crawler(Name=crawler_name)
+        logger.info("Crawler started")
+
+        t = time.time()
+        while time.time() - t < (max_crawling_time+60):
+            crawler_state = glueClient.get_crawler(Name=crawler_name)['Crawler']['State']
+            metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
+            if crawler_state != 'RUNNING':
+                logger.info(f"Crawling has completed running. It is {crawler_state}.")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
+                break
+            elif time.time() - t > max_crawling_time:
+                logger.info("Crawler is taking too long. Aborting ...")
+                logger.info(f"TablesCreated: {metrics['TablesCreated']} "
+                            f"TablesUpdated: {metrics['TablesUpdated']} "
+                            f"TablesDeleted: {metrics['TablesDeleted']} ")
+                glueClient.stop_crawler(Name=crawler_name)
+                break
+            time.sleep(30)
+
+    def process_results(self, skip_combine=False, force_upload=False):
+        self.get_dask_client()  # noqa: F841
+
+        if not skip_combine:
+            self._combine_results()
+
+        s3_upload_flag = 's3' in self.cfg.get('postprocessing', {}).get('aws', {})
+        if s3_upload_flag or force_upload:
+            self.upload_results()
+
+    def _combine_results(self):
         sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
-
         results_csvs_dir = os.path.join(self.results_dir, 'results_csvs')
         parquet_dir = os.path.join(self.results_dir, 'parquet')
         ts_dir = os.path.join(self.results_dir, 'parquet', 'timeseries')
@@ -321,8 +484,8 @@ class BuildStockBatchBase(object):
                 shutil.rmtree(dr)
             os.makedirs(dr)
 
-        results_by_upgrade = defaultdict(list)
-        all_dirs = list()
+        all_dirs = list()  # get the list of all the building simulation results directories
+        results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
         for item in os.listdir(sim_out_dir):
             m = re.match(r'up(\d+)', item)
             if not m:
@@ -345,7 +508,6 @@ class BuildStockBatchBase(object):
                 map(lambda x: os.path.join(sim_out_dir, x, 'run', 'data_point_out.json')).\
                 map(read_data_point_out_json).\
                 filter(lambda x: x is not None)
-
             meta = pd.DataFrame(list(
                 datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
                 map(flatten_datapoint_json).take(10)
@@ -417,7 +579,7 @@ class BuildStockBatchBase(object):
 
         avg_parquet_size = total_size / count
 
-        group_size = int(1.5*1024*1024*1024 / avg_parquet_size)
+        group_size = int(1.3*1024*1024*1024 / avg_parquet_size)
         if group_size < 1:
             group_size = 1
 
@@ -425,10 +587,12 @@ class BuildStockBatchBase(object):
                     f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
 
         def bldg_group(directory_name):
-            mtch = re.search('up([0-9]+)/bldg([0-9]+)', directory_name)
-            assert mtch, f"list of directories passed should be properly formatted as: 'up([0-9]+)/bldg([0-9]+)'. " \
-                         f"Got {directory_name}"
-            group = 'up' + mtch[1] + '_Group' + str(int(mtch[2]) // group_size)
+            directory_path = Path(directory_name)
+            upgrade_match = re.search(r'up([0-9]+)', str(directory_path.parent))
+            bldg_match = re.search(r'bldg([0-9]+)', directory_path.name)
+            assert upgrade_match and bldg_match, f"list of directories passed should be properly formatted as: " \
+                f"'up([0-9]+)*bldg([0-9]+)'. Got {directory_name}"
+            group = 'up' + upgrade_match[1] + '_Group' + str(int(bldg_match[1]) // group_size)
             return group
 
         def directory_name_append(name1, name2):
@@ -460,11 +624,12 @@ class BuildStockBatchBase(object):
                 if not os.path.isfile(full_path):
                     continue
                 new_pq = pd.read_parquet(full_path, engine='pyarrow')
+                new_pq.rename(columns=to_camelcase, inplace=True)
 
                 building_id_match = re.search(r'bldg(\d+)', folder)
                 assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
-                new_pq['building_id'] = int(building_id_match.group(1))
-                new_pq.rename(columns=lambda x: x.replace(':', '_').replace('[', "").replace("]", ""), inplace=True)
+                building_id = int(building_id_match.group(1))
+                new_pq['building_id'] = building_id
                 parquets.append(new_pq)
 
             pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)

@@ -176,7 +176,7 @@ class EagleBatch(HPCBatchBase):
         job_id = m.group(1)
         return [job_id]
 
-    def queue_post_processing(self, after_jobids):
+    def queue_post_processing(self, after_jobids=[], upload_only=False):
 
         # Configuration values
         account = self.cfg['eagle']['account']
@@ -187,7 +187,7 @@ class EagleBatch(HPCBatchBase):
         env['PROJECTFILE'] = self.project_filename
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
         env['OUT_DIR'] = self.output_dir
-
+        env['UPLOADONLY'] = str(upload_only)
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
@@ -195,8 +195,7 @@ class EagleBatch(HPCBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR',
-            '--dependency=afterany:{}'.format(':'.join(after_jobids)),
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
@@ -206,6 +205,9 @@ class EagleBatch(HPCBatchBase):
             '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
             eagle_post_sh
         ]
+
+        if after_jobids:
+            args.insert(4, '--dependency=afterany:{}'.format(':'.join(after_jobids)))
 
         resp = subprocess.run(
             args,
@@ -259,6 +261,16 @@ def user_cli():
     print(HPCBatchBase.LOGO)
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '--postprocessonly',
+        help='Only do postprocessing, useful for when the simulations are already done',
+        action='store_true'
+    )
+
+    group.add_argument('--uploadonly',
+                       help='Only upload to S3, useful when postprocessing is already done. Ignores the '
+                            'upload flag in yaml', action='store_true')
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
@@ -267,6 +279,12 @@ def user_cli():
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
+
+    if args.postprocessonly or args.uploadonly:
+        eagle_batch = EagleBatch(project_filename)
+        eagle_batch.queue_post_processing(upload_only=args.uploadonly)
+        return
+
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
     out_dir = cfg['output_directory']
@@ -302,10 +320,14 @@ def main():
     batch = EagleBatch(args.project_filename)
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
+    upload_only = os.environ.get('UPLOADONLY', '0').lower() in ('true', 't', '1', 'y', 'yes')
     if job_array_number:
         batch.run_job_batch(job_array_number)
     elif post_process:
-        batch.process_results()
+        if upload_only:
+            batch.process_results(skip_combine=True, force_upload=True)
+        else:
+            batch.process_results()
     else:
         batch.run_batch()
 

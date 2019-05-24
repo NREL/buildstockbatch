@@ -39,6 +39,10 @@ class CommercialSobolSampler(BuildStockSampler):
         super().__init__(*args, **kwargs)
         self.output_dir = output_dir
 
+    @property
+    def csv_path(self):
+        return os.path.join(self.project_dir, 'buildstock.csv')
+
     def run_sampling(self, n_datapoints):
         """
         Run the commercial sampling.
@@ -60,7 +64,7 @@ class CommercialSobolSampler(BuildStockSampler):
                 tsv_hash[tsv_file.replace('.tsv', '')] = tsv_df
         dependency_hash, attr_order = self._com_order_tsvs(tsv_hash)
         sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), n_datapoints)
-        csv_path = os.path.join(self.project_dir, 'buildstock.csv')
+        csv_path = self.csv_path
         header = 'Building,'
         for item in attr_order:
             header += str(item) + ','
