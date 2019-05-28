@@ -449,16 +449,20 @@ class BuildStockBatchBase(object):
 
         glueClient.start_crawler(Name=crawler_name)
         logger.info("Crawler started")
-
+        is_crawler_running = True
         t = time.time()
-        while time.time() - t < (max_crawling_time+60):
+        while time.time() - t < (3 * max_crawling_time):
             crawler_state = glueClient.get_crawler(Name=crawler_name)['Crawler']['State']
             metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])['CrawlerMetricsList'][0]
-            if crawler_state != 'RUNNING':
-                logger.info(f"Crawling has completed running. It is {crawler_state}.")
+            if is_crawler_running and crawler_state != 'RUNNING':
+                is_crawler_running = False
+                logger.info(f"Crawler has completed running. It is {crawler_state}.")
                 logger.info(f"TablesCreated: {metrics['TablesCreated']} "
                             f"TablesUpdated: {metrics['TablesUpdated']} "
                             f"TablesDeleted: {metrics['TablesDeleted']} ")
+            if crawler_state == 'READY':
+                logger.info("Crawler stopped. Deleting it now.")
+                glueClient.delete_crawler(Name=crawler_name)
                 break
             elif time.time() - t > max_crawling_time:
                 logger.info("Crawler is taking too long. Aborting ...")
@@ -466,6 +470,9 @@ class BuildStockBatchBase(object):
                             f"TablesUpdated: {metrics['TablesUpdated']} "
                             f"TablesDeleted: {metrics['TablesDeleted']} ")
                 glueClient.stop_crawler(Name=crawler_name)
+            elif time.time() - t > 2 * max_crawling_time:
+                logger.warning(f"Crawler could not be stopped and deleted. Please delete the crawler {crawler_name} "
+                               f"manually from the AWS console")
                 break
             time.sleep(30)
 
