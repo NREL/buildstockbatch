@@ -222,7 +222,6 @@ class AwsJobBase():
         self.dynamo_task_policy_name = f"{self.job_identifier}_dynamod_db_task_policy"
 
         self.vpc_name = self.job_identifier
-        self.vpc_cidr = aws_config['vpc_cidr']
 
     def __repr__(self):
 

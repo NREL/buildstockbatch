@@ -1,12 +1,12 @@
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_singlefamilydetached  # Relative to buildstock_directory
-output_directory: /scratch/nmerket/national_test_outputs
+output_directory: ../national_test_outputs
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 3000  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 5000  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -41,17 +41,15 @@ eagle:
     n_workers: 3
 aws:
   # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
-  job_identifier: ragertest1
+  job_identifier: noeltest16
   s3:
     bucket: buildstockbatch-test
-    prefix: noeltest04
+    prefix: noeltest16
   region: us-west-2
-  use_spot: false
+  use_spot: true
   # Percent of on-demand for max bid on spot
-  spot_bid_percent: 90
-  batch_array_size: 100
-  # Select a unique subnet by replacing the xxx with a value between 100 and 200
-  vpc_cidr: 172.134.0.0/16
+  spot_bid_percent: 100
+  batch_array_size: 10000
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: noel.merket@nrel.gov
 

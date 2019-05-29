@@ -1028,8 +1028,17 @@ class AwsBatchEnv(AwsJobBase):
 
     def create_vpc(self):
 
-        if 'XXX' in self.vpc_cidr:
-            self.vpc_cidr = self.vpc_cidr.replace('XXX', str(random.randrange(100, 200)))
+        cidrs_in_use = set()
+        vpc_response = self.ec2.describe_vpcs()
+        for vpc in vpc_response['Vpcs']:
+            cidrs_in_use.add(vpc['CidrBlock'])
+            for cidr_assoc in vpc['CidrBlockAssociationSet']:
+                cidrs_in_use.add(cidr_assoc['CidrBlock'])
+
+        need_to_find_cidr = True
+        while need_to_find_cidr:
+            self.vpc_cidr = '172.{}.0.0/16'.format(random.randrange(100, 200))
+            need_to_find_cidr = self.vpc_cidr in cidrs_in_use
 
         self.pub_subnet_cidr = self.vpc_cidr.replace('/16', '/17')
         self.priv_subnet_cidr_1 = self.vpc_cidr.replace('.0.0/16', '.128.0/18')
