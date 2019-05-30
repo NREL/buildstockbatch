@@ -154,6 +154,16 @@ class HPCBatchBase(BuildStockBatchBase):
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        # Check if results directory exists and require override to continue
+        if 'output_directory' in self.cfg:
+            if os.path.isdir(os.path.join(self.cfg['output_directory'], 'results')):
+                if self.cfg.get('override_existing', False):
+                    raise RuntimeError('results directory exists in {} - please address'.format(
+                        self.cfg['output_directory']))
+                else:
+                    logger.warn('Overriding results in results directory in {}'.format(self.cfg['output_directory']))
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)

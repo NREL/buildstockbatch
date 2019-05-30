@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 class EagleBatch(HPCBatchBase):
 
-    sys_image_dir = '/home/nmerket/buildstock/assets'  # TODO ??? A bad idea for portability - sys_image_dir much?
+    sys_image_dir = None
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2  # TODO This interface needs to be exposed via the yaml
 

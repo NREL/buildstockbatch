@@ -62,7 +62,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
             shutil.copyfile(os.path.abspath(sample_filename), os.path.abspath(output_path))
             return os.path.abspath(output_path)
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, buildstock_path=None, n_datapoints=None):
         """
         Check that the sampling has been precomputed and if necessary move to the required path.
 
@@ -85,14 +85,20 @@ class CommercialPrecomputedSingularitySampler(PrecomputedBaseSampler):
         super().__init__(*args, **kwargs)
         self.output_dir = output_dir
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, buildstock_path=None, n_datapoints=None):
         """
         Ensure the sampling is in place for use in Peregrine Singularity deployments
 
+        :param buildstock_path: Path (including *.csv) of the buildstock file to use.
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Path to the sample CSV file
         """
         csv_path = os.path.join(self.output_dir, 'buildstock.csv')
+        if buildstock_path is not None:
+            if not os.path.isfile(buildstock_path):
+                raise RuntimeError('Cannot find buildstock file {}'.format(buildstock_path))
+            shutil.copy2(buildstock_path, self.output_dir)
+            shutil.move(os.path.join(self.output_dir, os.path.basename(buildstock_path)), csv_path)
         return self.check_sampling(csv_path, n_datapoints)
 
 
@@ -104,13 +110,20 @@ class CommercialPrecomputedDockerSampler(PrecomputedBaseSampler):
         """
         super().__init__(*args, **kwargs)
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, buildstock_path=None, n_datapoints=None):
         """
         Ensure the sampling is in place for use in local Docker deployments
 
+        :param buildstock_path: Path (including *.csv) of the buildstock file to use.
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Path to the sample CSV file
         """
         csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        if buildstock_path is not None:
+            if not os.path.isfile(buildstock_path):
+                raise RuntimeError('Cannot find buildstock file {}'.format(buildstock_path))
+            shutil.copy2(buildstock_path, os.path.join(self.project_dir, 'housing_characteristics'))
+            shutil.move(os.path.join(os.path.join(self.project_dir, 'housing_characteristics'),
+                                     os.path.basename(buildstock_path)), csv_path)
         return self.check_sampling(csv_path, n_datapoints)
 
