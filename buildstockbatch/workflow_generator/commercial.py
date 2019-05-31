@@ -58,7 +58,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 'measures'
             ],
             'seed_file': 'seeds/empty.osm',
-            'weather_file': 'weather/CA_LOS-ANGELES-DOWNTOWN-USC_722874S_12.epw'
+            'weather_file': 'weather/empty.epw'
         }
 
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
