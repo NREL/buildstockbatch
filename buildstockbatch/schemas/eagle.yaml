@@ -16,6 +16,7 @@ sim-spec:
   n_datapoints: int(required=False)
   n_buildings_represented: int(required=False)
   measures: list(include('measure-spec'), required=False)
+  precomputed_sample: string(required=False)
 measure-spec:
   measure_dir_name: str(requried=True)
   arguments: map()
