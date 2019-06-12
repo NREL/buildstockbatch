@@ -20,6 +20,7 @@ import pathlib
 import re
 import shutil
 import subprocess
+import sys
 import yaml
 
 from .hpc import HPCBatchBase, SimulationExists
@@ -153,6 +154,9 @@ class EagleBatch(HPCBatchBase):
             '--job-name=bstk',
             eagle_sh
         ]
+        if os.environ.get('SBATCH_QOS'):
+            args.insert(-1, '--qos={}'.format(os.environ.get('SBATCH_QOS')))
+
         logger.debug(' '.join(args))
         resp = subprocess.run(
             args,
@@ -209,6 +213,9 @@ class EagleBatch(HPCBatchBase):
         if after_jobids:
             args.insert(4, '--dependency=afterany:{}'.format(':'.join(after_jobids)))
 
+        if os.environ.get('SBATCH_QOS'):
+            args.insert(-1, '--qos={}'.format(os.environ.get('SBATCH_QOS')))
+
         resp = subprocess.run(
             args,
             stdout=subprocess.PIPE,
@@ -256,22 +263,28 @@ logging_config = {
     }
 
 
-def user_cli():
+def user_cli(argv=sys.argv[1:]):
     logging.config.dictConfig(logging_config)
     print(HPCBatchBase.LOGO)
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
+    parser.add_argument(
+        '--hipri',
+        action='store_true',
+        help='Submit this job to the high priority queue. Uses 2x node hours.'
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '--postprocessonly',
         help='Only do postprocessing, useful for when the simulations are already done',
         action='store_true'
     )
-
-    group.add_argument('--uploadonly',
-                       help='Only upload to S3, useful when postprocessing is already done. Ignores the '
-                            'upload flag in yaml', action='store_true')
-    args = parser.parse_args()
+    group.add_argument(
+        '--uploadonly',
+        help='Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml',
+        action='store_true'
+    )
+    args = parser.parse_args(argv)
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
             'The project file {} doesn\'t exist'.format(args.project_filename)
@@ -298,7 +311,7 @@ def user_cli():
     env.update(os.environ)
     env['PROJECTFILE'] = project_filename
     env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
-    args = [
+    subargs = [
         'sbatch',
         '--time={}'.format(cfg['eagle'].get('sampling', {}).get('time', 60)),
         '--account={}'.format(cfg['eagle']['account']),
@@ -307,8 +320,10 @@ def user_cli():
         '--output=sampling.out',
         eagle_sh
     ]
+    if args.hipri:
+        subargs.insert(-1, '--qos=high')
     logger.info('Submitting sampling job to task scheduler')
-    subprocess.run(args, env=env, cwd=out_dir, check=True)
+    subprocess.run(subargs, env=env, cwd=out_dir, check=True)
     logger.info('Run squeue -u $USER to monitor the progress of your jobs')
 
 
