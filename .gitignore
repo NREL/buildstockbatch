@@ -1,6 +1,7 @@
 __pycache__
 *.egg-info
 .idea
+.vscode
 docs/_build
 dask-worker-space
 .pytest_cache
