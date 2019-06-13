@@ -154,8 +154,8 @@ class EagleBatch(HPCBatchBase):
             '--job-name=bstk',
             eagle_sh
         ]
-        if os.environ.get('SBATCH_QOS'):
-            args.insert(-1, '--qos={}'.format(os.environ.get('SBATCH_QOS')))
+        if os.environ.get('SLURM_JOB_QOS'):
+            args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
 
         logger.debug(' '.join(args))
         resp = subprocess.run(
@@ -213,8 +213,8 @@ class EagleBatch(HPCBatchBase):
         if after_jobids:
             args.insert(4, '--dependency=afterany:{}'.format(':'.join(after_jobids)))
 
-        if os.environ.get('SBATCH_QOS'):
-            args.insert(-1, '--qos={}'.format(os.environ.get('SBATCH_QOS')))
+        if os.environ.get('SLURM_JOB_QOS'):
+            args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
 
         resp = subprocess.run(
             args,
