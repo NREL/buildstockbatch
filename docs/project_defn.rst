@@ -245,8 +245,7 @@ The configuration options for postprocessing and AWS upload are:
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
 
             * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
-            * ``prefix``: S3 prefix at which the data is to be uploaded.
-            The complete path will become: ``s3://bucket/prefix/output_directory_name``
+            * ``prefix``: S3 prefix at which the data is to be uploaded. The complete path will become: ``s3://bucket/prefix/output_directory_name``
 
         *  ``athena``: configurations for Amazon Athena database creation. If this section is missing/commented-out, no
            Athena tables are created.
