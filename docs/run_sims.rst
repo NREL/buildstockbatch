@@ -12,24 +12,8 @@ Slide the CPUs available to Docker to the number of concurrent simulations you w
 
 Running a project file is straightforward. Call the ``buildstock_docker`` command line tool as follows:
 
-.. code-block:: none
-
-    usage: buildstock_docker [-h] [-j J] [--postprocessonly] [--uploadonly] project_filename
-
-    positional arguments:
-    project_filename
-
-    optional arguments:
-    -h, --help          show this help message and exit.
-    -j J                Number of parallel simulations, -1 is all cores, -2 is all.
-                        cores except one.
-    --postprocessonly   Skip simulating buildings and directly jump to postprocessing step, which involves aggregating
-                        and uploading (if configured in the project settings YAML file). Useful for (and can only be
-                        used) when the simulations are already done.
-    --uploadonly        Directly jump to the upload (to AWS s3) step, skipping both simulation and the aggregation part
-                        of postprocessing. Useful for (and can only be used) when the simulation and aggregation are
-                        already done. s3 configuration must be present in the project definition yaml file. Cannot be
-                        used with --postprocessonly
+.. command-output:: buildstock_docker --help
+   :ellipsis: 0,8
 
 .. warning::
 
@@ -46,17 +30,8 @@ Eagle
 After you have :ref:`activated the appropriate conda environment on Eagle <eagle_install>`, 
 you can submit a project file to be simulated by passing it to the ``buildstock_eagle`` command.
 
-.. code-block:: none
-
-    usage: buildstock_eagle [--postprocessonly] [--uploadonly] my_projectfile.yml
-
-    --postprocessonly   Skip simulating buildings and directly jump to postprocessing step, which involves aggregating
-                        and uploading (if configured in the project settings YAML file). Useful for (and can only be
-                        used) when the simulations are already done.
-    --uploadonly        Directly jump to the upload (to AWS s3) step, skipping both simulation and the aggregation part
-                        of postprocessing. Useful for (and can only be used) when the simulation and aggregation are
-                        already done. s3 configuration must be present in the project definition yaml file. Cannot be
-                        used with --postprocessonly
+.. command-output:: buildstock_eagle --help
+   :ellipsis: 0,8
 
 .. warning::
 

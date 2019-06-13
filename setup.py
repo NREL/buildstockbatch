@@ -71,6 +71,7 @@ setuptools.setup(
             'Sphinx',
             'sphinx_rtd_theme',
             'sphinx-autobuild',
+            'sphinxcontrib-programoutput',
             'flake8',
             'coverage'
         ]
