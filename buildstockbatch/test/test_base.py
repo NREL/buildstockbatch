@@ -9,7 +9,6 @@ import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
 
-
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -263,7 +262,9 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
                             }
                         }
                     }
-
+    mocked_glueclient = MagicMock()
+    mocked_glueclient.get_crawler = MagicMock(return_value={'Crawler': {'State': 'READY'}})
+    mocked_s3.client = MagicMock(return_value=mocked_glueclient)
     project_filename, results_dir = basic_residential_project_file(upload_config)
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'output_dir', results_dir), \
@@ -276,7 +277,7 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     files_uploaded = []
     crawler_created = False
     crawler_started = False
-    for call in mocked_s3.mock_calls:
+    for call in mocked_s3.mock_calls + mocked_s3.client().mock_calls:
         call_function = call[0].split('.')[-1]  # 0 is for the function name
         if call_function == 'resource':
             assert call[1][0] in ['s3']  # call[1] is for the positional arguments
