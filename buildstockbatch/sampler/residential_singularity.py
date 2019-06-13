@@ -12,7 +12,6 @@ This object contains the code required for generating the set of simulations to 
 
 import logging
 import os
-import shutil
 import subprocess
 
 
