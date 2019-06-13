@@ -2,7 +2,7 @@ import json
 import os
 import pathlib
 import shutil
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 

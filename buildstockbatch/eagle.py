@@ -45,7 +45,7 @@ class EagleBatch(HPCBatchBase):
     def output_dir(self):
         output_dir = self.cfg.get(
             'output_directory',
-            os.path.join('/scratch/{}'.format(os.environ['USER']), os.path.basename(self.project_dir))
+            os.path.join('/scratch/{}'.format(os.environ.get('USER', 'user')), os.path.basename(self.project_dir))
         )
         return output_dir
 
