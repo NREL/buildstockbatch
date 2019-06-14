@@ -45,7 +45,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)
     os.environ['CONDA_PREFIX'] = 'something'
-    os.environ['SBATCH_QOS'] = 'high'
+    os.environ['SLURM_JOB_QOS'] = 'high'
 
     with patch.object(EagleBatch, 'weather_dir', None):
         batch = EagleBatch(project_filename)
