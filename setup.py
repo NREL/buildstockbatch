@@ -73,7 +73,9 @@ setuptools.setup(
             'sphinx-autobuild',
             'sphinxcontrib-programoutput',
             'flake8',
-            'coverage'
+            'coverage',
+            'rope',
+            'doc8'
         ]
     },
     entry_points={
