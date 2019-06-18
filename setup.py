@@ -62,7 +62,9 @@ setuptools.setup(
         'pyarrow>=0.10.0',
         'dask[complete]',
         'docker',
-        'boto3'
+        'boto3',
+        'fs',
+        'fs-s3fs',
     ],
     extras_require={
         'dev': [

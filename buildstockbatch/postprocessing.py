@@ -14,13 +14,15 @@ from collections import defaultdict
 import dask.bag as db
 import dask
 import datetime as dt
+from functools import partial
+from fs import open_fs
+from fs.errors import ResourceNotFound, FileExpected
 import gzip
 import json
 import logging
 import os
 import random
 import re
-import shutil
 import sys
 import time
 import boto3
@@ -30,11 +32,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def read_data_point_out_json(filename):
+def read_data_point_out_json(fs_uri, filename):
+    fs = open_fs(fs_uri)
     try:
-        with open(filename, 'r') as f:
+        with fs.open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
+    except (ResourceNotFound, FileExpected, json.JSONDecodeError):
         return None
     else:
         if 'SimulationOutputReport' not in d:
@@ -84,11 +87,12 @@ def flatten_datapoint_json(d):
     return new_d
 
 
-def read_out_osw(filename):
+def read_out_osw(fs_uri, filename):
+    fs = open_fs(fs_uri)
     try:
-        with open(filename, 'r') as f:
+        with fs.open(filename, 'r') as f:
             d = json.load(f)
-    except (FileNotFoundError, NotADirectoryError, json.JSONDecodeError):
+    except (ResourceNotFound, FileExpected, json.JSONDecodeError):
         return None
     else:
         out_d = {}
@@ -105,30 +109,91 @@ def read_out_osw(filename):
         return out_d
 
 
+def bldg_group(group_size, directory_name):
+    m = re.search(r'up(\d+)/bldg(\d+)', directory_name)
+    assert m, f"list of directories passed should be properly formatted as: " \
+        f"'up([0-9]+)*bldg([0-9]+)'. Got {directory_name}"
+    upgrade_id, building_id = m.groups()
+    return f'up{upgrade_id}_Group{int(building_id) // group_size}'
+
+
+def directory_name_append(name1, name2):
+    if name1 is None:
+        return name2
+    else:
+        return name1 + '\n' + name2
+
+
+def write_output(results_dir, group_pq):
+    fs = open_fs(results_dir)
+    group = group_pq[0]
+    folders = group_pq[1]
+
+    try:
+        upgrade, groupname = group.split('_')
+        m = re.match(r'up(\d+)', upgrade)
+        upgrade_id = int(m.group(1))
+    except (ValueError, AttributeError):
+        logger.error(f"The group labels created from bldg_group function should "
+                     f"have 'up([0-9]+)_GroupXX' format. Found: {group}")
+        return
+
+    folder_path = f"parquet/timeseries/upgrade={upgrade_id}"
+    fs.makedirs(folder_path)
+
+    file_path = f"{folder_path}/{groupname}.parquet"
+    parquets = []
+    for folder in folders.split():
+        full_path = f"simulation_output/{folder}/run/enduse_timeseries.parquet"
+        if not fs.isfile(full_path):
+            continue
+        with fs.open(full_path, 'rb') as f:
+            new_pq = pd.read_parquet(f, engine='pyarrow')
+        new_pq.rename(columns=to_camelcase, inplace=True)
+
+        building_id_match = re.search(r'bldg(\d+)', folder)
+        assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
+        building_id = int(building_id_match.group(1))
+        new_pq['building_id'] = building_id
+        parquets.append(new_pq)
+
+    pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
+    logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
+                 f"{pq_size:.2f} MB memory on a dask worker process.")
+    pq = pd.concat(parquets)
+    logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
+    with fs.open(file_path, 'wb') as f:
+        pq.to_parquet(f, engine='pyarrow', flavor='spark')
+
+
 def combine_results(results_dir):
-    sim_out_dir = os.path.join(results_dir, 'simulation_output')
-    results_csvs_dir = os.path.join(results_dir, 'results_csvs')
-    parquet_dir = os.path.join(results_dir, 'parquet')
-    ts_dir = os.path.join(results_dir, 'parquet', 'timeseries')
+    fs = open_fs(results_dir)
+
+    sim_out_dir = 'simulation_output'
+    results_csvs_dir = 'results_csvs'
+    parquet_dir = 'parquet'
+    ts_dir = 'parquet/timeseries'
 
     # clear and create the postprocessing results directories
     for dr in [results_csvs_dir, parquet_dir, ts_dir]:
-        if os.path.exists(dr):
-            shutil.rmtree(dr)
-        os.makedirs(dr)
+        if fs.exists(dr):
+            fs.removetree(dr)
+        fs.makedirs(dr)
+
+    sim_out_fs = fs.opendir(sim_out_dir)
 
     all_dirs = list()  # get the list of all the building simulation results directories
     results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
-    for item in os.listdir(sim_out_dir):
+    for item in sim_out_fs.listdir('.'):
         m = re.match(r'up(\d+)', item)
         if not m:
             continue
         upgrade_id = int(m.group(1))
-        for subitem in os.listdir(os.path.join(sim_out_dir, item)):
+        for subitem in sim_out_fs.listdir(item):
             m = re.match(r'bldg(\d+)', subitem)
             if not m:
                 continue
-            full_path = os.path.join(item, subitem)
+            full_path = f"{item}/{subitem}"
             results_by_upgrade[upgrade_id].append(full_path)
             all_dirs.append(full_path)
 
@@ -138,8 +203,8 @@ def combine_results(results_dir):
         logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
 
         datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
-            map(lambda x: os.path.join(sim_out_dir, x, 'run', 'data_point_out.json')).\
-            map(read_data_point_out_json).\
+            map(lambda x: f"{sim_out_dir}/{x}/run/data_point_out.json").\
+            map(partial(read_data_point_out_json, results_dir)).\
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
             datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
@@ -152,9 +217,9 @@ def combine_results(results_dir):
             to_dataframe(meta=meta).rename(columns=to_camelcase)
 
         out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
-            map(lambda x: os.path.join(sim_out_dir, x, 'out.osw'))
+            map(lambda x: f"{sim_out_dir}/{x}/out.osw")
 
-        out_osw_df_d = out_osws.map(read_out_osw).filter(lambda x: x is not None).to_dataframe()
+        out_osw_df_d = out_osws.map(partial(read_out_osw, results_dir)).filter(lambda x: x is not None).to_dataframe()
 
         data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
@@ -179,36 +244,40 @@ def combine_results(results_dir):
 
         # Save to CSV
         logger.debug('Saving to csv.gz')
-        csv_filename = os.path.join(results_csvs_dir, 'results_up{:02d}.csv.gz'.format(upgrade_id))
-        with gzip.open(csv_filename, 'wt', encoding='utf-8') as f:
-            results_df.to_csv(f, index=False)
+        csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
+        with fs.open(csv_filename, 'wb') as f:
+            with gzip.open(f, 'wt', encoding='utf-8') as gf:
+                results_df.to_csv(gf, index=False)
 
         # Save to parquet
         logger.debug('Saving to parquet')
         if upgrade_id == 0:
-            results_parquet_dir = os.path.join(parquet_dir, 'baseline')
+            results_parquet_dir = f"{parquet_dir}/baseline"
         else:
-            results_parquet_dir = os.path.join(parquet_dir, 'upgrades', 'upgrade={}'.format(upgrade_id))
-        os.makedirs(results_parquet_dir, exist_ok=True)
-        results_df.to_parquet(
-            os.path.join(results_parquet_dir, 'results_up{:02d}.parquet'.format(upgrade_id)),
-            engine='pyarrow',
-            flavor='spark'
-        )
+            results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
+        if not fs.exists(results_parquet_dir):
+            fs.makedirs(results_parquet_dir)
+        with fs.open(f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet", 'wb') as f:
+            results_df.to_parquet(
+                f,
+                engine='pyarrow',
+                flavor='spark'
+            )
 
     # find the avg size of time_series parqeut files
     total_size = 0
     count = 0
     sample_size = 10 if len(all_dirs) >= 10 else len(all_dirs)
     for rnd_ts_index in random.sample(range(len(all_dirs)), sample_size):
-        full_path = os.path.join(sim_out_dir, all_dirs[rnd_ts_index], 'run', 'enduse_timeseries.parquet')
+        full_path = f"{sim_out_dir}/{all_dirs[rnd_ts_index]}/run/enduse_timeseries.parquet"
         try:
-            pq = pd.read_parquet(full_path)
+            with fs.open(full_path, 'rb') as f:
+                pq = pd.read_parquet(full_path)
+        except ResourceNotFound:
+            logger.warning(f" Time series file does not exist: {full_path}")
+        else:
             total_size += sys.getsizeof(pq)
             count += 1
-        except OSError:
-            logger.warning(f" Time series file does not exist: {full_path}")
-            continue
 
     avg_parquet_size = total_size / count
 
@@ -219,61 +288,8 @@ def combine_results(results_dir):
     logger.info(f"Each parquet file is {avg_parquet_size / (1024 * 1024) :.2f} in memory. \n" +
                 f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
 
-    def bldg_group(directory_name):
-        directory_path = Path(directory_name)
-        upgrade_match = re.search(r'up([0-9]+)', str(directory_path.parent))
-        bldg_match = re.search(r'bldg([0-9]+)', directory_path.name)
-        assert upgrade_match and bldg_match, f"list of directories passed should be properly formatted as: " \
-            f"'up([0-9]+)*bldg([0-9]+)'. Got {directory_name}"
-        group = 'up' + upgrade_match[1] + '_Group' + str(int(bldg_match[1]) // group_size)
-        return group
-
-    def directory_name_append(name1, name2):
-        if name1 is None:
-            return name2
-        else:
-            return name1 + '\n' + name2
-
-    def write_output(group_pq):
-        group = group_pq[0]
-        folders = group_pq[1]
-
-        try:
-            upgrade, groupname = group.split('_')
-            m = re.match(r'up(\d+)', upgrade)
-            upgrade_id = int(m.group(1))
-        except (ValueError, AttributeError):
-            logger.error(f"The group labels created from bldg_group function should "
-                         f"have 'up([0-9]+)_GroupXX' format. Found: {group}")
-            return
-
-        folder_path = os.path.join(ts_dir, f"upgrade={upgrade_id}")
-        os.makedirs(folder_path, exist_ok=True)
-
-        file_path = os.path.join(folder_path, str(groupname) + '.parquet')
-        parquets = []
-        for folder in folders.split():
-            full_path = os.path.join(sim_out_dir, folder, 'run', 'enduse_timeseries.parquet')
-            if not os.path.isfile(full_path):
-                continue
-            new_pq = pd.read_parquet(full_path, engine='pyarrow')
-            new_pq.rename(columns=to_camelcase, inplace=True)
-
-            building_id_match = re.search(r'bldg(\d+)', folder)
-            assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
-            building_id = int(building_id_match.group(1))
-            new_pq['building_id'] = building_id
-            parquets.append(new_pq)
-
-        pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
-        logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
-                     f"{pq_size:.2f} MB memory on a dask worker process.")
-        pq = pd.concat(parquets)
-        logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
-        pq.to_parquet(file_path, engine='pyarrow', flavor='spark')
-
     directory_bags = db.from_sequence(all_dirs).foldby(
-        bldg_group,
+        partial(bldg_group, group_size),
         directory_name_append,
         initial=None,
         combine=directory_name_append
@@ -282,7 +298,7 @@ def combine_results(results_dir):
 
     logger.info("Combining the parquets")
     t = time.time()
-    write_file = db.from_sequence(bags).map(write_output)
+    write_file = db.from_sequence(bags).map(partial(write_output, results_dir))
     write_file.compute()
     diff = time.time() - t
     logger.info(f"Took {diff:.2f} seconds")
@@ -328,15 +344,11 @@ def upload_results(aws_conf, output_dir, results_dir):
     files_bag.compute()
     logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}")
     return s3_bucket, s3_prefix_output
-    # athena_flag = 'athena' in self.cfg.get('postprocessing', {}).get('aws', {})
-    # if athena_flag:
-    #     self.create_athena_tables(s3_bucket, s3_prefix)
 
 
 def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
     logger.info("Creating Athena tables using glue crawler")
 
-    # aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
     region_name = aws_conf.get('region_name', 'us-west-2')
     db_name = aws_conf.get('athena', {}).get('database_name', None)
     role = aws_conf.get('athena', {}).get('glue_service_role', 'service-role/AWSGlueServiceRole-default')
@@ -350,7 +362,10 @@ def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
             'Exclusions': []
         }]
     }
-    output_folder_name = os.path.basename(output_dir)
+    if output_dir is None:
+        output_folder_name = s3_prefix.split('/')[-1]
+    else:
+        output_folder_name = os.path.basename(output_dir)
     crawler_name = db_name+'_'+output_folder_name
     tbl_prefix = output_folder_name + '_'
 
