@@ -238,7 +238,7 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
-@patch('buildstockbatch.base.boto3')
+@patch('buildstockbatch.postprocessing.boto3')
 def test_upload_files(mocked_s3, basic_residential_project_file):
     s3_bucket = 'test_bucket'
     s3_prefix = 'test_prefix'

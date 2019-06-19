@@ -47,7 +47,8 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file):
     os.environ['CONDA_PREFIX'] = 'something'
     os.environ['SLURM_JOB_QOS'] = 'high'
 
-    with patch.object(EagleBatch, 'weather_dir', None):
+    with patch.object(EagleBatch, 'weather_dir', None), \
+            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'):
         batch = EagleBatch(project_filename)
         for i in range(1, 11):
             pathlib.Path(results_dir, 'job{:03d}.json'.format(i)).touch()
@@ -61,7 +62,8 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file):
     mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
     mock_subprocess.PIPE = None
 
-    with patch.object(EagleBatch, 'weather_dir', None):
+    with patch.object(EagleBatch, 'weather_dir', None), \
+            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'):
         batch = EagleBatch(project_filename)
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
