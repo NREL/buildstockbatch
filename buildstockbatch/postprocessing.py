@@ -272,7 +272,7 @@ def combine_results(results_dir):
         full_path = f"{sim_out_dir}/{all_dirs[rnd_ts_index]}/run/enduse_timeseries.parquet"
         try:
             with fs.open(full_path, 'rb') as f:
-                pq = pd.read_parquet(full_path)
+                pq = pd.read_parquet(f, engine='pyarrow')
         except ResourceNotFound:
             logger.warning(f" Time series file does not exist: {full_path}")
         else:
