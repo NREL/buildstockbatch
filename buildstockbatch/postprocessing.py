@@ -157,7 +157,7 @@ def write_output(results_dir, group_pq):
         new_pq['building_id'] = building_id
         parquets.append(new_pq)
 
-    if not parquets: #if no valid simulation is found for this group
+    if not parquets:  # if no valid simulation is found for this group
         logger.warning(f'No valid simulation found for upgrade:{upgrade_id} and group:{groupname}.')
         logger.debug(f'The following folders were scanned {folders}.')
         return
