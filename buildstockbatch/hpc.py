@@ -222,6 +222,11 @@ class HPCBatchBase(BuildStockBatchBase):
             weather_dir,
         ]
 
+        # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
+        cli_cmd = 'openstudio run -w in.osw --debug'
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+        
         # Call singularity to run the simulation
         args = [
             'singularity', 'exec',
@@ -240,9 +245,7 @@ class HPCBatchBase(BuildStockBatchBase):
             args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
             container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
             runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
-        runscript.extend([
-            'openstudio run -w in.osw --debug'
-        ])
+        runscript.extend([cli_cmd])
         args.extend([
             singularity_image,
             'bash', '-x'
