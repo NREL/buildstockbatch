@@ -43,7 +43,7 @@ class CommercialSobolSampler(BuildStockSampler):
     def csv_path(self):
         return os.path.join(self.project_dir, 'buildstock.csv')
 
-    def run_sampling(self, n_datapoints):
+    def run_sampling(self, n_datapoints=None):
         """
         Run the commercial sampling.
 
@@ -54,6 +54,9 @@ class CommercialSobolSampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
+        if n_datapoints is None:
+            n_datapoints = 350000
+            logging.warning('n_datapoints passed to run_sampling function was None - defaulting to 350,000')
         logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
