@@ -22,7 +22,7 @@ import pandas as pd
 import shutil
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
+from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         elif self.stock_type == 'commercial':
             sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSampler(
+                self.sampler = CommercialSobolDockerSampler(
                     self.project_dir,
                     self.cfg,
                     self.buildstock_dir,

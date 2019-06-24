@@ -26,7 +26,7 @@ import subprocess
 import time
 
 from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
+from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler
 
 logger = logging_.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class HPCBatchBase(BuildStockBatchBase):
         elif self.stock_type == 'commercial':
             sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSampler(
+                self.sampler = CommercialSobolSingularitySampler(
                     self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
