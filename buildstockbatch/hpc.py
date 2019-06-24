@@ -101,6 +101,9 @@ class HPCBatchBase(BuildStockBatchBase):
                         sha=self.OS_SHA
                     )
                 r = requests.get(simg_url, stream=True)
+                if r.status_code != requests.codes.ok:
+                    logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
+                    r.raise_for_status()
                 with open(singularity_image_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
