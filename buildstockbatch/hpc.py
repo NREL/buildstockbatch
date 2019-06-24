@@ -72,12 +72,25 @@ class HPCBatchBase(BuildStockBatchBase):
 
     @property
     def singularity_image(self):
+        # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
+        if 'sys_image_dir' in self.cfg.keys():
+            sys_image_dir = self.cfg['sys_image_dir']
+            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                ver=self.OS_VERSION,
+                sha=self.OS_SHA
+            ))
+            if os.path.isfile(sys_image):
+                return sys_image
+            else:
+                raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
+        # Use the expected HPC environment default if not explicitly defined in the YAML
         sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
             ver=self.OS_VERSION,
             sha=self.OS_SHA
         ))
         if os.path.isfile(sys_image):
             return sys_image
+        # Download the appropriate singularity image for the defined OS_VERSION and OS_SHA
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
