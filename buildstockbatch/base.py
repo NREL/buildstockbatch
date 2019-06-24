@@ -55,37 +55,15 @@ class BuildStockBatchBase(object):
         elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
+        self.sampler = None
         self._weather_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
-
         # Load in overriding OS_VERSION and OS_SHA arguments if they exist in the YAML
         if 'os_version' in self.cfg.keys():
             self.OS_VERSION = self.cfg['os_version']
         if 'os_sha' in self.cfg.keys():
             self.OS_VERSION = self.cfg['os_sha']
-
-        # Special case of precomputed sample TODO @rHorsey move to precomupted sampler
-        if 'buildstock_csv' in self.cfg['baseline']:
-            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
-            if not os.path.exists(buildstock_csv):
-                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
-            df = pd.read_csv(buildstock_csv)
-            n_datapoints = self.cfg['baseline'].get('n_datapoints', df.shape[0])
-            self.cfg['baseline']['n_datapoints'] = n_datapoints
-            if n_datapoints != df.shape[0]:
-                raise RuntimeError(
-                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be '
-                    'equal to the number of rows in the buildstock.csv file. Remove or comment out '
-                    'baseline->n_datapoints from your project file.'
-                )
-            if 'downselect' in self.cfg:
-                raise RuntimeError(
-                    'A buildstock_csv was provided, which isn\'t compatible with downselecting.'
-                    'Remove or comment out the downselect key from your project file.'
-                )
-
-        self.sampler = None
 
     def path_rel_to_projectfile(self, x):
         if os.path.isabs(x):
@@ -153,19 +131,7 @@ class BuildStockBatchBase(object):
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
-        if 'buildstock_csv' in self.cfg['baseline']:
-            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
-            destination_filename = self.sampler.csv_path
-            if destination_filename != buildstock_csv:
-                if os.path.exists(destination_filename):
-                    os.remove(destination_filename)
-                shutil.copy(
-                    buildstock_csv,
-                    destination_filename
-                )
-            return destination_filename
-        else:
-            return self.sampler.run_sampling(n_datapoints)
+        return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError

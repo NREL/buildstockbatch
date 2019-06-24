@@ -22,7 +22,7 @@ import pandas as pd
 import shutil
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler
+from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler, PrecomputedDockerSampler
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,14 @@ class LocalDockerBatch(BuildStockBatchBase):
             if sampling_algorithm == 'sobol':
                 self.sampler = CommercialSobolDockerSampler(
                     self.project_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            elif sampling_algorithm == 'precomputed':
+                print('calling precomputed sampler')
+                self.sampler = PrecomputedDockerSampler(
+                    self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
                     self.project_dir

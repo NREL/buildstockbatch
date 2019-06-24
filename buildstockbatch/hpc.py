@@ -26,7 +26,7 @@ import subprocess
 import time
 
 from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler
+from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
 
 logger = logging_.getLogger(__name__)
 
@@ -56,6 +56,14 @@ class HPCBatchBase(BuildStockBatchBase):
             sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':
                 self.sampler = CommercialSobolSingularitySampler(
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            elif sampling_algorithm == 'precomputed':
+                print('calling precomputed sampler')
+                self.sampler = PrecomputedSingularitySampler(
                     self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
