@@ -157,6 +157,11 @@ def write_output(results_dir, group_pq):
         new_pq['building_id'] = building_id
         parquets.append(new_pq)
 
+    if not parquets: #if no valid simulation is found for this group
+        logger.warning(f'No valid simulation found for upgrade:{upgrade_id} and group:{groupname}.')
+        logger.debug(f'The following folders were scanned {folders}.')
+        return
+
     pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
     logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
                  f"{pq_size:.2f} MB memory on a dask worker process.")
