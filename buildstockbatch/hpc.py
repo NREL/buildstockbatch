@@ -226,7 +226,7 @@ class HPCBatchBase(BuildStockBatchBase):
         cli_cmd = 'openstudio run -w in.osw --debug'
         if cfg.get('baseline', dict()).get('custom_gems', False):
             cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
-        
+
         # Call singularity to run the simulation
         args = [
             'singularity', 'exec',
