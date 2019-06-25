@@ -220,15 +220,30 @@ Under the ``eagle`` key is a list of configuration for running the batch job on 
 Postprocessing
 ~~~~~~~~~~~~~~
 
-After a batch of simulation completes, to analyze BuildStock results the individual simulation results are aggregated in a postprocessing step as follows:
+After a batch of simulation completes, to analyze BuildStock results the
+individual simulation results are aggregated in a postprocessing step as
+follows:
 
-1. The inputs and annual outputs of each simulation are gathered together into one table for each upgrade scenario. In older versions that ran on PAT, this was known as the ``results.csv``. This table is now made available in both csv and parquet format. 
-2. Time series results for each simulation are gathered and concatenated into fewer larger parquet files that are better suited for querying using big data analysis tools. 
+1. The inputs and annual outputs of each simulation are gathered together into
+   one table for each upgrade scenario. In older versions that ran on PAT, this
+   was known as the ``results.csv``. This table is now made available in both
+   csv and parquet format. 
+2. Time series results for each simulation are gathered and concatenated into
+   fewer larger parquet files that are better suited for querying using big data
+   analysis tools. 
 
 Uploading to AWS Athena
 .......................
 
-BuildStock results can optionally be uploaded to AWS for further analysis using Athena. This process requires appropriate access to an AWS account to be configured on your machine. `These instructions <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_ cover how to set that up once you have your AWS access keys. If you don't have keys, consult your AWS administrator to get them set up.
+BuildStock results can optionally be uploaded to AWS for further analysis using
+Athena. This process requires appropriate access to an AWS account to be
+configured on your machine. You will need to set this up wherever you use buildstockbatch.
+If you don't have
+keys, consult your AWS administrator to get them set up.
+
+* :ref:`Local Docker AWS setup instructions <aws-user-config-local>`
+* :ref:`Eagle AWS setup instructions <aws-user-config-eagle>`
+* `Detailed instructions from AWS <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
 
 Postprocessing Configuration Options
 ....................................
@@ -245,8 +260,7 @@ The configuration options for postprocessing and AWS upload are:
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
 
             * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
-            * ``prefix``: S3 prefix at which the data is to be uploaded.
-            The complete path will become: ``s3://bucket/prefix/output_directory_name``
+            * ``prefix``: S3 prefix at which the data is to be uploaded. The complete path will become: ``s3://bucket/prefix/output_directory_name``
 
         *  ``athena``: configurations for Amazon Athena database creation. If this section is missing/commented-out, no
            Athena tables are created.

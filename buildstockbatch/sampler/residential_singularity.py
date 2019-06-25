@@ -12,7 +12,6 @@ This object contains the code required for generating the set of simulations to 
 
 import logging
 import os
-import shutil
 import subprocess
 
 
@@ -50,19 +49,14 @@ class ResidentialSingularitySampler(BuildStockSampler):
             'singularity',
             'exec',
             '--contain',
-            '--home', self.buildstock_dir,
+            '--home', '{}:/buildstock'.format(self.buildstock_dir),
+            '--bind', '{}:/outbind'.format(os.path.dirname(self.csv_path)),
             self.singularity_image,
             'ruby',
             'resources/run_sampling.rb',
             '-p', self.cfg['project_directory'],
             '-n', str(n_datapoints),
-            '-o', 'buildstock.csv'
+            '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
         ]
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
-        destination_dir = os.path.dirname(self.csv_path)
-        assert(os.path.isdir(destination_dir))
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_dir
-        )
         return self.csv_path

@@ -63,6 +63,8 @@ setuptools.setup(
         'dask[complete]',
         'docker',
         'boto3>=1.9.66',
+        'fs',
+        'fs-s3fs',
     ],
     extras_require={
         'dev': [
@@ -71,8 +73,11 @@ setuptools.setup(
             'Sphinx',
             'sphinx_rtd_theme',
             'sphinx-autobuild',
+            'sphinxcontrib-programoutput',
             'flake8',
-            'coverage'
+            'coverage',
+            'rope',
+            'doc8'
         ]
     },
     entry_points={
