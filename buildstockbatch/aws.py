@@ -1114,7 +1114,7 @@ class AwsBatchEnv(AwsJobBase):
 
         priv_response_1 = self.ec2.create_subnet(
             CidrBlock=self.priv_subnet_cidr_1,
-            AvailabilityZone = f"{self.region}a",
+            AvailabilityZone=f"{self.region}a",
             VpcId=self.vpc_id
         )
 
@@ -1144,8 +1144,7 @@ class AwsBatchEnv(AwsJobBase):
             ]
         )
 
-
-        t3_response = self.ec2.create_tags(
+        self.ec2.create_tags(
             Resources=[
                 self.priv_vpc_subnet_id_2
             ],
@@ -1310,8 +1309,7 @@ class AwsBatchEnv(AwsJobBase):
         )
         logger.info("Route table associated with subnet.")
 
-
-        art_response_2 = self.ec2.associate_route_table(
+        self.ec2.associate_route_table(
             RouteTableId=self.priv_route_table_id,
             SubnetId=self.priv_vpc_subnet_id_2
         )
@@ -2448,7 +2446,6 @@ class AwsBatch(DockerBatchBase):
         # this is an override fix for our keys - not yet sure what changed
         if key == 'building_id' or key == 'upgrade_idx':
             this_type = "S"
-
 
         if this_type == 'BOOL':
             this_item = {key: {this_type: value}}
