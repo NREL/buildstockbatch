@@ -31,7 +31,7 @@ import time
 import io
 
 from buildstockbatch.localdocker import DockerBatchBase
-from buildstockbatch.base import (
+from buildstockbatch.postprocessing import (
     read_data_point_out_json,
     to_camelcase,
     flatten_datapoint_json,
@@ -2551,8 +2551,10 @@ class AwsBatch(DockerBatchBase):
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
             out_osw_filepath = sim_dir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
-                out_osw = read_out_osw(out_osw_filepath)
-                dp_out = flatten_datapoint_json(read_data_point_out_json(datapoint_out_filepath))
+                out_osw = read_out_osw(str(sim_dir), str(out_osw_filepath.relative_to(sim_dir)))
+                dp_out = flatten_datapoint_json(
+                    read_data_point_out_json(str(sim_dir), str(datapoint_out_filepath.relative_to(sim_dir)))
+                )
                 if dp_out is None:
                     dp_out = {}
                 dp_out.update(out_osw)
