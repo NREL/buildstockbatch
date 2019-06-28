@@ -16,7 +16,7 @@ import dask
 import datetime as dt
 from functools import partial
 from fs import open_fs
-from fs.errors import ResourceNotFound, FileExpected
+from fs.errors import ResourceNotFound, FileExpected, DirectoryExists
 import gzip
 import json
 import logging
@@ -139,7 +139,10 @@ def write_output(results_dir, group_pq):
         return
 
     folder_path = f"parquet/timeseries/upgrade={upgrade_id}"
-    fs.makedirs(folder_path)
+    try:
+        fs.makedirs(folder_path)
+    except DirectoryExists:
+        pass
 
     file_path = f"{folder_path}/{groupname}.parquet"
     parquets = []
@@ -171,7 +174,7 @@ def write_output(results_dir, group_pq):
         pq.to_parquet(f, engine='pyarrow', flavor='spark')
 
 
-def combine_results(results_dir):
+def combine_results(results_dir, dask_bag_partition_size=500):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
@@ -207,7 +210,7 @@ def combine_results(results_dir):
 
         logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
 
-        datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
+        datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size).\
             map(lambda x: f"{sim_out_dir}/{x}/run/data_point_out.json").\
             map(partial(read_data_point_out_json, results_dir)).\
             filter(lambda x: x is not None)
@@ -221,7 +224,7 @@ def combine_results(results_dir):
         data_point_out_df_d = datapoint_output_jsons.map(flatten_datapoint_json).\
             to_dataframe(meta=meta).rename(columns=to_camelcase)
 
-        out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
+        out_osws = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size).\
             map(lambda x: f"{sim_out_dir}/{x}/out.osw")
 
         out_osw_df_d = out_osws.map(partial(read_out_osw, results_dir)).filter(lambda x: x is not None).to_dataframe()

@@ -12,12 +12,16 @@ This class contains the object & methods that allow for usage of the library wit
 import argparse
 import base64
 import boto3
+from fs import open_fs
+from fs.copy import copy_fs
+from fs.walk import Walker
 import gzip
 import itertools
 from joblib import Parallel, delayed
 import json
 import logging
 import math
+from multiprocessing import cpu_count
 import os
 import pandas as pd
 import pathlib
@@ -48,30 +52,6 @@ logger = logging.getLogger(__name__)
 def upload_file_to_s3(*args, **kwargs):
     s3 = boto3.client('s3')
     s3.upload_file(*args, **kwargs)
-
-
-def upload_directory_to_s3(local_directory, bucket, prefix):
-    local_dir_abs = pathlib.Path(local_directory).absolute()
-
-    def filename_generator():
-        for dirpath, dirnames, filenames in os.walk(local_dir_abs):
-            for filename in filenames:
-                if filename.startswith('.'):
-                    continue
-                local_filepath = pathlib.Path(dirpath, filename)
-                s3_key = pathlib.PurePosixPath(
-                    prefix,
-                    local_filepath.relative_to(local_dir_abs)
-                )
-                yield local_filepath, s3_key
-
-    logger.debug('Uploading {} => {}/{}'.format(local_dir_abs, bucket, prefix))
-
-    Parallel(n_jobs=-1, verbose=9)(
-        delayed(upload_file_to_s3)(str(local_file), bucket, s3_key.as_posix())
-        for local_file, s3_key
-        in filename_generator()
-    )
 
 
 def compress_file(in_filename, out_filename):
@@ -2352,14 +2332,16 @@ class AwsBatch(DockerBatchBase):
                 tf.add(jobs_dir, arcname='jobs')
             tick = time.time() - tick
             logger.debug('Done compressing job jsons using gz {:.1f} seconds'.format(tick))
-
             shutil.rmtree(jobs_dir)
 
+            os.makedirs(tmppath / 'results' / 'simulation_output')
+
             logger.debug('Uploading files to S3')
-            upload_directory_to_s3(
-                tmppath,
-                self.cfg['aws']['s3']['bucket'],
-                self.cfg['aws']['s3']['prefix']
+            copy_fs(
+                str(tmppath),
+                f"s3://{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}",
+                workers=cpu_count(),
+                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
             )
 
         # Define the batch environment
@@ -2523,26 +2505,20 @@ class AwsBatch(DockerBatchBase):
 
             cls.cleanup_sim_dir(sim_dir)
 
-            logger.debug('Uploading simulation outputs')
-            for dirpath, dirnames, filenames in os.walk(sim_dir):
-                # Remove the asset directories from upload
-                if pathlib.Path(dirpath) == sim_dir:
-                    for dirname in asset_dirs:
-                        dirnames.remove(dirname)
-                for filename in filenames:
-                    filepath = pathlib.Path(dirpath, filename)
-                    logger.debug('Uploading {}'.format(filepath.relative_to(sim_dir)))
-                    s3.upload_file(
-                        str(filepath),
-                        bucket,
-                        str(pathlib.Path(
-                            prefix,
-                            'results',
-                            'simulation_output',
-                            'up{:02d}'.format(0 if upgrade_idx is None else upgrade_idx + 1),
-                            'bldg{:07d}'.format(building_id), filepath.relative_to(sim_dir)
-                        ))
-                    )
+            logger.debug('Uploading simulation outputs for building_id = {}, upgrade_id = {}'.format(
+                building_id, upgrade_idx
+            ))
+            walker = Walker(exclude_dirs=asset_dirs)
+            s3fs = open_fs(f"s3://{bucket}/{prefix}")
+            upload_fs = s3fs.makedirs(
+                f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"
+            )
+            copy_fs(
+                str(sim_dir),
+                upload_fs,
+                walker=walker,
+                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug('Upload {dst_path}')
+            )
 
             logger.debug('Writing output data to Firehose')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
