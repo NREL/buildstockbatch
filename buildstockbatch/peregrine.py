@@ -18,6 +18,7 @@ import math
 import os
 import re
 import subprocess
+import yamale
 
 from .hpc import HPCBatchBase
 
@@ -29,6 +30,12 @@ class PeregrineBatch(HPCBatchBase):
     sys_image_dir = '/projects/enduse/openstudio_singularity_images'
     hpc_name = 'peregrine'
     min_sims_per_job = 48
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'peregrine.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @property
     def output_dir(self):
@@ -213,6 +220,7 @@ def main():
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = PeregrineBatch(args.project_filename)
+    batch.validate_project(args.project_filename)
     job_array_number = int(os.environ.get('PBS_ARRAYID', 0))
     post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
     pick_up = os.environ.get('PICKUP', '0').lower() in ('true', 't', '1', 'y', 'yes')

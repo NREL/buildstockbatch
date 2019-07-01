@@ -20,6 +20,7 @@ import logging
 import os
 import pandas as pd
 import shutil
+import yamale
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -55,6 +56,12 @@ class LocalDockerBatch(BuildStockBatchBase):
                 raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'localdocker.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @classmethod
     def docker_image(cls):
@@ -186,10 +193,19 @@ def main():
     group.add_argument('--uploadonly',
                        help='Only upload to S3, useful when postprocessing is already done. Ignores the '
                        'upload flag in yaml', action='store_true')
+    group.add_argument('--validateonly', help='Only validate the project YAML file and references. Nothing is executed',
+                       action='store_true')
     args = parser.parse_args()
+    if not os.path.isfile(args.project_filename):
+        raise FileNotFoundError(
+            'The project file {} doesn\'t exist'.format(args.project_filename)
+        )
     batch = LocalDockerBatch(args.project_filename)
-    if not (args.postprocessonly or args.uploadonly):
+    if not (args.postprocessonly or args.uploadonly or args.validateonly):
+        batch.validate_project(args.project_filename)
         batch.run_batch(n_jobs=args.j)
+    if args.validateonly:
+        batch.validate_project(args.project_filename)
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
     else:

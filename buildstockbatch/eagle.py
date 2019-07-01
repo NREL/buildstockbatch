@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import yaml
+import yamale
 
 from .hpc import HPCBatchBase, SimulationExists
 
@@ -40,6 +41,12 @@ class EagleBatch(HPCBatchBase):
     local_weather_dir = local_scratch / 'weather'
     local_output_dir = local_scratch
     local_singularity_img = local_scratch / 'openstudio.simg'
+
+    @staticmethod
+    def validate_project(project_file):
+        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'eagle.yaml'))
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     @property
     def output_dir(self):
@@ -284,6 +291,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml',
         action='store_true'
     )
+    group.add_argument(
+        '--validateonly',
+        help='Only validate the project YAML file and references. Nothing is executed',
+        action='store_true'
+    )
     args = parser.parse_args(argv)
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
@@ -292,6 +304,10 @@ def user_cli(argv=sys.argv[1:]):
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
+
+    if args.validateonly:
+        eagle_batch = EagleBatch(project_filename)
+        eagle_batch.validate_project(project_filename)
 
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
@@ -333,6 +349,7 @@ def main():
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = EagleBatch(args.project_filename)
+    batch.validate_project(args.project_filename)
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
     upload_only = os.environ.get('UPLOADONLY', '0').lower() in ('true', 't', '1', 'y', 'yes')

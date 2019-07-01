@@ -270,6 +270,10 @@ class BuildStockBatchBase(object):
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir)
 
+    @staticmethod
+    def validate_project(project_file):
+        raise NotImplementedError
+
     def get_dask_client(self):
         return Client()
 

@@ -251,3 +251,7 @@ class HPCBatchBase(BuildStockBatchBase):
 
     def queue_post_processing(self, after_jobids):
         raise NotImplementedError
+
+    @staticmethod
+    def validate_project(project_file):
+        raise NotImplementedError
