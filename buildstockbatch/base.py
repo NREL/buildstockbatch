@@ -21,6 +21,7 @@ import requests
 import shutil
 import tempfile
 import yaml
+import yamale
 import zipfile
 
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -272,7 +273,22 @@ class BuildStockBatchBase(object):
 
     @staticmethod
     def validate_project(project_file):
-        raise NotImplementedError
+        try:
+            with open(project_file) as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        except FileNotFoundError as err:
+            print(f'Failed to load input yaml for validation')
+            raise err
+        version_schema = os.path.join(os.path.dirname(__file__),
+                                      'schemas',
+                                      f'v-{cfg["version"].replace(".", "-")}.yaml'
+                                      )
+        if not os.path.isfile(version_schema):
+            print(f'Could not find validation schema for YAML version {cfg["version"]}')
+            raise FileNotFoundError(version_schema)
+        schema = yamale.make_schema(version_schema)
+        data = yamale.make_data(project_file)
+        _ = yamale.validate(schema, data)
 
     def get_dask_client(self):
         return Client()

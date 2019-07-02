@@ -22,7 +22,6 @@ import shutil
 import subprocess
 import sys
 import yaml
-import yamale
 
 from .hpc import HPCBatchBase, SimulationExists
 
@@ -44,9 +43,8 @@ class EagleBatch(HPCBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'eagle.yaml'))
-        data = yamale.make_data(project_file)
-        _ = yamale.validate(schema, data)
+        super().validate_project(project_file)
+        # Eagle specific validation goes here
 
     @property
     def output_dir(self):

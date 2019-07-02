@@ -254,4 +254,4 @@ class HPCBatchBase(BuildStockBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        raise NotImplementedError
+        return super().validate_project(project_file)

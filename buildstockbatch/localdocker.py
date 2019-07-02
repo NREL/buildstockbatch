@@ -20,7 +20,6 @@ import logging
 import os
 import pandas as pd
 import shutil
-import yamale
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -59,9 +58,8 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        schema = yamale.make_schema(os.path.join(os.path.dirname(__file__), 'schemas', 'localdocker.yaml'))
-        data = yamale.make_data(project_file)
-        _ = yamale.validate(schema, data)
+        super().validate_project(project_file)
+        # LocalDocker specific code goes here
 
     @classmethod
     def docker_image(cls):
@@ -197,15 +195,13 @@ def main():
                        action='store_true')
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
-        raise FileNotFoundError(
-            'The project file {} doesn\'t exist'.format(args.project_filename)
-        )
+        raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
     batch = LocalDockerBatch(args.project_filename)
+    LocalDockerBatch.validate_project(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
-        batch.validate_project(args.project_filename)
         batch.run_batch(n_jobs=args.j)
     if args.validateonly:
-        batch.validate_project(args.project_filename)
+        return True
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
     else:
