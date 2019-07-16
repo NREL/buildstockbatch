@@ -130,9 +130,12 @@ class HPCBatchBase(BuildStockBatchBase):
         n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
         n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
-        baseline_sims = zip(building_ids, itertools.repeat(None))
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
-        all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        if not self.skip_baseline_sims:
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        else:
+            all_sims = list(itertools.chain(upgrade_sims))
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
 

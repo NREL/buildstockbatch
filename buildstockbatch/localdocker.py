@@ -119,11 +119,14 @@ class LocalDockerBatch(BuildStockBatchBase):
             self.results_dir,
             self.cfg
         )
-        baseline_sims = map(run_building_d, building_ids)
         upgrade_sims = []
         for i in range(len(self.cfg.get('upgrades', []))):
             upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
-        all_sims = itertools.chain(baseline_sims, *upgrade_sims)
+        if not self.skip_baseline_sims:
+            baseline_sims = map(run_building_d, building_ids)
+            all_sims = itertools.chain(baseline_sims, *upgrade_sims)
+        else:
+            all_sims = itertools.chain(*upgrade_sims)    
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
     @property

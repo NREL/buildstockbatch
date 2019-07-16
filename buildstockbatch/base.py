@@ -142,6 +142,11 @@ class BuildStockBatchBase(object):
     @property
     def output_dir(self):
         raise NotImplementedError
+        
+    @property
+    def skip_baseline_sims(self):
+        baseline_skip = self.cfg['baseline'].get('skip_sims', False)
+        return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
