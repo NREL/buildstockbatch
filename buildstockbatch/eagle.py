@@ -345,6 +345,19 @@ def user_cli(argv=sys.argv[1:]):
 
 
 def main():
+    """
+    Determines which piece of work is to be run right now, on this process, on 
+    this node. There are four types of work that may need to be done:
+
+    - initialization, sampling, and queuing other work (job_array_number == 0)
+    - run a batch of simulations (job_array_number > 0)
+    - post-process results (job_array_number == 0 and POSTPROCESS)
+    - upload results to Athena (job_array_number == 0 and POSTPROCESS and UPLOADONLY)
+
+    The context for the work is deinfed by the project_filename (project .yml file), 
+    which is used to initialize an EagleBatch object.
+    """
+
     # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
 
