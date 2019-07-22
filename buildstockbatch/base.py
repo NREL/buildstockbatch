@@ -24,6 +24,7 @@ import yaml
 import yamale
 import zipfile
 
+from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 from .postprocessing import combine_results, upload_results, create_athena_tables
 
@@ -273,22 +274,24 @@ class BuildStockBatchBase(object):
 
     @staticmethod
     def validate_project(project_file):
+        assert(BuildStockBatchBase.validate_project_schema(project_file))
+
+    @staticmethod
+    def validate_project_schema(project_file):
         try:
             with open(project_file) as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
         except FileNotFoundError as err:
             print(f'Failed to load input yaml for validation')
             raise err
-        version_schema = os.path.join(os.path.dirname(__file__),
-                                      'schemas',
-                                      f'v-{cfg["version"].replace(".", "-")}.yaml'
-                                      )
+        schema_version = cfg.get('version', __schema_version__)
+        version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'{schema_version}.yaml')
         if not os.path.isfile(version_schema):
             print(f'Could not find validation schema for YAML version {cfg["version"]}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file)
-        _ = yamale.validate(schema, data)
+        return yamale.validate(schema, data)
 
     def get_dask_client(self):
         return Client()
