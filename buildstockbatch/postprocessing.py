@@ -247,6 +247,18 @@ def combine_results(results_dir):
             )
             results_df = results_df[cols_to_keep]
 
+        # standardize the column orders
+        first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
+                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name']
+
+        build_existing_model_cols = sorted([col for col in results_df.columns if
+                                            col.startswith('build_existing_model')])
+        simulation_output_cols = sorted([col for col in results_df.columns if
+                                         col.startswith('simulation_output_report')])
+        sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+
+        results_df = results_df.reindex(columns=sorted_cols, copy=False)
+
         # Save to CSV
         logger.debug('Saving to csv.gz')
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
