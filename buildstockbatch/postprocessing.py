@@ -171,16 +171,17 @@ def write_output(results_dir, group_pq):
         pq.to_parquet(f, engine='pyarrow', flavor='spark')
 
 
-def combine_results(results_dir):
+def combine_results(results_dir, skip_timeseries=False):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
     results_csvs_dir = 'results_csvs'
     parquet_dir = 'parquet'
     ts_dir = 'parquet/timeseries'
+    dirs = [results_csvs_dir, parquet_dir] if skip_timeseries else [results_csvs_dir, parquet_dir, ts_dir]
 
     # clear and create the postprocessing results directories
-    for dr in [results_csvs_dir, parquet_dir, ts_dir]:
+    for dr in dirs:
         if fs.exists(dr):
             fs.removetree(dr)
         fs.makedirs(dr)
@@ -281,6 +282,11 @@ def combine_results(results_dir):
                 flavor='spark'
             )
 
+    if skip_timeseries:
+        logger.info("Timeseries aggregation skipped.")
+        return
+
+    # Time series aggregation
     # find the avg size of time_series parqeut files
     total_size = 0
     count = 0
@@ -295,6 +301,10 @@ def combine_results(results_dir):
         else:
             total_size += sys.getsizeof(pq)
             count += 1
+
+    if count == 0:
+        logger.error('No valid timeseries file could be found.')
+        return
 
     avg_parquet_size = total_size / count
 
