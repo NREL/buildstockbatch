@@ -28,6 +28,8 @@ import time
 import boto3
 import pandas as pd
 from pathlib import Path
+import pyarrow as pa
+from pyarrow import parquet
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +111,13 @@ def read_out_osw(fs_uri, filename):
         return out_d
 
 
+def write_dataframe_as_parquet(df, fs_uri, filename):
+    fs = open_fs(fs_uri)
+    tbl = pa.Table.from_pandas(df, preserve_index=False)
+    with fs.open(filename, 'wb') as f:
+        parquet.write_table(tbl, f, flavor='spark')
+
+
 def bldg_group(group_size, directory_name):
     m = re.search(r'up(\d+)/bldg(\d+)', directory_name)
     assert m, f"list of directories passed should be properly formatted as: " \
@@ -165,8 +174,7 @@ def write_output(results_dir, group_pq):
                  f"{pq_size:.2f} MB memory on a dask worker process.")
     pq = pd.concat(parquets)
     logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
-    with fs.open(file_path, 'wb') as f:
-        pq.to_parquet(f, engine='pyarrow', flavor='spark')
+    write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
 def combine_results(results_dir, skip_timeseries=False):
@@ -273,12 +281,11 @@ def combine_results(results_dir, skip_timeseries=False):
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
         if not fs.exists(results_parquet_dir):
             fs.makedirs(results_parquet_dir)
-        with fs.open(f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet", 'wb') as f:
-            results_df.to_parquet(
-                f,
-                engine='pyarrow',
-                flavor='spark'
-            )
+        write_dataframe_as_parquet(
+            results_df,
+            results_dir,
+            f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+        )
 
     if skip_timeseries:
         logger.info("Timeseries aggregation skipped.")
