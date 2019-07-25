@@ -26,7 +26,7 @@ import zipfile
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
-from .postprocessing import combine_results, upload_results, create_athena_tables
+from .postprocessing import combine_results, upload_results, create_athena_tables, write_dataframe_as_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -253,10 +253,11 @@ class BuildStockBatchBase(object):
     def cleanup_sim_dir(sim_dir):
 
         # Convert the timeseries data to parquet
-        timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-        if os.path.isfile(timeseries_filename):
-            tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
-            tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        if os.path.isfile(timeseries_filepath):
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
+            timeseries_filedir, timeseries_filename = os.path.split(timeseries_filepath)
+            write_dataframe_as_parquet(tsdf, timeseries_filedir, os.path.splitext(timeseries_filename)[0] + '.parquet')
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
