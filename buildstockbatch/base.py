@@ -314,7 +314,6 @@ class BuildStockBatchBase(object):
                     raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
         return True
 
-
     def get_dask_client(self):
         return Client()
 
