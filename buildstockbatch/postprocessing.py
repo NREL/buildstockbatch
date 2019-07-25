@@ -148,8 +148,6 @@ def write_output(results_dir, group_pq):
         return
 
     folder_path = f"parquet/timeseries/upgrade={upgrade_id}"
-    fs.makedirs(folder_path)
-
     file_path = f"{folder_path}/{groupname}.parquet"
     parquets = []
     for folder in folders.split():
@@ -294,6 +292,13 @@ def combine_results(results_dir, skip_timeseries=False):
         return
 
     # Time series aggregation
+
+    # Create directories in serial section to avoid race conditions
+    for upgrade_id in results_by_upgrade.keys():
+        folder_path = f"{ts_dir}/upgrade={upgrade_id}"
+        if not fs.exists(folder_path):
+            fs.makedirs(folder_path)
+
     # find the avg size of time_series parqeut files
     total_size = 0
     count = 0
