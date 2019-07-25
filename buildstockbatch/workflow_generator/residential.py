@@ -33,7 +33,8 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'begin_month': 1,
             'begin_day_of_month': 1,
             'end_month': 12,
-            'end_day_of_month': 31
+            'end_day_of_month': 31,
+            'calendar_year': 2007
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))

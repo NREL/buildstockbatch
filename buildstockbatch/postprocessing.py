@@ -171,16 +171,17 @@ def write_output(results_dir, group_pq):
         pq.to_parquet(f, engine='pyarrow', flavor='spark')
 
 
-def combine_results(results_dir):
+def combine_results(results_dir, skip_timeseries=False):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
     results_csvs_dir = 'results_csvs'
     parquet_dir = 'parquet'
     ts_dir = 'parquet/timeseries'
+    dirs = [results_csvs_dir, parquet_dir] if skip_timeseries else [results_csvs_dir, parquet_dir, ts_dir]
 
     # clear and create the postprocessing results directories
-    for dr in [results_csvs_dir, parquet_dir, ts_dir]:
+    for dr in dirs:
         if fs.exists(dr):
             fs.removetree(dr)
         fs.makedirs(dr)
@@ -247,6 +248,18 @@ def combine_results(results_dir):
             )
             results_df = results_df[cols_to_keep]
 
+        # standardize the column orders
+        first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
+                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name']
+
+        build_existing_model_cols = sorted([col for col in results_df.columns if
+                                            col.startswith('build_existing_model')])
+        simulation_output_cols = sorted([col for col in results_df.columns if
+                                         col.startswith('simulation_output_report')])
+        sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+
+        results_df = results_df.reindex(columns=sorted_cols, copy=False)
+
         # Save to CSV
         logger.debug('Saving to csv.gz')
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
@@ -269,6 +282,11 @@ def combine_results(results_dir):
                 flavor='spark'
             )
 
+    if skip_timeseries:
+        logger.info("Timeseries aggregation skipped.")
+        return
+
+    # Time series aggregation
     # find the avg size of time_series parqeut files
     total_size = 0
     count = 0
@@ -283,6 +301,10 @@ def combine_results(results_dir):
         else:
             total_size += sys.getsizeof(pq)
             count += 1
+
+    if count == 0:
+        logger.error('No valid timeseries file could be found.')
+        return
 
     avg_parquet_size = total_size / count
 
