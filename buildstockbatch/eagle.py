@@ -43,7 +43,7 @@ class EagleBatch(HPCBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        super().validate_project(project_file)
+        super(EagleBatch, EagleBatch).validate_project(project_file)
         # Eagle specific validation goes here
 
     @property

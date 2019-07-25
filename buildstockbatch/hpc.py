@@ -254,4 +254,4 @@ class HPCBatchBase(BuildStockBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        return super().validate_project(project_file)
+        return super(HPCBatchBase, HPCBatchBase).validate_project(project_file)

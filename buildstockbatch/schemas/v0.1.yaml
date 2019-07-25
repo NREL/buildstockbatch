@@ -15,7 +15,7 @@ residential_simulation_controls: include('residential-simulation-spec', required
 hpc-spec:
   account: str(required=True)
   minutes_per_sim: int(max=120, required=False)
-  n_jobs: int(required=True)
+  n_jobs: int(required=False)
   buildstock_csv: str(required=False)
 sim-spec:
   n_datapoints: int(required=False)
