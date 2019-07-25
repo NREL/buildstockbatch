@@ -284,7 +284,7 @@ def combine_results(results_dir, skip_timeseries=False):
         if not fs.exists(results_parquet_dir):
             fs.makedirs(results_parquet_dir)
         write_dataframe_as_parquet(
-            results_df, 
+            results_df,
             results_dir,
             f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         )
