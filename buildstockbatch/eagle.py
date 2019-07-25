@@ -225,6 +225,8 @@ class EagleBatch(HPCBatchBase):
 
         if os.environ.get('SLURM_JOB_QOS'):
             args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
+        elif hipri:
+            args.insert(-1, '--qos=high')
 
         resp = subprocess.run(
             args,
@@ -305,7 +307,7 @@ def user_cli(argv=sys.argv[1:]):
 
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
-        eagle_batch.queue_post_processing(upload_only=args.uploadonly)
+        eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
         return
 
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
