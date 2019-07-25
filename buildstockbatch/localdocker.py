@@ -58,7 +58,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        super().validate_project(project_file)
+        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
         # LocalDocker specific code goes here
 
     @classmethod
