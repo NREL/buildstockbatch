@@ -68,8 +68,8 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file):
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
-        
-        
+
+
 @patch('buildstockbatch.eagle.subprocess')
 def test_skipping_baseline(mock_subprocess, basic_residential_project_file):
     return
