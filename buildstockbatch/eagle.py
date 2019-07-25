@@ -180,11 +180,21 @@ class EagleBatch(HPCBatchBase):
         job_id = m.group(1)
         return [job_id]
 
-    def queue_post_processing(self, after_jobids=[], upload_only=False):
+    def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False):
 
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
+
+        # Clear out some files that cause problems if we're rerunning this.
+        for subdir in ('parquet', 'results_csvs'):
+            subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
+            if subdirpath.exists():
+                shutil.rmtree(subdirpath)
+        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
+            filepath = pathlib.Path(self.output_dir, filename)
+            if filepath.exists():
+                os.remove(filepath)
 
         env = {}
         env.update(os.environ)
