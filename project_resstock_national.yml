@@ -1,13 +1,14 @@
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_singlefamilydetached  # Relative to buildstock_directory
-output_directory: /scratch/nmerket/national_test_outputs
+output_directory: ../temp_nobaseline
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
-weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 3000  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
+  skip_sims: true
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:
@@ -40,13 +41,13 @@ eagle:
     time: 60
     n_workers: 3
 
-postprocessing:
-  aws:
-    region_name: 'us-west-2'
-    s3:
-      bucket: resbldg-datasets
-      prefix: resstock-athena/calibration_runs_new
-    athena:
-      glue_service_role: service-role/AWSGlueServiceRole-default
-      database_name: calibration_runs_testing
-      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+# postprocessing:
+#   aws:
+#     region_name: 'us-west-2'
+#     s3:
+#       bucket: resbldg-datasets
+#       prefix: resstock-athena/calibration_runs_new
+#     athena:
+#       glue_service_role: service-role/AWSGlueServiceRole-default
+#       database_name: calibration_runs_testing
+#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
