@@ -281,8 +281,13 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
+        if self.cfg.get('timeseries_csv_export', {}):
+            skip_timeseries = False
+        else:
+            skip_timeseries = True
+
         if not skip_combine:
-            combine_results(self.results_dir)
+            combine_results(self.results_dir, skip_timeseries=skip_timeseries)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:

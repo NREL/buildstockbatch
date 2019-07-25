@@ -30,6 +30,10 @@ def basic_residential_project_file():
                     'n_datapoints': 10,
                     'n_buildings_represented': 80000000
                 },
+                'timeseries_csv_export': {
+                    'reporting_frequency': 'Hourly',
+                    'include_enduse_subcategories': 'true'
+                },
                 'eagle': {
                     'sampling': {
                         'time': 20
