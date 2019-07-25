@@ -196,12 +196,14 @@ def main():
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
-    batch = LocalDockerBatch(args.project_filename)
+
+    # Validate the project, and in case of the --validateonly flag return True if validation passes
     LocalDockerBatch.validate_project(args.project_filename)
-    if not (args.postprocessonly or args.uploadonly or args.validateonly):
-        batch.run_batch(n_jobs=args.j)
     if args.validateonly:
         return True
+    batch = LocalDockerBatch(args.project_filename)
+    if not (args.postprocessonly or args.uploadonly or args.validateonly):
+        batch.run_batch(n_jobs=args.j)
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
     else:

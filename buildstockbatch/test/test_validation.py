@@ -38,15 +38,45 @@ def test_local_docker_validation_is_static():
     assert(isinstance(LocalDockerBatch.validate_project, types.FunctionType))
 
 
-def test_schema_validation_passes():
+def test_complete_schema_passes_validation():
     assert(BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'complete-schema.yml')))
 
 
-def test_missing_required_key_fails():
-    expected_failures = [
-        os.path.join(example_yml_dir, 'missing-required-schema.yml'),
-        os.path.join(example_yml_dir, 'missing-nested-required-schema.yml')
-    ]
-    for expected_failure in expected_failures:
-        with pytest.raises(Exception):
-            assert BuildStockBatchBase.validate_project_schema(expected_failure)
+def test_minimal_schema_passes_validation():
+    assert(BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'minimal-schema.yml')))
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'missing-required-schema.yml'),
+    os.path.join(example_yml_dir, 'missing-nested-required-schema.yml')
+])
+def test_missing_required_key_fails(project_file):
+    with pytest.raises(ValueError):
+        BuildStockBatchBase.validate_project_schema(project_file)
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'),
+    os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'),
+    os.path.join(example_yml_dir, 'enforce-schema-xor.yml')
+])
+def test_xor_violations_fail(project_file):
+    with pytest.raises(ValueError):
+        BuildStockBatchBase.validate_xor_schema_keys(project_file)
+
+
+@pytest.mark.parametrize("project_file,expected", [
+    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
+    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
+])
+def test_validation_integration(project_file, expected):
+    if expected is not True:
+        with pytest.raises(expected):
+            BuildStockBatchBase.validate_project(project_file)
+    else:
+        assert(BuildStockBatchBase.validate_project(project_file))

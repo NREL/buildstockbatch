@@ -275,6 +275,8 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
+        assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        return True
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -285,13 +287,33 @@ class BuildStockBatchBase(object):
             print(f'Failed to load input yaml for validation')
             raise err
         schema_version = cfg.get('version', __schema_version__)
-        version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'{schema_version}.yaml')
+        version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
         if not os.path.isfile(version_schema):
             print(f'Could not find validation schema for YAML version {cfg["version"]}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file)
         return yamale.validate(schema, data)
+
+    @staticmethod
+    def validate_xor_schema_keys(project_file):
+        try:
+            with open(project_file) as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        except FileNotFoundError as err:
+            print(f'Failed to load input yaml for validation')
+            raise err
+        major, minor = cfg.get('version', __schema_version__).split('.')
+        if int(major) >= 0:
+            if int(minor) >= 0:
+                if ('weather_files_url' in cfg.keys()) is \
+                   ('weather_files_path' in cfg.keys()):
+                    raise ValueError('Both/neither weather_files_url and weather_files_path found in yaml root')
+                if ('n_datapoints' in cfg['baseline'].keys()) is \
+                   ('buildstock_csv' in cfg['baseline'].keys()):
+                    raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+        return True
+
 
     def get_dask_client(self):
         return Client()

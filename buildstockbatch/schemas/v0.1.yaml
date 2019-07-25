@@ -1,19 +1,22 @@
-buildstock_directory: str(required=True)
+buildstock_directory: str()
 project_directory: str(required=True)
-weather_files_path: str(required=True)
+weather_files_path: str(required=False)
+weather_files_url: str(required=False)
 stock_type: enum('residential', 'commercial', required=True)
-eagle: include('hpc-spec', required=True)
+eagle: include('hpc-spec', required=False)
 output_directory: str(required=False)
 sys_image_dir: str(required=False)
-baseline: include('sim-spec', required=False)
+baseline: include('sim-spec', required=True)
 timeseries_csv_export: include('tscsvexport-spec', required=False)
 upgrades: list(include('upgrade-spec'), required=False)
+postprocessing: include('postprocessing-spec', required=False)
+residential_simulation_controls: include('residential-simulation-spec', required=False)
 ---
 hpc-spec:
   account: str(required=True)
   minutes_per_sim: int(max=120, required=False)
-  n_jobs: int(required=False)
-  postprocessing: include('postprocessing-spec', required=False)
+  n_jobs: int(required=True)
+  buildstock_csv: str(required=False)
 sim-spec:
   n_datapoints: int(required=False)
   n_buildings_represented: int(required=False)
@@ -23,25 +26,61 @@ measure-spec:
   measure_dir_name: str(requried=True)
   arguments: map(required=False)
 tscsvexport-spec:
-  reporting_frequency: enum('Hourly', 'Timestep')
+  reporting_frequency: enum('Hourly', 'Timestep', required=False)
   inc_end_use_subcategories: bool(required=False)
   inc_output_variables: bool(required=False)
   output_variables: list(str(), required=False)
-postprocessing-spec:
+hpc-postprocessing-spec:
   time: int(required=False)
 upgrade-spec:
-  upgrade_name: str()
+  upgrade_name: str(required=False)
   options: list(include('option-spec'), required=True)
+#  package_apply_logic: include('apply-logic-spec', required=False)
 option-spec:
   option: str(required=True)
-  apply_logic: any(include('or-spec'), include('and-spec'), required=False)
+#  apply_logic: include('apply-logic-spec', required=False)
   costs: list(include('cost-spec'), required=False)
   lifetime: num(required=False)
   reference_scenario: str(required=False)
-or-spec:
-  or: list(str(required=True))
-and-spec:
-  and: list(str(required=True))
+#apply-logic-spec: >
+#  any(
+#    list(
+#      include('and-spec', required=False),
+#      include('or-spec', required=False),
+#      include('not-spec', required=False),
+#      required=False
+#    ),
+#    include('and-spec', required=False),
+#    include('or-spec', required=False),
+#    include('not-spec', required=False),
+#    required=False
+#  )
+#or-spec:
+#  or: list(str(required=True))
+#and-spec:
+#  and: list(str(required=True))
+#not-spec:
+#  not: list(str(required=True))
 cost-spec:
   value: num(required=True)
   multiplier: str(required=False)
+postprocessing-spec:
+  aws: include('aws-postprocessing-spec', required=False)
+aws-postprocessing-spec:
+  region_name: str(required=False)
+  s3: include('s3-aws-postprocessing-spec', required=True)
+  athena: include('athena-aws-postprocessing-spec', required=False)
+s3-aws-postprocessing-spec:
+  bucket: str(required=True)
+  prefix: str(required=False)
+athena-aws-postprocessing-spec:
+  glue_service_role: str(required=False)
+  database_name: str(required=True)
+  max_crawling_time: num(requried=False)
+residential-simulation-spec:
+  timesteps_per_hr: num(required=False)
+  begin_month: int(required=False)
+  begin_day_of_month: int(required=False)
+  end_month: int(required=False)
+  end_day_of_month: int(required=False)
+  calendar_year: int(required=False)

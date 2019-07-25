@@ -303,9 +303,10 @@ def user_cli(argv=sys.argv[1:]):
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
+    # Validate the project, and in case of the --validateonly flag return True if validation passes
+    EagleBatch.validate_project(project_filename)
     if args.validateonly:
-        eagle_batch = EagleBatch(project_filename)
-        eagle_batch.validate_project(project_filename)
+        return True
 
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
@@ -347,7 +348,6 @@ def main():
     parser.add_argument('project_filename')
     args = parser.parse_args()
     batch = EagleBatch(args.project_filename)
-    batch.validate_project(args.project_filename)
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
     upload_only = os.environ.get('UPLOADONLY', '0').lower() in ('true', 't', '1', 'y', 'yes')
