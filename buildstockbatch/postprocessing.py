@@ -283,12 +283,11 @@ def combine_results(results_dir, skip_timeseries=False):
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
         if not fs.exists(results_parquet_dir):
             fs.makedirs(results_parquet_dir)
-        with fs.open(f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet", 'wb') as f:
-            results_df.to_parquet(
-                f,
-                engine='pyarrow',
-                flavor='spark'
-            )
+        write_dataframe_as_parquet(
+            results_df, 
+            results_dir,
+            f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+        )
 
     if skip_timeseries:
         logger.info("Timeseries aggregation skipped.")
