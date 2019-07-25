@@ -112,6 +112,7 @@ def test_residential_simulation_controls_config():
 
 
 def test_timeseries_csv_export():
+    print "\n"
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
@@ -141,3 +142,25 @@ def test_timeseries_csv_export():
     assert(args['output_variables'] == 'Zone Mean Air Temperature')
     for argname in ('include_enduse_subcategories',):
         assert(args[argname] == default_args[argname])
+        
+def test_additional_reporting_measures():
+    print "\n"
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'reporting_measures': [
+            'reporting_measure_1',
+            'reporting_measure_2'
+        ]
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    reporting_measure_1_step = osw['steps'][-3]
+    assert(reporting_measure_1_step['measure_dir_name'] == 'reporting_measure_1')
+    reporting_measure_2_step = osw['steps'][-2]
+    assert(reporting_measure_2_step['measure_dir_name'] == 'reporting_measure_2')
