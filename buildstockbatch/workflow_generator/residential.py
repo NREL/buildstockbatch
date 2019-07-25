@@ -121,6 +121,14 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 'measure_dir_name': 'TimeseriesCSVExport',
                 'arguments': timeseries_csv_export_args
             }
-            osw['steps'].insert(-1, timeseries_measure)
+            osw['steps'].insert(-1, timeseries_measure) # right before ServerDirectoryCleanup
+
+        if 'reporting_measures' in self.cfg:
+            for measure_dir_name in self.cfg['reporting_measures']:
+                reporting_measure = {
+                    'measure_dir_name': measure_dir_name,
+                    'arguments': {}
+                }
+                osw['steps'].insert(-1, reporting_measure) # right before ServerDirectoryCleanup  
 
         return osw
