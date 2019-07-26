@@ -21,8 +21,6 @@ def test_docker_image_exists_on_docker_hub():
     token = r2.json()['token']
     r3 = requests.head(
         f'{baseurl}{docker_image}/manifests/{docker_tag}',
-        headers={
-            'Authorization': f'Bearer {token}'
-        }
+        headers={'Authorization': f'Bearer {token}'}
     )
     assert(r3.ok)
