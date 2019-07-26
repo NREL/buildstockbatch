@@ -126,30 +126,3 @@ The ``-d`` and ``-e`` flags can also be combined if desired
 ::
 
    bash create_eagle_env.sh -d -e /projects/enduse/envs mydevenv
-
-Peregrine
-~~~~~~~~~
-
-.. warning:: 
-
-   The use of BuildStock Batch on Peregrine is deprecated and not really
-   maintained anymore. We recommend using Eagle. 
-
-
-To use this library you will need to have access to NREL's HPC system.
-Instructions can be found on `NREL's High Performance Computing
-website <http://www.nrel.gov/hpc>`__. Once you have access, ssh into
-Peregrine, and do the following:
-
-::
-
-   git clone <repo_url>
-   cd buildstockbatch
-   qsub -A res_stock create_peregrine_env.sh
-
-This assumes you have access to the allocation ``res_stock``. If you are
-using another allocation replace it in the ``-A`` argument above.
-
-This submits a job that will create the environment. It may take several
-minutes to complete. When it is done, a file ``create_environment.out``
-will be in the directory with the output of the installation process.
