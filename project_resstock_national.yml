@@ -25,11 +25,6 @@ timeseries_csv_export:
 #   resample: false
 #   logic:
 #     - not: Heating Fuel|Natural Gas
-peregrine:
-  nodetype: 24core
-  queue: short
-  n_jobs: 2
-  allocation: la100
 eagle:
   n_jobs: 200
   minutes_per_sim: 2
@@ -39,7 +34,6 @@ eagle:
   postprocessing:
     time: 60
     n_workers: 3
-
 postprocessing:
   aws:
     region_name: 'us-west-2'

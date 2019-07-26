@@ -22,7 +22,7 @@ class BuildStockSampler(object):
         """
         Create the buildstock.csv file required for batch simulations using this class.
 
-        Multiple sampling methods are available to support local & peregrine analyses, as well as to support multiple\
+        Multiple sampling methods are available to support local & eagle analyses, as well as to support multiple\
         sampling strategies. Currently there are separate implementations for commercial & residential stock types\
         due to unique requirements created by the commercial tsv set.
 
