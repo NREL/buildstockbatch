@@ -12,4 +12,3 @@ def test_singularity_image_download_url():
     # Use a bearer tokean as at
     # https://docs.docker.com/registry/spec/auth/token/
     # https://docs.docker.com/registry/spec/api/
-
