@@ -7,7 +7,7 @@ eagle: include('hpc-spec', required=False)
 output_directory: str(required=False)
 sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
-timeseries_csv_export: include('tscsvexport-spec', required=False)
+timeseries_csv_export: map(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: include('residential-simulation-spec', required=False)
@@ -25,11 +25,6 @@ sim-spec:
 measure-spec:
   measure_dir_name: str(requried=True)
   arguments: map(required=False)
-tscsvexport-spec:
-  reporting_frequency: enum('Hourly', 'Timestep', required=False)
-  inc_end_use_subcategories: bool(required=False)
-  inc_output_variables: bool(required=False)
-  output_variables: str()
 hpc-postprocessing-spec:
   time: int(required=False)
 upgrade-spec:
