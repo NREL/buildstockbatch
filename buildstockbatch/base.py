@@ -277,6 +277,7 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        logger.info('Base Validation Successful')
         return True
 
     @staticmethod

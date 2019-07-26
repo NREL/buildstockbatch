@@ -29,7 +29,7 @@ tscsvexport-spec:
   reporting_frequency: enum('Hourly', 'Timestep', required=False)
   inc_end_use_subcategories: bool(required=False)
   inc_output_variables: bool(required=False)
-  output_variables: list(str(), required=False)
+  output_variables: str()
 hpc-postprocessing-spec:
   time: int(required=False)
 upgrade-spec:
