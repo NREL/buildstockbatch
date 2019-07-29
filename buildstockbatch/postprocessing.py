@@ -215,7 +215,7 @@ def write_output(results_dir, group_pq):
     write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
-def combine_results(results_dir, skip_timeseries=False):
+def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=False):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
@@ -223,7 +223,11 @@ def combine_results(results_dir, skip_timeseries=False):
     parquet_dir = 'parquet'
     ts_dir = 'parquet/timeseries'
     agg_ts_dir = 'parquet/aggregated_timeseries'
-    dirs = [results_csvs_dir, parquet_dir] if skip_timeseries else [results_csvs_dir, parquet_dir, ts_dir, agg_ts_dir]
+    dirs = [results_csvs_dir, parquet_dir]
+    if not skip_timeseries:
+        dirs += [ts_dir]
+        if aggregate_timeseries:
+            dirs += [agg_ts_dir]
 
     # clear and create the postprocessing results directories
     for dr in dirs:
@@ -327,10 +331,10 @@ def combine_results(results_dir, skip_timeseries=False):
         )
 
         # combine and save the aggregated timeseries file
-        if not skip_timeseries:
+        if not skip_timeseries and aggregate_timeseries:
             full_sim_dir = results_dir + '/' + sim_out_dir
             logger.info(f"Combining timeseries files for {upgrade_id} in direcotry {full_sim_dir}")
-            agg_parquet = db.from_sequence(sim_dir_list).fold(partial(add_timeseries,full_sim_dir)).compute()
+            agg_parquet = db.from_sequence(sim_dir_list).fold(partial(add_timeseries, full_sim_dir)).compute()
             agg_parquet.reset_index(inplace=True)
 
             agg_parquet_dir = f"{agg_ts_dir}/upgrade={upgrade_id}"

@@ -35,6 +35,7 @@ eagle:
     time: 60
     n_workers: 3
 postprocessing:
+  aggregate_timeseries: true
   aws:
     region_name: 'us-west-2'
     s3:
