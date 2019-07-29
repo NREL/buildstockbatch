@@ -126,7 +126,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             baseline_sims = map(run_building_d, building_ids)
             all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         else:
-            all_sims = itertools.chain(*upgrade_sims)    
+            all_sims = itertools.chain(*upgrade_sims)
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
     @property
