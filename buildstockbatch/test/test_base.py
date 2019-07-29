@@ -1,14 +1,17 @@
 import dask
 import json
+import numpy as np
 import os
 from unittest.mock import patch, MagicMock
 import pandas as pd
 import pytest
+from pyarrow import parquet
 import tempfile
 import yaml
 import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.postprocessing import write_dataframe_as_parquet
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -330,6 +333,17 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     files_uploaded.remove((source_file_path, s3_file_path))
 
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
+
+
+def test_write_parquet_no_index():
+    df = pd.DataFrame(np.random.randn(6, 4), columns=list('abcd'), index=np.arange(6))
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = 'df.parquet'
+        write_dataframe_as_parquet(df, tmpdir, filename)
+        schema = parquet.read_schema(os.path.join(tmpdir, filename))
+        assert '__index_level_0__' not in schema.names
+        assert df.columns.values.tolist() == schema.names
 
 
 def test_skipping_baseline(basic_residential_project_file):

@@ -12,6 +12,4 @@ timeseries_csv_export:
   inc_end_use_subcategories: true
   inc_output_variables: true
 output_directory: /scratch/nmerket/multifamily10k
-peregrine:
-  minutes_per_sim: 60
 stock_type: residential
