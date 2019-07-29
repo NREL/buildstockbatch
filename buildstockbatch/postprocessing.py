@@ -133,6 +133,44 @@ def directory_name_append(name1, name2):
         return name1 + '\n' + name2
 
 
+def add_timeseries(results_dir, inp1, inp2):
+    fs = open_fs(results_dir)
+
+    def get_factor(folder):
+        path = f"{folder}/run/data_point_out.json"
+        with fs.open(path, 'r') as f:
+            js = json.load(f)
+        units_represented = float(js['BuildExistingModel']['units_represented'])
+        weight = float(js['BuildExistingModel']['weight'])
+        factor = weight / units_represented
+        return factor
+
+    if type(inp1) is str:
+        full_path = f"{inp1}/run/enduse_timeseries.parquet"
+        with fs.open(full_path, 'rb') as f:
+            file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+            file1 = file1 * get_factor(inp1)
+    else:
+        file1 = inp1
+
+    if type(inp2) is str:
+        full_path = f"{inp2}/run/enduse_timeseries.parquet"
+        with fs.open(full_path, 'rb') as f:
+            file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+            file2 = file2 * get_factor(inp2)
+    else:
+        file2 = inp2
+
+    if file1 is None and file2 is None:
+        return None
+    elif file1 is None:
+        return file2
+    elif file2 is None:
+        return file1
+    else:
+        return file1.add(file2, fill_value=0)
+
+
 def write_output(results_dir, group_pq):
     fs = open_fs(results_dir)
     group = group_pq[0]
@@ -184,7 +222,8 @@ def combine_results(results_dir, skip_timeseries=False):
     results_csvs_dir = 'results_csvs'
     parquet_dir = 'parquet'
     ts_dir = 'parquet/timeseries'
-    dirs = [results_csvs_dir, parquet_dir] if skip_timeseries else [results_csvs_dir, parquet_dir, ts_dir]
+    agg_ts_dir = 'parquet/aggregated_timeseries'
+    dirs = [results_csvs_dir, parquet_dir] if skip_timeseries else [results_csvs_dir, parquet_dir, ts_dir, agg_ts_dir]
 
     # clear and create the postprocessing results directories
     for dr in dirs:
@@ -287,11 +326,26 @@ def combine_results(results_dir, skip_timeseries=False):
             f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         )
 
+        # combine and save the aggregated timeseries file
+        if not skip_timeseries:
+            full_sim_dir = results_dir + '/' + sim_out_dir
+            logger.info(f"Combining timeseries files for {upgrade_id} in direcotry {full_sim_dir}")
+            agg_parquet = db.from_sequence(sim_dir_list).fold(partial(add_timeseries,full_sim_dir)).compute()
+            agg_parquet.reset_index(inplace=True)
+
+            agg_parquet_dir = f"{agg_ts_dir}/upgrade={upgrade_id}"
+            if not fs.exists(agg_parquet_dir):
+                fs.makedirs(agg_parquet_dir)
+
+            write_dataframe_as_parquet(agg_parquet,
+                                       results_dir,
+                                       f"{agg_parquet_dir}/aggregated_ts_up{upgrade_id:02d}.parquet")
+
     if skip_timeseries:
         logger.info("Timeseries aggregation skipped.")
         return
 
-    # Time series aggregation
+    # Time series combine
 
     # Create directories in serial section to avoid race conditions
     for upgrade_id in results_by_upgrade.keys():
@@ -334,7 +388,6 @@ def combine_results(results_dir, skip_timeseries=False):
         combine=directory_name_append
     )
     bags = directory_bags.compute()
-
     logger.info("Combining the parquets")
     t = time.time()
     write_file = db.from_sequence(bags).map(partial(write_output, results_dir))
