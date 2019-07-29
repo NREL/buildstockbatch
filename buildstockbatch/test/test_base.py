@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 import tempfile
 import yaml
+import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
 
@@ -329,3 +330,26 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     files_uploaded.remove((source_file_path, s3_file_path))
 
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
+
+
+def test_skipping_baseline(basic_residential_project_file):
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_filename, results_dir = basic_residential_project_file({
+            'baseline': {
+                'skip_sims': True
+            }
+        })
+
+        sim_output_path = os.path.join(results_dir, 'simulation_output')
+        assert 'up00' in os.listdir(sim_output_path)
+        baseline_path = os.path.join(sim_output_path, 'up00')
+        shutil.rmtree(baseline_path)
+        assert 'up00' not in os.listdir(sim_output_path)
+
+        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+                patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+
+            bsb = BuildStockBatchBase(project_filename)
+            bsb.process_results()
+            get_dask_client_mock.assert_called_once()
