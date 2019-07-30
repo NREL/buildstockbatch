@@ -343,3 +343,30 @@ def test_write_parquet_no_index():
         schema = parquet.read_schema(os.path.join(tmpdir, filename))
         assert '__index_level_0__' not in schema.names
         assert df.columns.values.tolist() == schema.names
+
+
+def test_report_additional_results_csv_columns(basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file({
+        'reporting_measures': [
+            'ReportingMeasure1',
+            'ReportingMeasure2'
+        ]
+    })
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    up00_results_csv_path = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
+    up00 = pd.read_csv(up00_results_csv_path)
+    assert 'reporting_measure1' in [col.split('.')[0] for col in up00.columns]
+    assert 'reporting_measure2' in [col.split('.')[0] for col in up00.columns]
+
+    up01_results_csv_path = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
+    up01 = pd.read_csv(up01_results_csv_path)
+    assert 'reporting_measure1' in [col.split('.')[0] for col in up01.columns]
+    assert 'reporting_measure2' in [col.split('.')[0] for col in up01.columns]
