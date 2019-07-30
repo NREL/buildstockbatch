@@ -34,7 +34,8 @@ from pyarrow import parquet
 logger = logging.getLogger(__name__)
 
 
-def read_data_point_out_json(fs_uri, filename):
+def read_data_point_out_json(args, filename):
+    (fs_uri, reporting_measures) = args
     fs = open_fs(fs_uri)
     try:
         with fs.open(filename, 'r') as f:
@@ -44,6 +45,9 @@ def read_data_point_out_json(fs_uri, filename):
     else:
         if 'SimulationOutputReport' not in d:
             d['SimulationOutputReport'] = {'applicable': False}
+        for reporting_measure in reporting_measures:
+            if reporting_measure not in d:
+                d[reporting_measure] = {'applicable': False}
         return d
 
 
@@ -221,7 +225,7 @@ def combine_results(results_dir, skip_timeseries=False, reporting_measures=[]):
 
         datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
             map(lambda x: f"{sim_out_dir}/{x}/run/data_point_out.json").\
-            map(partial(read_data_point_out_json, results_dir)).\
+            map(partial(read_data_point_out_json, (results_dir, reporting_measures))).\
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
             datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
