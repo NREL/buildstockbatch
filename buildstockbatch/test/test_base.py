@@ -347,23 +347,34 @@ def test_write_parquet_no_index():
 
 
 def test_skipping_baseline(basic_residential_project_file):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project_filename, results_dir = basic_residential_project_file({
-            'baseline': {
-                'skip_sims': True
-            }
-        })
+    project_filename, results_dir = basic_residential_project_file({
+        'baseline': {
+            'skip_sims': True
+        }
+    })
 
-        sim_output_path = os.path.join(results_dir, 'simulation_output')
-        assert 'up00' in os.listdir(sim_output_path)
-        baseline_path = os.path.join(sim_output_path, 'up00')
-        shutil.rmtree(baseline_path)
-        assert 'up00' not in os.listdir(sim_output_path)
+    sim_output_path = os.path.join(results_dir, 'simulation_output')
+    assert 'up00' in os.listdir(sim_output_path)
+    baseline_path = os.path.join(sim_output_path, 'up00')
+    shutil.rmtree(baseline_path)
+    assert 'up00' not in os.listdir(sim_output_path)
 
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
 
-            bsb = BuildStockBatchBase(project_filename)
-            bsb.process_results()
-            get_dask_client_mock.assert_called_once()
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    up00_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=0', 'results_up00.parquet')
+    assert(not os.path.exists(up00_parquet))
+
+    up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
+    assert(os.path.exists(up01_parquet))
+
+    up00_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
+    assert(not os.path.exists(up00_csv_gz))
+
+    up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
+    assert(os.path.exists(up01_csv_gz))
