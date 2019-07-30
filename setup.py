@@ -51,7 +51,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     python_requires='>=3.6',
     package_data={
-        'buildstockbatch': ['*.sh'],
+        'buildstockbatch': ['*.sh', 'schemas/*.yaml'],
         '': ['LICENSE']
     },
     install_requires=[
@@ -60,7 +60,7 @@ setuptools.setup(
         'numpy>=1.11',
         'pandas',
         'joblib',
-        'pyarrow>=0.10.0',
+        'pyarrow>=0.14.1',
         'dask[complete]>=2.1.0',
         'docker',
         'boto3',
