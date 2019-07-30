@@ -489,10 +489,6 @@ downselect:
   logic:
     - not: Heating Fuel|Natural Gas
 stock_type: residential
-peregrine:
-  nodetype: haswell
-  queue: batch-h
-  n_jobs: 200
 eagle:
   account: enduse
   n_jobs: 500
