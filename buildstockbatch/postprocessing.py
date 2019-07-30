@@ -140,7 +140,7 @@ def add_timeseries(results_dir, inp1, inp2):
         path = f"{folder}/run/data_point_out.json"
         with fs.open(path, 'r') as f:
             js = json.load(f)
-        units_represented = float(js['BuildExistingModel'].get('units_represented',1))
+        units_represented = float(js['BuildExistingModel'].get('units_represented', 1))
         weight = float(js['BuildExistingModel']['weight'])
         factor = weight / units_represented
         return factor
