@@ -56,6 +56,11 @@ class LocalDockerBatch(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+    @staticmethod
+    def validate_project(project_file):
+        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        # LocalDocker specific code goes here
+
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
@@ -186,9 +191,18 @@ def main():
     group.add_argument('--uploadonly',
                        help='Only upload to S3, useful when postprocessing is already done. Ignores the '
                        'upload flag in yaml', action='store_true')
+    group.add_argument('--validateonly', help='Only validate the project YAML file and references. Nothing is executed',
+                       action='store_true')
     args = parser.parse_args()
+    if not os.path.isfile(args.project_filename):
+        raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
+
+    # Validate the project, and in case of the --validateonly flag return True if validation passes
+    LocalDockerBatch.validate_project(args.project_filename)
+    if args.validateonly:
+        return True
     batch = LocalDockerBatch(args.project_filename)
-    if not (args.postprocessonly or args.uploadonly):
+    if not (args.postprocessonly or args.uploadonly or args.validateonly):
         batch.run_batch(n_jobs=args.j)
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)

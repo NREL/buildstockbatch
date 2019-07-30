@@ -66,6 +66,7 @@ setuptools.setup(
         'boto3',
         'fs',
         'fs-s3fs',
+        'yamale'
     ],
     extras_require={
         'dev': [
