@@ -161,14 +161,7 @@ def add_timeseries(results_dir, inp1, inp2):
     else:
         file2 = inp2
 
-    if file1 is None and file2 is None:
-        return None
-    elif file1 is None:
-        return file2
-    elif file2 is None:
-        return file1
-    else:
-        return file1.add(file2, fill_value=0)
+    return file1.add(file2, fill_value=0)
 
 
 def write_output(results_dir, group_pq):
