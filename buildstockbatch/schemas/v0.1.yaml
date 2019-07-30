@@ -61,6 +61,7 @@ cost-spec:
   multiplier: str(required=False)
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
+  aggregate_timeseries: bool(required=False)
 aws-postprocessing-spec:
   region_name: str(required=False)
   s3: include('s3-aws-postprocessing-spec', required=True)
