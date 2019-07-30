@@ -288,10 +288,10 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             print(f'Failed to load input yaml for validation')
             raise err
-        schema_version = cfg.get('version', __schema_version__)
+        schema_version = cfg.get('schema_version', __schema_version__)
         version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
         if not os.path.isfile(version_schema):
-            print(f'Could not find validation schema for YAML version {cfg["version"]}')
+            print(f'Could not find validation schema for YAML version {schema_version}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file)
