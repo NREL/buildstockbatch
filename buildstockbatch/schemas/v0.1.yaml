@@ -11,6 +11,7 @@ timeseries_csv_export: map(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: include('residential-simulation-spec', required=False)
+schema_version: num(required=False)
 ---
 hpc-spec:
   account: str(required=True)
