@@ -60,7 +60,7 @@ setuptools.setup(
         'numpy>=1.11',
         'pandas',
         'joblib',
-        'pyarrow>=0.10.0',
+        'pyarrow>=0.14.1',
         'dask[complete]>=2.1.0',
         'docker',
         'boto3',
