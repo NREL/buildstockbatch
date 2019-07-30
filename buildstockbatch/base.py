@@ -37,8 +37,8 @@ class SimulationExists(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.8.0'
-    OS_SHA = 'a7a1f79e98'
+    OS_VERSION = '2.8.1'
+    OS_SHA = '88b69707f1'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
