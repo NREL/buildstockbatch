@@ -166,6 +166,16 @@
     "include_enduse_subcategories": true,
     "applicable": true
   },
+  "ReportingMeasure1": {
+    "column_1": 1,
+    "column_2": 2,
+    "applicable": true
+  },
+  "ReportingMeasure2": {
+    "column_3": 3,
+    "column_4": 4,
+    "applicable": true
+  },
   "ServerDirectoryCleanup": {
     "applicable": true
   }
