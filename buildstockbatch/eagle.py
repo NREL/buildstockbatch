@@ -41,6 +41,11 @@ class EagleBatch(HPCBatchBase):
     local_output_dir = local_scratch
     local_singularity_img = local_scratch / 'openstudio.simg'
 
+    @staticmethod
+    def validate_project(project_file):
+        super(EagleBatch, EagleBatch).validate_project(project_file)
+        # Eagle specific validation goes here
+
     @property
     def output_dir(self):
         output_dir = self.cfg.get(
@@ -299,6 +304,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml',
         action='store_true'
     )
+    group.add_argument(
+        '--validateonly',
+        help='Only validate the project YAML file and references. Nothing is executed',
+        action='store_true'
+    )
     args = parser.parse_args(argv)
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
@@ -307,6 +317,11 @@ def user_cli(argv=sys.argv[1:]):
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
+
+    # Validate the project, and in case of the --validateonly flag return True if validation passes
+    EagleBatch.validate_project(project_filename)
+    if args.validateonly:
+        return True
 
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)

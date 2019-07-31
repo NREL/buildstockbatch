@@ -1,13 +1,17 @@
 import dask
 import json
+import numpy as np
 import os
 from unittest.mock import patch, MagicMock
 import pandas as pd
 import pytest
+from pyarrow import parquet
 import tempfile
 import yaml
+import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.postprocessing import write_dataframe_as_parquet
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -329,3 +333,48 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     files_uploaded.remove((source_file_path, s3_file_path))
 
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
+
+
+def test_write_parquet_no_index():
+    df = pd.DataFrame(np.random.randn(6, 4), columns=list('abcd'), index=np.arange(6))
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = 'df.parquet'
+        write_dataframe_as_parquet(df, tmpdir, filename)
+        schema = parquet.read_schema(os.path.join(tmpdir, filename))
+        assert '__index_level_0__' not in schema.names
+        assert df.columns.values.tolist() == schema.names
+
+
+def test_skipping_baseline(basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file({
+        'baseline': {
+            'skip_sims': True
+        }
+    })
+
+    sim_output_path = os.path.join(results_dir, 'simulation_output')
+    assert 'up00' in os.listdir(sim_output_path)
+    baseline_path = os.path.join(sim_output_path, 'up00')
+    shutil.rmtree(baseline_path)
+    assert 'up00' not in os.listdir(sim_output_path)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    up00_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=0', 'results_up00.parquet')
+    assert(not os.path.exists(up00_parquet))
+
+    up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
+    assert(os.path.exists(up01_parquet))
+
+    up00_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
+    assert(not os.path.exists(up00_csv_gz))
+
+    up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
+    assert(os.path.exists(up01_csv_gz))

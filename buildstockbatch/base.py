@@ -3,7 +3,7 @@
 """
 buildstockbatch.base
 ~~~~~~~~~~~~~~~
-This is the base class mixed into the deployment specific classes (i.e. peregrine, localdocker)
+This is the base class mixed into the deployment specific classes (i.e. eagle, localdocker)
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -21,10 +21,12 @@ import requests
 import shutil
 import tempfile
 import yaml
+import yamale
 import zipfile
 
+from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
-from .postprocessing import combine_results, upload_results, create_athena_tables
+from .postprocessing import combine_results, upload_results, create_athena_tables, write_dataframe_as_parquet
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +37,8 @@ class SimulationExists(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.8.0'
-    OS_SHA = 'a7a1f79e98'
+    OS_VERSION = '2.8.1'
+    OS_SHA = '88b69707f1'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -142,6 +144,11 @@ class BuildStockBatchBase(object):
     @property
     def output_dir(self):
         raise NotImplementedError
+
+    @property
+    def skip_baseline_sims(self):
+        baseline_skip = self.cfg['baseline'].get('skip_sims', False)
+        return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
@@ -251,10 +258,11 @@ class BuildStockBatchBase(object):
     def cleanup_sim_dir(sim_dir):
 
         # Convert the timeseries data to parquet
-        timeseries_filename = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-        if os.path.isfile(timeseries_filename):
-            tsdf = pd.read_csv(timeseries_filename, parse_dates=['Time'])
-            tsdf.to_parquet(os.path.splitext(timeseries_filename)[0] + '.parquet', engine='pyarrow', flavor='spark')
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        if os.path.isfile(timeseries_filepath):
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
+            timeseries_filedir, timeseries_filename = os.path.split(timeseries_filepath)
+            write_dataframe_as_parquet(tsdf, timeseries_filedir, os.path.splitext(timeseries_filename)[0] + '.parquet')
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
@@ -269,6 +277,49 @@ class BuildStockBatchBase(object):
         reports_dir = os.path.join(sim_dir, 'reports')
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir)
+
+    @staticmethod
+    def validate_project(project_file):
+        assert(BuildStockBatchBase.validate_project_schema(project_file))
+        assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        logger.info('Base Validation Successful')
+        return True
+
+    @staticmethod
+    def validate_project_schema(project_file):
+        try:
+            with open(project_file) as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        except FileNotFoundError as err:
+            print(f'Failed to load input yaml for validation')
+            raise err
+        schema_version = cfg.get('schema_version', __schema_version__)
+        version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
+        if not os.path.isfile(version_schema):
+            print(f'Could not find validation schema for YAML version {schema_version}')
+            raise FileNotFoundError(version_schema)
+        schema = yamale.make_schema(version_schema)
+        data = yamale.make_data(project_file)
+        return yamale.validate(schema, data)
+
+    @staticmethod
+    def validate_xor_schema_keys(project_file):
+        try:
+            with open(project_file) as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        except FileNotFoundError as err:
+            print(f'Failed to load input yaml for validation')
+            raise err
+        major, minor = cfg.get('version', __schema_version__).split('.')
+        if int(major) >= 0:
+            if int(minor) >= 0:
+                if ('weather_files_url' in cfg.keys()) is \
+                   ('weather_files_path' in cfg.keys()):
+                    raise ValueError('Both/neither weather_files_url and weather_files_path found in yaml root')
+                if ('n_datapoints' in cfg['baseline'].keys()) is \
+                   ('buildstock_csv' in cfg['baseline'].keys()):
+                    raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+        return True
 
     def get_dask_client(self):
         return Client()
