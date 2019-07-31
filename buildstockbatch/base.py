@@ -37,8 +37,8 @@ class SimulationExists(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.8.0'
-    OS_SHA = 'a7a1f79e98'
+    OS_VERSION = '2.8.1'
+    OS_SHA = '88b69707f1'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -144,6 +144,11 @@ class BuildStockBatchBase(object):
     @property
     def output_dir(self):
         raise NotImplementedError
+
+    @property
+    def skip_baseline_sims(self):
+        baseline_skip = self.cfg['baseline'].get('skip_sims', False)
+        return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
@@ -288,10 +293,10 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             print(f'Failed to load input yaml for validation')
             raise err
-        schema_version = cfg.get('version', __schema_version__)
+        schema_version = cfg.get('schema_version', __schema_version__)
         version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
         if not os.path.isfile(version_schema):
-            print(f'Could not find validation schema for YAML version {cfg["version"]}')
+            print(f'Could not find validation schema for YAML version {schema_version}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file)
