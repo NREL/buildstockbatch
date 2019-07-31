@@ -187,10 +187,13 @@ class EagleBatch(HPCBatchBase):
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
 
         # Clear out some files that cause problems if we're rerunning this.
-        for subdir in ('parquet', 'results_csvs'):
-            subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
-            if subdirpath.exists():
-                shutil.rmtree(subdirpath)
+
+        if not upload_only:
+            for subdir in ('parquet', 'results_csvs'):
+                subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
+                if subdirpath.exists():
+                    shutil.rmtree(subdirpath)
+
         for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
             filepath = pathlib.Path(self.output_dir, filename)
             if filepath.exists():
