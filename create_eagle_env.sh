@@ -16,6 +16,12 @@ then
 fi
 
 MY_CONDA_ENV_NAME=${@:$OPTIND:1}
+if [ -z "$MY_CONDA_ENV_NAME" ]
+then
+    echo "Environment name not provided"
+    exit 1
+fi
+
 MY_CONDA_PREFIX="$CONDA_ENVS_DIR/$MY_CONDA_ENV_NAME"
 module load conda
 conda remove -y --prefix "$MY_CONDA_PREFIX" --all
