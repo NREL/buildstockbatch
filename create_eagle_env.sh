@@ -26,7 +26,7 @@ MY_CONDA_PREFIX="$CONDA_ENVS_DIR/$MY_CONDA_ENV_NAME"
 echo "Creating $MY_CONDA_PREFIX"
 module load conda
 conda remove -y --prefix "$MY_CONDA_PREFIX" --all
-conda create -y --prefix "$MY_CONDA_PREFIX" python=3.7 pandas hdf5
+conda create -y --prefix "$MY_CONDA_PREFIX" -c conda-forge "pyarrow>=0.14" python=3.7 pandas dask distributed
 source activate "$MY_CONDA_PREFIX"
 pip install --upgrade pip
 if [ $DEV -eq 1 ]
