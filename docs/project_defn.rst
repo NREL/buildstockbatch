@@ -253,6 +253,10 @@ The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
 
+    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
+       The aggregated timeseries is generated as:
+       aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
+
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
