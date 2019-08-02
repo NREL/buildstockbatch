@@ -8,6 +8,7 @@ baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
   n_datapoints: 3000  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
+  #measures_to_ignore: # Names of measures, delimited by the '|' character, that are listed in buildstock_csv but shouldn't actually run
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:
