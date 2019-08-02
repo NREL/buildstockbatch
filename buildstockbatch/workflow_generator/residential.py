@@ -40,7 +40,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
 
-        sample_weight = self.cfg['baseline']['n_buildings_represented'] /
+        sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
                         self.cfg['baseline']['n_datapoints']
         bld_exist_model_args = {
             'building_id': building_id,
@@ -49,7 +49,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         }
         if 'measures_to_ignore' in self.cfg['baseline']:
             bld_exist_model_args['measures_to_ignore'] = self.cfg['baseline']['measures_to_ignore']
-            
+
         osw = {
             'id': sim_id,
             'steps': [
