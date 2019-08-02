@@ -439,8 +439,9 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
             'ReportingMeasure2'
         ]
     })
-    
-    for filename in glob.glob(os.path.join(results_dir, 'simulation_output', 'up*', 'bldg*', 'run', 'data_point_out.json')):
+
+    for filename in glob.glob(os.path.join(results_dir, 'simulation_output', 'up*', 'bldg*', 'run',
+                                           'data_point_out.json')):
         with open(filename, 'r') as f:
             dpout = json.load(f)
         dpout['ReportingMeasure1'] = {'column_1': 1, 'column_2': 2}
