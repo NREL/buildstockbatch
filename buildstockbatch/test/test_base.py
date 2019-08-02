@@ -8,6 +8,7 @@ import pytest
 from pyarrow import parquet
 import tempfile
 import yaml
+import shutil
 
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
@@ -56,7 +57,12 @@ def test_combine_files_flexible(basic_residential_project_file):
     # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
     # removed/renamed.
 
-    project_filename, results_dir = basic_residential_project_file()
+    post_process_config = {
+        'postprocessing': {
+            'aggregate_timeseries': True
+        }
+    }
+    project_filename, results_dir = basic_residential_project_file(post_process_config)
 
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
@@ -90,6 +96,7 @@ def test_combine_files_flexible(basic_residential_project_file):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
     test_path = os.path.join(results_dir, 'parquet')
 
+    # results parquet
     test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
@@ -104,6 +111,26 @@ def test_combine_files_flexible(basic_residential_project_file):
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
+    # aggregated_timeseries parquet
+    test_pq = pd.read_parquet(os.path.join(test_path, 'aggregated_timeseries',
+                                           'upgrade=0', 'aggregated_ts_up00.parquet')).\
+        rename(columns=simplify_columns).sort_values(['time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'aggregated_timeseries',
+                                                'upgrade=0', 'aggregated_ts_up00.parquet')).\
+        rename(columns=simplify_columns).sort_values(['time']).reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'aggregated_timeseries',
+                                           'upgrade=1', 'aggregated_ts_up01.parquet')).\
+        rename(columns=simplify_columns).sort_values(['time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'aggregated_timeseries',
+                                                'upgrade=1', 'aggregated_ts_up01.parquet')).\
+        rename(columns=simplify_columns).sort_values(['time']).reset_index().drop(columns=['index'])
+    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+
+    # timeseries parquet
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
         rename(columns=simplify_columns).sort_values(['buildingid', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet')).\
@@ -187,7 +214,13 @@ def test_provide_buildstock_csv(basic_residential_project_file):
 
 
 def test_combine_files(basic_residential_project_file):
-    project_filename, results_dir = basic_residential_project_file()
+
+    post_process_config = {
+        'postprocessing': {
+            'aggregate_timeseries': True
+        }
+    }
+    project_filename, results_dir = basic_residential_project_file(post_process_config)
 
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
@@ -216,6 +249,7 @@ def test_combine_files(basic_residential_project_file):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
     test_path = os.path.join(results_dir, 'parquet')
 
+    # results parquet
     test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).sort_values('building_id')\
         .reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
@@ -228,6 +262,24 @@ def test_combine_files(basic_residential_project_file):
         .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
+    # aggregated_timeseries parquet
+    test_pq = pd.read_parquet(os.path.join(test_path, 'aggregated_timeseries',
+                                           'upgrade=0', 'aggregated_ts_up00.parquet')).\
+        sort_values(['Time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'aggregated_timeseries',
+                                                'upgrade=0', 'aggregated_ts_up00.parquet')).\
+        sort_values(['Time']).reset_index().drop(columns=['index'])
+    pd.testing.assert_frame_equal(test_pq, reference_pq)
+
+    test_pq = pd.read_parquet(os.path.join(test_path, 'aggregated_timeseries',
+                                           'upgrade=1', 'aggregated_ts_up01.parquet')).\
+        sort_values(['Time']).reset_index().drop(columns=['index'])
+    reference_pq = pd.read_parquet(os.path.join(reference_path,  'aggregated_timeseries',
+                                                'upgrade=1', 'aggregated_ts_up01.parquet')).\
+        sort_values(['Time']).reset_index().drop(columns=['index'])
+    pd.testing.assert_frame_equal(test_pq, reference_pq)
+
+    # timeseries parquet
     test_pq = pd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0', 'Group0.parquet')).\
         sort_values(['building_id', 'time']).reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0', 'Group0.parquet'))\
@@ -343,6 +395,40 @@ def test_write_parquet_no_index():
         schema = parquet.read_schema(os.path.join(tmpdir, filename))
         assert '__index_level_0__' not in schema.names
         assert df.columns.values.tolist() == schema.names
+
+
+def test_skipping_baseline(basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file({
+        'baseline': {
+            'skip_sims': True
+        }
+    })
+
+    sim_output_path = os.path.join(results_dir, 'simulation_output')
+    assert 'up00' in os.listdir(sim_output_path)
+    baseline_path = os.path.join(sim_output_path, 'up00')
+    shutil.rmtree(baseline_path)
+    assert 'up00' not in os.listdir(sim_output_path)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    up00_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=0', 'results_up00.parquet')
+    assert(not os.path.exists(up00_parquet))
+
+    up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
+    assert(os.path.exists(up01_parquet))
+
+    up00_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
+    assert(not os.path.exists(up00_csv_gz))
+
+    up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
+    assert(os.path.exists(up01_csv_gz))
 
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):

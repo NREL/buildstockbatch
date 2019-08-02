@@ -66,6 +66,7 @@ setuptools.setup(
         'boto3',
         'fs',
         'fs-s3fs',
+        'docutils<0.15,>=0.10',
         'yamale'
     ],
     extras_require={

@@ -145,6 +145,11 @@ class BuildStockBatchBase(object):
     def output_dir(self):
         raise NotImplementedError
 
+    @property
+    def skip_baseline_sims(self):
+        baseline_skip = self.cfg['baseline'].get('skip_sims', False)
+        return baseline_skip
+
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
@@ -327,10 +332,13 @@ class BuildStockBatchBase(object):
         else:
             skip_timeseries = True
 
+        aggregate_ts = self.cfg.get('postprocessing', {}).get('aggregate_timeseries', False)
+
         reporting_measures = self.cfg.get('reporting_measures', [])
 
         if not skip_combine:
-            combine_results(self.results_dir, skip_timeseries=skip_timeseries, reporting_measures=reporting_measures)
+            combine_results(self.results_dir, skip_timeseries=skip_timeseries, aggregate_timeseries=aggregate_ts,
+                            reporting_measures=reporting_measures)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:

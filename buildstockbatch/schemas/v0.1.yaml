@@ -18,14 +18,15 @@ hpc-spec:
   account: str(required=True)
   minutes_per_sim: int(max=120, required=False)
   n_jobs: int(required=False)
-  buildstock_csv: str(required=False)
 sim-spec:
   n_datapoints: int(required=False)
   n_buildings_represented: int(required=False)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
+  buildstock_csv: str(required=False)
+  skip_sims: bool(required=False)
 measure-spec:
-  measure_dir_name: str(requried=True)
+  measure_dir_name: str(required=True)
   arguments: map(required=False)
 hpc-postprocessing-spec:
   time: int(required=False)
@@ -63,6 +64,7 @@ cost-spec:
   multiplier: str(required=False)
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
+  aggregate_timeseries: bool(required=False)
 aws-postprocessing-spec:
   region_name: str(required=False)
   s3: include('s3-aws-postprocessing-spec', required=True)

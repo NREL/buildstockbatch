@@ -47,6 +47,7 @@ Information about baseline simulations are listed under the
 -  ``n_buildings_represented``: The number of buildings that this sample
    is meant to represent.
 -  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
+-  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -256,6 +257,10 @@ Postprocessing Configuration Options
 The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
+
+    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
+       The aggregated timeseries is generated as:
+       aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
 
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
