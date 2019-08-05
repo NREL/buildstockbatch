@@ -23,6 +23,8 @@ import tempfile
 import yaml
 import yamale
 import zipfile
+import csv
+import difflib
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -282,21 +284,27 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_options_lookup(project_file))
         logger.info('Base Validation Successful')
         return True
 
     @staticmethod
-    def validate_project_schema(project_file):
+    def get_project_configuration(project_file):
         try:
             with open(project_file) as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
         except FileNotFoundError as err:
-            print(f'Failed to load input yaml for validation')
+            logger.error(f'Failed to load input yaml for validation')
             raise err
+        return cfg
+
+    @staticmethod
+    def validate_project_schema(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
         schema_version = cfg.get('schema_version', __schema_version__)
         version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
         if not os.path.isfile(version_schema):
-            print(f'Could not find validation schema for YAML version {schema_version}')
+            logger.error(f'Could not find validation schema for YAML version {schema_version}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file)
@@ -304,12 +312,7 @@ class BuildStockBatchBase(object):
 
     @staticmethod
     def validate_xor_schema_keys(project_file):
-        try:
-            with open(project_file) as f:
-                cfg = yaml.load(f, Loader=yaml.SafeLoader)
-        except FileNotFoundError as err:
-            print(f'Failed to load input yaml for validation')
-            raise err
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
         if int(major) >= 0:
             if int(minor) >= 0:
@@ -320,6 +323,82 @@ class BuildStockBatchBase(object):
                    ('buildstock_csv' in cfg['baseline'].keys()):
                     raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
         return True
+
+    @staticmethod
+    def validate_options_lookup(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        param_option_dict = {}
+        options_lookup_path = f'{cfg["buildstock_directory"]}/resources/options_lookup.tsv'
+        try:
+            with open(options_lookup_path, 'r') as f:
+                options = csv.DictReader(f, delimiter='\t')
+                for row in options:
+                    if row['Parameter Name'] not in param_option_dict:
+                        param_option_dict[row['Parameter Name']] = set()
+                    param_option_dict[row['Parameter Name']].add(row['Option Name'])
+        except FileNotFoundError as err:
+            logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
+            raise err
+
+        def get_errors(option_str):
+            if '|' not in option_str:
+                return f"* No option name delimiter '|' in '{option_str}' \n"
+            try:
+                parameter_name, option_name = option_str.split('|')
+            except ValueError:
+                return f"* Option specification '{option_str}' has too many '|'. \n"
+
+            if parameter_name not in param_option_dict:
+                error_str = f"* Parameter name '{parameter_name}' does not exist in options_lookup. \n"
+                close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(),1)
+                if close_match:
+                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
+                return error_str
+
+            if not option_name or option_name not in param_option_dict[parameter_name]:
+                error_str = f"* Option name '{option_name}' does not exist in options_lookup " \
+                    f"for paramter '{parameter_name}'. \n"
+                close_match = difflib.get_close_matches(option_name, list(param_option_dict[parameter_name]), 1)
+                if close_match:
+                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
+                return error_str
+
+            return ''
+
+        def get_all_str(inp):
+            if not inp:
+                return []
+            if type(inp) == str:
+                return [inp]
+            elif type(inp) == list:
+                return sum([get_all_str(i) for i in inp], [])
+            elif type(inp) == dict:
+                return sum([get_all_str(i) for i in inp.values()], [])
+
+        error_message = ''
+        option_strs = []
+        if 'upgrades' in cfg:
+            for upgrade in cfg['upgrades']:
+                for option in upgrade['options']:
+                    option_strs.append(option['option'])
+                    if 'apply_logic' in option:
+                        option_strs += get_all_str(option['apply_logic'])
+
+                if 'package_apply_logic' in upgrade:
+                    option_strs += get_all_str(upgrade['package_apply_logic'])
+
+        if 'downselect' in cfg:
+            option_strs += get_all_str(cfg['downselect']['logic'])
+            print(f"resample? {cfg['downselect']['resample']}")
+
+        for option_str in option_strs:
+            error_message += get_errors(option_str)
+
+        if not error_message:
+            return True
+        else:
+            logger.error("Option/parameter name(s) is(are) invalid. \n" + error_message)
+            return False
 
     def get_dask_client(self):
         return Client()
