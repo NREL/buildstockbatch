@@ -328,7 +328,9 @@ class BuildStockBatchBase(object):
     def validate_options_lookup(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = {}
-        options_lookup_path = f'{cfg["buildstock_directory"]}/resources/options_lookup.tsv'
+        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
+
         try:
             with open(options_lookup_path, 'r') as f:
                 options = csv.DictReader(f, delimiter='\t')
@@ -350,7 +352,7 @@ class BuildStockBatchBase(object):
 
             if parameter_name not in param_option_dict:
                 error_str = f"* Parameter name '{parameter_name}' does not exist in options_lookup. \n"
-                close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(),1)
+                close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(), 1)
                 if close_match:
                     error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
                 return error_str
@@ -389,7 +391,6 @@ class BuildStockBatchBase(object):
 
         if 'downselect' in cfg:
             option_strs += get_all_str(cfg['downselect']['logic'])
-            print(f"resample? {cfg['downselect']['resample']}")
 
         for option_str in option_strs:
             error_message += get_errors(option_str)
@@ -397,8 +398,9 @@ class BuildStockBatchBase(object):
         if not error_message:
             return True
         else:
-            logger.error("Option/parameter name(s) is(are) invalid. \n" + error_message)
-            return False
+            error_message = "Option/parameter name(s) is(are) invalid. \n" + error_message
+            logger.error(error_message)
+            raise ValueError(error_message)
 
     def get_dask_client(self):
         return Client()

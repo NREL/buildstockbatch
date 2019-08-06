@@ -17,6 +17,7 @@ import types
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.localdocker import LocalDockerBatch
 from buildstockbatch.base import BuildStockBatchBase
+from unittest.mock import patch
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
@@ -51,8 +52,10 @@ def test_minimal_schema_passes_validation():
     os.path.join(example_yml_dir, 'missing-nested-required-schema.yml')
 ])
 def test_missing_required_key_fails(project_file):
-    with pytest.raises(ValueError):
-        BuildStockBatchBase.validate_project_schema(project_file)
+    # patch the validate_options_lookup function to always return true for this case
+    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+        with pytest.raises(ValueError):
+            BuildStockBatchBase.validate_project_schema(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
@@ -61,8 +64,10 @@ def test_missing_required_key_fails(project_file):
     os.path.join(example_yml_dir, 'enforce-schema-xor.yml')
 ])
 def test_xor_violations_fail(project_file):
-    with pytest.raises(ValueError):
-        BuildStockBatchBase.validate_xor_schema_keys(project_file)
+    # patch the validate_options_lookup function to always return true for this case
+    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+        with pytest.raises(ValueError):
+            BuildStockBatchBase.validate_xor_schema_keys(project_file)
 
 
 @pytest.mark.parametrize("project_file,expected", [
@@ -75,8 +80,33 @@ def test_xor_violations_fail(project_file):
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
 def test_validation_integration(project_file, expected):
-    if expected is not True:
-        with pytest.raises(expected):
-            BuildStockBatchBase.validate_project(project_file)
+    # patch the validate_options_lookup function to always return true for this case
+    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+        if expected is not True:
+            with pytest.raises(expected):
+                BuildStockBatchBase.validate_project(project_file)
+        else:
+            assert(BuildStockBatchBase.validate_project(project_file))
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-good.yml'),
+])
+def test_good_options_validation(project_file):
+    assert BuildStockBatchBase.validate_options_lookup(project_file)
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-bad.yml'),
+])
+def test_bad_options_validation(project_file):
+    try:
+        BuildStockBatchBase.validate_options_lookup(project_file)
+    except ValueError as er:
+        er = str(er)
+        assert "Extra Argument" in er
+        assert "Invalid Option" in er
+        assert "Invalid Parameter" in er
+        assert " 1980s" in er
     else:
-        assert(BuildStockBatchBase.validate_project(project_file))
+        raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
