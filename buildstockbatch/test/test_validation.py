@@ -90,6 +90,14 @@ def test_validation_integration(project_file, expected):
 
 
 @pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-wrong-path.yml'),
+])
+def test_bad_path_options_validation(project_file):
+    with pytest.raises(FileNotFoundError):
+        BuildStockBatchBase.validate_options_lookup(project_file)
+
+
+@pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-options-good.yml'),
 ])
 def test_good_options_validation(project_file):
@@ -106,7 +114,14 @@ def test_bad_options_validation(project_file):
         er = str(er)
         assert "Extra Argument" in er
         assert "Invalid Option" in er
-        assert "Invalid Parameter" in er
+        assert "Insulation Wall|Good Option||" in er
         assert " 1980s" in er
+        assert "Vintage|1941s" in er
+        assert "Option name empty" in er
+        assert "Insulation Slat" in er
+        assert "Vintage|1960s|Vintage|1960s" in er
+        assert "Vintage|1960s||Vintage|1940s&&Vintage|1980s" in er
+        assert "Invalid Parameter" in er
+
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")

@@ -326,11 +326,15 @@ class BuildStockBatchBase(object):
 
     @staticmethod
     def validate_options_lookup(project_file):
+        """
+        Validates that the parameter|options specified in the project yaml file is avaliable in the options_lookup.tsv
+        """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = {}
         buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
+        # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
         try:
             with open(options_lookup_path, 'r') as f:
                 options = csv.DictReader(f, delimiter='\t')
@@ -342,58 +346,107 @@ class BuildStockBatchBase(object):
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
 
-        def get_errors(option_str):
-            if '|' not in option_str:
-                return f"* No option name delimiter '|' in '{option_str}' \n"
+        def get_errors(source_str, option_str):
+            """
+            Gives multiline descriptive error message if the option_str is invalid. Returns '' otherwise
+            :param source_str: the descriptive location where the option_str occurs in the yaml configuration.
+            :param option_str: the param|option string representing the option choice. Can be joined by either || or &&
+                               to form composite string. eg. param1|option1||param2|option2
+            :return: returns empty string if the param|option is valid i.e. they are found in options_lookup.tsv
+                     if not returns error message, close matches, and specifies where the error occurred (source_str)
+            """
+            if '||' in option_str and '&&' in option_str:
+                return f"* Option specification '{option_str}' has both || and &&, which is not supported. " \
+                    f"{source_str}\n"
+
+            if '||' in option_str or '&&' in option_str:
+                splitter = '||' if '||' in option_str else '&&'
+                errors = ''
+                broken_options = option_str.split(splitter)
+                if broken_options[-1] == '':
+                    return f"* Option spec '{option_str}' has a trailing '{splitter}'. {source_str}\n"
+                for broken_option_str in broken_options:
+                    new_source_str = source_str + f" in composite option '{option_str}'"
+                    errors += get_errors(new_source_str, broken_option_str)
+                return errors
+
+            if not option_str or '|' == option_str:
+                return f"* Option name empty. {source_str}\n"
+
             try:
                 parameter_name, option_name = option_str.split('|')
             except ValueError:
-                return f"* Option specification '{option_str}' has too many '|'. \n"
+                return f"* Option specification '{option_str}' has too many or too few '|' (exactly 1 required)." \
+                    f" {source_str}\n"
 
             if parameter_name not in param_option_dict:
                 error_str = f"* Parameter name '{parameter_name}' does not exist in options_lookup. \n"
                 close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(), 1)
                 if close_match:
                     error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
+                error_str += f"{source_str}\n"
                 return error_str
 
             if not option_name or option_name not in param_option_dict[parameter_name]:
                 error_str = f"* Option name '{option_name}' does not exist in options_lookup " \
-                    f"for paramter '{parameter_name}'. \n"
+                    f"for parameter '{parameter_name}'. \n"
                 close_match = difflib.get_close_matches(option_name, list(param_option_dict[parameter_name]), 1)
                 if close_match:
                     error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
+                error_str += f"{source_str}\n"
                 return error_str
 
             return ''
 
-        def get_all_str(inp):
+        def get_all_option_str(source_str, inp):
+            """
+            Returns a list of (source_str, option_str) tuple by recursively traversing the logic inp structure.
+            Check the get_errors function for more info about source_str and option_str
+            :param source_str: the descriptive location where the inp logic is found
+            :param inp: A nested apply_logic structure
+            :return: List of tuples of (source_str, option_str) where source_str is the location in inp where the
+                    option_str is found.
+            """
             if not inp:
                 return []
             if type(inp) == str:
-                return [inp]
+                return [(source_str, inp)]
             elif type(inp) == list:
-                return sum([get_all_str(i) for i in inp], [])
+                return sum([get_all_option_str(source_str + f", in entry {count}", entry) for count, entry
+                            in enumerate(inp)], [])
             elif type(inp) == dict:
-                return sum([get_all_str(i) for i in inp.values()], [])
+                if len(inp) > 1:
+                    raise ValueError(f"{source_str} the logic is malformed.")
+                source_str += f", in {list(inp.keys())[0]}"
+                return sum([get_all_option_str(source_str, i) for i in inp.values()], [])
 
-        error_message = ''
-        option_strs = []
+        # store all of the option_str in the project file as a list of (source_str, option_str) tuple
+        source_option_str_list = []
+
         if 'upgrades' in cfg:
-            for upgrade in cfg['upgrades']:
-                for option in upgrade['options']:
-                    option_strs.append(option['option'])
+            for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                upgrade_name = upgrade.get('upgrade_name', '') + f' (Upgrade Number: {upgrade_count})'
+                source_str_upgrade = f"In upgrade '{upgrade_name}'"
+                for option_count, option in enumerate(upgrade['options']):
+                    option_name = option.get('option', '') + f' (Option Number: {option_count})'
+                    source_str_option = source_str_upgrade + f", in option '{option_name}'"
+                    source_option_str_list.append((source_str_option, option.get('option')))
                     if 'apply_logic' in option:
-                        option_strs += get_all_str(option['apply_logic'])
+                        source_str_logic = source_str_option + ", in apply_logic"
+                        source_option_str_list += get_all_option_str(source_str_logic, option['apply_logic'])
 
                 if 'package_apply_logic' in upgrade:
-                    option_strs += get_all_str(upgrade['package_apply_logic'])
+                    source_str_package = source_str_upgrade + ", in package_apply_logic"
+                    source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
         if 'downselect' in cfg:
-            option_strs += get_all_str(cfg['downselect']['logic'])
+            source_str = f"In downselect"
+            source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
 
-        for option_str in option_strs:
-            error_message += get_errors(option_str)
+        # Gather all the errors in the option_str, if any
+        error_message = ''
+        for source_str, option_str in source_option_str_list:
+            error_message += get_errors(source_str, option_str)
 
         if not error_message:
             return True

@@ -4,20 +4,35 @@ baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
 upgrades:
-  - upgrade_name: good upgrade
+  - upgrade_name: bad upgrade
     options:
       - option: Vintage|Extra Argument
         apply_logic:
           - or:
             - Insulation Slab|Invalid Option
             - Insulation Slab|None
-          - not: Insulation Wall|Good Option
+          - not: Insulation Wall|Good Option||
           - and:
               - Vintage|1960s
               - Vintage| 1980s
       - option: Insulation Finished Basement|Good Option
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1970s||Vintage|1941s
+  - options:
+        - option: |
+          apply_logic:
+            - or:
+                - Insulation Slat|Good Option
+                - Insulation Slab|None
+            - not: Insulation Wall|Good Option
+            - and:
+                - Vintage|1960s|Vintage|1960s
+                - Vintage|1980s
+        - option: Insulation Finished Basement|Good Option
+          apply_logic:
+            - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1960s||Vintage|1940s&&Vintage|1980s
 downselect:
   resample: False
   logic: Invalid Parameter|2000s
