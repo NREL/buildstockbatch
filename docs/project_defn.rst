@@ -47,6 +47,7 @@ Information about baseline simulations are listed under the
 -  ``n_buildings_represented``: The number of buildings that this sample
    is meant to represent.
 -  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
+-  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,7 +66,7 @@ Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
 
 Under the ``upgrades`` key is a list of upgrades to apply with the
-following properties;
+following properties:
 
 -  ``upgrade_name``: The name that will be in the outputs for this
    upgrade scenario.
@@ -100,6 +101,11 @@ annual simulation results. These arguments are passed directly to the
 in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
 Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you're using.
 The best thing you can do is to verify that it works with what is in your branch.
+
+Additional Reporting Measures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
+Any columns reported by these additional measures will be appended to the results csv.
 
 Output Directory
 ~~~~~~~~~~~~~~~~
@@ -251,6 +257,10 @@ Postprocessing Configuration Options
 The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
+
+    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
+       The aggregated timeseries is generated as:
+       aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
 
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
