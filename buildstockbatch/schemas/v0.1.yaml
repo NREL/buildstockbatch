@@ -9,6 +9,7 @@ sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
 timeseries_csv_export: map(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
+downselect: include('downselect-spec',required=False)
 postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: include('residential-simulation-spec', required=False)
 reporting_measures: list(required=False)
@@ -62,6 +63,9 @@ option-spec:
 cost-spec:
   value: num(required=True)
   multiplier: str(required=False)
+downselect-spec:
+  resample: bool(required=False)
+  logic: any(map(required=True),list(required=True),str(required=True))
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
   aggregate_timeseries: bool(required=False)
