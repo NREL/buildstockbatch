@@ -12,6 +12,7 @@ upgrades: list(include('upgrade-spec'), required=False)
 downselect: include('downselect-spec',required=False)
 postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: include('residential-simulation-spec', required=False)
+reporting_measures: list(required=False)
 schema_version: num(required=False)
 ---
 hpc-spec:

@@ -66,7 +66,7 @@ Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
 
 Under the ``upgrades`` key is a list of upgrades to apply with the
-following properties;
+following properties:
 
 -  ``upgrade_name``: The name that will be in the outputs for this
    upgrade scenario.
@@ -101,6 +101,11 @@ annual simulation results. These arguments are passed directly to the
 in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
 Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you're using.
 The best thing you can do is to verify that it works with what is in your branch.
+
+Additional Reporting Measures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
+Any columns reported by these additional measures will be appended to the results csv.
 
 Output Directory
 ~~~~~~~~~~~~~~~~

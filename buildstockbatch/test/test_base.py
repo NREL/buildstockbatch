@@ -9,6 +9,7 @@ from pyarrow import parquet
 import tempfile
 import yaml
 import shutil
+import glob
 
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
@@ -429,3 +430,39 @@ def test_skipping_baseline(basic_residential_project_file):
 
     up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
     assert(os.path.exists(up01_csv_gz))
+
+
+def test_report_additional_results_csv_columns(basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file({
+        'reporting_measures': [
+            'ReportingMeasure1',
+            'ReportingMeasure2'
+        ]
+    })
+
+    for filename in glob.glob(os.path.join(results_dir, 'simulation_output', 'up*', 'bldg*', 'run',
+                                           'data_point_out.json')):
+        with open(filename, 'r') as f:
+            dpout = json.load(f)
+        dpout['ReportingMeasure1'] = {'column_1': 1, 'column_2': 2}
+        dpout['ReportingMeasure2'] = {'column_3': 3, 'column_4': 4}
+        with open(filename, 'w') as f:
+            json.dump(dpout, f)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    up00_results_csv_path = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
+    up00 = pd.read_csv(up00_results_csv_path)
+    assert 'reporting_measure1' in [col.split('.')[0] for col in up00.columns]
+    assert 'reporting_measure2' in [col.split('.')[0] for col in up00.columns]
+
+    up01_results_csv_path = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
+    up01 = pd.read_csv(up01_results_csv_path)
+    assert 'reporting_measure1' in [col.split('.')[0] for col in up01.columns]
+    assert 'reporting_measure2' in [col.split('.')[0] for col in up01.columns]
