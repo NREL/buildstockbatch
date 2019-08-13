@@ -34,7 +34,7 @@ from pyarrow import parquet
 logger = logging.getLogger(__name__)
 
 
-def read_data_point_out_json(fs_uri, filename):
+def read_data_point_out_json(fs_uri, reporting_measures, filename):
     fs = open_fs(fs_uri)
     try:
         with fs.open(filename, 'r') as f:
@@ -44,6 +44,9 @@ def read_data_point_out_json(fs_uri, filename):
     else:
         if 'SimulationOutputReport' not in d:
             d['SimulationOutputReport'] = {'applicable': False}
+        for reporting_measure in reporting_measures:
+            if reporting_measure not in d:
+                d[reporting_measure] = {'applicable': False}
         return d
 
 
@@ -52,7 +55,7 @@ def to_camelcase(x):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-def flatten_datapoint_json(d):
+def flatten_datapoint_json(reporting_measures, d):
     new_d = {}
     cols_to_keep = {
         'ApplyUpgrade': [
@@ -82,6 +85,11 @@ def flatten_datapoint_json(d):
     col3 = 'SimulationOutputReport'
     for k, v in d.get(col3, {}).items():
         new_d[f'{col3}.{k}'] = v
+
+    # additional reporting measures
+    for col in reporting_measures:
+        for k, v in d.get(col, {}).items():
+            new_d[f'{col}.{k}'] = v
 
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
@@ -208,7 +216,7 @@ def write_output(results_dir, group_pq):
     write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
-def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=False):
+def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
@@ -252,16 +260,17 @@ def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=Fal
 
         datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
             map(lambda x: f"{sim_out_dir}/{x}/run/data_point_out.json").\
-            map(partial(read_data_point_out_json, results_dir)).\
+            map(partial(read_data_point_out_json, results_dir, reporting_measures)).\
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
             datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
-            map(flatten_datapoint_json).take(10)
+            map(partial(flatten_datapoint_json, reporting_measures)).take(10)
         ))
+
         if meta.shape == (0, 0):
             meta = None
 
-        data_point_out_df_d = datapoint_output_jsons.map(flatten_datapoint_json).\
+        data_point_out_df_d = datapoint_output_jsons.map(partial(flatten_datapoint_json, reporting_measures)).\
             to_dataframe(meta=meta).rename(columns=to_camelcase)
 
         out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
@@ -299,6 +308,11 @@ def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=Fal
         simulation_output_cols = sorted([col for col in results_df.columns if
                                          col.startswith('simulation_output_report')])
         sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+
+        for reporting_measure in reporting_measures:
+            reporting_measure_cols = sorted([col for col in results_df.columns if
+                                            col.startswith(to_camelcase(reporting_measure))])
+            sorted_cols += reporting_measure_cols
 
         results_df = results_df.reindex(columns=sorted_cols, copy=False)
 
