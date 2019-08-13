@@ -341,8 +341,9 @@ class BuildStockBatchBase(object):
                         'ApplyUpgrade': 'upgrades',
                         'TimeseriesCSVExport': 'timeseries_csv_export'
                         }
-        for reporting_measure in cfg['reporting_measures']:
-            measure_names[reporting_measure] = 'reporting_measures'
+        if 'reporting_measures' in cfg.keys():
+            for reporting_measure in cfg['reporting_measures']:
+                measure_names[reporting_measure] = 'reporting_measures'
 
         def get_measure_xml(xml_path):
             tree = ET.parse(xml_path)
