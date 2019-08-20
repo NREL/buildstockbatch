@@ -118,9 +118,6 @@
     "upgrade_name": "Triple-Pane Windows",
     "applicable": true
   },
-  "BuildingCharacteristicsReport": {
-    "applicable": true
-  },
   "SimulationOutputReport": {
     "total_site_energy_mbtu": 52.670197375811036,
     "net_site_energy_mbtu": 52.670197375811036,

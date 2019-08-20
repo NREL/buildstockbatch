@@ -67,10 +67,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend([
             {
-                'measure_dir_name': 'BuildingCharacteristicsReport',
-                'arguments': {}
-            },
-            {
                 'measure_dir_name': 'SimulationOutputReport',
                 'arguments': {}
             },
