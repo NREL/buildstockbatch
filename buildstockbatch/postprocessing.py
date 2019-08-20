@@ -159,7 +159,7 @@ def add_timeseries(results_dir, inp1, inp2):
             with fs.open(full_path, 'rb') as f:
                 file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
                 file1 = file1 * get_factor(inp1)
-        except ResourceNotFound as er:
+        except ResourceNotFound:
             file1 = pd.DataFrame()  # if the timeseries file is missing, set it to empty dataframe
     else:
         file1 = inp1
