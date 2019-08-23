@@ -48,7 +48,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'sample_weight': sample_weight,
         }
         if 'measures_to_ignore' in self.cfg['baseline']:
-            bld_exist_model_args['measures_to_ignore'] = self.cfg['baseline']['measures_to_ignore']
+            bld_exist_model_args['measures_to_ignore'] = '|'.join(self.cfg['baseline']['measures_to_ignore'])
 
         osw = {
             'id': sim_id,

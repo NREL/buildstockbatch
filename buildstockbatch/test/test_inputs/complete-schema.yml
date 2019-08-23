@@ -7,6 +7,8 @@ schema_version: 0.1
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  measures_to_ignore:
+    - ResidentialApplianceClothesDryer
 upgrades:
   - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
     options:

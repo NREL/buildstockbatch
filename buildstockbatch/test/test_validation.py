@@ -76,6 +76,8 @@ def test_xor_violations_fail(project_file):
     (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-validate-measures-bad.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'), True),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
@@ -125,3 +127,28 @@ def test_bad_options_validation(project_file):
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'),
+])
+def test_good_measures_validation(project_file):
+    assert BuildStockBatchBase.validate_measure_references(project_file)
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-bad.yml'),
+])
+def test_bad_measures_validation(project_file):
+    try:
+        BuildStockBatchBase.validate_measure_references(project_file)
+    except ValueError as er:
+        er = str(er)
+        assert "Measure directory" in er
+        assert "not found" in er
+        assert "ResidentialConstructionsUnfinishedBasement" in er
+        assert "ResidentialConstructionsFinishedBasement" in er
+
+    else:
+        raise Exception("validate_measure_references was supposed to raise ValueError for enforce-validate-measures-bad.yml")
+        
