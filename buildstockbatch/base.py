@@ -301,6 +301,14 @@ class BuildStockBatchBase(object):
         return cfg
 
     @staticmethod
+    def get_buildstock_dir(project_file, cfg):
+        buildstock_dir = cfg["buildstock_directory"]
+        if os.path.isabs(buildstock_dir):
+            return os.path.abspath(buildstock_dir)
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+
+    @staticmethod
     def validate_project_schema(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         schema_version = cfg.get('schema_version', __schema_version__)
@@ -333,7 +341,7 @@ class BuildStockBatchBase(object):
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = {}
-        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
@@ -465,7 +473,7 @@ class BuildStockBatchBase(object):
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         measure_dirs = set()
-        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv

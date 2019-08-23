@@ -76,19 +76,19 @@ def test_xor_violations_fail(project_file):
     (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-validate-measures-bad.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'), True),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
 def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
-        if expected is not True:
-            with pytest.raises(expected):
-                BuildStockBatchBase.validate_project(project_file)
-        else:
-            assert(BuildStockBatchBase.validate_project(project_file))
+        # also patch validate_measure_references
+        with patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True):
+            if expected is not True:
+                with pytest.raises(expected):
+                    BuildStockBatchBase.validate_project(project_file)
+            else:
+                assert(BuildStockBatchBase.validate_project(project_file))
 
 
 @pytest.mark.parametrize("project_file", [
@@ -151,4 +151,3 @@ def test_bad_measures_validation(project_file):
 
     else:
         raise Exception("validate_measure_references was supposed to raise ValueError for enforce-validate-measures-bad.yml")
-        
