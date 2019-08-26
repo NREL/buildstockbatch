@@ -92,10 +92,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             apply_upgrade_measure = {
                 'measure_dir_name': 'ApplyUpgrade',
                 'arguments': {
-                    'upgrade_name': measure_d['upgrade_name'],
                     'run_measure': 1
                 }
             }
+            if 'upgrade_name' in measure_d:
+                apply_upgrade_measure['arguments']['upgrade_name'] = measure_d['upgrade_name']
             for opt_num, option in enumerate(measure_d['options'], 1):
                 apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
                 if 'lifetime' in option:
@@ -103,7 +104,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 if 'apply_logic' in option:
                     apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
                         self.make_apply_logic_arg(option['apply_logic'])
-                for cost_num, cost in enumerate(option['costs'], 1):
+                for cost_num, cost in enumerate(option.get('costs', []), 1):
                     for arg in ('value', 'multiplier'):
                         if arg not in cost:
                             continue
