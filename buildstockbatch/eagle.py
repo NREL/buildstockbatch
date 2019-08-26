@@ -293,6 +293,11 @@ def user_cli(argv=sys.argv[1:]):
         action='store_true',
         help='Submit this job to the high priority queue. Uses 2x node hours.'
     )
+    parser.add_argument(
+        '-m', '--apply_measures_only',
+        action='store_true',
+        help='Only apply the measures, but don\'t run simulations. Useful for debugging.'
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         '--postprocessonly',
