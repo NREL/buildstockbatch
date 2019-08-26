@@ -25,7 +25,6 @@ import yaml
 import yamale
 import zipfile
 import csv
-import difflib
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -468,7 +467,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_measure_references(project_file):
         """
-        Validates that the measures specified in the project yaml file are 
+        Validates that the measures specified in the project yaml file are
         referenced in the options_lookup.tsv
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
@@ -492,9 +491,9 @@ class BuildStockBatchBase(object):
             Gives multiline descriptive error message if the measure_str is invalid. Returns '' otherwise
             :param source_str: the descriptive location where the measure_str occurs in the yaml configuration.
             :param measure_str: the string containing a reference to a measure directory
-            :return: returns empty string if the measure_str is a valid measure 
+            :return: returns empty string if the measure_str is a valid measure
                      directory name as referenced in the options_lookup.tsv.
-                     if not returns error message, close matches, and specifies 
+                     if not returns error message, close matches, and specifies
                      where the error occurred (source_str).
             """
             if measure_str not in measure_dirs:

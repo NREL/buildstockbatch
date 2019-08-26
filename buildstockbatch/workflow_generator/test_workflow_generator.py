@@ -190,7 +190,9 @@ def test_ignore_measures_argument():
             break
     assert measure_step is not None, osw
     assert 'measures_to_ignore' in measure_step['arguments'], measure_step
-    assert measure_step['arguments']['measures_to_ignore'] == 'ResidentialApplianceCookingRange|ResidentialApplianceDishwasher|ResidentialApplianceClothesWasher|ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
+    assert measure_step['arguments']['measures_to_ignore'] == 'ResidentialApplianceCookingRange|' + \
+        'ResidentialApplianceDishwasher|ResidentialApplianceClothesWasher|' + \
+        'ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
 
 
 def test_default_apply_upgrade():
