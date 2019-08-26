@@ -28,11 +28,13 @@ import time
 import boto3
 import pandas as pd
 from pathlib import Path
+import pyarrow as pa
+from pyarrow import parquet
 
 logger = logging.getLogger(__name__)
 
 
-def read_data_point_out_json(fs_uri, filename):
+def read_data_point_out_json(fs_uri, reporting_measures, filename):
     fs = open_fs(fs_uri)
     try:
         with fs.open(filename, 'r') as f:
@@ -42,6 +44,9 @@ def read_data_point_out_json(fs_uri, filename):
     else:
         if 'SimulationOutputReport' not in d:
             d['SimulationOutputReport'] = {'applicable': False}
+        for reporting_measure in reporting_measures:
+            if reporting_measure not in d:
+                d[reporting_measure] = {'applicable': False}
         return d
 
 
@@ -50,7 +55,7 @@ def to_camelcase(x):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-def flatten_datapoint_json(d):
+def flatten_datapoint_json(reporting_measures, d):
     new_d = {}
     cols_to_keep = {
         'ApplyUpgrade': [
@@ -84,6 +89,11 @@ def flatten_datapoint_json(d):
     for k, v in d.get(col3, {}).items():
         new_d[f'{col3}.{k}'] = v
 
+    # additional reporting measures
+    for col in reporting_measures:
+        for k, v in d.get(col, {}).items():
+            new_d[f'{col}.{k}'] = v
+
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
@@ -112,6 +122,13 @@ def read_out_osw(fs_uri, filename):
         return out_d
 
 
+def write_dataframe_as_parquet(df, fs_uri, filename):
+    fs = open_fs(fs_uri)
+    tbl = pa.Table.from_pandas(df, preserve_index=False)
+    with fs.open(filename, 'wb') as f:
+        parquet.write_table(tbl, f, flavor='spark')
+
+
 def bldg_group(group_size, directory_name):
     m = re.search(r'up(\d+)/bldg(\d+)', directory_name)
     assert m, f"list of directories passed should be properly formatted as: " \
@@ -125,6 +142,43 @@ def directory_name_append(name1, name2):
         return name2
     else:
         return name1 + '\n' + name2
+
+
+def add_timeseries(results_dir, inp1, inp2):
+    fs = open_fs(results_dir)
+
+    def get_factor(folder):
+        path = f"{folder}/run/data_point_out.json"
+        with fs.open(path, 'r') as f:
+            js = json.load(f)
+        units_represented = float(js['BuildExistingModel'].get('units_represented', 1))
+        weight = float(js['BuildExistingModel']['weight'])
+        factor = weight / units_represented
+        return factor
+
+    if type(inp1) is str:
+        full_path = f"{inp1}/run/enduse_timeseries.parquet"
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file1 = file1 * get_factor(inp1)
+        except ResourceNotFound:
+            file1 = pd.DataFrame()  # if the timeseries file is missing, set it to empty dataframe
+    else:
+        file1 = inp1
+
+    if type(inp2) is str:
+        full_path = f"{inp2}/run/enduse_timeseries.parquet"
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file2 = file2 * get_factor(inp2)
+        except ResourceNotFound:
+            file2 = pd.DataFrame()
+    else:
+        file2 = inp2
+
+    return file1.add(file2, fill_value=0)
 
 
 def write_output(results_dir, group_pq):
@@ -142,8 +196,6 @@ def write_output(results_dir, group_pq):
         return
 
     folder_path = f"parquet/timeseries/upgrade={upgrade_id}"
-    fs.makedirs(folder_path)
-
     file_path = f"{folder_path}/{groupname}.parquet"
     parquets = []
     for folder in folders.split():
@@ -160,25 +212,35 @@ def write_output(results_dir, group_pq):
         new_pq['building_id'] = building_id
         parquets.append(new_pq)
 
+    if not parquets:  # if no valid simulation is found for this group
+        logger.warning(f'No valid simulation found for upgrade:{upgrade_id} and group:{groupname}.')
+        logger.debug(f'The following folders were scanned {folders}.')
+        return
+
     pq_size = (sum([sys.getsizeof(pq) for pq in parquets]) + sys.getsizeof(parquets)) / (1024 * 1024)
     logger.debug(f"{group}: list of {len(parquets)} parquets is consuming "
                  f"{pq_size:.2f} MB memory on a dask worker process.")
     pq = pd.concat(parquets)
     logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
-    with fs.open(file_path, 'wb') as f:
-        pq.to_parquet(f, engine='pyarrow', flavor='spark')
+    write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
-def combine_results(results_dir):
+def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
     results_csvs_dir = 'results_csvs'
     parquet_dir = 'parquet'
     ts_dir = 'parquet/timeseries'
+    agg_ts_dir = 'parquet/aggregated_timeseries'
+    dirs = [results_csvs_dir, parquet_dir]
+    if not skip_timeseries:
+        dirs += [ts_dir]
+        if aggregate_timeseries:
+            dirs += [agg_ts_dir]
 
     # clear and create the postprocessing results directories
-    for dr in [results_csvs_dir, parquet_dir, ts_dir]:
+    for dr in dirs:
         if fs.exists(dr):
             fs.removetree(dr)
         fs.makedirs(dr)
@@ -207,16 +269,17 @@ def combine_results(results_dir):
 
         datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=500).\
             map(lambda x: f"{sim_out_dir}/{x}/run/data_point_out.json").\
-            map(partial(read_data_point_out_json, results_dir)).\
+            map(partial(read_data_point_out_json, results_dir, reporting_measures)).\
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
             datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
-            map(flatten_datapoint_json).take(10)
+            map(partial(flatten_datapoint_json, reporting_measures)).take(10)
         ))
+
         if meta.shape == (0, 0):
             meta = None
 
-        data_point_out_df_d = datapoint_output_jsons.map(flatten_datapoint_json).\
+        data_point_out_df_d = datapoint_output_jsons.map(partial(flatten_datapoint_json, reporting_measures)).\
             to_dataframe(meta=meta).rename(columns=to_camelcase)
 
         out_osws = db.from_sequence(sim_dir_list, partition_size=500).\
@@ -245,6 +308,23 @@ def combine_results(results_dir):
             )
             results_df = results_df[cols_to_keep]
 
+        # standardize the column orders
+        first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
+                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name']
+
+        build_existing_model_cols = sorted([col for col in results_df.columns if
+                                            col.startswith('build_existing_model')])
+        simulation_output_cols = sorted([col for col in results_df.columns if
+                                         col.startswith('simulation_output_report')])
+        sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+
+        for reporting_measure in reporting_measures:
+            reporting_measure_cols = sorted([col for col in results_df.columns if
+                                            col.startswith(to_camelcase(reporting_measure))])
+            sorted_cols += reporting_measure_cols
+
+        results_df = results_df.reindex(columns=sorted_cols, copy=False)
+
         # Save to CSV
         logger.debug('Saving to csv.gz')
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
@@ -260,12 +340,38 @@ def combine_results(results_dir):
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
         if not fs.exists(results_parquet_dir):
             fs.makedirs(results_parquet_dir)
-        with fs.open(f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet", 'wb') as f:
-            results_df.to_parquet(
-                f,
-                engine='pyarrow',
-                flavor='spark'
-            )
+        write_dataframe_as_parquet(
+            results_df,
+            results_dir,
+            f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+        )
+
+        # combine and save the aggregated timeseries file
+        if not skip_timeseries and aggregate_timeseries:
+            full_sim_dir = results_dir + '/' + sim_out_dir
+            logger.info(f"Combining timeseries files for {upgrade_id} in direcotry {full_sim_dir}")
+            agg_parquet = db.from_sequence(sim_dir_list).fold(partial(add_timeseries, full_sim_dir)).compute()
+            agg_parquet.reset_index(inplace=True)
+
+            agg_parquet_dir = f"{agg_ts_dir}/upgrade={upgrade_id}"
+            if not fs.exists(agg_parquet_dir):
+                fs.makedirs(agg_parquet_dir)
+
+            write_dataframe_as_parquet(agg_parquet,
+                                       results_dir,
+                                       f"{agg_parquet_dir}/aggregated_ts_up{upgrade_id:02d}.parquet")
+
+    if skip_timeseries:
+        logger.info("Timeseries aggregation skipped.")
+        return
+
+    # Time series combine
+
+    # Create directories in serial section to avoid race conditions
+    for upgrade_id in results_by_upgrade.keys():
+        folder_path = f"{ts_dir}/upgrade={upgrade_id}"
+        if not fs.exists(folder_path):
+            fs.makedirs(folder_path)
 
     # find the avg size of time_series parqeut files
     total_size = 0
@@ -281,6 +387,10 @@ def combine_results(results_dir):
         else:
             total_size += sys.getsizeof(pq)
             count += 1
+
+    if count == 0:
+        logger.error('No valid timeseries file could be found.')
+        return
 
     avg_parquet_size = total_size / count
 
@@ -298,7 +408,6 @@ def combine_results(results_dir):
         combine=directory_name_append
     )
     bags = directory_bags.compute()
-
     logger.info("Combining the parquets")
     t = time.time()
     write_file = db.from_sequence(bags).map(partial(write_output, results_dir))

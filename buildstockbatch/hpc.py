@@ -78,6 +78,13 @@ class HPCBatchBase(BuildStockBatchBase):
     def output_dir(self):
         raise NotImplementedError
 
+    @classmethod
+    def singularity_image_url(cls):
+        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                    ver=cls.OS_VERSION,
+                    sha=cls.OS_SHA
+                )
+
     @property
     def singularity_image(self):
         # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
@@ -103,12 +110,7 @@ class HPCBatchBase(BuildStockBatchBase):
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
                 logger.debug('Downloading singularity image')
-                simg_url = \
-                    'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                        ver=self.OS_VERSION,
-                        sha=self.OS_SHA
-                    )
-                r = requests.get(simg_url, stream=True)
+                r = requests.get(self.singularity_image_url(), stream=True)
                 if r.status_code != requests.codes.ok:
                     logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
                     r.raise_for_status()
@@ -167,9 +169,12 @@ class HPCBatchBase(BuildStockBatchBase):
         n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
         n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
-        baseline_sims = zip(building_ids, itertools.repeat(None))
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
-        all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        if not self.skip_baseline_sims:
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        else:
+            all_sims = list(itertools.chain(upgrade_sims))
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
 
@@ -291,3 +296,7 @@ class HPCBatchBase(BuildStockBatchBase):
 
     def queue_post_processing(self, after_jobids):
         raise NotImplementedError
+
+    @staticmethod
+    def validate_project(project_file):
+        return super(HPCBatchBase, HPCBatchBase).validate_project(project_file)

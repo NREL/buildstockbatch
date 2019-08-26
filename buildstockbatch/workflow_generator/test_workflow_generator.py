@@ -93,7 +93,8 @@ def test_residential_simulation_controls_config():
         'begin_month': 1,
         'begin_day_of_month': 1,
         'end_month': 12,
-        'end_day_of_month': 31
+        'end_day_of_month': 31,
+        'calendar_year': 2007
     }
     for k, v in default_args.items():
         assert(step0['arguments'][k] == v)
@@ -106,7 +107,7 @@ def test_residential_simulation_controls_config():
     args = osw['steps'][0]['arguments']
     assert(args['timesteps_per_hr'] == 2)
     assert(args['begin_month'] == 7)
-    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month'):
+    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month', 'calendar_year'):
         assert(args[argname] == default_args[argname])
 
 
@@ -140,3 +141,55 @@ def test_timeseries_csv_export():
     assert(args['output_variables'] == 'Zone Mean Air Temperature')
     for argname in ('include_enduse_subcategories',):
         assert(args[argname] == default_args[argname])
+
+
+def test_additional_reporting_measures():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'reporting_measures': [
+            'ReportingMeasure1',
+            'ReportingMeasure2'
+        ]
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    reporting_measure_1_step = osw['steps'][-3]
+    assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
+    reporting_measure_2_step = osw['steps'][-2]
+    assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
+
+
+def test_default_apply_upgrade():
+    sim_id = 'bldg1up1'
+    building_id = 1
+    upgrade_idx = 0
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'upgrades': [
+            {
+                'options': [
+                    {
+                        'option': 'Parameter|Option',
+                    }
+                ],
+            }
+        ]
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    for step in osw['steps']:
+        if step['measure_dir_name'] == 'ApplyUpgrade':
+            break
+    assert(step['measure_dir_name'] == 'ApplyUpgrade')
+    assert(len(step['arguments']) == 2)
+    assert(step['arguments']['run_measure'] == 1)
+    assert(step['arguments']['option_1'] == 'Parameter|Option')

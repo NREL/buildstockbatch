@@ -7,12 +7,14 @@ from unittest.mock import patch
 from buildstockbatch.eagle import user_cli, EagleBatch
 
 
+@patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, basic_residential_project_file):
+def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file):
+    mock_validate_options.return_value = True
+
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)
     os.environ['CONDA_PREFIX'] = 'something'
-
     argv = [project_filename]
     user_cli(argv)
     mock_subprocess.run.assert_called_once()
