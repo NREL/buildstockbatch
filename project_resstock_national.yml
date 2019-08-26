@@ -1,19 +1,16 @@
 stock_type: residential
 buildstock_directory: ../dsgrid-OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_singlefamilydetached  # Relative to buildstock_directory
-output_directory: C:/Users/ehale/Desktop/TemporaryFiles/EE+DR/20190823_test
+output_directory: /scratch/ehale/test_resstock/20190826_test_2
 weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 #weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
+  buildstock_csv: /scratch/ehale/test_resstock/20190826_test_1/housing_characteristics/buildstock.csv
+#  n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
-  measures_to_ignore: # List of names of measures that are listed in buildstock_csv but shouldn't actually run
-    - ResidentialApplianceCookingRange
-    - ResidentialApplianceDishwasher
-    - ResidentialApplianceClothesWasher
-    - ResidentialApplianceClothesDryer
-    - ResidentialApplianceRefrigerator
+#  measures_to_ignore: # List of names of measures that are listed in buildstock_csv but shouldn't actually run
+#    - ResidentialApplianceClothesWasher
+#    - ResidentialApplianceClothesDryer
 # upgrades:
 #   - upgrade_name: Triple-Pane Windows
 #     options:
@@ -34,7 +31,7 @@ timeseries_csv_export:
 eagle:
   n_jobs: 200
   minutes_per_sim: 2
-  account: enduse
+  account: eedr
   sampling:
     time: 20
   postprocessing:
