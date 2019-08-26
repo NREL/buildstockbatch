@@ -49,7 +49,7 @@ def test_missing_simulation_output_report_applicable(basic_residential_project_f
     up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
     assert(os.path.exists(up01_parquet))
     df = pd.read_parquet(up01_parquet, engine='pyarrow')
-    assert((~df['simulation_output_report.applicable']).any())
+    assert(not df['simulation_output_report.applicable'].any())
 
 
 def test_combine_files_flexible(basic_residential_project_file):

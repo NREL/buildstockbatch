@@ -155,17 +155,23 @@ def add_timeseries(results_dir, inp1, inp2):
 
     if type(inp1) is str:
         full_path = f"{inp1}/run/enduse_timeseries.parquet"
-        with fs.open(full_path, 'rb') as f:
-            file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
-            file1 = file1 * get_factor(inp1)
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file1 = file1 * get_factor(inp1)
+        except ResourceNotFound:
+            file1 = pd.DataFrame()  # if the timeseries file is missing, set it to empty dataframe
     else:
         file1 = inp1
 
     if type(inp2) is str:
         full_path = f"{inp2}/run/enduse_timeseries.parquet"
-        with fs.open(full_path, 'rb') as f:
-            file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
-            file2 = file2 * get_factor(inp2)
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file2 = file2 * get_factor(inp2)
+        except ResourceNotFound:
+            file2 = pd.DataFrame()
     else:
         file2 = inp2
 
