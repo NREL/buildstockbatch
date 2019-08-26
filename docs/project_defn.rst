@@ -72,7 +72,7 @@ following properties:
    upgrade scenario.
 -  ``options``: A list of options to apply as part of this upgrade.
 
-   -  ``option``: The option to apply, in the format ``parameter|option`` which can be found in 
+   -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in 
       `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_
       in `OpenStudio-BuildStock`_.
    -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See 
