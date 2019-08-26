@@ -37,13 +37,15 @@ class ResidentialSingularitySampler(BuildStockSampler):
         self.output_dir = output_dir
         self.csv_path = os.path.join(self.output_dir, 'housing_characteristics', 'buildstock.csv')
 
-    def run_sampling(self, n_datapoints):
+    def run_sampling(self, n_datapoints=None):
         """
         Run the residential sampling in a singularity container.
 
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
+        if n_datapoints is None:
+            raise AttributeError('n_datapoints passed to sampler is None. Please specify for this sampler')
         logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'singularity',

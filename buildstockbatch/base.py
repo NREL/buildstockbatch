@@ -138,8 +138,6 @@ class BuildStockBatchBase(object):
         return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
         return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
