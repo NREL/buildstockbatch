@@ -91,6 +91,7 @@ class PrecomputedSingularitySampler(PrecomputedBaseSampler):
                 'Remove or comment out the downselect key from your project file.'
             )
         self.output_dir = output_dir
+        self.csv_path = os.path.join(self.output_dir, 'housing_characteristics', 'buildstock.csv')
 
     def run_sampling(self, n_datapoints=None):
         """
