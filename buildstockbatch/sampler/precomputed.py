@@ -84,12 +84,12 @@ class PrecomputedSingularitySampler(PrecomputedBaseSampler):
         :param output_dir: Directory in which to place buildstock.csv
         """
         logger.debug('args are `{}`'.format(*args))
+        super().__init__(*args, **kwargs)
         if 'downselect' in self.cfg:
             raise RuntimeError(
                 'A buildstock_csv was provided, which isn\'t compatible with downselecting.'
                 'Remove or comment out the downselect key from your project file.'
             )
-        super().__init__(*args, **kwargs)
         self.output_dir = output_dir
 
     def run_sampling(self, n_datapoints=None):
