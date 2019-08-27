@@ -150,5 +150,5 @@ def test_bad_measures_validation(project_file):
         assert "ResidentialConstructionsFinishedBasement" in er
 
     else:
-        raise Exception("validate_measure_references was supposed to raise ValueError for " + \
-            "enforce-validate-measures-bad.yml")
+        raise Exception("validate_measure_references was supposed to raise ValueError for "
+                        "enforce-validate-measures-bad.yml")
