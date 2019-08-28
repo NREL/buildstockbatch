@@ -81,14 +81,13 @@ def test_xor_violations_fail(project_file):
 ])
 def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
-        # also patch validate_measure_references
-        with patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True):
-            if expected is not True:
-                with pytest.raises(expected):
-                    BuildStockBatchBase.validate_project(project_file)
-            else:
-                assert(BuildStockBatchBase.validate_project(project_file))
+    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
+            patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True):
+        if expected is not True:
+            with pytest.raises(expected):
+                BuildStockBatchBase.validate_project(project_file)
+        else:
+            assert(BuildStockBatchBase.validate_project(project_file))
 
 
 @pytest.mark.parametrize("project_file", [
