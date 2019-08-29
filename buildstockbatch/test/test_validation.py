@@ -112,6 +112,9 @@ def test_bad_options_validation(project_file):
         BuildStockBatchBase.validate_options_lookup(project_file)
     except ValueError as er:
         er = str(er)
+        assert "Insulation Slab(Good) Option" in er
+        assert "Insulation Unfinished&Basement" in er
+        assert "Insulation Finished|Basement" in er
         assert "Extra Argument" in er
         assert "Invalid Option" in er
         assert "Insulation Wall|Good Option||" in er
