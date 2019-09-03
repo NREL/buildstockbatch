@@ -25,6 +25,7 @@ import yamale
 import zipfile
 import csv
 import difflib
+from collections import defaultdict
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -330,7 +331,7 @@ class BuildStockBatchBase(object):
         Validates that the parameter|options specified in the project yaml file is avaliable in the options_lookup.tsv
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        param_option_dict = {}
+        param_option_dict = defaultdict(set)
         buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
@@ -338,9 +339,14 @@ class BuildStockBatchBase(object):
         try:
             with open(options_lookup_path, 'r') as f:
                 options = csv.DictReader(f, delimiter='\t')
+                invalid_options_lookup_str = ''  # Holds option/parameter names with invalid characters
                 for row in options:
-                    if row['Parameter Name'] not in param_option_dict:
-                        param_option_dict[row['Parameter Name']] = set()
+                    for col in ['Parameter Name', 'Option Name']:
+                        invalid_chars = set(row[col]).intersection(set('|&()'))
+                        invalid_chars = ''.join(invalid_chars)
+                        if invalid_chars:
+                            invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
+
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
@@ -448,10 +454,16 @@ class BuildStockBatchBase(object):
         for source_str, option_str in source_option_str_list:
             error_message += get_errors(source_str, option_str)
 
+        if error_message:
+            error_message = "Following option/parameter name(s) in the yaml file is(are) invalid. \n" + error_message
+
+        if invalid_options_lookup_str:
+            error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
+                            invalid_options_lookup_str + "*"*80 + "\n" + error_message
+
         if not error_message:
             return True
         else:
-            error_message = "Option/parameter name(s) is(are) invalid. \n" + error_message
             logger.error(error_message)
             raise ValueError(error_message)
 
