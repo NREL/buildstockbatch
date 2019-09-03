@@ -11,6 +11,10 @@ OUTPUT_FOLDER_NAME = 'output'
 def basic_residential_project_file():
     with tempfile.TemporaryDirectory() as test_directory:
         buildstock_directory = os.path.join(test_directory, 'openstudio_buildstock')
+        shutil.copytree(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
+            os.path.join(buildstock_directory)
+        )
         project_directory = 'project_resstock_national'
         os.makedirs(os.path.join(buildstock_directory, project_directory))
         output_directory = os.path.join(test_directory, OUTPUT_FOLDER_NAME)

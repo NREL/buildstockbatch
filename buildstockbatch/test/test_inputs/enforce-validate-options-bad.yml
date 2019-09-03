@@ -1,4 +1,4 @@
-buildstock_directory: test_openstudio_buildstock
+buildstock_directory: test_openstudio_buildstock_bad
 project_directory: project_singlefamilydetached
 baseline:
   n_datapoints: 30
