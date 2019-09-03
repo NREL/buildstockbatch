@@ -11,6 +11,7 @@ This is the base class mixed into the deployment specific classes (i.e. eagle, l
 """
 
 from dask.distributed import Client
+import difflib
 import gzip
 import logging
 import math
@@ -24,7 +25,6 @@ import yaml
 import yamale
 import zipfile
 import csv
-import difflib
 from collections import defaultdict
 
 from buildstockbatch.__version__ import __schema_version__
@@ -286,6 +286,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_measure_references(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -298,6 +299,14 @@ class BuildStockBatchBase(object):
             logger.error(f'Failed to load input yaml for validation')
             raise err
         return cfg
+
+    @staticmethod
+    def get_buildstock_dir(project_file, cfg):
+        buildstock_dir = cfg["buildstock_directory"]
+        if os.path.isabs(buildstock_dir):
+            return os.path.abspath(buildstock_dir)
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -332,7 +341,7 @@ class BuildStockBatchBase(object):
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
-        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
@@ -464,6 +473,62 @@ class BuildStockBatchBase(object):
         if not error_message:
             return True
         else:
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+    @staticmethod
+    def validate_measure_references(project_file):
+        """
+        Validates that the measures specified in the project yaml file are
+        referenced in the options_lookup.tsv
+        """
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        measure_dirs = set()
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
+        options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
+
+        # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
+        try:
+            with open(options_lookup_path, 'r') as f:
+                options = csv.DictReader(f, delimiter='\t')
+                for row in options:
+                    if row['Measure Dir']:
+                        measure_dirs.add(row['Measure Dir'])
+        except FileNotFoundError as err:
+            logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
+            raise err
+
+        def get_errors(source_str, measure_str):
+            """
+            Gives multiline descriptive error message if the measure_str is invalid. Returns '' otherwise
+            :param source_str: the descriptive location where the measure_str occurs in the yaml configuration.
+            :param measure_str: the string containing a reference to a measure directory
+            :return: returns empty string if the measure_str is a valid measure
+                     directory name as referenced in the options_lookup.tsv.
+                     if not returns error message, close matches, and specifies
+                     where the error occurred (source_str).
+            """
+            if measure_str not in measure_dirs:
+                closest = difflib.get_close_matches(measure_str, list(measure_dirs))
+                return f"Measure directory {measure_str} not found. Closest matches: {closest}" \
+                    f" {source_str}\n"
+            return ''
+
+        source_measures_str_list = []
+
+        if 'measures_to_ignore' in cfg['baseline']:
+            source_str = f"In baseline 'measures_to_ignore'"
+            for measure_str in cfg['baseline']['measures_to_ignore']:
+                source_measures_str_list.append((source_str, measure_str))
+
+        error_message = ''
+        for source_str, measure_str in source_measures_str_list:
+            error_message += get_errors(source_str, measure_str)
+
+        if not error_message:
+            return True
+        else:
+            error_message = 'Measure name(s)/directory(ies) is(are) invalid. \n' + error_message
             logger.error(error_message)
             raise ValueError(error_message)
 
