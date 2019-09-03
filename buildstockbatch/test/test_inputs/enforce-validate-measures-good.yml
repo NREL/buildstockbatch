@@ -1,0 +1,12 @@
+stock_type: residential
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+baseline:
+  n_datapoints: 30
+  n_buildings_represented: 81221016
+  measures_to_ignore:
+    - ResidentialConstructionsUnfinishedBasement
+    - ResidentialConstructionsFinishedBasement
+downselect:
+  resample: False
+  logic: Vintage|2000s
