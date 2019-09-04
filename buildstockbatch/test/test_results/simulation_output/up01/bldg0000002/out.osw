@@ -802,31 +802,6 @@
       },
       {
          "arguments" : {},
-         "measure_dir_name" : "BuildingCharacteristicsReport",
-         "result" : {
-            "completed_at" : "20190417T173120Z",
-            "measure_class_name" : "BuildingCharacteristicsReport",
-            "measure_display_name" : "Building Characteristics Report",
-            "measure_name" : "building_characteristics_report",
-            "measure_taxonomy" : "Whole Building.Space Types",
-            "measure_type" : "ReportingMeasure",
-            "measure_uid" : "90eecbe2-d8e2-47db-9079-5d9029fb3e67",
-            "measure_version_id" : "6ebf6a45-ae5e-4d35-b5b0-2dfe35a85bbd",
-            "measure_version_modified" : "20181211T201922Z",
-            "measure_xml_checksum" : "2EA103AF",
-            "started_at" : "20190417T173120Z",
-            "stderr" : "",
-            "stdout" : "",
-            "step_errors" : [],
-            "step_files" : [],
-            "step_info" : [ "Upgrade datapoint, no building characteristics will be reported." ],
-            "step_result" : "Success",
-            "step_values" : [],
-            "step_warnings" : []
-         }
-      },
-      {
-         "arguments" : {},
          "measure_dir_name" : "SimulationOutputReport",
          "result" : {
             "completed_at" : "20190417T173149Z",

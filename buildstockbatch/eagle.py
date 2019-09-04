@@ -41,6 +41,11 @@ class EagleBatch(HPCBatchBase):
     local_output_dir = local_scratch
     local_singularity_img = local_scratch / 'openstudio.simg'
 
+    @staticmethod
+    def validate_project(project_file):
+        super(EagleBatch, EagleBatch).validate_project(project_file)
+        # Eagle specific validation goes here
+
     @property
     def output_dir(self):
         output_dir = self.cfg.get(
@@ -180,11 +185,24 @@ class EagleBatch(HPCBatchBase):
         job_id = m.group(1)
         return [job_id]
 
-    def queue_post_processing(self, after_jobids=[], upload_only=False):
+    def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False):
 
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
+
+        # Clear out some files that cause problems if we're rerunning this.
+
+        if not upload_only:
+            for subdir in ('parquet', 'results_csvs'):
+                subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
+                if subdirpath.exists():
+                    shutil.rmtree(subdirpath)
+
+        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
+            filepath = pathlib.Path(self.output_dir, filename)
+            if filepath.exists():
+                os.remove(filepath)
 
         env = {}
         env.update(os.environ)
@@ -215,6 +233,8 @@ class EagleBatch(HPCBatchBase):
 
         if os.environ.get('SLURM_JOB_QOS'):
             args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
+        elif hipri:
+            args.insert(-1, '--qos=high')
 
         resp = subprocess.run(
             args,
@@ -293,6 +313,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml',
         action='store_true'
     )
+    group.add_argument(
+        '--validateonly',
+        help='Only validate the project YAML file and references. Nothing is executed',
+        action='store_true'
+    )
 
     # parse CLI arguments
     args = parser.parse_args(argv)
@@ -306,10 +331,15 @@ def user_cli(argv=sys.argv[1:]):
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
+    # validate the project, and in case of the --validateonly flag return True if validation passes
+    EagleBatch.validate_project(project_filename)
+    if args.validateonly:
+        return True
+
     # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
-        eagle_batch.queue_post_processing(upload_only=args.uploadonly)
+        eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
         return
 
     # otherwise, queue up the whole eagle buildstockbatch process

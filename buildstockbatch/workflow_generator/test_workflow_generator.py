@@ -141,3 +141,85 @@ def test_timeseries_csv_export():
     assert(args['output_variables'] == 'Zone Mean Air Temperature')
     for argname in ('include_enduse_subcategories',):
         assert(args[argname] == default_args[argname])
+
+
+def test_additional_reporting_measures():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'reporting_measures': [
+            'ReportingMeasure1',
+            'ReportingMeasure2'
+        ]
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    reporting_measure_1_step = osw['steps'][-3]
+    assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
+    reporting_measure_2_step = osw['steps'][-2]
+    assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
+
+
+def test_ignore_measures_argument():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100,
+            'measures_to_ignore': [
+                'ResidentialApplianceCookingRange',
+                'ResidentialApplianceDishwasher',
+                'ResidentialApplianceClothesWasher',
+                'ResidentialApplianceClothesDryer',
+                'ResidentialApplianceRefrigerator']
+        }
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    measure_step = None
+    for step in osw['steps']:
+        if step['measure_dir_name'] == 'BuildExistingModel':
+            measure_step = step
+            break
+    assert measure_step is not None, osw
+    assert 'measures_to_ignore' in measure_step['arguments'], measure_step
+    assert measure_step['arguments']['measures_to_ignore'] == 'ResidentialApplianceCookingRange|' + \
+        'ResidentialApplianceDishwasher|ResidentialApplianceClothesWasher|' + \
+        'ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
+
+
+def test_default_apply_upgrade():
+    sim_id = 'bldg1up1'
+    building_id = 1
+    upgrade_idx = 0
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100
+        },
+        'upgrades': [
+            {
+                'options': [
+                    {
+                        'option': 'Parameter|Option',
+                    }
+                ],
+            }
+        ]
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    for step in osw['steps']:
+        if step['measure_dir_name'] == 'ApplyUpgrade':
+            break
+    assert(step['measure_dir_name'] == 'ApplyUpgrade')
+    assert(len(step['arguments']) == 2)
+    assert(step['arguments']['run_measure'] == 1)
+    assert(step['arguments']['option_1'] == 'Parameter|Option')

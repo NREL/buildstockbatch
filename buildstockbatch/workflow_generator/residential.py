@@ -28,6 +28,8 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         :param building_id: integer building id to use from the sampled buildstock.csv
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
+        logger.debug('Generating OSW, sim_id={}'.format(sim_id))
+
         res_sim_ctl_args = {
             'timesteps_per_hr': 6,
             'begin_month': 1,
@@ -37,7 +39,17 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'calendar_year': 2007
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
-        logger.debug('Generating OSW, sim_id={}'.format(sim_id))
+
+        sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
+            self.cfg['baseline']['n_datapoints']
+        bld_exist_model_args = {
+            'building_id': building_id,
+            'workflow_json': 'measure-info.json',
+            'sample_weight': sample_weight,
+        }
+        if 'measures_to_ignore' in self.cfg['baseline']:
+            bld_exist_model_args['measures_to_ignore'] = '|'.join(self.cfg['baseline']['measures_to_ignore'])
+
         osw = {
             'id': sim_id,
             'steps': [
@@ -47,12 +59,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 },
                 {
                     'measure_dir_name': 'BuildExistingModel',
-                    'arguments': {
-                        'building_id': building_id,
-                        'workflow_json': 'measure-info.json',
-                        'sample_weight': self.cfg['baseline']['n_buildings_represented'] /
-                        self.cfg['baseline']['n_datapoints']
-                    }
+                    'arguments': bld_exist_model_args
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
@@ -66,10 +73,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
         osw['steps'].extend([
-            {
-                'measure_dir_name': 'BuildingCharacteristicsReport',
-                'arguments': {}
-            },
             {
                 'measure_dir_name': 'SimulationOutputReport',
                 'arguments': {}
@@ -85,10 +88,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             apply_upgrade_measure = {
                 'measure_dir_name': 'ApplyUpgrade',
                 'arguments': {
-                    'upgrade_name': measure_d['upgrade_name'],
                     'run_measure': 1
                 }
             }
+            if 'upgrade_name' in measure_d:
+                apply_upgrade_measure['arguments']['upgrade_name'] = measure_d['upgrade_name']
             for opt_num, option in enumerate(measure_d['options'], 1):
                 apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
                 if 'lifetime' in option:
@@ -96,7 +100,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 if 'apply_logic' in option:
                     apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
                         self.make_apply_logic_arg(option['apply_logic'])
-                for cost_num, cost in enumerate(option['costs'], 1):
+                for cost_num, cost in enumerate(option.get('costs', []), 1):
                     for arg in ('value', 'multiplier'):
                         if arg not in cost:
                             continue
@@ -121,6 +125,14 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 'measure_dir_name': 'TimeseriesCSVExport',
                 'arguments': timeseries_csv_export_args
             }
-            osw['steps'].insert(-1, timeseries_measure)
+            osw['steps'].insert(-1, timeseries_measure)  # right before ServerDirectoryCleanup
+
+        if 'reporting_measures' in self.cfg:
+            for measure_dir_name in self.cfg['reporting_measures']:
+                reporting_measure = {
+                    'measure_dir_name': measure_dir_name,
+                    'arguments': {}
+                }
+                osw['steps'].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
 
         return osw
