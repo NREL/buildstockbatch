@@ -161,8 +161,8 @@ class BuildStockBatchBase(object):
             destination_filename = self.sampler.csv_path
             if destination_filename != buildstock_csv:
                 if os.path.exists(destination_filename):
-                    logger.info("Removing {!r} before copying {!r} to that location."\
-                        .format(destination_filename, buildstock_csv))
+                    logger.info("Removing {!r} before copying {!r} to that location."
+                                .format(destination_filename, buildstock_csv))
                     os.remove(destination_filename)
                 shutil.copy(
                     buildstock_csv,

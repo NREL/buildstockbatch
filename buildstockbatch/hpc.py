@@ -123,19 +123,19 @@ class HPCBatchBase(BuildStockBatchBase):
         )
 
         # run sampling
-        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch 
-        #   constructor ensures that 'downselect' not in self.cfg and 
-        #   run_sampling simply copies that .csv to the correct location if 
+        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
+        #   constructor ensures that 'downselect' not in self.cfg and
+        #   run_sampling simply copies that .csv to the correct location if
         #   necessary and returns the path
         if 'downselect' in self.cfg:
-            # if there is a downselect section in the yml, 
-            # BuildStockBatchBase.downselect calls run_sampling and does 
+            # if there is a downselect section in the yml,
+            # BuildStockBatchBase.downselect calls run_sampling and does
             # additional processing before and after
             buildstock_csv_filename = self.downselect()
         else:
             # otherwise just the plain sampling process needs to be run
             buildstock_csv_filename = self.run_sampling()
-        
+
         # read the results
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
 
@@ -147,10 +147,10 @@ class HPCBatchBase(BuildStockBatchBase):
 
         # this is the number of simulations defined for this run as a "full job"
         #     number of simulations per job if we believe the .yml file n_jobs
-        n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs']) 
-        #     use more appropriate batch size in the case of n_jobs being much 
+        n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
+        #     use more appropriate batch size in the case of n_jobs being much
         #     larger than we need, now that we know n_sims
-        n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)            
+        n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
         if not self.skip_baseline_sims:

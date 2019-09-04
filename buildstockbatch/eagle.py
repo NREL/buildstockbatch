@@ -290,8 +290,8 @@ def user_cli(argv=sys.argv[1:]):
 
     # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
-    
-    # print BuildStockBatch logo    
+
+    # print BuildStockBatch logo
     print(HPCBatchBase.LOGO)
 
     # CLI arguments
@@ -376,7 +376,7 @@ def user_cli(argv=sys.argv[1:]):
 
 def main():
     """
-    Determines which piece of work is to be run right now, on this process, on 
+    Determines which piece of work is to be run right now, on this process, on
     this node. There are four types of work that may need to be done:
 
     - initialization, sampling, and queuing other work (job_array_number == 0)
@@ -384,7 +384,7 @@ def main():
     - post-process results (job_array_number == 0 and POSTPROCESS)
     - upload results to Athena (job_array_number == 0 and POSTPROCESS and UPLOADONLY)
 
-    The context for the work is deinfed by the project_filename (project .yml file), 
+    The context for the work is deinfed by the project_filename (project .yml file),
     which is used to initialize an EagleBatch object.
     """
 
@@ -398,7 +398,7 @@ def main():
 
     # initialize the EagleBatch object
     batch = EagleBatch(args.project_filename)
-    # other arguments/cues about which part of the process we are in are 
+    # other arguments/cues about which part of the process we are in are
     # encoded in slurm job environment variables
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
@@ -413,8 +413,8 @@ def main():
         else:
             batch.process_results()
     else:
-        # default job_array_number == 0 task is to kick the whole BuildStock 
-        # process off, that is, to create samples and then create batch jobs 
+        # default job_array_number == 0 task is to kick the whole BuildStock
+        # process off, that is, to create samples and then create batch jobs
         # to run them
         batch.run_batch()
 
