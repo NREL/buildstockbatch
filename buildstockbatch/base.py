@@ -302,7 +302,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
-        assert(BuildStockBatchBase.validate_measure_references(project_file))
+        # assert(BuildStockBatchBase.validate_measure_references(project_file))
         logger.info('Base Validation Successful')
         return True
 
