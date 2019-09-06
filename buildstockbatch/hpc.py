@@ -177,7 +177,7 @@ class HPCBatchBase(BuildStockBatchBase):
         # now queue them
         jobids = self.queue_jobs()
 
-        # wait for all of the jobids to be done, then queue up post-processing
+        # queue up post-processing to run after all the simulation jobs are complete
         self.queue_post_processing(jobids)
 
     def run_job_batch(self, job_array_number):
