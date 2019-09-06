@@ -50,8 +50,10 @@ class HPCBatchBase(BuildStockBatchBase):
                 self.output_dir,
                 self.cfg,
                 self.buildstock_dir,
-                self.project_dir
+                self.project_dir,
+                subproject_directories = self.subproject_directories
             )
+            self.buildstock_dir = self.sampler.buildstock_dir
         elif self.stock_type == 'commercial':
             sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':

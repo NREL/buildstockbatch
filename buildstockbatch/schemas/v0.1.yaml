@@ -1,5 +1,6 @@
 buildstock_directory: str()
 project_directory: str(required=True)
+subproject_directories: list(required=False)
 weather_files_path: str(required=False)
 weather_files_url: str(required=False)
 stock_type: enum('residential', 'commercial', required=True)
