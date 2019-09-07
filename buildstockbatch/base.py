@@ -61,9 +61,9 @@ class BuildStockBatchBase(object):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
         self._weather_dir = None
+        self._buildstock_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
-        self._buildstock_dir = None
 
         if 'buildstock_csv' in self.cfg['baseline']:
             buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
