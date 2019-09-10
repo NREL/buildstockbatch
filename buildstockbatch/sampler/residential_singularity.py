@@ -69,6 +69,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
         project_found = False
         options_tsv = None
         for item in os.listdir(self.buildstock_dir):
+            item = os.path.join(self.buildstock_dir, item)
             if item.startswith('.'):
                 continue
             if os.path.isdir(item):
@@ -76,14 +77,16 @@ class ResidentialSingularitySampler(BuildStockSampler):
                 if dirname == 'resources':
                     resources_found = True
                     for r_item in os.listdir(item):
+                        r_item = os.path.join(item, r_item)
                         if os.path.isdir(r_item):
                             assert os.path.basename(r_item) == 'measures'
                             for r_m_item in os.listdir(r_item):
+                                r_m_item = os.path.join(r_item, r_m_item)
                                 create_softlink(r_m_item, new_measures_dir)
                         else:
                             assert os.path.isfile(r_item)
                             if os.path.basename(r_item) == 'options_lookup.tsv':
-                                options_tsv = pd.read_csv(item, sep='\t')
+                                options_tsv = pd.read_csv(r_item, sep='\t')
                             else:
                                 create_softlink(r_item, new_resources_dir)
                 elif dirname.startswith('project'):
@@ -94,9 +97,11 @@ class ResidentialSingularitySampler(BuildStockSampler):
                         new_tsv_dir = os.path.join(new_project_dir, 'housing_characteristics')
                         os.mkdir(new_tsv_dir)
                         for p_item in os.listdir(item):
+                            p_item = os.path.join(item, p_item)
                             if os.path.isdir(p_item):
                                 if os.path.basename(p_item) == 'housing_characteristics':
                                     for p_hc_item in os.listdir(p_item):
+                                        p_hc_item = os.path.join(p_item, p_hc_item)
                                         create_softlink(p_hc_item, new_tsv_dir)
                                     continue
                             create_softlink(p_item, new_project_dir)
@@ -120,9 +125,11 @@ class ResidentialSingularitySampler(BuildStockSampler):
         # soft link measures and tsvs from subproject directories, collect options_lookup.tsv files
         for subproject_directory in self.subproject_directories:
             for item in os.listdir(subproject_directory):
+                item = os.path.join(subproject_directory, item)
                 if os.path.isdir(item):
                     assert os.path.basename(item) == 'measures'
                     for m_item in os.listdir(item):
+                        m_item = os.path.join(item, m_item)
                         create_softlink(m_item, new_measures_dir)
                 else:
                     assert os.path.isfile(item)
