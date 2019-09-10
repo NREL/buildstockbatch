@@ -136,7 +136,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
                     assert os.path.splitext(item)[1] == '.tsv'
                     if os.path.basename(item) == 'options_lookup.tsv':
                         tmp = pd.read_csv(item, sep='\t')
-                        options_tsv = pd.concat([options_tsv, tmp])
+                        options_tsv = pd.concat([options_tsv, tmp],sort=False)
                     else:
                         create_softlink(item, new_tsv_dir)
 

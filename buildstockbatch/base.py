@@ -302,7 +302,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
-        # assert(BuildStockBatchBase.validate_measure_references(project_file))
+        assert(BuildStockBatchBase.validate_measure_references(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -323,6 +323,17 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+
+    @staticmethod
+    def get_subproject_directories(project_file, cfg):
+        result = []
+        if 'subproject_directories' in self.cfg:
+            for subproject_directory in self.cfg['subproject_directories']:
+                if os.path.isabs(subproject_directory):
+                    result.append(os.path.abspath(subproject_directory))
+                else:
+                    result.append(os.path.abspath(os.path.join(os.path.dirname(project_file), subproject_directory)))
+        return result
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -501,6 +512,7 @@ class BuildStockBatchBase(object):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         measure_dirs = set()
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
+        subproject_dirs = BuildStockBatchBase.get_subproject_directories(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
@@ -513,6 +525,16 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
+
+        # measures may also be listed in sub-project options_lookup files
+        for subproject_dir in subproject_dirs:
+            p = os.path.join(subproject_dir, 'options_lookup.tsv')
+            if os.path.exists(p):
+                with open(p, 'r') as f:
+                    options = csv.DictReader(f, delimiter='\t')
+                    for row in options:
+                        if row['Measure Dir']:
+                            measure_dirs.add(row['Measure Dir'])
 
         def get_errors(source_str, measure_str):
             """
