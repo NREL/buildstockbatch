@@ -327,8 +327,8 @@ class BuildStockBatchBase(object):
     @staticmethod
     def get_subproject_directories(project_file, cfg):
         result = []
-        if 'subproject_directories' in self.cfg:
-            for subproject_directory in self.cfg['subproject_directories']:
+        if 'subproject_directories' in cfg:
+            for subproject_directory in cfg['subproject_directories']:
                 if os.path.isabs(subproject_directory):
                     result.append(os.path.abspath(subproject_directory))
                 else:

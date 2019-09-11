@@ -48,16 +48,27 @@ class ResidentialSingularitySampler(BuildStockSampler):
     def create_run_buildstock_dir(self):
         # create run-specific OpenStudio-BuildStock directory
         new_buildstock_dir = os.path.join(self.output_dir,'OpenStudio-BuildStock')
-        os.mkdir(new_buildstock_dir)
         new_resources_dir = os.path.join(new_buildstock_dir, 'resources')
-        os.mkdir(new_resources_dir)
         new_measures_dir = os.path.join(new_resources_dir, 'measures')
-        os.mkdir(new_measures_dir)
 
-        def create_softlink(original_item, new_folder):
+        # this object gets made more than once. if the directory already 
+        # exists, just point to it and move on.
+        if os.path.exists(new_buildstock_dir):
+            # point to new buildstock and project directories
+            self.buildstock_dir = new_buildstock_dir
+            self.project_dir = os.path.join(new_buildstock_dir, os.path.basename(self.project_dir))
+            return
+
+        os.mkdir(new_buildstock_dir)
+        os.mkdir(new_resources_dir)
+        os.mkdir(new_measures_dir)        
+
+        def copy_item(original_item, new_folder):
+            # Initially this was "create_softlink" and used ln -s, but that did 
+            # not play well with singularity.
             args = [
-                'ln',
-                '-s',
+                'rsync',
+                '-avP',
                 original_item,
                 os.path.join(new_folder,os.path.basename(original_item))
             ]
@@ -69,9 +80,9 @@ class ResidentialSingularitySampler(BuildStockSampler):
         project_found = False
         options_tsv = None
         for item in os.listdir(self.buildstock_dir):
-            item = os.path.join(self.buildstock_dir, item)
             if item.startswith('.'):
                 continue
+            item = os.path.join(self.buildstock_dir, item)
             if os.path.isdir(item):
                 dirname = os.path.basename(item)
                 if dirname == 'resources':
@@ -82,13 +93,13 @@ class ResidentialSingularitySampler(BuildStockSampler):
                             assert os.path.basename(r_item) == 'measures'
                             for r_m_item in os.listdir(r_item):
                                 r_m_item = os.path.join(r_item, r_m_item)
-                                create_softlink(r_m_item, new_measures_dir)
+                                copy_item(r_m_item, new_measures_dir)
                         else:
                             assert os.path.isfile(r_item)
                             if os.path.basename(r_item) == 'options_lookup.tsv':
                                 options_tsv = pd.read_csv(r_item, sep='\t')
                             else:
-                                create_softlink(r_item, new_resources_dir)
+                                copy_item(r_item, new_resources_dir)
                 elif dirname.startswith('project'):
                     if dirname == os.path.basename(self.project_dir):
                         project_found = True
@@ -102,9 +113,9 @@ class ResidentialSingularitySampler(BuildStockSampler):
                                 if os.path.basename(p_item) == 'housing_characteristics':
                                     for p_hc_item in os.listdir(p_item):
                                         p_hc_item = os.path.join(p_item, p_hc_item)
-                                        create_softlink(p_hc_item, new_tsv_dir)
+                                        copy_item(p_hc_item, new_tsv_dir)
                                     continue
-                            create_softlink(p_item, new_project_dir)
+                            copy_item(p_item, new_project_dir)
                     else:
                         # project we don't need -- skip
                         continue
@@ -113,10 +124,10 @@ class ResidentialSingularitySampler(BuildStockSampler):
                     continue
                 else:
                     # soft-link the folder
-                    create_softlink(item, new_buildstock_dir)
+                    copy_item(item, new_buildstock_dir)
             elif os.path.isfile(item):
                 # soft-link file
-                create_softlink(item, new_buildstock_dir)
+                copy_item(item, new_buildstock_dir)
 
         assert resources_found
         assert project_found
@@ -130,7 +141,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
                     assert os.path.basename(item) == 'measures'
                     for m_item in os.listdir(item):
                         m_item = os.path.join(item, m_item)
-                        create_softlink(m_item, new_measures_dir)
+                        copy_item(m_item, new_measures_dir)
                 else:
                     assert os.path.isfile(item)
                     assert os.path.splitext(item)[1] == '.tsv'
@@ -138,7 +149,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
                         tmp = pd.read_csv(item, sep='\t')
                         options_tsv = pd.concat([options_tsv, tmp],sort=False)
                     else:
-                        create_softlink(item, new_tsv_dir)
+                        copy_item(item, new_tsv_dir)
 
         # save options_lookup.tsv file
         options_tsv.to_csv(os.path.join(new_resources_dir, 'options_lookup.tsv'), sep='\t', index=False)
