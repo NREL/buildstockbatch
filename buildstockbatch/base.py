@@ -177,6 +177,8 @@ class BuildStockBatchBase(object):
             destination_filename = self.sampler.csv_path
             if destination_filename != buildstock_csv:
                 if os.path.exists(destination_filename):
+                    logger.info("Removing {!r} before copying {!r} to that location."
+                                .format(destination_filename, buildstock_csv))
                     os.remove(destination_filename)
                 shutil.copy(
                     buildstock_csv,
@@ -233,7 +235,7 @@ class BuildStockBatchBase(object):
         with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
             with open(buildstock_csv_filename, 'rb') as f_in:
                 shutil.copyfileobj(f_in, f_out)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        df = pd.read_csv(buildstock_csv_filename, index_col=0, dtype='str')
         df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
         if len(df_new.index) == 0:
             raise RuntimeError('There are no buildings left after the down select!')
