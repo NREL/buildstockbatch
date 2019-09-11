@@ -23,7 +23,7 @@ import subprocess
 import sys
 import yaml
 
-from .hpc import HPCBatchBase, SimulationExists
+from .hpc import HPCBatchBase, SimulationExists, get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class EagleBatch(HPCBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV',
+            '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY',
             '--array={}'.format(array_spec),
             '--output=job.out-%a',
             '--job-name=bstk',
@@ -303,7 +303,7 @@ def user_cli(argv=sys.argv[1:]):
         help='Submit this job to the high priority queue. Uses 2x node hours.'
     )
     parser.add_argument(
-        '-m', '--apply_measures_only',
+        '-m', '--measures_only',
         action='store_true',
         help='Only apply the measures, but don\'t run simulations. Useful for debugging.'
     )
@@ -362,12 +362,13 @@ def user_cli(argv=sys.argv[1:]):
     env.update(os.environ)
     env['PROJECTFILE'] = project_filename
     env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
+    env['MEASURESONLY'] = str(int(args.measures_only))
     subargs = [
         'sbatch',
         '--time={}'.format(cfg['eagle'].get('sampling', {}).get('time', 60)),
         '--account={}'.format(cfg['eagle']['account']),
         '--nodes=1',
-        '--export=PROJECTFILE,MY_CONDA_ENV',
+        '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY',
         '--output=sampling.out',
         eagle_sh
     ]
@@ -406,13 +407,16 @@ def main():
     # other arguments/cues about which part of the process we are in are
     # encoded in slurm job environment variables
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
-    post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
-    upload_only = os.environ.get('UPLOADONLY', '0').lower() in ('true', 't', '1', 'y', 'yes')
+    post_process = get_bool_env_var('POSTPROCESS')
+    upload_only = get_bool_env_var('UPLOADONLY')
+    measures_only = get_bool_env_var('MEASURESONLY')
     if job_array_number:
         # if job array number is non-zero, run the batch job
         batch.run_job_batch(job_array_number)
     elif post_process:
         # else, we might be in a post-processing step
+        # Postprocessing should not have been scheduled if measures only are run
+        assert(not measures_only)
         if upload_only:
             batch.process_results(skip_combine=True, force_upload=True)
         else:
