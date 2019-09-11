@@ -23,7 +23,7 @@ def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_proj
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
 
@@ -35,7 +35,7 @@ def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_proj
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' in mock_subprocess.run.call_args[0][0]
 
