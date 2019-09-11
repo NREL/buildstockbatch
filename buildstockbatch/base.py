@@ -62,6 +62,7 @@ class BuildStockBatchBase(object):
                                                                                            project_filename))
         self._weather_dir = None
         self._buildstock_dir = None
+        self._project_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
 
@@ -136,17 +137,24 @@ class BuildStockBatchBase(object):
 
     @buildstock_dir.setter
     def buildstock_dir(self, value):
-        assert(os.path.isdir(value))
+        assert os.path.isdir(value)
         self._buildstock_dir = value
 
     @property
     def project_dir(self):
-        d = os.path.abspath(
-            os.path.join(self.buildstock_dir, self.cfg['project_directory'])
-        )
-        # logger.debug('project_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
+        if self._project_dir is None:                
+            d = os.path.abspath(
+                os.path.join(self.buildstock_dir, self.cfg['project_directory'])
+            )
+            # logger.debug('project_dir = {}'.format(d))
+            assert(os.path.isdir(d))
+            self._project_dir = d
+        return self._project_dir
+
+    @project_dir.setter
+    def project_dir(self, value):
+        assert os.path.isdir(value)
+        self._project_dir = value
 
     @property
     def subproject_directories(self):
