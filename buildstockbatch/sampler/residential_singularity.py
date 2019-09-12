@@ -66,11 +66,12 @@ class ResidentialSingularitySampler(BuildStockSampler):
         def copy_item(original_item, new_folder):
             # Initially this was "create_softlink" and used ln -s, but that did 
             # not play well with singularity.
+            sep = '/' if os.path.isdir(original_item) else ''
             args = [
                 'rsync',
                 '-avP',
-                original_item,
-                os.path.join(new_folder,os.path.basename(original_item))
+                original_item + sep,
+                os.path.join(new_folder,os.path.basename(original_item)) + sep
             ]
             subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
 
