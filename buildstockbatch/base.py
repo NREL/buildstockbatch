@@ -61,6 +61,8 @@ class BuildStockBatchBase(object):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
         self._weather_dir = None
+        self._buildstock_dir = None
+        self._project_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
 
@@ -126,19 +128,41 @@ class BuildStockBatchBase(object):
 
     @property
     def buildstock_dir(self):
-        d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
-        # logger.debug('buildstock_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
+        if self._buildstock_dir is None:
+            d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
+            # logger.debug('buildstock_dir = {}'.format(d))
+            assert(os.path.isdir(d))
+            self._buildstock_dir = d
+        return self._buildstock_dir
+
+    @buildstock_dir.setter
+    def buildstock_dir(self, value):
+        assert os.path.isdir(value)
+        self._buildstock_dir = value
 
     @property
     def project_dir(self):
-        d = os.path.abspath(
-            os.path.join(self.buildstock_dir, self.cfg['project_directory'])
-        )
-        # logger.debug('project_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
+        if self._project_dir is None:                
+            d = os.path.abspath(
+                os.path.join(self.buildstock_dir, self.cfg['project_directory'])
+            )
+            # logger.debug('project_dir = {}'.format(d))
+            assert(os.path.isdir(d))
+            self._project_dir = d
+        return self._project_dir
+
+    @project_dir.setter
+    def project_dir(self, value):
+        assert os.path.isdir(value)
+        self._project_dir = value
+
+    @property
+    def subproject_directories(self):
+        result = []
+        if 'subproject_directories' in self.cfg:
+            for subproject_directory in self.cfg['subproject_directories']:
+                result.append(self.path_rel_to_projectfile(subproject_directory))
+        return result
 
     @property
     def results_dir(self):
@@ -309,6 +333,17 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+
+    @staticmethod
+    def get_subproject_directories(project_file, cfg):
+        result = []
+        if 'subproject_directories' in cfg:
+            for subproject_directory in cfg['subproject_directories']:
+                if os.path.isabs(subproject_directory):
+                    result.append(os.path.abspath(subproject_directory))
+                else:
+                    result.append(os.path.abspath(os.path.join(os.path.dirname(project_file), subproject_directory)))
+        return result
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -487,6 +522,7 @@ class BuildStockBatchBase(object):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         measure_dirs = set()
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
+        subproject_dirs = BuildStockBatchBase.get_subproject_directories(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
@@ -499,6 +535,16 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
+
+        # measures may also be listed in sub-project options_lookup files
+        for subproject_dir in subproject_dirs:
+            p = os.path.join(subproject_dir, 'options_lookup.tsv')
+            if os.path.exists(p):
+                with open(p, 'r') as f:
+                    options = csv.DictReader(f, delimiter='\t')
+                    for row in options:
+                        if row['Measure Dir']:
+                            measure_dirs.add(row['Measure Dir'])
 
         def get_errors(source_str, measure_str):
             """

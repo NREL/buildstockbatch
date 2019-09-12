@@ -18,7 +18,7 @@ class BuildStockSampler(object):
 
     csv_path = None
 
-    def __init__(self, cfg, buildstock_dir, project_dir):
+    def __init__(self, cfg, buildstock_dir, project_dir, subproject_directories = []):
         """
         Create the buildstock.csv file required for batch simulations using this class.
 
@@ -33,6 +33,7 @@ class BuildStockSampler(object):
         self.cfg = cfg
         self.buildstock_dir = buildstock_dir
         self.project_dir = project_dir
+        self.subproject_directories = subproject_directories
 
     def run_sampling(self, n_datapoints=None):
         """
