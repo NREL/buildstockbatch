@@ -287,6 +287,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
+        assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -532,6 +533,34 @@ class BuildStockBatchBase(object):
             logger.error(error_message)
             raise ValueError(error_message)
 
+    @staticmethod
+    def validate_reference_scenario(project_file):
+        """
+        Checks if the reference_scenario mentioned in an upgrade points to a valid upgrade
+        """
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+
+        # collect all upgrade_names
+        upgrade_names = set()
+        for upgrade_count, upgrade in enumerate(cfg.get('upgrades', [])):
+            upgrade_names.add(upgrade.get('upgrade_name', ''))
+
+        warning_string = ""
+        # check if the reference_scenario matches with any upgrade_names
+        for upgrade_count, upgrade in enumerate(cfg.get('upgrades', [])):
+            if 'reference_scenario' in upgrade:
+                if upgrade['reference_scenario'] not in upgrade_names:
+                    warning_string += f"* In Upgrade '{upgrade.get('upgrade_name', '')}', reference_scenario: " \
+                        f"'{upgrade['reference_scenario']}' does not match any existing upgrade names \n"
+                elif upgrade['reference_scenario'] == upgrade.get('upgrade_name', ''):
+                    warning_string += f"* In Upgrade '{upgrade.get('upgrade_name', '')}', reference_scenario: " \
+                        f"'{upgrade['reference_scenario']}' points to the same upgrade \n"
+
+        if warning_string:
+            logger.warning(warning_string)
+
+        return True  # Only print the warning, but always pass the validation
+
     def get_dask_client(self):
         return Client()
 
@@ -548,8 +577,8 @@ class BuildStockBatchBase(object):
         reporting_measures = self.cfg.get('reporting_measures', [])
 
         if not skip_combine:
-            combine_results(self.results_dir, skip_timeseries=skip_timeseries, aggregate_timeseries=aggregate_ts,
-                            reporting_measures=reporting_measures)
+            combine_results(self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
+                            aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:

@@ -33,15 +33,15 @@ measure-spec:
 hpc-postprocessing-spec:
   time: int(required=False)
 upgrade-spec:
-  upgrade_name: str(required=False)
+  upgrade_name: str(required=True)
   options: list(include('option-spec'), required=True)
+  reference_scenario: str(required=False)
 #  package_apply_logic: include('apply-logic-spec', required=False)
 option-spec:
   option: str(required=True)
 #  apply_logic: include('apply-logic-spec', required=False)
   costs: list(include('cost-spec'), required=False)
   lifetime: num(required=False)
-  reference_scenario: str(required=False)
 #apply-logic-spec: >
 #  any(
 #    list(

@@ -52,6 +52,33 @@ def test_missing_simulation_output_report_applicable(basic_residential_project_f
     assert(not df['simulation_output_report.applicable'].any())
 
 
+def test_reference_scenario(basic_residential_project_file):
+    # verify that the reference_scenario get's added to the upgrade file
+
+    upgrade_config = {
+        'upgrades': [
+            {
+                'upgrade_name': 'Triple-Pane Windows',
+                'reference_scenario': 'example_reference_scenario'
+            }
+        ]
+    }
+    project_filename, results_dir = basic_residential_project_file(upgrade_config)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    # test results.csv files
+    test_path = os.path.join(results_dir, 'results_csvs')
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))
+    assert len(test_csv['apply_upgrade.reference_scenario'].unique()) == 1
+    assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
+
+
 def test_combine_files_flexible(basic_residential_project_file):
     # Allows addition/removable/rename of columns. For columns that remain unchanged, verifies that the data matches
     # with stored test_results. If this test passes but test_combine_files fails, then test_results/parquet and
