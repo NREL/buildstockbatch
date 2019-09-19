@@ -69,7 +69,7 @@ Upgrade Scenarios
 Under the ``upgrades`` key is a list of upgrades to apply with the
 following properties:
 
--  ``upgrade_name``: The name that will be in the outputs for this
+-  ``upgrade_name``: (required) The name that will be in the outputs for this
    upgrade scenario.
 -  ``options``: A list of options to apply as part of this upgrade.
 
@@ -90,8 +90,11 @@ following properties:
           or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
-- ``package_apply_logic``: The conditions under which this package of upgrades should be performed.
+- ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
   See :ref:`filtering-logic`.
+- ``reference_scenario``: (optional) The `upgrade_name` which should act as a reference to this upgrade to calculate
+  savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
+  Buildstockbatch will not do the savings calculation.
 
 Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
