@@ -7,9 +7,12 @@ from unittest.mock import patch
 from buildstockbatch.eagle import user_cli, EagleBatch
 
 
+@patch('buildstockbatch.base.BuildStockBatchBase.validate_measures_and_arguments')
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file, monkeypatch):
+def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures, basic_residential_project_file,
+                  monkeypatch):
+    mock_validate_measures.return_value = True
     mock_validate_options.return_value = True
 
     project_filename, results_dir = basic_residential_project_file()

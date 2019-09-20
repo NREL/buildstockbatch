@@ -36,7 +36,7 @@ def basic_residential_project_file():
                 },
                 'timeseries_csv_export': {
                     'reporting_frequency': 'Hourly',
-                    'include_enduse_subcategories': 'true'
+                    'include_enduse_subcategories': True
                 },
                 'eagle': {
                     'sampling': {
