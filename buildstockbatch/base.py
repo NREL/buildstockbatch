@@ -26,6 +26,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict
+import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -338,9 +339,10 @@ class BuildStockBatchBase(object):
         return True
 
     def validate_measures_and_arguments(project_file):
-        import xml.etree.ElementTree as ET
-
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if cfg['stock_type'] != 'residential':  # FIXME: add comstock logic
+            return True
+
         buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
         measures_dir = f'{buildstock_dir}/measures'
         type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
@@ -366,10 +368,12 @@ class BuildStockBatchBase(object):
         for measure_name in measure_names.keys():
             measure_path = os.path.join(measures_dir, measure_name)
 
-            if measure_names[measure_name] in cfg.keys():
+            if measure_names[measure_name] in cfg.keys() or measure_names[measure_name] == 'residential_simulation_controls':
+                # if they exist in the cfg, make sure they exist in the buildstock checkout
                 if not os.path.exists(measure_path):
                     error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
 
+            # check argument value types for residential simulation controls and timeseries csv export measures
             if measure_name in ['ResidentialSimulationControls', 'TimeseriesCSVExport']:
                 root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
 
@@ -385,6 +389,9 @@ class BuildStockBatchBase(object):
                     else:
                         expected_arguments[name.text].append(argument.find('./type').text)
 
+                # check only if that measure exists in cfg
+                if measure_names[measure_name] not in cfg.keys():
+                    continue
                 for actual_argument_key in cfg[measure_names[measure_name]].keys():
                     if actual_argument_key not in expected_arguments.keys():
                         error_msgs += f"* Found unexpected argument key {actual_argument_key} for \
