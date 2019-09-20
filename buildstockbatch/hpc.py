@@ -31,6 +31,10 @@ from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 logger = logging_.getLogger(__name__)
 
 
+def get_bool_env_var(varname):
+    return os.environ.get(varname, '0').lower() in ('true', 't', '1', 'y', 'yes')
+
+
 class HPCBatchBase(BuildStockBatchBase):
 
     sys_image_dir = None
@@ -181,7 +185,8 @@ class HPCBatchBase(BuildStockBatchBase):
         jobids = self.queue_jobs()
 
         # queue up post-processing to run after all the simulation jobs are complete
-        self.queue_post_processing(jobids)
+        if not get_bool_env_var('MEASURESONLY'):
+            self.queue_post_processing(jobids)
 
     def run_job_batch(self, job_array_number):
         """
@@ -245,9 +250,9 @@ class HPCBatchBase(BuildStockBatchBase):
             args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
             container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
             runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
-        runscript.extend([
-            'openstudio run -w in.osw --debug'
-        ])
+        runscript.append('openstudio run -w in.osw')
+        if get_bool_env_var('MEASURESONLY'):
+            runscript[-1] += ' --measures_only'
         args.extend([
             singularity_image,
             'bash', '-x'
