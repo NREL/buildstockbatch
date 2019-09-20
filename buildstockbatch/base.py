@@ -368,7 +368,8 @@ class BuildStockBatchBase(object):
         for measure_name in measure_names.keys():
             measure_path = os.path.join(measures_dir, measure_name)
 
-            if measure_names[measure_name] in cfg.keys() or measure_names[measure_name] == 'residential_simulation_controls':
+            if measure_names[measure_name] in cfg.keys() or \
+                    measure_names[measure_name] == 'residential_simulation_controls':
                 # if they exist in the cfg, make sure they exist in the buildstock checkout
                 if not os.path.exists(measure_path):
                     error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
