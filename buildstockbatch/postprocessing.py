@@ -304,7 +304,7 @@ def combine_results(results_dir, config, skip_timeseries=False, aggregate_timese
         valid_index = upgrade_names.first_valid_index()
         # some rows in results_upxx.csv might have blank entry for apply_upgrade.upgrade_name. Either because it is a
         # baseline simulation or because some of the simulation for an upgrade has failed.
-        if valid_index:  # only if there is a valid upgrade name for current upgrade
+        if valid_index is not None:  # only if there is a valid upgrade name for current upgrade
             current_upgrade_name = upgrade_names.iloc[valid_index]
         # end: find the name of the current upgrade
             for upgrade in config.get('upgrades', []):  # find the configuration for current upgrade
