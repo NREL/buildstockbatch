@@ -48,6 +48,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
     def create_run_buildstock_dir(self):
         # create run-specific OpenStudio-BuildStock directory
         new_buildstock_dir = os.path.join(self.output_dir,'OpenStudio-BuildStock')
+        new_reporting_measures_dir = os.path.join(new_buildstock_dir, 'measures')
         new_resources_dir = os.path.join(new_buildstock_dir, 'resources')
         new_measures_dir = os.path.join(new_resources_dir, 'measures')
 
@@ -60,6 +61,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
             return
 
         os.mkdir(new_buildstock_dir)
+        os.mkdir(new_reporting_measures_dir)
         os.mkdir(new_resources_dir)
         os.mkdir(new_measures_dir)        
 
@@ -77,6 +79,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
 
         # soft link files to be retained from source OpenStudio-BuildStock and 
         # the project directory
+        reporting_measures_found = False
         resources_found = False
         project_found = False
         options_tsv = None
@@ -86,7 +89,12 @@ class ResidentialSingularitySampler(BuildStockSampler):
             item = os.path.join(self.buildstock_dir, item)
             if os.path.isdir(item):
                 dirname = os.path.basename(item)
-                if dirname == 'resources':
+                if dirname == 'measures':
+                    reporting_measures_found = True
+                    for rm_item in os.listdir(item):
+                        rm_item = os.path.join(item, rm_item)
+                        copy_item(rm_item, new_reporting_measures_dir)
+                elif dirname == 'resources':
                     resources_found = True
                     for r_item in os.listdir(item):
                         r_item = os.path.join(item, r_item)
@@ -130,6 +138,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
                 # soft-link file
                 copy_item(item, new_buildstock_dir)
 
+        assert reporting_measures_found
         assert resources_found
         assert project_found
         assert isinstance(options_tsv,pd.DataFrame)
@@ -141,11 +150,14 @@ class ResidentialSingularitySampler(BuildStockSampler):
                 if os.path.isdir(item):
                     assert os.path.basename(item) == 'measures'
                     for m_item in os.listdir(item):
+                        dest = new_measures_dir
+                        if m_item in self.cfg['reporting_measures']:
+                            dest = new_reporting_measures_dir
                         m_item = os.path.join(item, m_item)
-                        copy_item(m_item, new_measures_dir)
+                        copy_item(m_item, dest)
                 else:
-                    assert os.path.isfile(item)
-                    assert os.path.splitext(item)[1] == '.tsv'
+                    assert os.path.isfile(item), item
+                    assert os.path.splitext(item)[1] == '.tsv', item
                     if os.path.basename(item) == 'options_lookup.tsv':
                         tmp = pd.read_csv(item, sep='\t')
                         options_tsv = pd.concat([options_tsv, tmp],sort=False)
