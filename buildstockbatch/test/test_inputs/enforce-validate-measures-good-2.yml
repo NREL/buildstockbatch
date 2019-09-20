@@ -3,13 +3,6 @@ project_directory: project_singlefamilydetached
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
-residential_simulation_controls:
-  timesteps_per_hr: 4
-  begin_month: 1
-  begin_day_of_month: 1
-  end_month: 12
-  end_day_of_month: 31
-  calendar_year: 2016
 upgrades:
   - upgrade_name: good upgrade
     options:
