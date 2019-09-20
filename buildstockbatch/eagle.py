@@ -23,7 +23,7 @@ import subprocess
 import sys
 import yaml
 
-from .hpc import HPCBatchBase, SimulationExists
+from .hpc import HPCBatchBase, SimulationExists, get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,7 @@ class EagleBatch(HPCBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV',
+            '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY',
             '--array={}'.format(array_spec),
             '--output=job.out-%a',
             '--job-name=bstk',
@@ -284,14 +284,28 @@ logging_config = {
 
 
 def user_cli(argv=sys.argv[1:]):
+    '''
+    This is the user entry point for running buildstockbatch on Eagle
+    '''
+
+    # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
+
+    # print BuildStockBatch logo
     print(HPCBatchBase.LOGO)
+
+    # CLI arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     parser.add_argument(
         '--hipri',
         action='store_true',
         help='Submit this job to the high priority queue. Uses 2x node hours.'
+    )
+    parser.add_argument(
+        '-m', '--measures_only',
+        action='store_true',
+        help='Only apply the measures, but don\'t run simulations. Useful for debugging.'
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
@@ -309,7 +323,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Only validate the project YAML file and references. Nothing is executed',
         action='store_true'
     )
+
+    # parse CLI arguments
     args = parser.parse_args(argv)
+
+    # load the yaml project file
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(
             'The project file {} doesn\'t exist'.format(args.project_filename)
@@ -318,16 +336,19 @@ def user_cli(argv=sys.argv[1:]):
     with open(project_filename, 'r') as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
-    # Validate the project, and in case of the --validateonly flag return True if validation passes
+    # validate the project, and in case of the --validateonly flag return True if validation passes
     EagleBatch.validate_project(project_filename)
     if args.validateonly:
         return True
 
+    # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
         return
 
+    # otherwise, queue up the whole eagle buildstockbatch process
+    # the main work of the first Eagle job is to run the sampling script ...
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
     assert(os.path.exists(eagle_sh))
     out_dir = cfg['output_directory']
@@ -341,12 +362,13 @@ def user_cli(argv=sys.argv[1:]):
     env.update(os.environ)
     env['PROJECTFILE'] = project_filename
     env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
+    env['MEASURESONLY'] = str(int(args.measures_only))
     subargs = [
         'sbatch',
         '--time={}'.format(cfg['eagle'].get('sampling', {}).get('time', 60)),
         '--account={}'.format(cfg['eagle']['account']),
         '--nodes=1',
-        '--export=PROJECTFILE,MY_CONDA_ENV',
+        '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY',
         '--output=sampling.out',
         eagle_sh
     ]
@@ -355,25 +377,54 @@ def user_cli(argv=sys.argv[1:]):
     logger.info('Submitting sampling job to task scheduler')
     subprocess.run(subargs, env=env, cwd=out_dir, check=True)
     logger.info('Run squeue -u $USER to monitor the progress of your jobs')
+    # eagle.sh calls main()
 
 
 def main():
+    """
+    Determines which piece of work is to be run right now, on this process, on
+    this node. There are four types of work that may need to be done:
+
+    - initialization, sampling, and queuing other work (job_array_number == 0)
+    - run a batch of simulations (job_array_number > 0)
+    - post-process results (job_array_number == 0 and POSTPROCESS)
+    - upload results to Athena (job_array_number == 0 and POSTPROCESS and UPLOADONLY)
+
+    The context for the work is deinfed by the project_filename (project .yml file),
+    which is used to initialize an EagleBatch object.
+    """
+
+    # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
+
+    # only direct script argument is the project .yml file
     parser = argparse.ArgumentParser()
     parser.add_argument('project_filename')
     args = parser.parse_args()
+
+    # initialize the EagleBatch object
     batch = EagleBatch(args.project_filename)
+    # other arguments/cues about which part of the process we are in are
+    # encoded in slurm job environment variables
     job_array_number = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
-    post_process = os.environ.get('POSTPROCESS', '0').lower() in ('true', 't', '1', 'y', 'yes')
-    upload_only = os.environ.get('UPLOADONLY', '0').lower() in ('true', 't', '1', 'y', 'yes')
+    post_process = get_bool_env_var('POSTPROCESS')
+    upload_only = get_bool_env_var('UPLOADONLY')
+    measures_only = get_bool_env_var('MEASURESONLY')
     if job_array_number:
+        # if job array number is non-zero, run the batch job
         batch.run_job_batch(job_array_number)
     elif post_process:
+        # else, we might be in a post-processing step
+        # Postprocessing should not have been scheduled if measures only are run
+        assert(not measures_only)
         if upload_only:
             batch.process_results(skip_combine=True, force_upload=True)
         else:
             batch.process_results()
     else:
+        # default job_array_number == 0 task is to kick the whole BuildStock
+        # process off, that is, to create samples and then create batch jobs
+        # to run them
         batch.run_batch()
 
 

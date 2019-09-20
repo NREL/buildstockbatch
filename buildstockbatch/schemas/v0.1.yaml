@@ -26,6 +26,7 @@ sim-spec:
   precomputed_sample: str(required=False)
   buildstock_csv: str(required=False)
   skip_sims: bool(required=False)
+  ignore_measures: list(required=False)
 measure-spec:
   measure_dir_name: str(required=True)
   arguments: map(required=False)

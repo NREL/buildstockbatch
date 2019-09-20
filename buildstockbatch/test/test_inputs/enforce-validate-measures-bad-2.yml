@@ -1,0 +1,33 @@
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+baseline:
+  n_datapoints: 30
+  n_buildings_represented: 81221016
+residential_simulation_controls:
+  timesteps_per_hr: 4
+  begin_month: 1
+  begin_day_of_month: 1.5
+  end_month: 12
+  end_day_of_month: 31
+upgrades:
+  - upgrade_name: good upgrade
+    options:
+      - option: Vintage|<1940
+        apply_logic:
+          - or:
+            - Insulation Slab|Good Option
+            - Insulation Slab|None
+          - not: Insulation Wall|Good Option
+          - and:
+              - Vintage|1960s||Vintage|1960s
+              - Vintage|1980s
+      - option: Insulation Finished Basement|Good Option
+        apply_logic:
+          - Insulation Unfinished Basement|Extra Argument
+timeseries_csv_export:
+  reporting_frequency: Huorly
+  include_enduse_subcategories: true
+  output_variable:
+    - Zone Mean Air Temperature
+reporting_measures:
+  - ReportingMeasure2

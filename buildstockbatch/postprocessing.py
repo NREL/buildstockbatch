@@ -72,19 +72,12 @@ def flatten_datapoint_json(reporting_measures, d):
     for k, v in d.get(col1, {}).items():
         new_d[f'{col1}.{k}'] = v
 
-    # if there are some key, values in BuildingCharacteristicsReport that aren't part of BuildExistingModel, copy them
-    # and make it part of BuildExistingModel
-    col2 = 'BuildingCharacteristicsReport'
-    for k, v in d.get(col2, {}).items():
-        if k not in d.get(col1, {}):
-            new_d[f'{col1}.{k}'] = v  # Using col1 to make it part of BuildExistingModel
-
     # if there is no units_represented key, default to 1
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
-    col3 = 'SimulationOutputReport'
-    for k, v in d.get(col3, {}).items():
-        new_d[f'{col3}.{k}'] = v
+    col2 = 'SimulationOutputReport'
+    for k, v in d.get(col2, {}).items():
+        new_d[f'{col2}.{k}'] = v
 
     # additional reporting measures
     for col in reporting_measures:
@@ -155,17 +148,23 @@ def add_timeseries(results_dir, inp1, inp2):
 
     if type(inp1) is str:
         full_path = f"{inp1}/run/enduse_timeseries.parquet"
-        with fs.open(full_path, 'rb') as f:
-            file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
-            file1 = file1 * get_factor(inp1)
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file1 = file1 * get_factor(inp1)
+        except ResourceNotFound:
+            file1 = pd.DataFrame()  # if the timeseries file is missing, set it to empty dataframe
     else:
         file1 = inp1
 
     if type(inp2) is str:
         full_path = f"{inp2}/run/enduse_timeseries.parquet"
-        with fs.open(full_path, 'rb') as f:
-            file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
-            file2 = file2 * get_factor(inp2)
+        try:
+            with fs.open(full_path, 'rb') as f:
+                file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
+                file2 = file2 * get_factor(inp2)
+        except ResourceNotFound:
+            file2 = pd.DataFrame()
     else:
         file2 = inp2
 

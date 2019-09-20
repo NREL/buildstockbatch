@@ -31,6 +31,10 @@ from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
 logger = logging_.getLogger(__name__)
 
 
+def get_bool_env_var(varname):
+    return os.environ.get(varname, '0').lower() in ('true', 't', '1', 'y', 'yes')
+
+
 class HPCBatchBase(BuildStockBatchBase):
 
     sys_image_dir = None
@@ -112,6 +116,8 @@ class HPCBatchBase(BuildStockBatchBase):
         return results_dir
 
     def run_batch(self):
+
+        # create destination_dir and copy housing_characteristics into it
         destination_dir = os.path.dirname(self.sampler.csv_path)
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
@@ -119,21 +125,40 @@ class HPCBatchBase(BuildStockBatchBase):
             os.path.join(self.project_dir, 'housing_characteristics'),
             destination_dir
         )
+
+        # run sampling
+        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
+        #   constructor ensures that 'downselect' not in self.cfg and
+        #   run_sampling simply copies that .csv to the correct location if
+        #   necessary and returns the path
         if 'downselect' in self.cfg:
+            # if there is a downselect section in the yml,
+            # BuildStockBatchBase.downselect calls run_sampling and does
+            # additional processing before and after
             buildstock_csv_filename = self.downselect()
         else:
+            # otherwise just the plain sampling process needs to be run
             buildstock_csv_filename = self.run_sampling()
+
+        # read the results
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
+
+        # find out how many buildings there are to simulate
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
+        # number of simulations is number of buildings * number of upgrades
         n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
-        # This is the maximum number of jobs we'll submit for this batch
+        # this is the number of simulations defined for this run as a "full job"
+        #     number of simulations per job if we believe the .yml file n_jobs
         n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
+        #     use more appropriate batch size in the case of n_jobs being much
+        #     larger than we need, now that we know n_sims
         n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
         if not self.skip_baseline_sims:
+            # create batches of simulations
             baseline_sims = zip(building_ids, itertools.repeat(None))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
         else:
@@ -153,11 +178,17 @@ class HPCBatchBase(BuildStockBatchBase):
                     'batch': batch,
                 }, f, indent=4)
 
+        # now queue them
         jobids = self.queue_jobs()
 
-        self.queue_post_processing(jobids)
+        # queue up post-processing to run after all the simulation jobs are complete
+        if not get_bool_env_var('MEASURESONLY'):
+            self.queue_post_processing(jobids)
 
     def run_job_batch(self, job_array_number):
+        """
+        Uses joblib to run_building in parallel
+        """
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
@@ -216,9 +247,9 @@ class HPCBatchBase(BuildStockBatchBase):
             args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
             container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
             runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
-        runscript.extend([
-            'openstudio run -w in.osw --debug'
-        ])
+        runscript.append('openstudio run -w in.osw')
+        if get_bool_env_var('MEASURESONLY'):
+            runscript[-1] += ' --measures_only'
         args.extend([
             singularity_image,
             'bash', '-x'
