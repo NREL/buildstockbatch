@@ -1,3 +1,4 @@
+stock_type: residential
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
 baseline:
