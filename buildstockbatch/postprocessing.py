@@ -215,7 +215,7 @@ def write_output(results_dir, group_pq):
     write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
-def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
+def combine_results(results_dir, config, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'
@@ -298,9 +298,25 @@ def combine_results(results_dir, skip_timeseries=False, aggregate_timeseries=Fal
             )
             results_df = results_df[cols_to_keep]
 
+        # Add reference_scenario column to the dataframe
+        # begin: find the name of the current upgrade
+        upgrade_names = results_df['apply_upgrade.upgrade_name']
+        valid_index = upgrade_names.first_valid_index()
+        # some rows in results_upxx.csv might have blank entry for apply_upgrade.upgrade_name. Either because it is a
+        # baseline simulation or because some of the simulation for an upgrade has failed.
+        if valid_index is not None:  # only if there is a valid upgrade name for current upgrade
+            current_upgrade_name = upgrade_names.iloc[valid_index]
+        # end: find the name of the current upgrade
+            for upgrade in config.get('upgrades', []):  # find the configuration for current upgrade
+                if upgrade['upgrade_name'] == current_upgrade_name:
+                    reference_scenario = upgrade.get('reference_scenario', None)  # and extract reference_scenario
+                    if reference_scenario:
+                        results_df['apply_upgrade.reference_scenario'] = reference_scenario
+                        break
+
         # standardize the column orders
         first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
-                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name']
+                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name', 'apply_upgrade.reference_scenario']
 
         build_existing_model_cols = sorted([col for col in results_df.columns if
                                             col.startswith('build_existing_model')])
