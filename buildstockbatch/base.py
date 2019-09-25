@@ -320,8 +320,8 @@ class BuildStockBatchBase(object):
             logger.error(f'Could not find validation schema for YAML version {schema_version}')
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
-        data = yamale.make_data(project_file)
-        return yamale.validate(schema, data)
+        data = yamale.make_data(project_file, parser='ruamel')
+        return yamale.validate(schema, data, strict=True)
 
     @staticmethod
     def validate_xor_schema_keys(project_file):
