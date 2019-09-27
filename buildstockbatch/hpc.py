@@ -264,6 +264,7 @@ class HPCBatchBase(BuildStockBatchBase):
             'bash', '-x'
         ])
         logger.debug(' '.join(args))
+        logger.debug('\n'.join(runscript))
         with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
             try:
                 subprocess.run(
@@ -277,6 +278,7 @@ class HPCBatchBase(BuildStockBatchBase):
             except subprocess.CalledProcessError:
                 pass
             finally:
+                time.sleep(600)
                 # Clean up the symbolic links we created in the container
                 for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
                     try:

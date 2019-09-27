@@ -106,4 +106,35 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             }
         ])
 
+        if upgrade_idx is not None:
+            measure_d = self.cfg['upgrades'][upgrade_idx]
+            apply_upgrade_measure = {
+                'measure_dir_name': 'ApplyUpgrade',
+                'arguments': {
+                    'run_measure': 1
+                }
+            }
+            if 'upgrade_name' in measure_d:
+                apply_upgrade_measure['arguments']['upgrade_name'] = measure_d['upgrade_name']
+            for opt_num, option in enumerate(measure_d['options'], 1):
+                apply_upgrade_measure['arguments']['option_{}'.format(opt_num)] = option['option']
+                if 'lifetime' in option:
+                    apply_upgrade_measure['arguments']['option_{}_lifetime'.format(opt_num)] = option['lifetime']
+                if 'apply_logic' in option:
+                    apply_upgrade_measure['arguments']['option_{}_apply_logic'.format(opt_num)] = \
+                        self.make_apply_logic_arg(option['apply_logic'])
+                for cost_num, cost in enumerate(option.get('costs', []), 1):
+                    for arg in ('value', 'multiplier'):
+                        if arg not in cost:
+                            continue
+                        apply_upgrade_measure['arguments']['option_{}_cost_{}_{}'.format(opt_num, cost_num, arg)] = \
+                            cost[arg]
+            if 'package_apply_logic' in measure_d:
+                apply_upgrade_measure['arguments']['package_apply_logic'] = \
+                    self.make_apply_logic_arg(measure_d['package_apply_logic'])
+
+            build_existing_model_idx = \
+                list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+            osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
+
         return osw

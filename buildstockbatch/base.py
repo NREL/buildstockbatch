@@ -67,7 +67,7 @@ class BuildStockBatchBase(object):
         if 'os_version' in self.cfg.keys():
             self.OS_VERSION = self.cfg['os_version']
         if 'os_sha' in self.cfg.keys():
-            self.OS_VERSION = self.cfg['os_sha']
+            self.OS_SHA = self.cfg['os_sha']
 
     def path_rel_to_projectfile(self, x):
         if os.path.isabs(x):
