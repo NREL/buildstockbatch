@@ -67,8 +67,8 @@ setuptools.setup(
         'fs',
         'fs-s3fs',
         'docutils<0.15,>=0.10',
-        'yamale>2.0',
-        'ruamel.yaml>0.16.5'
+        'yamale>=2.0',
+        'ruamel.yaml>=0.16.5'
     ],
     extras_require={
         'dev': [
