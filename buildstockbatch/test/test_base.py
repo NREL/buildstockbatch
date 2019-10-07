@@ -19,8 +19,6 @@ from buildstockbatch.postprocessing import write_dataframe_as_parquet
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
 
-OUTPUT_FOLDER_NAME = 'output'
-
 
 def test_missing_simulation_output_report_applicable(basic_residential_project_file):
 
@@ -363,6 +361,7 @@ def test_combine_files(basic_residential_project_file):
 def test_upload_files(mocked_s3, basic_residential_project_file):
     s3_bucket = 'test_bucket'
     s3_prefix = 'test_prefix'
+    s3_folder = 'test_folder'
     db_name = 'test_db_name'
     role = 'test_role'
     region = 'test_region'
@@ -374,6 +373,7 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
                             's3': {
                                 'bucket': s3_bucket,
                                 'prefix': s3_prefix,
+                                'upload_folder': s3_folder,
                                     },
                             'athena': {
                                 'glue_service_role': role,
@@ -413,21 +413,21 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
             crawler_created = True
             assert crawler_para['DatabaseName'] == upload_config['postprocessing']['aws']['athena']['database_name']
             assert crawler_para['Role'] == upload_config['postprocessing']['aws']['athena']['glue_service_role']
-            assert crawler_para['TablePrefix'] == OUTPUT_FOLDER_NAME + '_'
-            assert crawler_para['Name'] == db_name + '_' + OUTPUT_FOLDER_NAME
+            assert crawler_para['TablePrefix'] == s3_folder + '_'
+            assert crawler_para['Name'] == db_name + '_' + s3_folder
             assert crawler_para['Targets']['S3Targets'][0]['Path'] == 's3://' + s3_bucket + '/' + s3_prefix + '/' + \
-                                                                      OUTPUT_FOLDER_NAME + '/'
+                                                                      s3_folder + '/'
         if call_function == 'start_crawler':
             assert crawler_created, "crawler attempted to start before creating"
             crawler_started = True
             crawler_para = call[2]  # 2 is for keyboard arguments.
-            assert crawler_para['Name'] == db_name + '_' + OUTPUT_FOLDER_NAME
+            assert crawler_para['Name'] == db_name + '_' + s3_folder
 
     assert crawler_started, "Crawler never started"
 
     # check if all the files are properly uploaded
     source_path = os.path.join(results_dir, 'parquet')
-    s3_path = s3_prefix + '/' + OUTPUT_FOLDER_NAME + '/'
+    s3_path = s3_prefix + '/' + s3_folder + '/'
 
     s3_file_path = s3_path + 'baseline/results_up00.parquet'
     source_file_path = os.path.join(source_path, 'baseline', 'results_up00.parquet')

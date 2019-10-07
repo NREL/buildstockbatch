@@ -89,6 +89,7 @@ postprocessing:
     s3:
       bucket: mybucket
       prefix: buildstock-athena/new
+      upload_folder: myfolder
     athena:
       glue_service_role: service-role/AWSGlueServiceRole-default
       database_name: new-buildstock-analysis

@@ -20,7 +20,6 @@ from fs.errors import ResourceNotFound, FileExpected
 import gzip
 import json
 import logging
-import os
 import random
 import re
 import sys
@@ -422,10 +421,23 @@ def combine_results(results_dir, config, skip_timeseries=False, aggregate_timese
     logger.info(f"Took {diff:.2f} seconds")
 
 
-def upload_results(aws_conf, output_dir, results_dir):
-    logger.info("Uploading the parquet files to s3")
+def does_data_already_exist(aws_conf):
+    s3_prefix = aws_conf['s3']['prefix']
+    s3_bucket = aws_conf['s3']['bucket']
+    upload_folder_name = aws_conf['s3']['upload_folder']
 
-    output_folder_name = Path(output_dir).name
+    s3_prefix_output = s3_prefix + '/' + upload_folder_name + '/'
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket)
+    n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix_output)))
+    if n_existing_files == 0:
+        return False
+    else:
+        return True
+
+
+def upload_results(aws_conf, results_dir):
+    logger.info("Uploading the parquet files to s3")
     parquet_dir = Path(results_dir).joinpath('parquet')
 
     if not parquet_dir.is_dir():
@@ -436,18 +448,13 @@ def upload_results(aws_conf, output_dir, results_dir):
     for files in parquet_dir.rglob('*.parquet'):
         all_files.append(files.relative_to(parquet_dir))
 
-    s3_prefix = aws_conf.get('s3', {}).get('prefix', None)
-    s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
-    if not (s3_prefix and s3_bucket):
-        logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
-        return
-    s3_prefix_output = s3_prefix + '/' + output_folder_name + '/'
+    s3_prefix = aws_conf['s3']['prefix']
+    s3_bucket = aws_conf['s3']['bucket']
+    upload_folder_name = aws_conf['s3']['upload_folder']
+    s3_prefix_output = s3_prefix + '/' + upload_folder_name + '/'
 
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(s3_bucket)
-    n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix_output)))
-    if n_existing_files > 0:
-        logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
+    if does_data_already_exist(aws_conf):
+        logger.error(f"There are already files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
         raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix_output}")
 
     def upload_file(filepath):
@@ -461,11 +468,15 @@ def upload_results(aws_conf, output_dir, results_dir):
         from_sequence(all_files, partition_size=500).map(upload_file)
     files_bag.compute()
     logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}")
-    return s3_bucket, s3_prefix_output
 
 
-def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
+def create_athena_tables(aws_conf):
     logger.info("Creating Athena tables using glue crawler")
+
+    s3_prefix = aws_conf['s3']['prefix']
+    s3_bucket = aws_conf['s3']['bucket']
+    upload_folder_name = aws_conf['s3']['upload_folder']
+    s3_prefix_output = s3_prefix + '/' + upload_folder_name + '/'
 
     region_name = aws_conf.get('region_name', 'us-west-2')
     db_name = aws_conf.get('athena', {}).get('database_name', None)
@@ -476,16 +487,13 @@ def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
     glueClient = boto3.client('glue', region_name=region_name)
     crawlTarget = {
         'S3Targets': [{
-            'Path': f's3://{s3_bucket}/{s3_prefix}',
+            'Path': f's3://{s3_bucket}/{s3_prefix_output}',
             'Exclusions': []
         }]
     }
-    if output_dir is None:
-        output_folder_name = s3_prefix.split('/')[-1]
-    else:
-        output_folder_name = os.path.basename(output_dir)
-    crawler_name = db_name+'_'+output_folder_name
-    tbl_prefix = output_folder_name + '_'
+
+    crawler_name = db_name+'_'+upload_folder_name
+    tbl_prefix = upload_folder_name + '_'
 
     def create_crawler():
         glueClient.create_crawler(Name=crawler_name,

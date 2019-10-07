@@ -26,6 +26,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict
+from buildstockbatch import postprocessing
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -290,8 +291,19 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
+        assert(BuildStockBatchBase.validate_s3_data(project_file))
         logger.info('Base Validation Successful')
         return True
+
+    @staticmethod
+    def validate_s3_data(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        aws_conf = cfg.get('postprocessing', {}).get('aws', {})
+        if aws_conf and postprocessing.does_data_already_exist(aws_conf):
+            s3_conf = aws_conf['s3']
+            raise FileExistsError(f"s3://{s3_conf['bucket']}/{s3_conf['prefix']}/{s3_conf['upload_folder']}")
+        else:
+            return True
 
     @staticmethod
     def get_project_configuration(project_file):
@@ -584,6 +596,6 @@ class BuildStockBatchBase(object):
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = upload_results(aws_conf, self.output_dir, self.results_dir)
+            upload_results(aws_conf, self.results_dir)
             if 'athena' in aws_conf:
-                create_athena_tables(aws_conf, self.output_dir, s3_bucket, s3_prefix)
+                create_athena_tables(aws_conf)

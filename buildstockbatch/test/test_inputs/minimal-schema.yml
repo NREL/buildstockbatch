@@ -1,6 +1,7 @@
 stock_type: commercial
 buildstock_directory: here
 project_directory: there
+output_directory: somewhere
 weather_files_path: over-yonder
 baseline:
   n_datapoints: 12345
