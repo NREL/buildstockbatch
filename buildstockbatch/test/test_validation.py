@@ -93,7 +93,9 @@ def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_measures_and_arguments', lambda _: True):
+            patch.object(BuildStockBatchBase, 'validate_measures_and_arguments', lambda _: True), \
+            patch.object(BuildStockBatchBase, 'validate_s3_data', lambda _: True):
+
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)

@@ -97,6 +97,7 @@ aws-postprocessing-spec:
 s3-aws-postprocessing-spec:
   bucket: str(required=True)
   prefix: str(required=True)
+  upload_folder: str(required=True)
 
 athena-aws-postprocessing-spec:
   glue_service_role: str(required=False)
