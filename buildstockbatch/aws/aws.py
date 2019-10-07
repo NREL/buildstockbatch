@@ -42,7 +42,7 @@ from buildstockbatch.postprocessing import (
     read_out_osw
 )
 
-from buildstockbatch.awsbase import (
+from buildstockbatch.aws.awsbase import (
     AwsJobBase
 )
 
@@ -64,6 +64,102 @@ def compress_file(in_filename, out_filename):
 #    def __init__(self, job_name, aws_config, boto3_session):
 #        super().__init__(job_name, aws_config, boto3_session)
 #        self.ec2 = self.session.client('ec2')
+
+class AwsEMR(AwsJobBase):
+
+    def __init__(self, job_name, aws_config, boto3_session):
+        super().__init__(job_name, aws_config, boto3_session)
+        self.emr = self.session.client('emr')
+        self.ec2 = self.session.client('ec2')
+
+    def create_security_groups(self):
+
+        try:
+
+            response = self.ec2.create_security_group(
+                Description='EMR Job Flow Security Group (full cluster access)',
+                GroupName=self.emr_cluster_security_group_name,
+                VpcId=self.vpc_id
+            )
+            print(response)
+            self.emr_cluster_security_group_id = response['GroupId']
+
+        except Exception as e:
+            if 'already exists for VPC' in str(e):
+                logger.info("Security group for EMR already exists, skipping ...")
+                response = self.ec2.describe_security_groups(
+                    Filters=[
+                        {
+                            'Name': 'group-name',
+                            'Values': [
+                                self.emr_cluster_security_group_name,
+                            ]
+                        },
+                    ]
+                )
+                from pprint import pprint
+                pprint(response)
+                self.emr_cluster_security_group_id = response['SecurityGroups'][0]['GroupId']
+            else:
+                raise
+
+
+        response = self.ec2.authorize_security_group_ingress(
+            GroupId=self.emr_cluster_security_group_id,
+            IpPermissions= [dict(IpProtocol='-1',
+                            UserIdGroupPairs=[dict(GroupId=self.emr_cluster_security_group_id, UserId = self.account)])],
+        )
+
+
+    def create_iam_roles(self):
+
+        self.emr_service_role_arn = self.iam_helper.role_stitcher(
+            self.emr_service_role_name,
+            "elasticmapreduce",
+            f"EMR Service Role {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole']
+        )
+
+        self.emr_job_flow_role_arn = self.iam_helper.role_stitcher(
+            self.emr_job_flow_role_name,
+            "elasticmapreduce",
+            f"EMR Job Flow Role {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role']
+        )
+
+
+    def upload_assets(self):
+
+        upload_path = os.path.dirname(os.path.abspath(__file__))
+
+        logger.info('Uploading EMR support assets...')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_emr_folder_name}/bsb_post.py')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_emr_folder_name}/bsb_post.sh')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bootstrap-dask-custom', self.s3_bucket, f'{self.s3_emr_folder_name}/bootstrap-dask-custom')
+        logger.info('EMR support assets uploaded.')
+
+    def clean(self):
+
+        """
+        Responsible for cleaning artifacts for EMR.
+        """
+        logger.info("Cleaning up firehose stream.")
+
+        try:
+            self.emr.terminate_job_flows(
+                JobFlowIds=[
+                    'string',
+                ]
+            )
+            logger.info(f"Firehose {self.firehose_name} deleted.")
+        except Exception as e:
+            if 'ResourceNotFoundException' in str(e):
+                logger.info(f"Firehose {self.firehose_name} already MIA - skipping...")
+
+        self.iam_helper.delete_role(self.firehose_role)
+
+        logger.info(
+            f"Firehose clean complete.  Results bucket and data {self.s3_results_bucket} have not been deleted.")
 
 
 class AwsDynamo(AwsJobBase):
@@ -157,509 +253,6 @@ class AwsDynamo(AwsJobBase):
                 raise
 
 
-class AwsFirehose(AwsJobBase):
-    logger.propagate = False
-
-    def __init__(self, job_name, aws_config, boto3_session):
-
-        """
-        Initializes the Firehose configuration.
-        :param job_name:  Name of the job being run
-        :param s3_bucket: Bucket to land results into
-        :param s3_bucket_prefix: Prefix to land results into
-        :param region: the AWS region to run jobs in
-
-        """
-        super().__init__(job_name, aws_config, boto3_session)
-
-        self.firehose = self.session.client('firehose')
-        self.s3 = self.session.client('s3')
-        self.firehose_role_arn = None
-        self.firehose_arn = None
-
-    def __repr__(self):
-
-        return f"""
-The following objects compose the environment to support the Firehose collection for {self.job_identifier}:
-Job Definition Name: {self.job_identifier}
-Firehose: {self.firehose_name}
-s3 Results Bucket: {self.s3_results_bucket}
-s3 Backup Bucket: {self.s3_results_backup_bucket}
-Firehose Role Name: {self.firehose_role}
-
-"""
-
-    def create_firehose_delivery_role(self):
-        """
-        Generate the firehose role with permissions to the endpoints - in this case cloudwatch and project s3 buckets.
-        """
-
-        delivery_role_policy = f'''{{
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {{
-                                "Sid": "S3AllowForFH",
-                                "Effect": "Allow",
-                                "Action": [
-                                    "s3:AbortMultipartUpload",
-                                    "s3:GetBucketLocation",
-                                    "s3:GetObject",
-                                    "s3:ListBucket",
-                                    "s3:ListBucketMultipartUploads",
-                                    "s3:PutObject"
-                                ],
-                                "Resource": [
-                                    "{self.s3_results_bucket_arn}",
-                                    "{self.s3_results_bucket_arn}/*",
-                                    "{self.s3_results_backup_bucket_arn}",
-                                    "{self.s3_results_backup_bucket_arn}/*"
-                                ]
-                            }},
-
-                            {{
-                                "Sid": "CWAllowForCW",
-                                "Effect": "Allow",
-                                "Action": [
-                                    "logs:PutLogEvents"
-                                ],
-                                "Resource": [
-                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*",
-                                    "arn:aws:logs:{self.region}:*:log-group:/aws/kinesisfirehose/{self.job_identifier}:*:*"
-                                ]
-                            }}
-                        ]
-                    }}'''
-
-        self.firehose_role_arn = self.iam_helper.role_stitcher(
-            self.firehose_role, 'firehose',
-            f"Service role for Firehose support {self.job_identifier}",
-            policies_list=[delivery_role_policy]
-        )
-
-    def create_firehose_buckets(self):
-        """
-        Creates the output and backup buckets for the data.
-        Failed processing stream events will land in the backup.
-        """
-
-        # try:
-        #    self.s3.create_bucket(
-        #        Bucket=self.s3_results_bucket,
-        #        CreateBucketConfiguration={
-        #            'LocationConstraint': self.session.region_name
-        #        }
-        #    )
-
-        # except Exception as e:
-        #    if 'BucketAlreadyOwnedByYou' in str(e):
-        #        logger.info(f'Bucket {self.s3_results_bucket}  not created - already exists')
-        #    else:
-        #        logger.info(str(e))
-
-        try:
-            self.s3.create_bucket(
-                Bucket=self.s3_results_backup_bucket,
-                CreateBucketConfiguration={
-                    'LocationConstraint': self.session.region_name
-                }
-            )
-        except Exception as e:
-            if 'BucketAlreadyOwnedByYou' in str(e):
-                logger.info(f'Bucket {self.s3_results_backup_bucket} not created - already exists')
-            else:
-                logger.warning(str(e))
-
-    def create_firehose(self):
-        """
-        Creates a simple firehose with S3 endpoints in AWS and waits for success.
-        There appears to be a race condition with creation of the role, so firehose
-        will re-try until created.
-        """
-        while 1 == 1:
-            time.sleep(5)
-            try:
-                self.firehose.create_delivery_stream(
-                    DeliveryStreamName=self.firehose_name,
-                    DeliveryStreamType='DirectPut',
-                    ExtendedS3DestinationConfiguration={
-                        'RoleARN': self.firehose_role_arn,
-                        'BucketARN': self.s3_results_bucket_arn,
-                        'Prefix': self.s3_bucket_prefix + '/',
-                        'BufferingHints': {
-                            'SizeInMBs': 128,
-                            'IntervalInSeconds': 900
-                        },
-                        'CompressionFormat': 'GZIP',
-                        'CloudWatchLoggingOptions': {
-                            'Enabled': True,
-                            'LogGroupName': self.job_identifier,
-                            'LogStreamName': self.s3_results_bucket
-                        },
-
-                        'S3BackupMode': 'Enabled',
-                        'S3BackupConfiguration': {
-                            'RoleARN': self.firehose_role_arn,
-                            'BucketARN': self.s3_results_backup_bucket_arn,
-                            'Prefix': self.s3_bucket_prefix,
-                            'BufferingHints': {
-                                'SizeInMBs': 128,
-                                'IntervalInSeconds': 900
-                            },
-                            'CompressionFormat': 'GZIP',
-
-                            'CloudWatchLoggingOptions': {
-                                'Enabled': True,
-                                'LogGroupName': self.job_identifier,
-                                'LogStreamName': self.s3_results_backup_bucket
-                            }
-                        },
-                    },
-
-                    Tags=[
-                        {
-                            'Key': 'batch_job',
-                            'Value': self.job_identifier
-                        },
-                    ]
-                )
-
-            except Exception as e:
-                if 'ResourceInUseException' in str(e):
-                    logger.info('Firehose stream operation in progress...')
-                    break
-                else:
-                    logger.warning(
-                        f"Problem creating stream {self.firehose_name} - retrying after 5 seconds.  Error is: {str(e)}")
-                    time.sleep(5)
-
-        logger.info('Waiting for firehose delivery stream activation')
-
-        while 1 == 1:
-            time.sleep(5)
-            try:
-                # We need to give it a second to start
-
-                cresponse = self.firehose.describe_delivery_stream(
-                    DeliveryStreamName=self.firehose_name,
-                    Limit=1
-                )
-
-                if cresponse['DeliveryStreamDescription']['DeliveryStreamStatus'] == 'ACTIVE':
-                    self.firehose_arn = cresponse['DeliveryStreamDescription']['DeliveryStreamARN']
-                    logger.info(f"Firehose delivery stream {self.firehose_name} is active.")
-                    break
-
-            except Exception as e:
-                if 'ResourceNotFoundException' in str(e):
-                    logger.info(f"Firehose delivery stream {self.firehose_name} is not found.  Trying again...")
-                    time.sleep(5)
-                else:
-                    raise
-
-    def add_firehose_task_permissions(self, task_role):
-        delivery_role_policy = f'''{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Sid": "TaskFH",
-                    "Effect": "Allow",
-                    "Action": [
-                        "firehose:PutRecord"
-                    ],
-                    "Resource": [
-                        "{self.firehose_arn}"
-                    ]
-                }}
-            ]
-        }}'''
-
-        self.iam.put_role_policy(
-            RoleName=task_role,
-            PolicyName=self.firehost_task_policy_name,
-            PolicyDocument=delivery_role_policy
-        )
-
-    def put_record(self, data):
-        """
-        :param data: dictionary of data to record in the firehose
-        """
-        try:
-            self.firehose.put_record(
-                DeliveryStreamName=self.firehose_name,
-                Record={
-                    'Data': json.dumps(data)
-                }
-            )
-        except Exception as e:
-            logger.error(str(e))
-
-    def clean(self):
-        """
-        Responsible for cleaning artifacts for the firehose.
-        """
-        logger.info("Cleaning up firehose stream.")
-        try:
-            self.firehose.delete_delivery_stream(
-                DeliveryStreamName=self.firehose_name
-            )
-            logger.info(f"Firehose {self.firehose_name} deleted.")
-        except Exception as e:
-            if 'ResourceNotFoundException' in str(e):
-                logger.info(f"Firehose {self.firehose_name} already MIA - skipping...")
-
-        self.iam_helper.delete_role(self.firehose_role)
-
-        logger.info(
-            f"Firehose clean complete.  Results bucket and data {self.s3_results_bucket} have not been deleted.")
-
-
-class AWSGlueTransform(AwsJobBase):
-    """
-    Handles Glue crawlers, ETL and databases
-    """
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        """
-        Glue handler to create the JSON crawler for the job, as well as manage the results database.
-        :param job_name:  Name of the job being run
-        :param s3_bucket: Bucket to land results into
-        :param s3_bucket_prefix: Prefix to land results into
-        :param region: the AWS region to run jobs in
-        """
-        super().__init__(job_name, aws_config, boto3_session)
-
-        self.glue = self.session.client('glue')
-        # self.md_crawler_role_name = self.glue_metadata_crawler_role_name
-        # self.md_crawler_name = self.glue_metadata_crawler_name
-        # self.database_name = self.glue_database_name
-        self.md_crawler_role_arn = None
-
-    def __repr__(self):
-
-        return f"""
-The following objects compose the Glue to support the Batch run for {self.job_identifier}:
-Crawler Role Name: {self.glue_metadata_crawler_role_name}
-S3 Bucket For Source Data and Glue Tables: {self.s3_results_bucket}
-Source S3 Bucket Prefix: {self.s3_bucket_prefix}
-    """
-
-    def create_database(self):
-        """
-        Creates the Glue database
-        """
-
-        try:
-            self.glue.create_database(
-                DatabaseInput={
-                    'Name': self.glue_database_name,
-                    'Description': f'Database created for job: {self.job_identifier}'
-                }
-            )
-        except Exception as e:
-            if 'AlreadyExistsException' in str(e):
-                logger.info(f'Database {self.glue_database_name} already exists, skipping...')
-            else:
-                raise
-
-    def create_roles(self):
-        """
-        Creates the IAM roles required for Glue.
-        """
-
-        service_policy = f'''{{"Version": "2012-10-17",
-                "Statement": [
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "glue:*",
-                            "s3:GetBucketLocation",
-                            "s3:ListBucket",
-                            "s3:ListAllMyBuckets",
-                            "s3:GetBucketAcl",
-                            "ec2:DescribeVpcEndpoints",
-                            "ec2:DescribeRouteTables",
-                            "ec2:CreateNetworkInterface",
-                            "ec2:DeleteNetworkInterface",
-                            "ec2:DescribeNetworkInterfaces",
-                            "ec2:DescribeSecurityGroups",
-                            "ec2:DescribeSubnets",
-                            "ec2:DescribeVpcAttribute",
-                            "iam:ListRolePolicies",
-                            "iam:GetRole",
-                            "iam:GetRolePolicy",
-                            "cloudwatch:PutMetricData"
-                        ],
-                        "Resource": [
-                            "*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:CreateBucket"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::aws-glue-*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:GetObject",
-                            "s3:PutObject",
-                            "s3:DeleteObject"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::aws-glue-*/*",
-                            "arn:aws:s3:::*/*aws-glue-*/*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:GetObject"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::crawler-public*",
-                            "arn:aws:s3:::aws-glue-*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "logs:CreateLogGroup",
-                            "logs:CreateLogStream",
-                            "logs:PutLogEvents"
-                        ],
-                        "Resource": [
-                            "arn:aws:logs:*:*:/aws-glue/*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "ec2:CreateTags",
-                            "ec2:DeleteTags"
-                        ],
-                        "Condition": {{
-                            "ForAllValues:StringEquals": {{
-                                "aws:TagKeys": [
-                                    "aws-glue-service-resource"
-                                ]
-                            }}
-                        }},
-                        "Resource": [
-                            "arn:aws:ec2:*:*:network-interface/*",
-                            "arn:aws:ec2:*:*:security-group/*",
-                            "arn:aws:ec2:*:*:instance/*"
-                        ]
-                    }}
-                ]
-            }}
-
-            '''
-
-        data_access_policy = f'''{{"Version": "2012-10-17",
-                "Statement": [
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:GetBucketLocation",
-                            "s3:ListBucket",
-                            "s3:ListAllMyBuckets",
-                            "s3:GetBucketAcl"
-                        ],
-                        "Resource": [
-                            "*"
-                        ]
-                    }},
-                    {{
-                        "Effect": "Allow",
-                        "Action": [
-                            "s3:Get*",
-                            "s3:List*",
-                            "s3:Put*"
-                        ],
-                        "Resource": [
-                            "arn:aws:s3:::{self.s3_results_bucket}/*",
-                            "arn:aws:s3:::{self.s3_results_bucket}/*/*"
-                        ]
-                    }}
-
-                ]
-
-            }}
-            '''
-
-        policies = []
-        policies.append(service_policy)
-        policies.append(data_access_policy)
-
-        self.crawler_role_arn = self.iam_helper.role_stitcher(
-            self.glue_metadata_crawler_role_name,
-            'glue',
-            f'IAM role for {self.glue_metadata_crawler_role_name}',
-            policies_list=policies
-        )
-
-    def create_crawler(self):
-        """
-        Creates the crawler for the Fireshose summary metadata.
-        """
-        while True:
-            try:
-                self.glue.create_crawler(
-                    Name=self.glue_metadata_crawler_name,
-                    Role=self.glue_metadata_crawler_role_name,
-                    DatabaseName=self.glue_database_name,
-                    Description=f"{self.job_identifier} crawler",
-                    Targets={
-                        'S3Targets': [
-                            {
-                                'Path': f's3://{self.s3_results_bucket}/{self.s3_bucket_prefix}/',
-                            },
-                        ],
-                    },
-                    # TablePrefix=self.s3_bucket_prefix,
-                    SchemaChangePolicy={
-                        'UpdateBehavior': 'UPDATE_IN_DATABASE',
-                        'DeleteBehavior': 'DELETE_FROM_DATABASE'
-                    }
-                )
-
-                logger.info(f'Crawler {self.glue_metadata_crawler_name} created')
-                break
-
-            except Exception as e:
-                if "Service is unable to assume role" in str(e):
-                    logger.info('Sleeping to allow role to register correctly before crawler creation...')
-                    time.sleep(5)
-                elif 'AlreadyExistsException' in str(e):
-                    logger.info(f'Crawler {self.glue_metadata_crawler_name} already exists, skipping...')
-                    break
-                else:
-                    raise
-
-    def delete_crawler(self):
-        """
-        Method to delete the summary metadata crawler crawler.
-        """
-        try:
-            self.glue.delete_crawler(
-                Name=self.glue_metadata_crawler_name
-            )
-            logger.info(f'Crawler {self.glue_metadata_crawler_name} deleted')
-        except Exception as e:
-            if 'EntityNotFoundException' in str(e):
-                logger.info(f'Crawler {self.glue_metadata_crawler_name} does not exist.  Skipping delete...')
-
-    def clean(self):
-        """
-        Method responsible for cleaning the Glue artifacts.
-        """
-
-        self.iam_helper.delete_role(self.glue_metadata_crawler_role_name)
-        self.delete_crawler()
 
 
 class AwsLambda(AwsJobBase):
@@ -688,80 +281,54 @@ class AwsLambda(AwsJobBase):
         Create supporting IAM roles for Lambda support.
         """
 
-        # Glue Crawler support
+        # EMR
 
-        lambda_policy = f'''{{"Version": "2012-10-17",
-        "Statement": [
-          {{
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-              "logs:CreateLogStream",
-              "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-          }},
-          {{
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": [
-                "glue:StartCrawler",
-                "glue:GetTables"
-            ],
-            "Resource": "*"
-          }},
-          {{
-            "Sid": "VisualEditor2",
+        lambda_policy = f'''{{
+    "Version": "2012-10-17",
+    "Statement": [
+        {{
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:*:*:*"
-          }},
-          {{
-            "Sid": "VisualEditor3",
+            "Resource": "arn:aws:logs:{self.region}:{self.account}:*"
+        }},
+        {{
             "Effect": "Allow",
-            "Action": "glue:GetCrawlerMetrics",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
+            ]
+        }},
+        {{
+            "Effect": "Allow",
+            "Action": "elasticmapreduce:RunJobFlow",
             "Resource": "*"
-          }}
-        ]
-    }}
+        }},
+        {{
 
+            "Effect": "Allow",
+            "Action": "iam:PassRole",
+            "Resource": [
+                "arn:aws:iam::{self.account}:role/EMR_DefaultRole",
+                "arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
+                "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole"
+            ]
+        }}
+    ]
+}}
 
-        '''
-        self.md_lambda_crawler_role_arn = self.iam_helper.role_stitcher(
-            self.lambda_metadata_crawler_role_name,
+'''
+
+        self.lambda_emr_job_step_execution_role_arn = self.iam_helper.role_stitcher(
+            self.lambda_emr_job_step_execution_role,
             'lambda',
-            f'Lambda execution role for {self.lambda_metadata_crawler_function_name}',
+            f'Lambda execution role for {self.lambda_emr_job_step_function_name}',
             policies_list=[lambda_policy]
         )
 
-        athena_s3_accesses = f'''{{"Version": "2012-10-17",
-        "Statement": [{{
-            "Sid": "VisualEditor3",
-            "Effect": "Allow",
-            "Action": "s3:*",
-            "Resource": [
-                            "{self.s3_results_bucket_arn}/*",
-                            "{self.s3_athena_query_results_arn}/*",
-                            "{self.s3_results_bucket_arn}*",
-                            "arn:aws:s3:::aws-athena-query-results*"
-                        ]
-          }}
-        ]
-    }}
-          '''
-
-        self.lambda_athena_metadata_summary_execution_role_arn = self.iam_helper.role_stitcher(
-            self.lambda_athena_metadata_summary_execution_role,
-            'lambda',
-            f'Lambda execution role for {self.lambda_athena_function_name}',
-            policies_list=[athena_s3_accesses],
-            managed_policie_arns=['arn:aws:iam::aws:policy/AmazonAthenaFullAccess'])
-
-    def create_crawler_function(self):
-        '''
-        This is the crawler running on the Firehose JSON data to define the first table to seed our ETL job
-        '''
-
+    def create_lambda_function_bucket(self):
         try:
             self.s3.create_bucket(Bucket=self.s3_lambda_code_bucket,
                                   CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
@@ -773,206 +340,160 @@ class AwsLambda(AwsJobBase):
             else:
                 raise
 
-        function_script = f'''
-import json
-from pprint import pprint
-import boto3
-import time
+    def create_emr_cluster_function(self):
 
-def lambda_handler(event, context):
-    client = boto3.client('glue')
-    response = client.start_crawler(Name='{self.glue_metadata_crawler_name}')
+        script_name = f"s3://{self.s3_bucket}/emr/bsb_post.sh"
+        bootstrap_action = f'{self.s3_bucket}/emr/bootstrap-dask-custom'
 
-    while True:
-        response = client.get_crawler_metrics(
-            CrawlerNameList=[
-                '{self.glue_metadata_crawler_name}'
-            ]
-        )
-        print(response)
-        crawler_metric = response['CrawlerMetricsList'][0]
-        if rcrawler_metric['StillEstimating'] == False and crawler_metric['TimeLeftSeconds'] == 0.0:
-            tables_response = client.get_tables(
-                DatabaseName='{self.glue_database_name}',
-                Expression='*{self.s3_bucket_prefix}*'
-            )
-            for table in tables_response['TableList']:
-                if table['Parameters']['UPDATED_BY_CRAWLER'] == '{self.glue_metadata_crawler_name}':
-                    return 'complete'
-            print(tables_response)
-            break
-        else:
-            print("Crawler still running")
-            time.sleep(5)
+        function_script = f''' 
 
-        '''
-
-        self.zip_and_s3_load(function_script,
-                             'run_md_crawler.py',
-                             'run_md_crawler.py.zip',
-                             self.s3_lambda_code_bucket,
-                             self.s3_lambda_code_metadata_crawler_key)
-
-        while True:
-            try:
-
-                self.aws_lambda.create_function(
-                    FunctionName=self.lambda_metadata_crawler_function_name,
-                    Runtime='python3.7',
-                    Role=self.md_lambda_crawler_role_arn,
-                    Handler='run_md_crawler.lambda_handler',
-                    Code={
-                        'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_code_metadata_crawler_key
-                    },
-                    Description=f'Lambda for crawler execution on job {self.job_identifier}',
-                    Timeout=900,
-                    MemorySize=128,
-                    Publish=True,
-                    Tags={
-                        'job': self.job_identifier
-                    }
-                )
-
-                logger.info(f"Lambda function {self.lambda_metadata_crawler_function_name} created.")
-                break
-
-            except Exception as e:
-                if 'role defined for the function cannot be assumed' in str(e):
-                    logger.info(
-                        f"Lamda role not registered for {self.lambda_metadata_crawler_role_name} - sleeping ...")
-                    time.sleep(5)
-                elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.lambda_metadata_crawler_function_name} exists, skipping...')
-                    break
-                else:
-                    raise
-
-    def create_athena_etl_function(self):
-        """
-        Creates the ETL function which executes a query against Athena to create the CSV-based data.
-        """
-
-        function_script = f'''
 import json
 import boto3
 from pprint import pprint
 
 def lambda_handler(event, context):
-    athena = boto3.client('athena')
-    response = athena.start_query_execution(
-        QueryString="""CREATE TABLE "{self.glue_database_name}"."{self.glue_metadata_summary_table_name}"
-        WITH (
-          format='TEXTFILE',
-          external_location='{self.glue_metadata_etl_results_s3_path}'
-        ) AS
-        SELECT * FROM "{self.glue_database_name}"."{self.s3_bucket_prefix}";""",
-        ResultConfiguration={{
-            'OutputLocation': '{self.s3_athena_query_results_path}'
-        }}
+    
+    region='us-west-2'
+
+    
+    # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
+    # was launched from the console - also prepare a bucket for logs
+    
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
+    
+    session = boto3.Session(region_name=region)
+    
+    client = session.client("emr")
+
+    response = client.run_job_flow(
+        Name='BIGTEST',
+        LogUri='s3://buildstockbatch-test/emrlogs/',
+
+        ReleaseLabel='emr-5.23.0',
+        Instances={{
+            'MasterInstanceType': {self.emr_master_instance_type},
+            'SlaveInstanceType': {self.emr_slave_instance_type},
+            'InstanceCount': {self.emr_cluster_instance_count},
+            'Ec2SubnetId': {self.priv_subnet_cidr_1},
+            'KeepJobFlowAliveWhenNoSteps': False
+        }},
+
+        Applications=[
+            {{
+                'Name': 'Hadoop'
+            }},
+
+        ],
+        
+        BootstrapActions=[
+            {{
+                'Name': 'launchFromS3',
+                'ScriptBootstrapAction': {{
+                    'Path': '{bootstrap_action}',
+                }}
+            }},
+        ],
+        
+        Steps=[
+            {{
+                'Name': 'Dask',
+                'ActionOnFailure': 'TERMINATE_CLUSTER',
+
+                'HadoopJarStep': {{
+                    'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
+                    'Args': [{script_name}]
+                }}
+            }},
+        ],
+        
+        VisibleToAllUsers=True,
+        JobFlowRole='EMR_EC2_DefaultRole',
+        ServiceRole='EMR_DefaultRole',
+        Tags=[
+            {{
+                'Key': 'org',
+                'Value': 'ops'
+            }},
+        ],
+        AutoScalingRole='EMR_AutoScaling_DefaultRole',
+        ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
+        EbsRootVolumeSize=100
+        
+
     )
+    pprint(response)
 
-    print(response['QueryExecutionId'])
-
-    while True:
-        response2 = athena.get_query_execution(
-            QueryExecutionId=response['QueryExecutionId']
-        )
-
-        pprint(response2)
-        if response2['QueryExecution']['Status']['State'] != "RUNNING":
-            if response2['QueryExecution']['Status']['State'] == "FAILED":
-                raise Exception(response2['QueryExecution']['Status']['StateChangeReason'])
-            break
+'''
 
 
-        '''
         self.zip_and_s3_load(function_script,
-                             'create_table.py',
-                             'create_table.py.zip',
-                             self.s3_lambda_code_bucket,
-                             self.s3_lambda_code_athena_summary_key)
+                                 'emr_function.py',
+                                 'emr_function.py.zip',
+                                 self.s3_lambda_code_bucket,
+                                 self.s3_lambda_code_emr_cluster_key)
 
         while True:
-            try:
+                try:
 
-                self.aws_lambda.create_function(
-                    FunctionName=self.lambda_athena_function_name,
-                    Runtime='python3.7',
-                    Role=self.lambda_athena_metadata_summary_execution_role_arn,
-                    Handler='create_table.lambda_handler',
-                    Code={
-                        'S3Bucket': self.s3_lambda_code_bucket,
-                        'S3Key': self.s3_lambda_code_athena_summary_key
-                    },
-                    Description=f'Lambda for crawler execution on job {self.job_identifier}',
-                    Timeout=900,
-                    MemorySize=128,
-                    Publish=True,
-                    Tags={
-                        'job': self.job_identifier
-                    }
-                )
+                    self.aws_lambda.create_function(
+                        FunctionName=self.lambda_emr_job_step_function_name,
+                        Runtime='python3.7',
+                        Role=self.lambda_emr_job_step_execution_role_arn,
+                        Handler='emr_function.lambda_handler',
+                        Code={
+                            'S3Bucket': self.s3_lambda_code_bucket,
+                            'S3Key': self.s3_lambda_code_emr_cluster_key
+                        },
+                        Description=f'Lambda for emr cluster execution on job {self.job_identifier}',
+                        Timeout=900,
+                        MemorySize=128,
+                        Publish=True,
+                        Tags={
+                            'job': self.job_identifier
+                        }
+                    )
 
-                logger.info(f"Lambda function {self.lambda_athena_function_name} created.")
-                break
-
-            except Exception as e:
-                if 'role defined for the function cannot be assumed' in str(e):
-                    logger.info(
-                        f"Lamda role not registered for {self.lambda_metadata_crawler_role_name} - sleeping ...")
-                    time.sleep(5)
-                elif 'Function already exist' in str(e):
-                    logger.info(f'Lambda function {self.lambda_metadata_crawler_function_name} exists, skipping...')
+                    logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")
                     break
-                else:
-                    raise
+
+                except Exception as e:
+                    if 'role defined for the function cannot be assumed' in str(e):
+                        logger.info(
+                            f"Lamda role not registered for {self.lambda_metadata_crawler_role_name} - sleeping ...")
+                        time.sleep(5)
+                    elif 'Function already exist' in str(e):
+                        logger.info(f'Lambda function {self.lambda_metadata_crawler_function_name} exists, skipping...')
+                        break
+                    else:
+                        raise
+
 
     def clean(self):
-        self.iam_helper.delete_role(self.lambda_metadata_crawler_role_name)
-        self.iam_helper.delete_role(self.lambda_athena_metadata_summary_execution_role)
+
         try:
             self.aws_lambda.delete_function(
-                FunctionName=self.lambda_metadata_crawler_function_name
+                FunctionName=self.lambda_emr_job_step_function_name
             )
         except Exception as e:
             if 'Function not found' in str(e):
-                logger.info(f"Function {self.lambda_metadata_crawler_function_name} not found, skipping...")
+                logger.info(f"Function {self.lambda_emr_job_step_function_name} not found, skipping...")
             else:
                 raise
-        try:
-            self.aws_lambda.delete_function(
-                FunctionName=self.lambda_athena_function_name
-            )
-        except Exception as e:
-            if 'Function not found' in str(e):
-                logger.info(f"Function {self.lambda_athena_function_name} not found, skipping...")
-            else:
-                raise
+
         try:
             self.s3.delete_object(Bucket=self.s3_lambda_code_bucket, Key=self.s3_lambda_code_metadata_crawler_key)
             logger.info(
-                f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} deleted."  # noqa E501
+                f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_lambda_code_bucket} deleted."  # noqa E501
             )
         except Exception as e:
             if 'NoSuchBucket' in str(e):
                 logger.info(
-                    f"S3 object {self.s3_lambda_code_metadata_crawler_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted."  # noqa E501
+                    f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted."  # noqa E501
                 )
             else:
                 raise
 
-        try:
-            self.s3.delete_object(Bucket=self.s3_lambda_code_bucket, Key=self.s3_lambda_code_athena_summary_key)
-            logger.info(
-                f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} deleted.")
-        except Exception as e:
-            if 'NoSuchBucket' in str(e):
-                logger.info(
-                    f"S3 object {self.s3_lambda_code_athena_summary_key} for bucket {self.s3_lambda_code_bucket} missing - not deleted."  # noqa E501
-                )
-            else:
-                raise
+        self.iam_helper.delete_role(self.lambda_emr_job_step_execution_role)
 
 
 class AwsBatchEnv(AwsJobBase):
@@ -1779,32 +1300,27 @@ class AwsBatchEnv(AwsJobBase):
       }},
       "End": true
     }},
-    "Wait 16 Minutes": {{
-      "Type": "Wait",
-      "Seconds": 960,
-      "Next": "Run Firehose JSON Crawler"
-    }},
-    "Run Firehose JSON Crawler": {{
+    "Run EMR Job": {{
       "Type": "Task",
-      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_metadata_crawler_function_name}",
-      "Next": "Notify Firehose JSON Crawl Success",
+      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_emr_job_step_function_name}",
+      "Next": "Notify EMR Job Success",
       "Catch": [
         {{
           "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Firehose JSON Crawl Failure"
+          "Next": "Notify EMR Job Failure"
         }}
       ]
     }},
-    "Notify Firehose JSON Crawl Success": {{
+    "Notify EMR Job Success": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {{
         "Message": "Crawl of Firehose data succeeded",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
-      "Next": "Run Athena Table Creation Function"
+      "End": true
     }},
-    "Notify Firehose JSON Crawl Failure": {{
+    "Notify EMR Job Failure": {{
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {{
@@ -1813,35 +1329,8 @@ class AwsBatchEnv(AwsJobBase):
       }},
       "End": true
     }},
-    "Run Athena Table Creation Function": {{
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_athena_function_name}",
-      "Next": "Notify Table Create Success",
-      "Catch": [
-        {{
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Table Create Failed"
-        }}
-      ]
-    }},
-    "Notify Table Create Success": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Create of summary data table succeeded",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "End": true
-    }},
-    "Notify Table Create Failed": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Create of summary data table failed",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "End": true
-    }}
+    
+    
   }}
 }}
 
@@ -2014,11 +1503,21 @@ class AwsBatchEnv(AwsJobBase):
                         response = self.ec2.disassociate_route_table(
                             AssociationId=association['RouteTableAssociationId']
                         )
+                        while True:
+                            try:
+                                response = self.ec2.delete_route_table(
+                                    RouteTableId=route_table_id
+                                )
+                                logger.info("Route table removed.")
+                                break
+                            except Exception as e:
+                                if 'DependencyViolation' in str(e):
+                                    logger.info(
+                                        "Waiting for association to be released before deleting route table.  Sleeping...")
+                                    time.sleep(5)
+                                else:
+                                    raise
 
-                        response = self.ec2.delete_route_table(
-                            RouteTableId=route_table_id
-                        )
-                        logger.info("Route table removed.")
 
             igw_response = self.ec2.describe_internet_gateways(
                 Filters=[
@@ -2250,7 +1749,7 @@ class AwsBatch(DockerBatchBase):
             - package and upload the assets, including weather
             - kick off a batch simulation on AWS
         """
-
+        '''
         # Generate buildstock.csv
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
@@ -2343,7 +1842,20 @@ class AwsBatch(DockerBatchBase):
                 workers=cpu_count(),
                 on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
             )
+            '''
+        # Set up baseline for EMR
 
+        emr_env = AwsEMR(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        #emr_env.upload_assets()
+        #emr_env.create_iam_roles()
+        #emr_env.create_security_groups()
+
+        lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        lambda_env.create_roles()
+        lambda_env.create_lambda_function_bucket()
+        lambda_env.create_emr_cluster_function()
+
+        return
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         logger.info(
@@ -2371,6 +1883,7 @@ class AwsBatch(DockerBatchBase):
             env_vars=env_vars
         )
 
+
         # Initialize the firehose environment and try to create it
         '''
         firehose_env = AwsFirehose(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -2389,10 +1902,7 @@ class AwsBatch(DockerBatchBase):
         '''
         # Set up functions to manage ETL after the Batch job completes
         '''
-        lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        lambda_env.create_roles()
-        lambda_env.create_crawler_function()
-        lambda_env.create_athena_etl_function()
+
         '''
         # SNS Topic
         sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -2400,11 +1910,10 @@ class AwsBatch(DockerBatchBase):
         sns_env.subscribe_to_topic()
 
         # State machine
-        '''
         batch_env.create_state_machine_roles()
         batch_env.create_state_machine()
         batch_env.start_state_machine_execution(array_size)
-        '''
+
 
         dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
         dynamo_env.create_summary_table()

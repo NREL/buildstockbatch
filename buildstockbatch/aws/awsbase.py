@@ -1,6 +1,7 @@
 import logging
 import time
 import zipfile
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -166,12 +167,30 @@ class AwsJobBase():
         self.s3 = self.session.client('s3')
         self.job_identifier = job_identifier
         self.account = self.session.client('sts').get_caller_identity().get('Account')
-        self.s3_bucket = aws_config['s3']['bucket']
-        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_bucket_prefix = aws_config['s3']['prefix']
         self.region = aws_config['region']
         self.operator_email = aws_config['notifications_email']
 
+        # EMR
+
+        self.emr_master_instance_type = aws_config['emr_master_instance_type']
+        self.emr_slave_instance_type = aws_config['emr_slave_instance_type']
+        self.emr_cluster_instance_count = aws_config['emr_cluster_instance_count']
+        #self.emr_ec2_key_name = aws_config['emr_ec2_key_name']
+        self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
+        self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
+        self.emr_job_flow_role_name = f'{self.job_identifier}_emr_job_flow_role'
+        self.emr_job_flow_role_arn = ''
+        self.emr_service_role_name = f'{self.job_identifier}_emr_service_role'
+        self.emr_service_role_arn = ''
+        self.emr_cluster_security_group_id = ''
+
+
+
+        # S3
+
+        self.s3_bucket = aws_config['s3']['bucket']
+        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
+        self.s3_bucket_prefix = aws_config['s3']['prefix']
         self.s3_results_bucket = f'{self.s3_bucket}'
         self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
@@ -181,6 +200,10 @@ class AwsJobBase():
         self.s3_lambda_code_bucket = f'nrel-{self.job_identifier}_lambda_functions'.replace('_', '-')
         self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
         self.s3_lambda_code_athena_summary_key = f'{self.job_identifier}/create_table.py.zip'
+        self.s3_lambda_code_emr_cluster_key = f'{self.job_identifier}/emr_function.py.zip'
+        self.s3_emr_folder_name = 'emr'
+
+        # Lambda
 
         self.lambda_metadata_crawler_function_name = f'{self.job_identifier}_start_metadata_crawler'
         self.lambda_metadata_crawler_role_name = f'{self.job_identifier}_lambda_metadata_execution_role'
@@ -188,6 +211,11 @@ class AwsJobBase():
         self.lambda_metadata_summary_crawler_function_name = f'{self.job_identifier}_lambda_metadata_summary_crawler'
         self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
         self.lambda_athena_function_name = f'{self.job_identifier}_athena_summary_execution'
+        self.lambda_emr_job_step_execution_role = f'{self.job_identifier}_emr_job_step_execution_role'
+        self.lambda_emr_job_step_function_name = f'{self.job_identifier}_emr_job_step_submission'
+        self.lambda_emr_job_step_execution_role_arn = ''
+
+        # Glue
 
         self.glue_metadata_crawler_name = f'{self.job_identifier}_md_crawler'
         self.glue_metadata_crawler_role_name = f'{self.job_identifier}_md_crawler_role'
@@ -196,6 +224,7 @@ class AwsJobBase():
         self.glue_metadata_etl_output_type = "csv"
         self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/summary-results/{self.glue_metadata_etl_output_type}/'  # noqa 501
 
+        # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
         self.batch_compute_environment_ami = 'ami-0a859713f8259be72'
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
@@ -208,20 +237,31 @@ class AwsJobBase():
         self.batch_use_spot = aws_config['use_spot']
         self.batch_spot_bid_percent = aws_config['spot_bid_percent']
 
+        # Firehose
+
         self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
         self.firehose_name = f"{self.job_identifier}_firehose"
         self.firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
 
+        # Step Functions
+
         self.state_machine_name = f"{self.job_identifier}_state_machine"
         self.state_machine_role_name = f"{self.job_identifier}_state_machine_role"
 
+        # SNS
+
         self.sns_state_machine_topic = f"{self.job_identifier}_state_machine_notifications"
+
+        # Dynamo
 
         self.dynamo_table_name = f"{self.job_identifier}_summary_table"
         self.dynamo_table_arn = f"arn:aws:dynamodb:{self.region}:{self.account}:table/{self.dynamo_table_name}"
         self.dynamo_task_policy_name = f"{self.job_identifier}_dynamod_db_task_policy"
 
+        # VPC
         self.vpc_name = self.job_identifier
+        self.vpc_id = ''  # will be available after VPC creation
+        self.priv_subnet_cidr_1 = ''  # will be available after VPC creation
 
     def __repr__(self):
 
@@ -247,6 +287,9 @@ csv output.
     def set_name(self, type, name):
         self.named_items[type] = name
 
+    def upload_s3_file(self,file_name, s3_destination_bucket, s3_destination_key):
+        self.s3.upload_file(file_name, s3_destination_bucket, s3_destination_key)
+
     def zip_and_s3_load(self, string_to_zip, file_name, zip_name, s3_destination_bucket, s3_destination_key):
         zip_archive = zipfile.ZipFile(zip_name, mode='w', compression=zipfile.ZIP_STORED)
 
@@ -258,6 +301,7 @@ csv output.
 
         zip_archive.close()
 
-        self.s3.upload_file(zip_name, s3_destination_bucket, s3_destination_key)
+        self.upload_s3_file(zip_name, s3_destination_bucket, s3_destination_key)
 
         logger.info(f'{zip_name} uploaded to bucket {s3_destination_bucket} under key {s3_destination_key}')
+
