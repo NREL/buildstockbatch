@@ -170,6 +170,23 @@ class AwsJobBase():
         self.region = aws_config['region']
         self.operator_email = aws_config['notifications_email']
 
+        # S3
+
+        self.s3_bucket = aws_config['s3']['bucket']
+        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
+        self.s3_bucket_prefix = aws_config['s3']['prefix']
+        #self.s3_results_bucket = f'{self.s3_bucket}'
+        #self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
+        #self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
+        #self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
+        #self.s3_athena_query_results_path = f"s3://aws-athena-query-results-{self.account}-{self.region}"
+        #self.s3_athena_query_results_arn = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
+        #self.s3_lambda_code_bucket = f'{self.s3_bucket}/lambda_functions/'
+        #self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
+        #self.s3_lambda_code_athena_summary_key = f'{self.job_identifier}/create_table.py.zip'
+        self.s3_lambda_code_emr_cluster_key = f'{self.s3_bucket_prefix}/lambda_functions/emr_function.py.zip'
+        self.s3_emr_folder_name = 'emr'
+
         # EMR
 
         self.emr_master_instance_type = aws_config['emr_master_instance_type']
@@ -183,46 +200,31 @@ class AwsJobBase():
         self.emr_service_role_name = f'{self.job_identifier}_emr_service_role'
         self.emr_service_role_arn = ''
         self.emr_cluster_security_group_id = ''
-
-
-
-        # S3
-
-        self.s3_bucket = aws_config['s3']['bucket']
-        self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_bucket_prefix = aws_config['s3']['prefix']
-        self.s3_results_bucket = f'{self.s3_bucket}'
-        self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"
-        self.s3_results_backup_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}-backups"
-        self.s3_athena_query_results_path = f"s3://aws-athena-query-results-{self.account}-{self.region}"
-        self.s3_athena_query_results_arn = f"arn:aws:s3:::aws-athena-query-results-{self.account}-{self.region}"
-        self.s3_lambda_code_bucket = f'nrel-{self.job_identifier}_lambda_functions'.replace('_', '-')
-        self.s3_lambda_code_metadata_crawler_key = f'{self.job_identifier}/run_md_crawler.py.zip'
-        self.s3_lambda_code_athena_summary_key = f'{self.job_identifier}/create_table.py.zip'
-        self.s3_lambda_code_emr_cluster_key = f'{self.job_identifier}/emr_function.py.zip'
-        self.s3_emr_folder_name = 'emr'
+        self.emr_log_uri = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
 
         # Lambda
 
+        '''
         self.lambda_metadata_crawler_function_name = f'{self.job_identifier}_start_metadata_crawler'
         self.lambda_metadata_crawler_role_name = f'{self.job_identifier}_lambda_metadata_execution_role'
         self.lambda_metadata_etl_function_name = f'{self.job_identifier}_lambda_metadata_etl'
         self.lambda_metadata_summary_crawler_function_name = f'{self.job_identifier}_lambda_metadata_summary_crawler'
         self.lambda_athena_metadata_summary_execution_role = f'{self.job_identifier}_athena_summary_execution_role'
         self.lambda_athena_function_name = f'{self.job_identifier}_athena_summary_execution'
+        '''
         self.lambda_emr_job_step_execution_role = f'{self.job_identifier}_emr_job_step_execution_role'
         self.lambda_emr_job_step_function_name = f'{self.job_identifier}_emr_job_step_submission'
         self.lambda_emr_job_step_execution_role_arn = ''
 
         # Glue
-
+        '''
         self.glue_metadata_crawler_name = f'{self.job_identifier}_md_crawler'
         self.glue_metadata_crawler_role_name = f'{self.job_identifier}_md_crawler_role'
         self.glue_database_name = f'{self.job_identifier}_data'
         self.glue_metadata_summary_table_name = f'{self.job_identifier}_md_summary_table'
         self.glue_metadata_etl_output_type = "csv"
         self.glue_metadata_etl_results_s3_path = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/summary-results/{self.glue_metadata_etl_output_type}/'  # noqa 501
+        '''
 
         # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
@@ -239,9 +241,11 @@ class AwsJobBase():
 
         # Firehose
 
+        '''
         self.firehose_role = f"{self.job_identifier}_firehose_delivery_role"
         self.firehose_name = f"{self.job_identifier}_firehose"
         self.firehost_task_policy_name = f"{self.job_identifier}_firehose_task_policy"
+        '''
 
         # Step Functions
 
@@ -272,20 +276,9 @@ S3 Prefix for Source Data:  {self.s3_bucket_prefix}
 
 A state machine {self.state_machine_name} will execute an AWS Batch job {self.job_identifier} against the source data.
 Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
-Summary results are transimitted via the Firehose stream {self.firehose_name} to S3 in JSON format.
-Athena table {self.glue_database_name}.{self.s3_bucket_prefix} will be created from the source JSON.
-The summary results will be transformed into a set of csv files placed in S3 at
-{self.glue_metadata_etl_results_s3_path}.
-Additionally, an Athena table {self.glue_database_name}.{self.glue_metadata_summary_table_name} will be created on the
-csv output.
+Summary results are transimitted to the DynamoDB table {self.dynamo_table_name}.  Once processing is complete the
+state machine will then launch an EMR cluster with a job to combine the results and create an AWS Glue table. 
 """
-    '''
-    def get_name(self,type):
-
-        return self.named_items[type]
-    '''
-    def set_name(self, type, name):
-        self.named_items[type] = name
 
     def upload_s3_file(self,file_name, s3_destination_bucket, s3_destination_key):
         self.s3.upload_file(file_name, s3_destination_bucket, s3_destination_key)
