@@ -37,9 +37,9 @@ Each batch of simulations depends on a number of weather files. These
 are provided in a zip file. This can be done with **one** of the
 following keys:
 
--  ``weather_files_url``: (optional iff weather_files_path is there) the Where the zip file of weather files can be
-   downloaded from
--  ``weather_files_path``: (optional iff weather_files_url is there)  Where on this machine to find the zipped
+-  ``weather_files_url``: (either this or `weather_files_path` required) the Where the zip file of
+    weather files can be downloaded from
+-  ``weather_files_path``: Where on this machine to find the zipped
    weather files. This can be absolute or relative (to this file)
 
 Baseline simulations
@@ -48,11 +48,11 @@ Baseline simulations
 Information about baseline simulations are listed under the
 ``baseline`` key.
 
--  ``n_datapoints``:  (optional iff using buildstock_csv)The number of buildings to sample and run for the
+-  ``n_datapoints``: (either this or `buildstock_csv` required) The number of buildings to sample and run for the
    baseline case.
 -  ``n_buildings_represented``: (required) The number of buildings that this sample
    is meant to represent.
--  ``buildstock_csv``: (optional) Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
+-  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
 -  ``skip_sims``: (optional) Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
 - ``measures_to_ignore``: (optional) **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
 
