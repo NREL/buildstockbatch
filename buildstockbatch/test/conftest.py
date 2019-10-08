@@ -39,6 +39,7 @@ def basic_residential_project_file():
                     'include_enduse_subcategories': True
                 },
                 'eagle': {
+                    'n_jobs': 20,
                     'sampling': {
                         'time': 20
                     },

@@ -39,7 +39,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'calendar_year': 2007
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
-
         sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
             self.cfg['baseline']['n_datapoints']
         bld_exist_model_args = {

@@ -1,37 +1,23 @@
-buildstock_directory: str()
+stock_type: enum('residential', 'commercial', required=True)
+sys_image_dir: str(required=False)
+buildstock_directory: str(required=True)
 project_directory: str(required=True)
+output_directory: str(required=True)
 weather_files_path: str(required=False)
 weather_files_url: str(required=False)
-stock_type: enum('residential', 'commercial', required=True)
-eagle: include('hpc-spec', required=False)
-output_directory: str(required=True)
-sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
-timeseries_csv_export: include('timeseries_csv_export-spec',required=False)
-upgrades: list(include('upgrade-spec'), required=False)
-downselect: include('downselect-spec',required=False)
-postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: include('residential-simulation-spec', required=False)
+upgrades: list(include('upgrade-spec'), required=False)
+timeseries_csv_export: include('timeseries_csv_export-spec',required=False)
 reporting_measures: list(str(), required=False)
+downselect: include('downselect-spec',required=False)
+eagle: include('hpc-spec', required=False)
+postprocessing: include('postprocessing-spec', required=False)
 schema_version: num(required=False)
 ---
-hpc-spec:
-  account: str(required=True)
-  minutes_per_sim: int(max=120, required=False)
-  n_jobs: int(required=False)
-  postprocessing: include('hpc-postprocessing-spec', required=False)
-  sampling: include('sampling-spec', required=False)
-
-hpc-postprocessing-spec:
-  time: int(required=True)
-  n_workers: int(required=False)
-
-sampling-spec:
-  time: int(required=True)
-
 sim-spec:
   n_datapoints: int(required=False)
-  n_buildings_represented: int(required=False)
+  n_buildings_represented: int(required=True)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
   buildstock_csv: str(required=False)
@@ -39,10 +25,13 @@ sim-spec:
   measures_to_ignore: list(str(), required=False)
   sampling_algorithm: enum('sobol', required=False)
 
-measure-spec:
-  measure_dir_name: str(required=True)
-  arguments: map(required=False)
-
+residential-simulation-spec:
+  timesteps_per_hr: num(required=False)
+  begin_month: int(required=False, min=1, max=12)
+  begin_day_of_month: int(required=False, min=1, max=31)
+  end_month: int(required=False, min=1, max=12)
+  end_day_of_month: int(required=False, min=1, max=31)
+  calendar_year: int(required=False, min=1900, max=2100)
 
 upgrade-spec:
   upgrade_name: str(required=True)
@@ -102,9 +91,27 @@ timeseries_csv_export-spec:
   include_enduse_subcategories: bool(required=True)
   output_variables: str(required=False)
 
+measure-spec:
+  measure_dir_name: str(required=True)
+  arguments: map(required=False)
+
 downselect-spec:
   resample: bool(required=False)
   logic: include('apply-logic-spec', required=False)
+
+hpc-spec:
+  account: str(required=True)
+  minutes_per_sim: int(max=120, required=False)
+  n_jobs: int(required=True)
+  postprocessing: include('hpc-postprocessing-spec', required=False)
+  sampling: include('sampling-spec', required=False)
+
+hpc-postprocessing-spec:
+  time: int(required=True)
+  n_workers: int(required=False)
+
+sampling-spec:
+  time: int(required=True)
 
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
@@ -124,11 +131,3 @@ athena-aws-postprocessing-spec:
   glue_service_role: str(required=False)
   database_name: str(required=True)
   max_crawling_time: num(requried=False)
-
-residential-simulation-spec:
-  timesteps_per_hr: num(required=False)
-  begin_month: int(required=False, min=1, max=12)
-  begin_day_of_month: int(required=False, min=1, max=31)
-  end_month: int(required=False, min=1, max=12)
-  end_day_of_month: int(required=False, min=1, max=31)
-  calendar_year: int(required=False, min=1900, max=2100)

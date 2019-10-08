@@ -17,12 +17,18 @@ Reference the project
 
 First we tell it what project we're running with the following keys:
 
--  ``buildstock_directory``: The absolute (or relative to this YAML
+-  ``buildstock_directory``: (required) The absolute (or relative to this YAML
    file) path of the `OpenStudio-BuildStock`_ repository.
--  ``project_directory``: The relative (to the ``buildstock_directory``)
+-  ``project_directory``: (required) The relative (to the ``buildstock_directory``)
    path of the project.
+-  ``output_directory``: (required) The absolute path for the output directory
 
 .. _OpenStudio-BuildStock: https://github.com/NREL/OpenStudio-BuildStock
+
+Output Directory
+~~~~~~~~~~~~~~~~
+
+- ``output_directory``: (required) specifies where the outputs of the simulation should be stored.
 
 Weather Files
 ~~~~~~~~~~~~~
@@ -31,9 +37,9 @@ Each batch of simulations depends on a number of weather files. These
 are provided in a zip file. This can be done with **one** of the
 following keys:
 
--  ``weather_files_url``: Where the zip file of weather files can be
+-  ``weather_files_url``: (optional iff weather_files_path is there) the Where the zip file of weather files can be
    downloaded from
--  ``weather_files_path``: Where on this machine to find the zipped
+-  ``weather_files_path``: (optional iff weather_files_url is there)  Where on this machine to find the zipped
    weather files. This can be absolute or relative (to this file)
 
 Baseline simulations
@@ -42,13 +48,13 @@ Baseline simulations
 Information about baseline simulations are listed under the
 ``baseline`` key.
 
--  ``n_datapoints``: The number of buildings to sample and run for the
+-  ``n_datapoints``:  (optional iff using buildstock_csv)The number of buildings to sample and run for the
    baseline case.
--  ``n_buildings_represented``: The number of buildings that this sample
+-  ``n_buildings_represented``: (required) The number of buildings that this sample
    is meant to represent.
--  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
--  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
-- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
+-  ``buildstock_csv``: (optional) Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
+-  ``skip_sims``: (optional) Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
+- ``measures_to_ignore``: (optional) **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -71,24 +77,24 @@ following properties:
 
 -  ``upgrade_name``: (required) The name that will be in the outputs for this
    upgrade scenario.
--  ``options``: A list of options to apply as part of this upgrade.
+-  ``options``: (required) A list of options to apply as part of this upgrade.
 
-   -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in 
+   -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in
       `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_
       in `OpenStudio-BuildStock`_.
-   -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See 
+   -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See
       :ref:`filtering-logic` for instructions.
-   - ``costs``: A list of costs for the upgrade. 
+   - ``costs``: (optional) A list of costs for the upgrade.
      Multiple costs can be entered and each is multiplied by a cost multiplier, described below.
 
-        - ``value``: A cost for the measure, which will be multiplied by the multiplier.
-        - ``multiplier``: The cost above is multiplied by this value, which is a function of the buiding.
+        - ``value``: (required) A cost for the measure, which will be multiplied by the multiplier.
+        - ``multiplier``: (required) The cost above is multiplied by this value, which is a function of the buiding.
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
-          The multiplier needs to be from 
+          The multiplier needs to be from
           `this enumeration list in OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
           or from the list in your branch of that repo.
-   - ``lifetime``: Lifetime in years of the upgrade.
+   - ``lifetime``: (optional) Lifetime in years of the upgrade.
 
 - ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
   See :ref:`filtering-logic`.
@@ -99,7 +105,7 @@ following properties:
 Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Include the ``timeseries_csv_export`` key to include hourly or subhourly results along with the usual
+Optionally, include the ``timeseries_csv_export`` key to include hourly or subhourly results along with the usual
 annual simulation results. These arguments are passed directly to the 
 `TimeseriesCSVExport measure <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/TimeseriesCSVExport/measure.xml>`_
 in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
@@ -108,13 +114,8 @@ The best thing you can do is to verify that it works with what is in your branch
 
 Additional Reporting Measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
+Optionally, include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
 Any columns reported by these additional measures will be appended to the results csv.
-
-Output Directory
-~~~~~~~~~~~~~~~~
-
-``output_directory`` specifies where the outputs of the simulation should be stored. 
 
 Down Selecting the Sampling Space
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -251,17 +252,17 @@ Eagle Configuration
 
 Under the ``eagle`` key is a list of configuration for running the batch job on the Eagle.
 
-*  ``n_jobs``: Number of eagle jobs to parallelize the simulation into
-*  ``minutes_per_sim``: Maximum allocated simulation time in minutes
-*  ``account``: Eagle allocation account to charge the job to
-*  ``sampling``: Configuration for the sampling in eagle
+*  ``n_jobs``: (required) Number of eagle jobs to parallelize the simulation into.
+*  ``minutes_per_sim``: (optional) Maximum allocated simulation time in minutes. Default is 3 minutes
+*  ``account``: (required) Eagle allocation account to charge the job to.
+*  ``sampling``: (optional) Configuration for the sampling in eagle
 
-    *  ``time``: Maximum time in minutes to allocate to sampling job
+    *  ``time``: (required) Maximum time in minutes to allocate to sampling job
 
-*  ``postprocessing``: Eagle configuration for the postprocessing step
+*  ``postprocessing``: (optional) Eagle configuration for the postprocessing step
 
-    *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into
+    *  ``time``: (required) Maximum time in minutes to allocate postprocessing job
+    *  ``n_workers``: (optional) Number of eagle workers to parallelize the postprocessing job into. Default is 2.
 
 
 Postprocessing
@@ -297,29 +298,32 @@ Postprocessing Configuration Options
 
 The configuration options for postprocessing and AWS upload are:
 
-*  ``postprocessing``: postprocessing configuration
+*  ``postprocessing``: (optional) postprocessing configuration
 
-    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
+    *  ``aggregate_timeseries``: (optional) true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
        The aggregated timeseries is generated as:
        aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
 
-    *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
+    *  ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
 
-        *  ``region_name``: The name of the aws region to use for database creation and other services
-        *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
+        *  ``region_name``: (optional) The name of the aws region to use for database creation and other services
+        *  ``s3``: (required) Configurations for data upload to Amazon S3 data storage service.
 
-            * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
-            * ``prefix``: S3 prefix at which the data is to be uploaded. The complete path will become: ``s3://bucket/prefix/output_directory_name``
+            * ``bucket``: (required) The s3 bucket into which the postprocessed data is to be uploaded to
+            * ``prefix``: (required) S3 prefix at which the data is to be uploaded.
+            * ``upload_folder``: (required) The folder name for the uploaded data.
+               The complete path will become: ``s3://bucket/prefix/upload_folder``
 
-        *  ``athena``: configurations for Amazon Athena database creation. If this section is missing/commented-out, no
+
+        *  ``athena``: (optional) configurations for Amazon Athena database creation. If this section is missing/commented-out, no
            Athena tables are created.
 
-            *  ``glue_service_role``: The data in s3 is catalogued using Amazon Glue data crawler. An IAM role must be
+            *  ``glue_service_role``: (optional) The data in s3 is catalogued using Amazon Glue data crawler. An IAM role must be
                present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
                name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default". Consult
                your AWS administrator for help.
-            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
-            *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
-               before aborting it.
+            *  ``database_name``: (required) The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
+            *  ``max_crawling_time``: (optional) The maximum time in seconds to wait for the glue crawler to catalogue the data
+               before aborting it. Default is 600 seconds
