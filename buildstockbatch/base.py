@@ -26,6 +26,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict
+import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -287,6 +288,7 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
@@ -335,6 +337,98 @@ class BuildStockBatchBase(object):
                 if ('n_datapoints' in cfg['baseline'].keys()) is \
                    ('buildstock_csv' in cfg['baseline'].keys()):
                     raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+        return True
+
+    def validate_measures_and_arguments(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if cfg['stock_type'] != 'residential':  # FIXME: add comstock logic
+            return True
+
+        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        measures_dir = f'{buildstock_dir}/measures'
+        type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
+
+        measure_names = {
+                        'ResidentialSimulationControls': 'residential_simulation_controls',
+                        'BuildExistingModel': 'baseline',
+                        'SimulationOutputReport': 'simulation_output_report',
+                        'ServerDirectoryCleanup': None,
+                        'ApplyUpgrade': 'upgrades',
+                        'TimeseriesCSVExport': 'timeseries_csv_export'
+                        }
+        if 'reporting_measures' in cfg.keys():
+            for reporting_measure in cfg['reporting_measures']:
+                measure_names[reporting_measure] = 'reporting_measures'
+
+        def get_measure_xml(xml_path):
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            return root
+
+        error_msgs = ''
+        for measure_name in measure_names.keys():
+            measure_path = os.path.join(measures_dir, measure_name)
+
+            if measure_names[measure_name] in cfg.keys() or \
+                    measure_names[measure_name] == 'residential_simulation_controls':
+                # if they exist in the cfg, make sure they exist in the buildstock checkout
+                if not os.path.exists(measure_path):
+                    error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
+
+            # check argument value types for residential simulation controls and timeseries csv export measures
+            if measure_name in ['ResidentialSimulationControls', 'TimeseriesCSVExport']:
+                root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+
+                expected_arguments = {}
+                for argument in root.findall('./arguments/argument'):
+                    for name in argument.findall('./name'):
+                        expected_arguments[name.text] = []
+
+                    if argument.find('./type').text == 'Choice':
+                        for choice in argument.findall('./choices/choice'):
+                            for value in choice.findall('./value'):
+                                expected_arguments[name.text].append(value.text)
+                    else:
+                        expected_arguments[name.text].append(argument.find('./type').text)
+
+                # check only if that measure exists in cfg
+                if measure_names[measure_name] not in cfg.keys():
+                    continue
+                for actual_argument_key in cfg[measure_names[measure_name]].keys():
+                    if actual_argument_key not in expected_arguments.keys():
+                        error_msgs += f"* Found unexpected argument key {actual_argument_key} for \
+                        {measure_names[measure_name]} in yaml file. \n"
+
+                    actual_argument_value = cfg[measure_names[measure_name]][actual_argument_key]
+
+                    if actual_argument_key in expected_arguments.keys():
+                        expected_argument_type = expected_arguments[actual_argument_key]
+
+                        try:
+                            if type(actual_argument_value) != list:
+                                if not isinstance(actual_argument_value, type_map[expected_argument_type[0]]):
+                                    error_msgs += f"* Wrong argument value type for {actual_argument_key} for \
+                                    {measure_names[measure_name]} in yaml file. \n"
+                            else:
+                                for actual_argument_val in actual_argument_value:
+                                    if not isinstance(actual_argument_val, type_map[expected_argument_type[0]]):
+                                        error_msgs += f"* Wrong argument value type for {actual_argument_key} for \
+                                        {measure_names[measure_name]} in yaml file. \n"
+
+                        except KeyError:
+                            if len(expected_argument_type) > 1:  # Choice
+                                if actual_argument_value not in expected_argument_type:
+                                    error_msgs += f"* Found unexpected argument value {actual_argument_value} for \
+                                    {measure_names[measure_name]} in yaml file. \n"
+                            else:
+                                print(f"Found an unexpected argument value type: {expected_argument_type[0]}.")
+
+        if not error_msgs:
+            return True
+        else:
+            logger.error(error_msgs)
+            raise ValueError(error_msgs)
+
         return True
 
     @staticmethod

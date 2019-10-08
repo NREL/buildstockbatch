@@ -7,14 +7,17 @@ from unittest.mock import patch
 from buildstockbatch.eagle import user_cli, EagleBatch
 
 
+@patch('buildstockbatch.base.BuildStockBatchBase.validate_measures_and_arguments')
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file):
+def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures, basic_residential_project_file,
+                  monkeypatch):
+    mock_validate_measures.return_value = True
     mock_validate_options.return_value = True
 
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)
-    os.environ['CONDA_PREFIX'] = 'something'
+    monkeypatch.setenv('CONDA_PREFIX', 'something')
     argv = [project_filename]
     user_cli(argv)
     mock_subprocess.run.assert_called_once()
@@ -23,9 +26,10 @@ def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_proj
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
+    assert '0' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
 
     mock_subprocess.reset_mock()
     shutil.rmtree(results_dir)
@@ -35,19 +39,33 @@ def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_proj
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' in mock_subprocess.run.call_args[0][0]
+    assert '0' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
+
+    mock_subprocess.reset_mock()
+    shutil.rmtree(results_dir)
+    argv = ['--measures_only', project_filename]
+    user_cli(argv)
+    mock_subprocess.run.assert_called_once()
+    assert '--time=20' in mock_subprocess.run.call_args[0][0]
+    assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
+    assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
+    assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
+    assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
+    assert '1' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
 
 
 @patch('buildstockbatch.eagle.subprocess')
-def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file):
+def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, monkeypatch):
     mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
     mock_subprocess.PIPE = None
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)
-    os.environ['CONDA_PREFIX'] = 'something'
-    os.environ['SLURM_JOB_QOS'] = 'high'
+    monkeypatch.setenv('CONDA_PREFIX', 'something')
+    monkeypatch.setenv('SLURM_JOB_QOS', 'high')
 
     with patch.object(EagleBatch, 'weather_dir', None), \
             patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'):
