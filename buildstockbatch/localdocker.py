@@ -74,7 +74,8 @@ class LocalDockerBatch(BuildStockBatchBase):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, measures_only,
+                     cfg, i, upgrade_idx=None):
         try:
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
         except SimulationExists:
@@ -97,13 +98,17 @@ class LocalDockerBatch(BuildStockBatchBase):
             json.dump(osw, f, indent=4)
 
         docker_client = docker.client.from_env()
+        args = [
+            'openstudio',
+            'run',
+            '-w', 'in.osw',
+            '--debug'
+        ]
+        if measures_only:
+            args.insert(2, '--measures_only')
         container_output = docker_client.containers.run(
             cls.docker_image(),
-            [
-                'openstudio',
-                'run',
-                '-w', 'in.osw'
-            ],
+            args,
             remove=True,
             volumes=docker_volume_mounts,
             name=sim_id
@@ -117,7 +122,7 @@ class LocalDockerBatch(BuildStockBatchBase):
 
         cls.cleanup_sim_dir(sim_dir)
 
-    def run_batch(self, n_jobs=-1):
+    def run_batch(self, n_jobs=-1, measures_only=False):
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:
@@ -130,6 +135,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             self.buildstock_dir,
             self.weather_dir,
             self.results_dir,
+            measures_only,
             self.cfg
         )
         upgrade_sims = []
@@ -192,9 +198,17 @@ def main():
     parser = argparse.ArgumentParser()
     print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
-    parser.add_argument('-j', type=int,
-                        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
-                        default=-1)
+    parser.add_argument(
+        '-j',
+        type=int,
+        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
+        default=-1
+    )
+    parser.add_argument(
+        '-m', '--measures_only',
+        action='store_true',
+        help='Only apply the measures, but don\'t run simulations. Useful for debugging.'
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--postprocessonly',
                        help='Only do postprocessing, useful for when the simulations are already done',
@@ -214,7 +228,9 @@ def main():
         return True
     batch = LocalDockerBatch(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
-        batch.run_batch(n_jobs=args.j)
+        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only)
+    if args.measures_only:
+        return
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
     else:

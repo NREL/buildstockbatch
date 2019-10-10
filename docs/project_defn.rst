@@ -48,6 +48,7 @@ Information about baseline simulations are listed under the
    is meant to represent.
 -  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
 -  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
+- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,7 +69,7 @@ Upgrade Scenarios
 Under the ``upgrades`` key is a list of upgrades to apply with the
 following properties:
 
--  ``upgrade_name``: The name that will be in the outputs for this
+-  ``upgrade_name``: (required) The name that will be in the outputs for this
    upgrade scenario.
 -  ``options``: A list of options to apply as part of this upgrade.
 
@@ -89,8 +90,11 @@ following properties:
           or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
-- ``package_apply_logic``: The conditions under which this package of upgrades should be performed.
+- ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
   See :ref:`filtering-logic`.
+- ``reference_scenario``: (optional) The `upgrade_name` which should act as a reference to this upgrade to calculate
+  savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
+  Buildstockbatch will not do the savings calculation.
 
 Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

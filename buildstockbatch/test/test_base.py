@@ -1,15 +1,17 @@
+import csv
 import dask
+import glob
 import json
 import numpy as np
 import os
-from unittest.mock import patch, MagicMock
 import pandas as pd
-import pytest
 from pyarrow import parquet
-import tempfile
-import yaml
+import pytest
+import re
 import shutil
-import glob
+import tempfile
+from unittest.mock import patch, MagicMock
+import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
@@ -50,6 +52,33 @@ def test_missing_simulation_output_report_applicable(basic_residential_project_f
     assert(os.path.exists(up01_parquet))
     df = pd.read_parquet(up01_parquet, engine='pyarrow')
     assert(not df['simulation_output_report.applicable'].any())
+
+
+def test_reference_scenario(basic_residential_project_file):
+    # verify that the reference_scenario get's added to the upgrade file
+
+    upgrade_config = {
+        'upgrades': [
+            {
+                'upgrade_name': 'Triple-Pane Windows',
+                'reference_scenario': 'example_reference_scenario'
+            }
+        ]
+    }
+    project_filename, results_dir = basic_residential_project_file(upgrade_config)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()
+        get_dask_client_mock.assert_called_once()
+
+    # test results.csv files
+    test_path = os.path.join(results_dir, 'results_csvs')
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))
+    assert len(test_csv['apply_upgrade.reference_scenario'].unique()) == 1
+    assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
 
 
 def test_combine_files_flexible(basic_residential_project_file):
@@ -212,6 +241,42 @@ def test_provide_buildstock_csv(basic_residential_project_file):
             with pytest.raises(RuntimeError) as ex:
                 bsb = BuildStockBatchBase(project_filename)
             assert('Remove or comment out the downselect key' in str(ex.value))
+
+
+def test_downselect_integer_options(basic_residential_project_file):
+    with tempfile.TemporaryDirectory() as buildstock_csv_dir:
+        buildstock_csv = os.path.join(buildstock_csv_dir, 'buildstock.csv')
+        valid_option_values = set()
+        with open(os.path.join(here, 'buildstock.csv'), 'r', newline='') as f_in, \
+                open(buildstock_csv, 'w', newline='') as f_out:
+            cf_in = csv.reader(f_in)
+            cf_out = csv.writer(f_out)
+            for i, row in enumerate(cf_in):
+                if i == 0:
+                    col_idx = row.index('Days Shifted')
+                else:
+                    # Convert values from "Day1" to "1.10" so we hit the bug
+                    row[col_idx] = '{0}.{0}0'.format(re.search(r'Day(\d+)', row[col_idx]).group(1))
+                    valid_option_values.add(row[col_idx])
+                cf_out.writerow(row)
+
+        project_filename, results_dir = basic_residential_project_file({
+            'downselect': {
+                'resample': False,
+                'logic': 'Geometry House Size|1500-2499'
+            }
+        })
+        run_sampling_mock = MagicMock(return_value=buildstock_csv)
+        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+                patch.object(BuildStockBatchBase, 'results_dir', results_dir), \
+                patch.object(BuildStockBatchBase, 'run_sampling', run_sampling_mock):
+            bsb = BuildStockBatchBase(project_filename)
+            bsb.downselect()
+            run_sampling_mock.assert_called_once()
+            with open(buildstock_csv, 'r', newline='') as f:
+                cf = csv.DictReader(f)
+                for row in cf:
+                    assert(row['Days Shifted'] in valid_option_values)
 
 
 def test_combine_files(basic_residential_project_file):

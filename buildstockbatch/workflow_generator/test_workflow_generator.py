@@ -165,6 +165,36 @@ def test_additional_reporting_measures():
     assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
 
 
+def test_ignore_measures_argument():
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 100,
+            'measures_to_ignore': [
+                'ResidentialApplianceCookingRange',
+                'ResidentialApplianceDishwasher',
+                'ResidentialApplianceClothesWasher',
+                'ResidentialApplianceClothesDryer',
+                'ResidentialApplianceRefrigerator']
+        }
+    }
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    measure_step = None
+    for step in osw['steps']:
+        if step['measure_dir_name'] == 'BuildExistingModel':
+            measure_step = step
+            break
+    assert measure_step is not None, osw
+    assert 'measures_to_ignore' in measure_step['arguments'], measure_step
+    assert measure_step['arguments']['measures_to_ignore'] == 'ResidentialApplianceCookingRange|' + \
+        'ResidentialApplianceDishwasher|ResidentialApplianceClothesWasher|' + \
+        'ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
+
+
 def test_default_apply_upgrade():
     sim_id = 'bldg1up1'
     building_id = 1

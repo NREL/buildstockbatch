@@ -81,12 +81,38 @@ def test_xor_violations_fail(project_file):
 ])
 def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
+            patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
+            patch.object(BuildStockBatchBase, 'validate_measures_and_arguments', lambda _: True):
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)
         else:
             assert(BuildStockBatchBase.validate_project(project_file))
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-bad-2.yml')
+])
+def test_bad_measures(project_file):
+    try:
+        BuildStockBatchBase.validate_measures_and_arguments(project_file)
+    except ValueError as er:
+        er = str(er)
+        assert "ReportingMeasure2 does not exist" in er
+        assert "Wrong argument value type for begin_day_of_month" in er
+        assert "Found unexpected argument key output_variable" in er
+        assert "Found unexpected argument value Huorly" in er
+
+    else:
+        raise Exception("measures_and_arguments was supposed to raise ValueError for enforce-validate-measures-bad.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml'),
+])
+def test_good_measures(project_file):
+    assert BuildStockBatchBase.validate_measures_and_arguments(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
@@ -112,6 +138,9 @@ def test_bad_options_validation(project_file):
         BuildStockBatchBase.validate_options_lookup(project_file)
     except ValueError as er:
         er = str(er)
+        assert "Insulation Slab(Good) Option" in er
+        assert "Insulation Unfinished&Basement" in er
+        assert "Insulation Finished|Basement" in er
         assert "Extra Argument" in er
         assert "Invalid Option" in er
         assert "Insulation Wall|Good Option||" in er
@@ -125,3 +154,28 @@ def test_bad_options_validation(project_file):
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'),
+])
+def test_good_measures_validation(project_file):
+    assert BuildStockBatchBase.validate_measure_references(project_file)
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-bad.yml'),
+])
+def test_bad_measures_validation(project_file):
+    try:
+        BuildStockBatchBase.validate_measure_references(project_file)
+    except ValueError as er:
+        er = str(er)
+        assert "Measure directory" in er
+        assert "not found" in er
+        assert "ResidentialConstructionsUnfinishedBasement" in er
+        assert "ResidentialConstructionsFinishedBasement" in er
+
+    else:
+        raise Exception("validate_measure_references was supposed to raise ValueError for "
+                        "enforce-validate-measures-bad.yml")

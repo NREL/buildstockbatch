@@ -11,6 +11,7 @@ This is the base class mixed into the deployment specific classes (i.e. eagle, l
 """
 
 from dask.distributed import Client
+import difflib
 import gzip
 import logging
 import math
@@ -24,7 +25,8 @@ import yaml
 import yamale
 import zipfile
 import csv
-import difflib
+from collections import defaultdict
+import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
@@ -187,7 +189,7 @@ class BuildStockBatchBase(object):
         with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
             with open(buildstock_csv_filename, 'rb') as f_in:
                 shutil.copyfileobj(f_in, f_out)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        df = pd.read_csv(buildstock_csv_filename, index_col=0, dtype='str')
         df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
         if len(df_new.index) == 0:
             raise RuntimeError('There are no buildings left after the down select!')
@@ -255,6 +257,10 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
+        assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_measure_references(project_file))
+        assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         #assert(BuildStockBatchBase.validate_options_lookup(project_file))
         logger.info('Base Validation Successful')
         return True
@@ -268,6 +274,14 @@ class BuildStockBatchBase(object):
             logger.error(f'Failed to load input yaml for validation')
             raise err
         return cfg
+
+    @staticmethod
+    def get_buildstock_dir(project_file, cfg):
+        buildstock_dir = cfg["buildstock_directory"]
+        if os.path.isabs(buildstock_dir):
+            return os.path.abspath(buildstock_dir)
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -295,23 +309,120 @@ class BuildStockBatchBase(object):
                     raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
         return True
 
+    def validate_measures_and_arguments(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if cfg['stock_type'] != 'residential':  # FIXME: add comstock logic
+            return True
+
+        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        measures_dir = f'{buildstock_dir}/measures'
+        type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
+
+        measure_names = {
+                        'ResidentialSimulationControls': 'residential_simulation_controls',
+                        'BuildExistingModel': 'baseline',
+                        'SimulationOutputReport': 'simulation_output_report',
+                        'ServerDirectoryCleanup': None,
+                        'ApplyUpgrade': 'upgrades',
+                        'TimeseriesCSVExport': 'timeseries_csv_export'
+                        }
+        if 'reporting_measures' in cfg.keys():
+            for reporting_measure in cfg['reporting_measures']:
+                measure_names[reporting_measure] = 'reporting_measures'
+
+        def get_measure_xml(xml_path):
+            tree = ET.parse(xml_path)
+            root = tree.getroot()
+            return root
+
+        error_msgs = ''
+        for measure_name in measure_names.keys():
+            measure_path = os.path.join(measures_dir, measure_name)
+
+            if measure_names[measure_name] in cfg.keys() or \
+                    measure_names[measure_name] == 'residential_simulation_controls':
+                # if they exist in the cfg, make sure they exist in the buildstock checkout
+                if not os.path.exists(measure_path):
+                    error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
+
+            # check argument value types for residential simulation controls and timeseries csv export measures
+            if measure_name in ['ResidentialSimulationControls', 'TimeseriesCSVExport']:
+                root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+
+                expected_arguments = {}
+                for argument in root.findall('./arguments/argument'):
+                    for name in argument.findall('./name'):
+                        expected_arguments[name.text] = []
+
+                    if argument.find('./type').text == 'Choice':
+                        for choice in argument.findall('./choices/choice'):
+                            for value in choice.findall('./value'):
+                                expected_arguments[name.text].append(value.text)
+                    else:
+                        expected_arguments[name.text].append(argument.find('./type').text)
+
+                # check only if that measure exists in cfg
+                if measure_names[measure_name] not in cfg.keys():
+                    continue
+                for actual_argument_key in cfg[measure_names[measure_name]].keys():
+                    if actual_argument_key not in expected_arguments.keys():
+                        error_msgs += f"* Found unexpected argument key {actual_argument_key} for \
+                        {measure_names[measure_name]} in yaml file. \n"
+
+                    actual_argument_value = cfg[measure_names[measure_name]][actual_argument_key]
+
+                    if actual_argument_key in expected_arguments.keys():
+                        expected_argument_type = expected_arguments[actual_argument_key]
+
+                        try:
+                            if type(actual_argument_value) != list:
+                                if not isinstance(actual_argument_value, type_map[expected_argument_type[0]]):
+                                    error_msgs += f"* Wrong argument value type for {actual_argument_key} for \
+                                    {measure_names[measure_name]} in yaml file. \n"
+                            else:
+                                for actual_argument_val in actual_argument_value:
+                                    if not isinstance(actual_argument_val, type_map[expected_argument_type[0]]):
+                                        error_msgs += f"* Wrong argument value type for {actual_argument_key} for \
+                                        {measure_names[measure_name]} in yaml file. \n"
+
+                        except KeyError:
+                            if len(expected_argument_type) > 1:  # Choice
+                                if actual_argument_value not in expected_argument_type:
+                                    error_msgs += f"* Found unexpected argument value {actual_argument_value} for \
+                                    {measure_names[measure_name]} in yaml file. \n"
+                            else:
+                                print(f"Found an unexpected argument value type: {expected_argument_type[0]}.")
+
+        if not error_msgs:
+            return True
+        else:
+            logger.error(error_msgs)
+            raise ValueError(error_msgs)
+
+        return True
+
     @staticmethod
     def validate_options_lookup(project_file):
         """
         Validates that the parameter|options specified in the project yaml file is avaliable in the options_lookup.tsv
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        param_option_dict = {}
-        buildstock_dir = os.path.join(os.path.dirname(project_file), cfg["buildstock_directory"])
+        param_option_dict = defaultdict(set)
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
 
         # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
         try:
             with open(options_lookup_path, 'r') as f:
                 options = csv.DictReader(f, delimiter='\t')
+                invalid_options_lookup_str = ''  # Holds option/parameter names with invalid characters
                 for row in options:
-                    if row['Parameter Name'] not in param_option_dict:
-                        param_option_dict[row['Parameter Name']] = set()
+                    for col in ['Parameter Name', 'Option Name']:
+                        invalid_chars = set(row[col]).intersection(set('|&()'))
+                        invalid_chars = ''.join(invalid_chars)
+                        if invalid_chars:
+                            invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
+
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
@@ -419,12 +530,102 @@ class BuildStockBatchBase(object):
         for source_str, option_str in source_option_str_list:
             error_message += get_errors(source_str, option_str)
 
+        if error_message:
+            error_message = "Following option/parameter name(s) in the yaml file is(are) invalid. \n" + error_message
+
+        if invalid_options_lookup_str:
+            error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
+                            invalid_options_lookup_str + "*"*80 + "\n" + error_message
+
         if not error_message:
             return True
         else:
-            error_message = "Option/parameter name(s) is(are) invalid. \n" + error_message
             logger.error(error_message)
             raise ValueError(error_message)
+
+    @staticmethod
+    def validate_measure_references(project_file):
+        """
+        Validates that the measures specified in the project yaml file are
+        referenced in the options_lookup.tsv
+        """
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        measure_dirs = set()
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
+        options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
+
+        # fill in the param_option_dict with {'param1':['valid_option1','valid_option2' ...]} from options_lookup.tsv
+        try:
+            with open(options_lookup_path, 'r') as f:
+                options = csv.DictReader(f, delimiter='\t')
+                for row in options:
+                    if row['Measure Dir']:
+                        measure_dirs.add(row['Measure Dir'])
+        except FileNotFoundError as err:
+            logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
+            raise err
+
+        def get_errors(source_str, measure_str):
+            """
+            Gives multiline descriptive error message if the measure_str is invalid. Returns '' otherwise
+            :param source_str: the descriptive location where the measure_str occurs in the yaml configuration.
+            :param measure_str: the string containing a reference to a measure directory
+            :return: returns empty string if the measure_str is a valid measure
+                     directory name as referenced in the options_lookup.tsv.
+                     if not returns error message, close matches, and specifies
+                     where the error occurred (source_str).
+            """
+            if measure_str not in measure_dirs:
+                closest = difflib.get_close_matches(measure_str, list(measure_dirs))
+                return f"Measure directory {measure_str} not found. Closest matches: {closest}" \
+                    f" {source_str}\n"
+            return ''
+
+        source_measures_str_list = []
+
+        if 'measures_to_ignore' in cfg['baseline']:
+            source_str = f"In baseline 'measures_to_ignore'"
+            for measure_str in cfg['baseline']['measures_to_ignore']:
+                source_measures_str_list.append((source_str, measure_str))
+
+        error_message = ''
+        for source_str, measure_str in source_measures_str_list:
+            error_message += get_errors(source_str, measure_str)
+
+        if not error_message:
+            return True
+        else:
+            error_message = 'Measure name(s)/directory(ies) is(are) invalid. \n' + error_message
+            logger.error(error_message)
+            raise ValueError(error_message)
+
+    @staticmethod
+    def validate_reference_scenario(project_file):
+        """
+        Checks if the reference_scenario mentioned in an upgrade points to a valid upgrade
+        """
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+
+        # collect all upgrade_names
+        upgrade_names = set()
+        for upgrade_count, upgrade in enumerate(cfg.get('upgrades', [])):
+            upgrade_names.add(upgrade.get('upgrade_name', ''))
+
+        warning_string = ""
+        # check if the reference_scenario matches with any upgrade_names
+        for upgrade_count, upgrade in enumerate(cfg.get('upgrades', [])):
+            if 'reference_scenario' in upgrade:
+                if upgrade['reference_scenario'] not in upgrade_names:
+                    warning_string += f"* In Upgrade '{upgrade.get('upgrade_name', '')}', reference_scenario: " \
+                        f"'{upgrade['reference_scenario']}' does not match any existing upgrade names \n"
+                elif upgrade['reference_scenario'] == upgrade.get('upgrade_name', ''):
+                    warning_string += f"* In Upgrade '{upgrade.get('upgrade_name', '')}', reference_scenario: " \
+                        f"'{upgrade['reference_scenario']}' points to the same upgrade \n"
+
+        if warning_string:
+            logger.warning(warning_string)
+
+        return True  # Only print the warning, but always pass the validation
 
     def get_dask_client(self):
         return Client()
@@ -442,8 +643,8 @@ class BuildStockBatchBase(object):
         reporting_measures = self.cfg.get('reporting_measures', [])
 
         if not skip_combine:
-            combine_results(self.results_dir, skip_timeseries=skip_timeseries, aggregate_timeseries=aggregate_ts,
-                            reporting_measures=reporting_measures)
+            combine_results(self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
+                            aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
