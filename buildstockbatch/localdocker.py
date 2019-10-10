@@ -20,6 +20,7 @@ import logging
 import os
 import pandas as pd
 import shutil
+import sys
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -74,15 +75,18 @@ class LocalDockerBatch(BuildStockBatchBase):
             return
 
         bind_mounts = [
-            (sim_dir, '/var/simdata/openstudio', 'rw'),
-            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
-            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'),
-             '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
-            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
-            (weather_dir, '/var/simdata/openstudio/weather', 'ro')
+            (sim_dir, '', 'rw'),
+            (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'seeds'), 'seeds', 'ro'),
+            (weather_dir, 'weather', 'ro')
         ]
-        docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
+        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])
+        for bind in bind_mounts:
+            dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
+            if not os.path.exists(dir_to_make):
+                os.makedirs(dir_to_make)
 
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
@@ -94,16 +98,19 @@ class LocalDockerBatch(BuildStockBatchBase):
             'openstudio',
             'run',
             '-w', 'in.osw',
-            '--debug'
         ]
         if measures_only:
             args.insert(2, '--measures_only')
+        extra_kws = {}
+        if sys.platform.startswith('linux'):
+            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
             cls.docker_image(),
             args,
             remove=True,
             volumes=docker_volume_mounts,
-            name=sim_id
+            name=sim_id,
+            **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
             f_out.write(container_output)
