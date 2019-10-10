@@ -136,6 +136,40 @@ class AwsEMR(AwsJobBase):
 
         upload_path = os.path.dirname(os.path.abspath(__file__))
 
+        bsb_post_script = f'''
+from dask_yarn import YarnCluster
+from dask.distributed import Client
+
+cluster = YarnCluster(
+    deploy_mode='local',
+    worker_vcores=2,
+    worker_memory='{self.emr_worker_memory} GB',
+    n_workers={self.emr_total_workers}
+)
+
+client = Client(cluster)
+from buildstockbatch.postprocessing import combine_results, create_athena_tables
+results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results/'
+full_path = '{self.emr_simulation_output_full_path}'
+
+from fs import open_fs
+import pandas as pd
+import os
+from fs.copy import copy_file
+
+s3fs = open_fs(results_s3_loc)
+
+s3fs.getinfo(full_path).is_file
+
+with s3fs.open(full_path, 'rb') as f:
+    df = pd.read_parquet(f, engine='pyarrow')
+
+combine_results(results_s3_loc)
+
+create_athena_tables(None, {self.s3_bucket}, '{self.s3_bucket_prefix}/results/')
+
+'''
+        self.write_file(f'{upload_path}/s3_assets/bsb_post.py', bsb_post_script)
         logger.info('Uploading EMR support assets...')
         self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.py')
         self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh')
@@ -354,30 +388,27 @@ import boto3
 from pprint import pprint
 
 def lambda_handler(event, context):
-    
-    region='us-west-2'
-
-    
+        
     # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
     # was launched from the console - also prepare a bucket for logs
     
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
     
-    session = boto3.Session(region_name={self.region})
+    session = boto3.Session(region_name='{self.region}')
     
     client = session.client("emr")
 
     response = client.run_job_flow(
         Name='{self.emr_cluster_name}',
-        #LogUri='s3://buildstockbatch-test/emrlogs/',
-        LogUri={self.emr_log_uri}
+        #LogUri='s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
+        LogUri='{self.emr_log_uri}'
 
         ReleaseLabel='emr-5.23.0',
         Instances={{
-            'MasterInstanceType': {self.emr_master_instance_type},
-            'SlaveInstanceType': {self.emr_slave_instance_type},
+            'MasterInstanceType': '{self.emr_master_instance_type}',
+            'SlaveInstanceType': '{self.emr_slave_instance_type}',
             'InstanceCount': {self.emr_cluster_instance_count},
-            'Ec2SubnetId': {self.priv_subnet_cidr_1},
+            'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
             'KeepJobFlowAliveWhenNoSteps': False
         }},
 
@@ -404,7 +435,7 @@ def lambda_handler(event, context):
 
                 'HadoopJarStep': {{
                     'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-                    'Args': [{script_name}]
+                    'Args': ['{script_name}']
                 }}
             }},
         ],
@@ -427,6 +458,7 @@ def lambda_handler(event, context):
     pprint(response)
 
 '''
+
 
         self.zip_and_s3_load(function_script,
                                  'emr_function.py',
@@ -1299,7 +1331,7 @@ class AwsBatchEnv(AwsJobBase):
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {{
-        "Message": "Crawl of Firehose data succeeded",
+        "Message": "EMR Job succeeded",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
       "End": true
@@ -1308,7 +1340,7 @@ class AwsBatchEnv(AwsJobBase):
       "Type": "Task",
       "Resource": "arn:aws:states:::sns:publish",
       "Parameters": {{
-        "Message": "Crawl of Firehose data failed",
+        "Message": "EMR job failed",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
       "End": true

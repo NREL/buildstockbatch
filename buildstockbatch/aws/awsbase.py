@@ -189,9 +189,9 @@ class AwsJobBase():
 
         # EMR
 
-        self.emr_master_instance_type = aws_config['emr_master_instance_type']
-        self.emr_slave_instance_type = aws_config['emr_slave_instance_type']
-        self.emr_cluster_instance_count = aws_config['emr_cluster_instance_count']
+        self.emr_master_instance_type = aws_config['emr']['master_instance_type']
+        self.emr_slave_instance_type = aws_config['emr']['slave_instance_type']
+        self.emr_cluster_instance_count = aws_config['emr']['cluster_instance_count']
         #self.emr_ec2_key_name = aws_config['emr_ec2_key_name']
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
@@ -200,7 +200,11 @@ class AwsJobBase():
         self.emr_service_role_name = f'{self.job_identifier}_emr_service_role'
         self.emr_service_role_arn = ''
         self.emr_cluster_security_group_id = ''
-        self.emr_log_uri = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
+        self.emr_log_uri = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/'
+        self.emr_worker_memory = aws_config['emr']['slave_memory_size']
+        self.emr_total_workers = aws_config['emr']['n_workers']
+        self.emr_worker_vcores = aws_config['emr']['worker_vcores']
+        self.emr_simulation_output_full_path = aws_config['emr']['simulation_output_full_path']
 
         # Lambda
 
@@ -266,6 +270,8 @@ class AwsJobBase():
         self.vpc_name = self.job_identifier
         self.vpc_id = ''  # will be available after VPC creation
         self.priv_subnet_cidr_1 = ''  # will be available after VPC creation
+        self.priv_vpc_subnet_id_1 = '' # will be available after VPC creation
+        self.priv_vpc_subnet_id_2 = ''  # will be available after VPC creation
 
     def __repr__(self):
 
@@ -279,6 +285,11 @@ Notifications of execution progress will be sent to {self.operator_email} once t
 Summary results are transimitted to the DynamoDB table {self.dynamo_table_name}.  Once processing is complete the
 state machine will then launch an EMR cluster with a job to combine the results and create an AWS Glue table. 
 """
+
+    def write_file(self, file_name, content):
+        f = open(file_name, "w")
+        f.write(content)
+        logger.info(f'{file_name} written.')
 
     def upload_s3_file(self,file_name, s3_destination_bucket, s3_destination_key):
         self.s3.upload_file(file_name, s3_destination_bucket, s3_destination_key)

@@ -41,20 +41,25 @@ eagle:
     n_workers: 3
 aws:
   # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
-  job_identifier: noeltest22
+  job_identifier: noeltest23
   s3:
-    bucket: buildstockbatch-test2
+    bucket: buildstockbatch-test3
     prefix: noeltest22pref
   region: us-west-2
   use_spot: true
   # Percent of on-demand for max bid on spot
   spot_bid_percent: 100
-  batch_array_size: 100
+  batch_array_size: 10000
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: david.rager@nrel.gov
-  emr_master_instance_type: m3.xlarge
-  emr_slave_instance_type: r5.4xlarge
-  emr_cluster_instance_count: 3
+  emr:
+   master_instance_type: m3.xlarge
+   slave_instance_type: r5.4xlarge
+   cluster_instance_count: 3
+   slave_memory_size: 15
+   n_workers: 16
+   worker_vcores: 2
+   simulation_output_full_path: simulation_output/up01/bldg0000563/run/enduse_timeseries.parquet
 
 
 postprocessing:

@@ -1,3 +1,4 @@
+
 from dask_yarn import YarnCluster
 from dask.distributed import Client
 
@@ -10,7 +11,7 @@ cluster = YarnCluster(
 
 client = Client(cluster)
 from buildstockbatch.postprocessing import combine_results, create_athena_tables
-results_s3_loc = 's3://buildstockbatch-test/noeltest21/results/'
+results_s3_loc = 's3://buildstockbatch-test3/noeltest22pref/results/'
 full_path = 'simulation_output/up01/bldg0000563/run/enduse_timeseries.parquet'
 
 from fs import open_fs
@@ -27,4 +28,5 @@ with s3fs.open(full_path, 'rb') as f:
 
 combine_results(results_s3_loc)
 
-create_athena_tables(None, 'buildstockbatch-test', 'noeltest21/results/')
+create_athena_tables(None, buildstockbatch-test3, 'noeltest22pref/results/')
+
