@@ -60,156 +60,6 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
-# class AwsEc2(AwsJobBase):
-#    def __init__(self, job_name, aws_config, boto3_session):
-#        super().__init__(job_name, aws_config, boto3_session)
-#        self.ec2 = self.session.client('ec2')
-
-class AwsEMR(AwsJobBase):
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        super().__init__(job_name, aws_config, boto3_session)
-        self.emr = self.session.client('emr')
-        self.ec2 = self.session.client('ec2')
-
-    def create_security_groups(self):
-
-        try:
-
-            response = self.ec2.create_security_group(
-                Description='EMR Job Flow Security Group (full cluster access)',
-                GroupName=self.emr_cluster_security_group_name,
-                VpcId=self.vpc_id
-            )
-            print(response)
-            self.emr_cluster_security_group_id = response['GroupId']
-
-        except Exception as e:
-            if 'already exists for VPC' in str(e):
-                logger.info("Security group for EMR already exists, skipping ...")
-                response = self.ec2.describe_security_groups(
-                    Filters=[
-                        {
-                            'Name': 'group-name',
-                            'Values': [
-                                self.emr_cluster_security_group_name,
-                            ]
-                        },
-                    ]
-                )
-                from pprint import pprint
-                pprint(response)
-                self.emr_cluster_security_group_id = response['SecurityGroups'][0]['GroupId']
-            else:
-                raise
-
-        try:
-            response = self.ec2.authorize_security_group_ingress(
-                GroupId=self.emr_cluster_security_group_id,
-                IpPermissions= [dict(IpProtocol='-1',
-                                UserIdGroupPairs=[dict(GroupId=self.emr_cluster_security_group_id, UserId = self.account)])],
-            )
-        except Exception as e:
-            if 'already exists' in str(e):
-                logger.info("Security group egress rule for EMR already exists, skipping ...")
-            else:
-                raise
-
-    def create_iam_roles(self):
-
-        self.emr_service_role_arn = self.iam_helper.role_stitcher(
-            self.emr_service_role_name,
-            "elasticmapreduce",
-            f"EMR Service Role {self.job_identifier}",
-            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole']
-        )
-
-        self.emr_job_flow_role_arn = self.iam_helper.role_stitcher(
-            self.emr_job_flow_role_name,
-            "elasticmapreduce",
-            f"EMR Job Flow Role {self.job_identifier}",
-            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role']
-        )
-
-
-    def upload_assets(self):
-
-        upload_path = os.path.dirname(os.path.abspath(__file__))
-
-        bsb_post_script = f'''
-from dask_yarn import YarnCluster
-from dask.distributed import Client
-
-cluster = YarnCluster(
-    deploy_mode='local',
-    worker_vcores=2,
-    worker_memory='{self.emr_worker_memory} GB',
-    n_workers={self.emr_total_workers}
-)
-
-client = Client(cluster)
-from buildstockbatch.postprocessing import combine_results, create_athena_tables
-results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results/'
-full_path = '{self.emr_simulation_output_full_path}'
-
-from fs import open_fs
-import pandas as pd
-import os
-from fs.copy import copy_file
-
-s3fs = open_fs(results_s3_loc)
-
-s3fs.getinfo(full_path).is_file
-
-with s3fs.open(full_path, 'rb') as f:
-    df = pd.read_parquet(f, engine='pyarrow')
-
-combine_results(results_s3_loc)
-
-create_athena_tables(None, {self.s3_bucket}, '{self.s3_bucket_prefix}/results/')
-
-'''
-        self.write_file(f'{upload_path}/s3_assets/bsb_post.py', bsb_post_script)
-        logger.info('Uploading EMR support assets...')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.py')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bootstrap-dask-custom', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom')
-        logger.info('EMR support assets uploaded.')
-
-    def clean(self):
-
-        """
-        Responsible for cleaning artifacts for EMR.
-        """
-        logger.info("Cleaning up EMR.")
-
-        try:
-            self.emr.terminate_job_flows(
-                JobFlowIds=[
-                    self.emr_cluster_name
-                ]
-            )
-            logger.info(f"EMR cluster {self.emr_cluster_name} deleted.")
-
-        except Exception as e:
-            if 'ResourceNotFoundException' in str(e):
-                logger.info(f"EMR cluster {self.emr_cluster_name} already MIA - skipping...")
-
-        self.iam_helper.delete_role(self.emr_service_role_name)
-        self.iam_helper.delete_role(self.emr_job_flow_role_name)
-
-        logger.info(
-            f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
-
-        logger.info(f'Deleting Security group {self.emr_cluster_security_group_name}.')
-
-
-        self.ec2.delete_security_group(
-            GroupName = self.emr_cluster_security_group_name
-        )
-
-
-
 class AwsDynamo(AwsJobBase):
 
     def __init__(self, job_name, aws_config, boto3_session):
@@ -303,232 +153,6 @@ class AwsDynamo(AwsJobBase):
 
 
 
-class AwsLambda(AwsJobBase):
-    """
-    Class to handle Lambda functions supporting ETL.
-    """
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        """
-        Initializes the Lambda class.
-        :param job_name:  Name of the job being run
-        :param s3_bucket: Bucket to land results into
-        :param s3_bucket_prefix: Prefix to land results into
-        :param region: the AWS region to run jobs in
-        """
-        super().__init__(job_name, aws_config, boto3_session)
-        self.aws_lambda = self.session.client('lambda')
-        self.s3 = self.session.client('s3')
-        self.s3_res = self.session.resource('s3')
-        self.md_lambda_crawler_role_arn = None
-        self.lambda_metadata_etl_role_arn = None
-        self.lambda_athena_metadata_summary_execution_role_arn = None
-
-    def create_roles(self):
-        """
-        Create supporting IAM roles for Lambda support.
-        """
-
-        # EMR
-
-        lambda_policy = f'''{{
-    "Version": "2012-10-17",
-    "Statement": [
-        {{
-            "Effect": "Allow",
-            "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:{self.region}:{self.account}:*"
-        }},
-        {{
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": [
-                "arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
-            ]
-        }},
-        {{
-            "Effect": "Allow",
-            "Action": "elasticmapreduce:RunJobFlow",
-            "Resource": "*"
-        }},
-        {{
-
-            "Effect": "Allow",
-            "Action": "iam:PassRole",
-            "Resource": [
-                "arn:aws:iam::{self.account}:role/EMR_DefaultRole",
-                "arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
-                "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole"
-            ]
-        }}
-    ]
-}}
-
-'''
-
-        self.lambda_emr_job_step_execution_role_arn = self.iam_helper.role_stitcher(
-            self.lambda_emr_job_step_execution_role,
-            'lambda',
-            f'Lambda execution role for {self.lambda_emr_job_step_function_name}',
-            policies_list=[lambda_policy]
-        )
-
-    def create_emr_cluster_function(self):
-
-        script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
-        bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'
-
-        function_script = f''' 
-
-import json
-import boto3
-from pprint import pprint
-
-def lambda_handler(event, context):
-        
-    # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
-    # was launched from the console - also prepare a bucket for logs
-    
-    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
-    
-    session = boto3.Session(region_name='{self.region}')
-    
-    client = session.client("emr")
-
-    response = client.run_job_flow(
-        Name='{self.emr_cluster_name}',
-        #LogUri='s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
-        LogUri='{self.emr_log_uri}'
-
-        ReleaseLabel='emr-5.23.0',
-        Instances={{
-            'MasterInstanceType': '{self.emr_master_instance_type}',
-            'SlaveInstanceType': '{self.emr_slave_instance_type}',
-            'InstanceCount': {self.emr_cluster_instance_count},
-            'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
-            'KeepJobFlowAliveWhenNoSteps': False
-        }},
-
-        Applications=[
-            {{
-                'Name': 'Hadoop'
-            }},
-
-        ],
-        
-        BootstrapActions=[
-            {{
-                'Name': 'launchFromS3',
-                'ScriptBootstrapAction': {{
-                    'Path': '{bootstrap_action}',
-                }}
-            }},
-        ],
-        
-        Steps=[
-            {{
-                'Name': 'Dask',
-                'ActionOnFailure': 'TERMINATE_CLUSTER',
-
-                'HadoopJarStep': {{
-                    'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-                    'Args': ['{script_name}']
-                }}
-            }},
-        ],
-        
-        VisibleToAllUsers=True,
-        JobFlowRole='EMR_EC2_DefaultRole',
-        ServiceRole='EMR_DefaultRole',
-        Tags=[
-            {{
-                'Key': 'org',
-                'Value': 'ops'
-            }},
-        ],
-        AutoScalingRole='EMR_AutoScaling_DefaultRole',
-        ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
-        EbsRootVolumeSize=100
-        
-
-    )
-    pprint(response)
-
-'''
-
-
-        self.zip_and_s3_load(function_script,
-                                 'emr_function.py',
-                                 'emr_function.py.zip',
-                                 self.s3_bucket,
-                                 f'{self.s3_lambda_code_emr_cluster_key}')
-
-        while True:
-                try:
-
-                    self.aws_lambda.create_function(
-                        FunctionName=self.lambda_emr_job_step_function_name,
-                        Runtime='python3.7',
-                        Role=self.lambda_emr_job_step_execution_role_arn,
-                        Handler='emr_function.lambda_handler',
-                        Code={
-                            'S3Bucket': self.s3_bucket,
-                            'S3Key': self.s3_lambda_code_emr_cluster_key
-                        },
-                        Description=f'Lambda for emr cluster execution on job {self.job_identifier}',
-                        Timeout=900,
-                        MemorySize=128,
-                        Publish=True,
-                        Tags={
-                            'job': self.job_identifier
-                        }
-                    )
-
-                    logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")
-                    break
-
-                except Exception as e:
-                    if 'role defined for the function cannot be assumed' in str(e):
-                        logger.info(
-                            f"Lamda role not registered for {self.lambda_emr_job_step_function_name} - sleeping ...")
-                        time.sleep(5)
-                    elif 'Function already exist' in str(e):
-                        logger.info(f'Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...')
-                        break
-                    else:
-                        raise
-
-
-    def clean(self):
-
-        try:
-            self.aws_lambda.delete_function(
-                FunctionName=self.lambda_emr_job_step_function_name
-            )
-        except Exception as e:
-            if 'Function not found' in str(e):
-                logger.info(f"Function {self.lambda_emr_job_step_function_name} not found, skipping...")
-            else:
-                raise
-
-        try:
-            self.s3.delete_object(Bucket=self.s3_bucket, Key=self.s3_lambda_code_emr_cluster_key)
-            logger.info(
-                f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} deleted."  # noqa E501
-            )
-        except Exception as e:
-            if 'NoSuchBucket' in str(e):
-                logger.info(
-                    f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} missing - not deleted."  # noqa E501
-                )
-            else:
-                raise
-
-        self.iam_helper.delete_role(self.lambda_emr_job_step_execution_role)
-
 
 class AwsBatchEnv(AwsJobBase):
     """
@@ -545,7 +169,11 @@ class AwsBatchEnv(AwsJobBase):
 
         self.batch = self.session.client('batch')
         self.ec2 = self.session.client('ec2')
+        self.emr = self.session.client('emr')
         self.step_functions = self.session.client('stepfunctions')
+        self.aws_lambda = self.session.client('lambda')
+        self.s3 = self.session.client('s3')
+        self.s3_res = self.session.resource('s3')
 
         self.task_role_arn = None
         self.job_definition_arn = None
@@ -557,9 +185,64 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.propagate = False
 
+
+
     def __repr__(self):
 
         return super().__repr__()
+
+    def create_emr_lambda_roles(self):
+        """
+        Create supporting IAM roles for Lambda support.
+        """
+
+        # EMR
+
+        lambda_policy = f'''{{
+            "Version": "2012-10-17",
+            "Statement": [
+                {{
+                    "Effect": "Allow",
+                    "Action": "logs:CreateLogGroup",
+                    "Resource": "arn:aws:logs:{self.region}:{self.account}:*"
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": [
+                        "logs:CreateLogStream",
+                        "logs:PutLogEvents"
+                    ],
+                    "Resource": [
+                        "arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
+                    ]
+                }},
+                {{
+                    "Effect": "Allow",
+                    "Action": "elasticmapreduce:RunJobFlow",
+                    "Resource": "*"
+                }},
+                {{
+
+                    "Effect": "Allow",
+                    "Action": "iam:PassRole",
+                    "Resource": [
+                        "arn:aws:iam::{self.account}:role/EMR_DefaultRole",
+                        "arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
+                        "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole"
+                    ]
+                }}
+            ]
+        }}
+
+        '''
+
+        self.lambda_emr_job_step_execution_role_arn = self.iam_helper.role_stitcher(
+            self.lambda_emr_job_step_execution_role,
+            'lambda',
+            f'Lambda execution role for {self.lambda_emr_job_step_function_name}',
+            policies_list=[lambda_policy]
+        )
+
 
     def create_vpc(self):
 
@@ -652,6 +335,8 @@ class AwsBatchEnv(AwsJobBase):
             AvailabilityZone=f"{self.region}a",
             VpcId=self.vpc_id
         )
+
+        print(priv_response_1)
 
         self.priv_vpc_subnet_id_1 = priv_response_1['Subnet']['SubnetId']
 
@@ -1390,6 +1075,81 @@ class AwsBatchEnv(AwsJobBase):
 
     def clean(self):
 
+        """
+        Responsible for cleaning artifacts for EMR.
+        """
+        logger.info("Cleaning up EMR.")
+
+        try:
+            self.emr.terminate_job_flows(
+                JobFlowIds=[
+                    self.emr_cluster_name
+                ]
+            )
+            logger.info(f"EMR cluster {self.emr_cluster_name} deleted.")
+
+        except Exception as e:
+            if 'ResourceNotFoundException' in str(e):
+                logger.info(f"EMR cluster {self.emr_cluster_name} already MIA - skipping...")
+
+        self.iam_helper.delete_role(self.emr_service_role_name)
+        self.iam_helper.delete_role(self.emr_job_flow_role_name)
+
+        logger.info(
+            f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
+
+        logger.info(f'Deleting Security group {self.emr_cluster_security_group_name}.')
+
+        sg_response = self.ec2.describe_security_groups(
+            Filters=[
+                {
+                    'Name': 'group-name',
+                    'Values': [
+                        self.emr_cluster_security_group_name,
+                    ]
+                },
+            ]
+        )
+
+        group_id = sg_response['SecurityGroups'][0]['GroupId']
+
+        try:
+            self.ec2.delete_security_group(
+                GroupId=group_id
+            )
+        except Exception as e:
+            if 'does not exist' in str(e):
+                logger.info(f'Security group {self.emr_cluster_security_group_name} does not exist - skipping...')
+
+
+        try:
+            self.aws_lambda.delete_function(
+                FunctionName=self.lambda_emr_job_step_function_name
+            )
+        except Exception as e:
+            if 'Function not found' in str(e):
+                logger.info(f"Function {self.lambda_emr_job_step_function_name} not found, skipping...")
+            else:
+                raise
+
+        try:
+            self.s3.delete_object(Bucket=self.s3_bucket, Key=self.s3_lambda_code_emr_cluster_key)
+            logger.info(
+                f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} deleted."  # noqa E501
+            )
+        except Exception as e:
+            if 'NoSuchBucket' in str(e):
+                logger.info(
+                    f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} missing - not deleted."  # noqa E501
+                )
+            else:
+                raise
+
+        self.iam_helper.delete_role(self.lambda_emr_job_step_execution_role)
+
+
+
+
         state_machines = self.step_functions.list_state_machines()
 
         for sm in state_machines['stateMachines']:
@@ -1511,9 +1271,12 @@ class AwsBatchEnv(AwsJobBase):
 
             )
 
+            #print("ROUTE TABLES", rtas_response)
+
             for route_table in rtas_response['RouteTables']:
                 route_table_id = route_table['RouteTableId']
                 for association in route_table['Associations']:
+
 
                     if not association['Main']:
                         response = self.ec2.disassociate_route_table(
@@ -1633,6 +1396,292 @@ class AwsBatchEnv(AwsJobBase):
             )
 
 
+    def create_emr_security_groups(self):
+
+        try:
+
+            response = self.ec2.create_security_group(
+                Description='EMR Job Flow Security Group (full cluster access)',
+                GroupName=self.emr_cluster_security_group_name,
+                VpcId=self.vpc_id
+            )
+            print(response)
+            self.emr_cluster_security_group_id = response['GroupId']
+
+        except Exception as e:
+            if 'already exists for VPC' in str(e):
+                logger.info("Security group for EMR already exists, skipping ...")
+                response = self.ec2.describe_security_groups(
+                    Filters=[
+                        {
+                            'Name': 'group-name',
+                            'Values': [
+                                self.emr_cluster_security_group_name,
+                            ]
+                        },
+                    ]
+                )
+                from pprint import pprint
+                pprint(response)
+                self.emr_cluster_security_group_id = response['SecurityGroups'][0]['GroupId']
+            else:
+                raise
+
+        try:
+            response = self.ec2.authorize_security_group_ingress(
+                GroupId=self.emr_cluster_security_group_id,
+                IpPermissions= [dict(IpProtocol='-1',
+                                UserIdGroupPairs=[dict(GroupId=self.emr_cluster_security_group_id, UserId = self.account)])],
+            )
+        except Exception as e:
+            if 'already exists' in str(e):
+                logger.info("Security group egress rule for EMR already exists, skipping ...")
+            else:
+                raise
+
+    def create_emr_iam_roles(self):
+
+        self.emr_service_role_arn = self.iam_helper.role_stitcher(
+            self.emr_service_role_name,
+            "elasticmapreduce",
+            f"EMR Service Role {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole']
+        )
+
+        emr_policy = '''{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "glue:GetCrawler",
+                "glue:CreateTable",
+                "glue:DeleteCrawler",
+                "glue:StartCrawler",
+                "glue:StopCrawler",
+                "glue:DeleteTable",
+                "glue:ListCrawlers",
+                "glue:UpdateCrawler",
+                "glue:CreateCrawler"
+            ],
+            "Resource": "*"
+        }
+    ]
+}'''
+
+        self.emr_job_flow_role_arn = self.iam_helper.role_stitcher(
+            self.emr_job_flow_role_name,
+            "ec2",
+            f"EMR Job Flow Role {self.job_identifier}",
+            managed_policie_arns=['arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role'],
+            policies_list=[emr_policy]
+        )
+
+        try:
+            response = self.iam.create_instance_profile(
+                InstanceProfileName=self.emr_instance_profile_name
+            )
+
+            self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+
+            logger.info("EMR Instance Profile created")
+
+            response = self.iam.add_role_to_instance_profile(
+                InstanceProfileName=self.emr_instance_profile_name,
+                RoleName=self.emr_job_flow_role_arn
+            )
+
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('ECS Instance Profile not created - already exists')
+                response = self.iam.get_instance_profile(
+                    InstanceProfileName=self.emr_instance_profile_name
+                )
+                self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+
+
+
+    def upload_assets(self):
+
+        upload_path = os.path.dirname(os.path.abspath(__file__))
+
+        bsb_post_script = f'''
+from dask_yarn import YarnCluster
+from dask.distributed import Client
+
+cluster = YarnCluster(
+    deploy_mode='local',
+    worker_vcores=2,
+    worker_memory='{self.emr_worker_memory} GB',
+    n_workers={self.emr_total_workers}
+)
+
+client = Client(cluster)
+from buildstockbatch.postprocessing import combine_results, create_athena_tables
+results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results/'
+full_path = '{self.emr_simulation_output_full_path}'
+
+from fs import open_fs
+import pandas as pd
+import os
+from fs.copy import copy_file
+
+s3fs = open_fs(results_s3_loc)
+
+s3fs.getinfo(full_path).is_file
+
+with s3fs.open(full_path, 'rb') as f:
+    df = pd.read_parquet(f, engine='pyarrow')
+
+combine_results(results_s3_loc)
+
+conf = dict(
+    region_name='us-west-2',
+    athena=dict(database_name='{self.job_identifier}',
+                glue_service_role='service-role/AWSGlueServiceRole-default',
+                max_crawling_time=600)
+    )
+
+create_athena_tables(conf, {self.s3_bucket}, '{self.s3_bucket_prefix}/results/')
+
+'''
+        self.write_file(f'{upload_path}/s3_assets/bsb_post.py', bsb_post_script)
+        logger.info('Uploading EMR support assets...')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.py')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh')
+        self.upload_s3_file(f'{upload_path}/s3_assets/bootstrap-dask-custom', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom')
+        logger.info('EMR support assets uploaded.')
+
+    def create_emr_cluster_function(self):
+
+        print("CREATE EMR", self.priv_vpc_subnet_id_1)
+
+        script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
+        bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'
+
+        function_script = f''' 
+
+import json
+import boto3
+from pprint import pprint
+
+def lambda_handler(event, context):
+
+    # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
+    # was launched from the console - also prepare a bucket for logs
+
+    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
+
+    session = boto3.Session(region_name='{self.region}')
+
+    client = session.client("emr")
+
+    response = client.run_job_flow(
+        Name='{self.emr_cluster_name}',
+        #LogUri='s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
+        LogUri='{self.emr_log_uri}'
+
+        ReleaseLabel='emr-5.23.0',
+        Instances={{
+            'MasterInstanceType': '{self.emr_master_instance_type}',
+            'SlaveInstanceType': '{self.emr_slave_instance_type}',
+            'InstanceCount': {self.emr_cluster_instance_count},
+            'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
+            'KeepJobFlowAliveWhenNoSteps': False
+        }},
+
+        Applications=[
+            {{
+                'Name': 'Hadoop'
+            }},
+
+        ],
+
+        BootstrapActions=[
+            {{
+                'Name': 'launchFromS3',
+                'ScriptBootstrapAction': {{
+                    'Path': '{bootstrap_action}',
+                }}
+            }},
+        ],
+
+        Steps=[
+            {{
+                'Name': 'Dask',
+                'ActionOnFailure': 'TERMINATE_CLUSTER',
+
+                'HadoopJarStep': {{
+                    'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
+                    'Args': ['{script_name}']
+                }}
+            }},
+        ],
+
+        VisibleToAllUsers=True,
+        JobFlowRole='{self.emr_job_flow_role_name}',
+        ServiceRole='{self.emr_service_role_name}',
+        Tags=[
+            {{
+                'Key': 'org',
+                'Value': 'ops'
+            }},
+        ],
+        AutoScalingRole='EMR_AutoScaling_DefaultRole',
+        ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
+        EbsRootVolumeSize=100
+
+
+    )
+    pprint(response)
+
+'''
+
+        self.zip_and_s3_load(function_script,
+                             'emr_function.py',
+                             'emr_function.py.zip',
+                             self.s3_bucket,
+                             f'{self.s3_lambda_code_emr_cluster_key}')
+
+        while True:
+            try:
+                print(self.lambda_emr_job_step_function_name)
+                print(self.lambda_emr_job_step_execution_role_arn)
+
+                self.aws_lambda.create_function(
+                    FunctionName=self.lambda_emr_job_step_function_name,
+                    Runtime='python3.7',
+                    Role=self.lambda_emr_job_step_execution_role_arn,
+                    Handler='emr_function.lambda_handler',
+                    Code={
+                        'S3Bucket': self.s3_bucket,
+                        'S3Key': self.s3_lambda_code_emr_cluster_key
+                    },
+                    Description=f'Lambda for emr cluster execution on job {self.job_identifier}',
+                    Timeout=900,
+                    MemorySize=128,
+                    Publish=True,
+                    Tags={
+                        'job': self.job_identifier
+                    }
+                )
+
+                logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")
+                break
+
+            except Exception as e:
+                if 'role defined for the function cannot be assumed' in str(e):
+                    logger.info(
+                        f"Lambda role not registered for {self.lambda_emr_job_step_function_name} - sleeping ...")
+                    time.sleep(5)
+                elif 'Function already exist' in str(e):
+                    logger.info(f'Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...')
+                    break
+                else:
+                    raise
+
+
 class AwsSNS(AwsJobBase):
 
     def __init__(self, job_name, aws_config, boto3_session):
@@ -1744,11 +1793,11 @@ class AwsBatch(DockerBatchBase):
         # firehose_env = AwsFirehose(self.job_identifier, self.cfg['aws'], self.boto3_session)
         # firehose_env.clean()
 
-        lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        lambda_env.clean()
+        #lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        #lambda_env.clean()
 
-        emr_env = AwsEMR(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        emr_env.clean()
+        #emr_env = AwsEMR(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        #emr_env.clean()
 
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         batch_env.clean()
@@ -1771,7 +1820,7 @@ class AwsBatch(DockerBatchBase):
             - package and upload the assets, including weather
             - kick off a batch simulation on AWS
         """
-
+        '''
         # Generate buildstock.csv
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
@@ -1865,7 +1914,7 @@ class AwsBatch(DockerBatchBase):
                 on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
             )
 
-
+        '''
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -1904,20 +1953,22 @@ class AwsBatch(DockerBatchBase):
         dynamo_env.create_summary_table()
         dynamo_env.add_dynamo_task_permissions()
 
-        # EMR Function
-        emr_env = AwsEMR(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        emr_env.upload_assets()
-        emr_env.create_iam_roles()
-        emr_env.create_security_groups()
-
-        lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        lambda_env.create_roles()
-        lambda_env.create_emr_cluster_function()
 
         # State machine
         batch_env.create_state_machine_roles()
         batch_env.create_state_machine()
-        batch_env.start_state_machine_execution(array_size)
+
+        # EMR Function
+
+        batch_env.upload_assets()
+        batch_env.create_emr_iam_roles()
+        batch_env.create_emr_security_groups()
+        batch_env.create_emr_iam_roles()
+        batch_env.create_emr_cluster_function()
+
+        # start job
+
+        #batch_env.start_state_machine_execution(array_size)
 
         # old method to submit the job
         #batch_env.submit_job(array_size)

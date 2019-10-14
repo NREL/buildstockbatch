@@ -270,8 +270,8 @@ class AwsJobBase():
         self.vpc_name = self.job_identifier
         self.vpc_id = ''  # will be available after VPC creation
         self.priv_subnet_cidr_1 = ''  # will be available after VPC creation
-        self.priv_vpc_subnet_id_1 = '' # will be available after VPC creation
-        self.priv_vpc_subnet_id_2 = ''  # will be available after VPC creation
+        self.priv_vpc_subnet_id_1 = 'REPL' # will be available after VPC creation
+        self.priv_vpc_subnet_id_2 = 'REPL'  # will be available after VPC creation
 
     def __repr__(self):
 
