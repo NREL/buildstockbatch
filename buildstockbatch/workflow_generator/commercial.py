@@ -106,6 +106,17 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             }
         ])
 
+        if self.cfg.get('baseline', {}).get('include_qaqc', False):
+            osw['steps'].extend([
+                {
+                    'measure_dir_name': 'la_100_qaqc',
+                    'Arguments': {
+                        'run_qaqc': True
+                    },
+                    'measure_type': 'ReportingMeasure'
+                }
+            ])
+
         if upgrade_idx is not None:
             measure_d = self.cfg['upgrades'][upgrade_idx]
             apply_upgrade_measure = {

@@ -28,6 +28,8 @@ sim-spec:
   skip_sims: bool(required=False)
   ignore_measures: list(required=False)
   sampling_algorithm: str(required=False)
+  osw_template: str(required=False)
+  include_qaqc: bool(required=False)
 measure-spec:
   measure_dir_name: str(required=True)
   arguments: map(required=False)
