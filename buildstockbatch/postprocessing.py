@@ -76,17 +76,9 @@ def flatten_datapoint_json(reporting_measures, d):
     # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
-<<<<<<< HEAD
-
-    # copy over all the keys and values in SimulationOutputReport
-    col3 = 'SimulationOutputReport'
-    for k, v in d.get(col3, {}).items():
-        new_d[f'{col3}.{k}'] = v
-=======
     col2 = 'SimulationOutputReport'
     for k, v in d.get(col2, {}).items():
         new_d[f'{col2}.{k}'] = v
->>>>>>> origin/master
 
     # additional reporting measures
     for col in reporting_measures:
