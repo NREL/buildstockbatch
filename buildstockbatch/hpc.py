@@ -309,7 +309,7 @@ class HPCBatchBase(BuildStockBatchBase):
             except subprocess.CalledProcessError:
                 pass
             finally:
-                time.sleep(600)
+                # time.sleep(600)
                 # Clean up the symbolic links we created in the container
                 for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
                     try:
