@@ -110,7 +110,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             osw['steps'].extend([
                 {
                     'measure_dir_name': 'la_100_qaqc',
-                    'Arguments': {
+                    'arguments': {
                         'run_qaqc': True
                     },
                     'measure_type': 'ReportingMeasure'
