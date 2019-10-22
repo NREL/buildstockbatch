@@ -228,7 +228,9 @@ class AwsBatchEnv(AwsJobBase):
                     "Resource": [
                         "arn:aws:iam::{self.account}:role/EMR_DefaultRole",
                         "arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
-                        "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole"
+                        "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole",
+                        "{self.emr_job_flow_role_arn}",
+                        "{self.emr_service_role_arn}"
                     ]
                 }}
             ]
@@ -1092,8 +1094,11 @@ class AwsBatchEnv(AwsJobBase):
             if 'ResourceNotFoundException' in str(e):
                 logger.info(f"EMR cluster {self.emr_cluster_name} already MIA - skipping...")
 
-        self.iam_helper.delete_role(self.emr_service_role_name)
+        self.iam_helper.remove_role_from_instance_profile(self.emr_instance_profile_name)
+        self.iam_helper.delete_instance_profile(self.emr_instance_profile_name)
         self.iam_helper.delete_role(self.emr_job_flow_role_name)
+        self.iam_helper.delete_role(self.emr_service_role_name)
+
 
         logger.info(
             f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
@@ -1110,15 +1115,15 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
-
-        group_id = sg_response['SecurityGroups'][0]['GroupId']
-
         try:
+
+            group_id = sg_response['SecurityGroups'][0]['GroupId']
+
             self.ec2.delete_security_group(
                 GroupId=group_id
             )
         except Exception as e:
-            if 'does not exist' in str(e):
+            if 'does not exist' in str(e) or 'list index out of range' in str(e):
                 logger.info(f'Security group {self.emr_cluster_security_group_name} does not exist - skipping...')
 
 
@@ -1478,27 +1483,33 @@ class AwsBatchEnv(AwsJobBase):
             policies_list=[emr_policy]
         )
 
-        try:
-            response = self.iam.create_instance_profile(
-                InstanceProfileName=self.emr_instance_profile_name
-            )
+        #try:
+        print("INSTANCEPROFILE")
+        response = self.iam.create_instance_profile(
+            InstanceProfileName=self.emr_instance_profile_name
+        )
 
-            self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+        self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
 
-            logger.info("EMR Instance Profile created")
+        logger.info("EMR Instance Profile created")
 
-            response = self.iam.add_role_to_instance_profile(
-                InstanceProfileName=self.emr_instance_profile_name,
-                RoleName=self.emr_job_flow_role_arn
-            )
+        print(self.emr_instance_profile_name)
+        print(self.emr_job_flow_role_arn)
 
-        except Exception as e:
-            if 'EntityAlreadyExists' in str(e):
-                logger.info('ECS Instance Profile not created - already exists')
-                response = self.iam.get_instance_profile(
-                    InstanceProfileName=self.emr_instance_profile_name
-                )
-                self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+        response = self.iam.add_role_to_instance_profile(
+            InstanceProfileName=self.emr_instance_profile_name,
+            RoleName=self.emr_job_flow_role_name
+        )
+
+        #except Exception as e:
+        #    if 'EntityAlreadyExists' in str(e):
+        #        logger.info('EMR Instance Profile not created - already exists')
+        #        response = self.iam.get_instance_profile(
+        #            InstanceProfileName=self.emr_instance_profile_name
+        #        )
+        #        self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+
+        print("EMRINSTANCEPROFILE", self.emr_instance_profile_arn)
 
 
 
@@ -1580,7 +1591,7 @@ def lambda_handler(event, context):
     response = client.run_job_flow(
         Name='{self.emr_cluster_name}',
         #LogUri='s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
-        LogUri='{self.emr_log_uri}'
+        LogUri='{self.emr_log_uri}',
 
         ReleaseLabel='emr-5.23.0',
         Instances={{
@@ -1588,7 +1599,7 @@ def lambda_handler(event, context):
             'SlaveInstanceType': '{self.emr_slave_instance_type}',
             'InstanceCount': {self.emr_cluster_instance_count},
             'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
-            'KeepJobFlowAliveWhenNoSteps': False
+            'KeepJobFlowAliveWhenNoSteps': True
         }},
 
         Applications=[
@@ -1620,7 +1631,7 @@ def lambda_handler(event, context):
         ],
 
         VisibleToAllUsers=True,
-        JobFlowRole='{self.emr_job_flow_role_name}',
+        JobFlowRole='{self.emr_instance_profile_name}',
         ServiceRole='{self.emr_service_role_name}',
         Tags=[
             {{
@@ -1647,7 +1658,7 @@ def lambda_handler(event, context):
         while True:
             try:
                 print(self.lambda_emr_job_step_function_name)
-                print(self.lambda_emr_job_step_execution_role_arn)
+                print('lambda role', self.lambda_emr_job_step_execution_role_arn)
 
                 self.aws_lambda.create_function(
                     FunctionName=self.lambda_emr_job_step_function_name,
@@ -1820,7 +1831,7 @@ class AwsBatch(DockerBatchBase):
             - package and upload the assets, including weather
             - kick off a batch simulation on AWS
         """
-        '''
+
         # Generate buildstock.csv
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
@@ -1914,7 +1925,7 @@ class AwsBatch(DockerBatchBase):
                 on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
             )
 
-        '''
+
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -1963,15 +1974,15 @@ class AwsBatch(DockerBatchBase):
         batch_env.upload_assets()
         batch_env.create_emr_iam_roles()
         batch_env.create_emr_security_groups()
-        batch_env.create_emr_iam_roles()
+        batch_env.create_emr_lambda_roles()
         batch_env.create_emr_cluster_function()
 
         # start job
 
-        #batch_env.start_state_machine_execution(array_size)
+        batch_env.start_state_machine_execution(array_size)
 
         # old method to submit the job
-        #batch_env.submit_job(array_size)
+        # batch_env.submit_job(array_size)
 
     @classmethod
     def create_dynamo_field(cls, key, value):

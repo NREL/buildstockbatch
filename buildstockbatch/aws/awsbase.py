@@ -205,6 +205,7 @@ class AwsJobBase():
         self.emr_total_workers = aws_config['emr']['n_workers']
         self.emr_worker_vcores = aws_config['emr']['worker_vcores']
         self.emr_simulation_output_full_path = aws_config['emr']['simulation_output_full_path']
+        self.emr_instance_profile_name=f'{self.job_identifier}_emr_instance_profile'
 
         # Lambda
 
