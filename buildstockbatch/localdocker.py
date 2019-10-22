@@ -19,8 +19,10 @@ import json
 import logging
 import os
 import pandas as pd
+from requests.exceptions import ReadTimeout
 import shutil
 import sys
+import traceback
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -104,14 +106,17 @@ class LocalDockerBatch(BuildStockBatchBase):
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
-        container_output = docker_client.containers.run(
-            cls.docker_image(),
-            args,
-            remove=True,
-            volumes=docker_volume_mounts,
-            name=sim_id,
-            **extra_kws
-        )
+        try:
+            container_output = docker_client.containers.run(
+                cls.docker_image(),
+                args,
+                remove=True,
+                volumes=docker_volume_mounts,
+                name=sim_id,
+                **extra_kws
+            )
+        except ReadTimeout as ex:
+            container_output = traceback.format_exc()
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
             f_out.write(container_output)
 
