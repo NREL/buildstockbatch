@@ -345,7 +345,7 @@ def user_cli(argv=sys.argv[1:]):
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return
+        return True
 
     # otherwise, queue up the whole eagle buildstockbatch process
     # the main work of the first Eagle job is to run the sampling script ...
