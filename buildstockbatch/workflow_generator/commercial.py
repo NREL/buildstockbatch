@@ -114,6 +114,13 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                         'run_qaqc': True
                     },
                     'measure_type': 'ReportingMeasure'
+                },
+                {
+                    'measure_dir_name': 'simulation_settings_check',
+                    'arguments': {
+                        'run_sim_settings_checks': True
+                    },
+                    'measure_type': 'ReportingMeasure'
                 }
             ])
 
