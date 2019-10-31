@@ -169,6 +169,7 @@ class AwsBatchEnv(AwsJobBase):
 
         self.batch = self.session.client('batch')
         self.ec2 = self.session.client('ec2')
+        self.ec2r = self.session.resource('ec2')
         self.emr = self.session.client('emr')
         self.step_functions = self.session.client('stepfunctions')
         self.aws_lambda = self.session.client('lambda')
@@ -1001,7 +1002,7 @@ class AwsBatchEnv(AwsJobBase):
         "Message": "Batch job submitted through Step Functions failed",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
-      "End": true
+      "Next": "Job Failure"
     }},
     "Run EMR Job": {{
       "Type": "Task",
@@ -1030,6 +1031,10 @@ class AwsBatchEnv(AwsJobBase):
         "Message": "EMR job failed",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
+      "Next": "Notify EMR Job Failure"
+    }},
+    "Job Failure": {{
+      "Type": "Fail",
       "End": true
     }}
   }}
@@ -1105,6 +1110,22 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info(f'Deleting Security group {self.emr_cluster_security_group_name}.')
 
+        default_sg_response = self.ec2.describe_security_groups(
+            Filters=[
+                {
+                    'Name': 'group-name',
+                    'Values': [
+                        'default',
+                    ]
+                },
+            ]
+        )
+
+        default_group_id = default_sg_response['SecurityGroups'][0]['GroupId']
+        dsg = self.ec2r.SecurityGroup(default_group_id)
+        if len(dsg.ip_permissions_egress):
+            dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
+
         sg_response = self.ec2.describe_security_groups(
             Filters=[
                 {
@@ -1115,16 +1136,33 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
+
+
         try:
 
             group_id = sg_response['SecurityGroups'][0]['GroupId']
 
-            self.ec2.delete_security_group(
-                GroupId=group_id
-            )
+            sg = self.ec2r.SecurityGroup(group_id)
+            if len(sg.ip_permissions):
+                sg.revoke_ingress(IpPermissions=sg.ip_permissions)
+
+            while True:
+                try:
+                    self.ec2.delete_security_group(
+                        GroupId=group_id
+                    )
+                    break
+                except:
+                    raise
+                    logger.info("Waiting for security group ingress rules to be removed ...")
+                    time.sleep(5)
+
+            logger.info(f"Deleted security group {self.emr_cluster_security_group_name}.")
         except Exception as e:
             if 'does not exist' in str(e) or 'list index out of range' in str(e):
                 logger.info(f'Security group {self.emr_cluster_security_group_name} does not exist - skipping...')
+            else:
+                raise
 
 
         try:
@@ -1554,10 +1592,19 @@ conf = dict(
                 max_crawling_time=600)
     )
 
-create_athena_tables(conf, {self.s3_bucket}, '{self.s3_bucket_prefix}/results/')
+create_athena_tables(conf, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/')
 
 '''
+
+        bsb_post_bash = f'''#!/bin/bash
+
+aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post.py
+/home/hadoop/miniconda/bin/python bsb_post.py
+
+        '''
+
         self.write_file(f'{upload_path}/s3_assets/bsb_post.py', bsb_post_script)
+        self.write_file(f'{upload_path}/s3_assets/bsb_post.sh', bsb_post_bash)
         logger.info('Uploading EMR support assets...')
         self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.py')
         self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh')
@@ -1590,7 +1637,6 @@ def lambda_handler(event, context):
 
     response = client.run_job_flow(
         Name='{self.emr_cluster_name}',
-        #LogUri='s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/',
         LogUri='{self.emr_log_uri}',
 
         ReleaseLabel='emr-5.23.0',
@@ -1599,7 +1645,9 @@ def lambda_handler(event, context):
             'SlaveInstanceType': '{self.emr_slave_instance_type}',
             'InstanceCount': {self.emr_cluster_instance_count},
             'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
-            'KeepJobFlowAliveWhenNoSteps': True
+            'KeepJobFlowAliveWhenNoSteps': True,
+            'EmrManagedMasterSecurityGroup': '{self.emr_cluster_security_group_id}',
+            'EmrManagedSlaveSecurityGroup': '{self.emr_cluster_security_group_id}'
         }},
 
         Applications=[
