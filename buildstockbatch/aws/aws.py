@@ -9,7 +9,7 @@ This class contains the object & methods that allow for usage of the library wit
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-import argparse
+import argparsea
 import base64
 import boto3
 from fs import open_fs
@@ -1647,7 +1647,8 @@ def lambda_handler(event, context):
             'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
             'KeepJobFlowAliveWhenNoSteps': True,
             'EmrManagedMasterSecurityGroup': '{self.emr_cluster_security_group_id}',
-            'EmrManagedSlaveSecurityGroup': '{self.emr_cluster_security_group_id}'
+            'EmrManagedSlaveSecurityGroup': '{self.emr_cluster_security_group_id}',
+            'ServiceAccessSecurityGroup': '{self.batch_security_group}'
         }},
 
         Applications=[
