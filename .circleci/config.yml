@@ -2,27 +2,23 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/python:3
+      - image: continuumio/miniconda3
     steps:
       - checkout
       - run:
           name: Install buildstock
           command: |
-            echo $CIRCLE_BRANCHdocker
-            python3 -m venv env
-            source env/bin/activate
+            conda install -c conda-forge -y -q scipy numpy pandas "pyarrow>=0.14.1" dask joblib pyyaml
             pip install .[dev] --progress-bar off
       - run:
           name: Run PyTest
           command: |
-            source env/bin/activate
             pytest -v
       - run:
           name: Run coverage tests
           when: always
           command: |
             set +e
-            source env/bin/activate
             coverage run --source=buildstockbatch -m pytest > /dev/null 2>&1
             coverage report -m
             coverage html -d /tmp/coverage_report
@@ -30,7 +26,6 @@ jobs:
           name: Run style checks
           when: always
           command: |
-            source env/bin/activate
             flake8 buildstockbatch
       - store_artifacts:
           path: /tmp/coverage_report
@@ -39,7 +34,7 @@ jobs:
           name: Build documentation
           when: always
           command: |
-            source env/bin/activate
+            apt-get install make
             cd docs
             make html
             mkdir /tmp/docs
