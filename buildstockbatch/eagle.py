@@ -323,6 +323,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Only validate the project YAML file and references. Nothing is executed',
         action='store_true'
     )
+    group.add_argument(
+        '--samplingonly',
+        help='Run the sampling only.',
+        action='store_true'
+    )
 
     # parse CLI arguments
     args = parser.parse_args(argv)
@@ -363,12 +368,13 @@ def user_cli(argv=sys.argv[1:]):
     env['PROJECTFILE'] = project_filename
     env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
     env['MEASURESONLY'] = str(int(args.measures_only))
+    env['SAMPLINGONLY'] = str(int(args.samplingonly))
     subargs = [
         'sbatch',
         '--time={}'.format(cfg['eagle'].get('sampling', {}).get('time', 60)),
         '--account={}'.format(cfg['eagle']['account']),
         '--nodes=1',
-        '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY',
+        '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY',
         '--output=sampling.out',
         eagle_sh
     ]
@@ -410,13 +416,17 @@ def main():
     post_process = get_bool_env_var('POSTPROCESS')
     upload_only = get_bool_env_var('UPLOADONLY')
     measures_only = get_bool_env_var('MEASURESONLY')
+    sampling_only = get_bool_env_var('SAMPLINGONLY')
     if job_array_number:
         # if job array number is non-zero, run the batch job
+        # Simulation should not be scheduled for sampling only
+        assert(not sampling_only)
         batch.run_job_batch(job_array_number)
     elif post_process:
         # else, we might be in a post-processing step
-        # Postprocessing should not have been scheduled if measures only are run
+        # Postprocessing should not have been scheduled if measures only or sampling only are run
         assert(not measures_only)
+        assert(not sampling_only)
         if upload_only:
             batch.process_results(skip_combine=True, force_upload=True)
         else:
@@ -425,7 +435,7 @@ def main():
         # default job_array_number == 0 task is to kick the whole BuildStock
         # process off, that is, to create samples and then create batch jobs
         # to run them
-        batch.run_batch()
+        batch.run_batch(sampling_only)
 
 
 if __name__ == '__main__':
