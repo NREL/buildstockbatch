@@ -6,12 +6,12 @@ cluster = YarnCluster(
     deploy_mode='local',
     worker_vcores=2,
     worker_memory='15 GB',
-    n_workers=16
+    n_workers=2
 )
 
 client = Client(cluster)
 from buildstockbatch.postprocessing import combine_results, create_athena_tables
-results_s3_loc = 's3://buildstockbatch-test7/ragertest7/results/'
+results_s3_loc = 's3://buildstockbatch-test8/ragertest8/results/'
 full_path = 'simulation_output/up01/bldg0000563/run/enduse_timeseries.parquet'
 
 from fs import open_fs
@@ -30,10 +30,10 @@ combine_results(results_s3_loc)
 
 conf = dict(
     region_name='us-west-2',
-    athena=dict(database_name='ragertest7',
+    athena=dict(database_name='ragertest8',
                 glue_service_role='service-role/AWSGlueServiceRole-default',
                 max_crawling_time=600)
     )
 
-create_athena_tables(conf, 'buildstockbatch-test7', 'ragertest7/results/')
+create_athena_tables(conf, None, 'buildstockbatch-test8', 'ragertest8/results/')
 

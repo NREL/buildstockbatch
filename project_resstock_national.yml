@@ -41,10 +41,10 @@ eagle:
     n_workers: 3
 aws:
   # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
-  job_identifier: ragertest7
+  job_identifier: ragertest8
   s3:
-    bucket: buildstockbatch-test7
-    prefix: ragertest7
+    bucket: buildstockbatch-test8
+    prefix: ragertest8
   region: us-west-2
   use_spot: true
   # Percent of on-demand for max bid on spot

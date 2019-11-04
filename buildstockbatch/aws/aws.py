@@ -1034,8 +1034,7 @@ class AwsBatchEnv(AwsJobBase):
       "Next": "Notify EMR Job Failure"
     }},
     "Job Failure": {{
-      "Type": "Fail",
-      "End": true
+      "Type": "Fail"
     }}
   }}
 }}
@@ -1530,8 +1529,8 @@ class AwsBatchEnv(AwsJobBase):
 
             logger.info("EMR Instance Profile created")
 
-            print(self.emr_instance_profile_name)
-            print(self.emr_job_flow_role_arn)
+            #print(self.emr_instance_profile_name)
+            #print(self.emr_job_flow_role_arn)
 
             response = self.iam.add_role_to_instance_profile(
                 InstanceProfileName=self.emr_instance_profile_name,
