@@ -9,7 +9,7 @@ This class contains the object & methods that allow for usage of the library wit
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-import argparsea
+import argparse
 import base64
 import boto3
 from fs import open_fs
@@ -339,7 +339,7 @@ class AwsBatchEnv(AwsJobBase):
             VpcId=self.vpc_id
         )
 
-        print(priv_response_1)
+        #print(priv_response_1)
 
         self.priv_vpc_subnet_id_1 = priv_response_1['Subnet']['SubnetId']
 
@@ -1336,7 +1336,7 @@ class AwsBatchEnv(AwsJobBase):
                             except Exception as e:
                                 rt_counter = rt_counter -1
                                 if 'DependencyViolation' in str(e):
-                                    print(str(e))
+                                    #print(str(e))
                                     logger.info(
                                         "Waiting for association to be released before deleting route table.  Sleeping...")
                                     time.sleep(5)
@@ -1448,7 +1448,7 @@ class AwsBatchEnv(AwsJobBase):
                 GroupName=self.emr_cluster_security_group_name,
                 VpcId=self.vpc_id
             )
-            print(response)
+            #print(response)
             self.emr_cluster_security_group_id = response['GroupId']
 
         except Exception as e:
@@ -1464,8 +1464,7 @@ class AwsBatchEnv(AwsJobBase):
                         },
                     ]
                 )
-                from pprint import pprint
-                pprint(response)
+
                 self.emr_cluster_security_group_id = response['SecurityGroups'][0]['GroupId']
             else:
                 raise
@@ -1521,33 +1520,33 @@ class AwsBatchEnv(AwsJobBase):
             policies_list=[emr_policy]
         )
 
-        #try:
-        print("INSTANCEPROFILE")
-        response = self.iam.create_instance_profile(
-            InstanceProfileName=self.emr_instance_profile_name
-        )
+        try:
+            #print("INSTANCEPROFILE")
+            response = self.iam.create_instance_profile(
+                InstanceProfileName=self.emr_instance_profile_name
+            )
 
-        self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+            self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
 
-        logger.info("EMR Instance Profile created")
+            logger.info("EMR Instance Profile created")
 
-        print(self.emr_instance_profile_name)
-        print(self.emr_job_flow_role_arn)
+            print(self.emr_instance_profile_name)
+            print(self.emr_job_flow_role_arn)
 
-        response = self.iam.add_role_to_instance_profile(
-            InstanceProfileName=self.emr_instance_profile_name,
-            RoleName=self.emr_job_flow_role_name
-        )
+            response = self.iam.add_role_to_instance_profile(
+                InstanceProfileName=self.emr_instance_profile_name,
+                RoleName=self.emr_job_flow_role_name
+            )
 
-        #except Exception as e:
-        #    if 'EntityAlreadyExists' in str(e):
-        #        logger.info('EMR Instance Profile not created - already exists')
-        #        response = self.iam.get_instance_profile(
-        #            InstanceProfileName=self.emr_instance_profile_name
-        #        )
-        #        self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
+        except Exception as e:
+            if 'EntityAlreadyExists' in str(e):
+                logger.info('EMR Instance Profile not created - already exists')
+                response = self.iam.get_instance_profile(
+                    InstanceProfileName=self.emr_instance_profile_name
+                )
+                self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
 
-        print("EMRINSTANCEPROFILE", self.emr_instance_profile_arn)
+        #print("EMRINSTANCEPROFILE", self.emr_instance_profile_arn)
 
 
 
@@ -1613,7 +1612,7 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
 
     def create_emr_cluster_function(self):
 
-        print("CREATE EMR", self.priv_vpc_subnet_id_1)
+        #print("CREATE EMR", self.priv_vpc_subnet_id_1)
 
         script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
         bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'
@@ -1706,8 +1705,8 @@ def lambda_handler(event, context):
 
         while True:
             try:
-                print(self.lambda_emr_job_step_function_name)
-                print('lambda role', self.lambda_emr_job_step_execution_role_arn)
+                #print(self.lambda_emr_job_step_function_name)
+                #print('lambda role', self.lambda_emr_job_step_execution_role_arn)
 
                 self.aws_lambda.create_function(
                     FunctionName=self.lambda_emr_job_step_function_name,
