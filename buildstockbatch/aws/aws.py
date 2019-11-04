@@ -1592,7 +1592,7 @@ conf = dict(
                 max_crawling_time=600)
     )
 
-create_athena_tables(conf, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/')
+create_athena_tables(conf, None, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/')
 
 '''
 
