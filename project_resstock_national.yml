@@ -57,7 +57,7 @@ aws:
    slave_instance_type: r5.4xlarge
    cluster_instance_count: 3
    slave_memory_size: 15
-   n_workers: 16
+   n_workers: 2
    worker_vcores: 2
    simulation_output_full_path: simulation_output/up01/bldg0000563/run/enduse_timeseries.parquet
 
