@@ -1031,7 +1031,7 @@ class AwsBatchEnv(AwsJobBase):
         "Message": "EMR job failed",
         "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
       }},
-      "Next": "Notify EMR Job Failure"
+      "Next": "Job Failure"
     }},
     "Job Failure": {{
       "Type": "Fail"
