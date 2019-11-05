@@ -1081,6 +1081,21 @@ class AwsBatchEnv(AwsJobBase):
 
     def clean(self):
 
+        # Get our vpc:
+
+        response = self.ec2.describe_vpcs(
+            Filters=[
+                {
+                    'Name': 'tag:Name',
+                    'Values': [
+                        self.vpc_name,
+                    ]
+                },
+            ]
+        )
+
+        self.vpc_id = response['Vpcs'][0]['VpcId']
+
         """
         Responsible for cleaning artifacts for EMR.
         """
@@ -1119,11 +1134,18 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
+        logger.info("Removing egress from default security group.")
+        for group in default_sg_response['SecurityGroups']:
+            #print(group)
+            #print(self.vpc_id)
+            if group['VpcId'] == self.vpc_id:
+                default_group_id = group['GroupId']
+                dsg = self.ec2r.SecurityGroup(default_group_id)
+                #print(dsg)
+                #print(len(dsg.ip_permissions_egress))
+                if len(dsg.ip_permissions_egress):
+                    response =  dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
-        default_group_id = default_sg_response['SecurityGroups'][0]['GroupId']
-        dsg = self.ec2r.SecurityGroup(default_group_id)
-        if len(dsg.ip_permissions_egress):
-            dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
         sg_response = self.ec2.describe_security_groups(
             Filters=[
@@ -1152,7 +1174,7 @@ class AwsBatchEnv(AwsJobBase):
                     )
                     break
                 except:
-                    raise
+
                     logger.info("Waiting for security group ingress rules to be removed ...")
                     time.sleep(5)
 
@@ -1507,6 +1529,14 @@ class AwsBatchEnv(AwsJobBase):
                 "glue:CreateCrawler"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": "arn:aws:iam::*:role/service-role/AWSGlueServiceRole-default"
         }
     ]
 }'''
