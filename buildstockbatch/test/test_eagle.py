@@ -26,7 +26,7 @@ def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
     assert '0' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
@@ -39,10 +39,11 @@ def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' in mock_subprocess.run.call_args[0][0]
     assert '0' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
+    assert '0' == mock_subprocess.run.call_args[1]['env']['SAMPLINGONLY']
 
     mock_subprocess.reset_mock()
     shutil.rmtree(results_dir)
@@ -52,10 +53,25 @@ def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures
     assert '--time=20' in mock_subprocess.run.call_args[0][0]
     assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
     assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
-    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY' in mock_subprocess.run.call_args[0][0]
     assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
     assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
     assert '1' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
+    assert '0' == mock_subprocess.run.call_args[1]['env']['SAMPLINGONLY']
+
+    mock_subprocess.reset_mock()
+    shutil.rmtree(results_dir)
+    argv = ['--samplingonly', project_filename]
+    user_cli(argv)
+    mock_subprocess.run.assert_called_once()
+    assert '--time=20' in mock_subprocess.run.call_args[0][0]
+    assert '--account=testaccount' in mock_subprocess.run.call_args[0][0]
+    assert '--nodes=1' in mock_subprocess.run.call_args[0][0]
+    assert '--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY' in mock_subprocess.run.call_args[0][0]
+    assert '--output=sampling.out' in mock_subprocess.run.call_args[0][0]
+    assert '--qos=high' not in mock_subprocess.run.call_args[0][0]
+    assert '1' == mock_subprocess.run.call_args[1]['env']['SAMPLINGONLY']
+    assert '0' == mock_subprocess.run.call_args[1]['env']['MEASURESONLY']
 
 
 @patch('buildstockbatch.eagle.subprocess')
