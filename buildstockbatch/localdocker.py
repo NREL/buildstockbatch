@@ -126,11 +126,15 @@ class LocalDockerBatch(BuildStockBatchBase):
 
         cls.cleanup_sim_dir(sim_dir)
 
-    def run_batch(self, n_jobs=-1, measures_only=False):
+    def run_batch(self, n_jobs=-1, measures_only=False, sampling_only=False):
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        if sampling_only:
+            return
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         run_building_d = functools.partial(
@@ -222,6 +226,8 @@ def main():
                        'upload flag in yaml', action='store_true')
     group.add_argument('--validateonly', help='Only validate the project YAML file and references. Nothing is executed',
                        action='store_true')
+    group.add_argument('--samplingonly', help='Run the sampling only.',
+                       action='store_true')
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
@@ -232,8 +238,8 @@ def main():
         return True
     batch = LocalDockerBatch(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
-        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only)
-    if args.measures_only:
+        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only, sampling_only=args.samplingonly)
+    if args.measures_only or args.samplingonly:
         return
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
