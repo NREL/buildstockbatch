@@ -43,7 +43,6 @@ measure-spec:
   measure_dir_name: str(required=True)
   arguments: map(required=False)
 
-
 upgrade-spec:
   upgrade_name: str(required=True)
   options: list(include('option-spec'), required=True)
