@@ -18,9 +18,19 @@ from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.localdocker import LocalDockerBatch
 from buildstockbatch.base import BuildStockBatchBase
 from unittest.mock import patch
+from testfixtures import LogCapture
+import logging
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
+
+
+def filter_logs(logs, level):
+    filtered_logs = ''
+    for record in logs.records:
+        if record.levelname == level:
+            filtered_logs += record.msg
+    return filtered_logs
 
 
 def test_base_validation_is_static():
@@ -94,25 +104,60 @@ def test_validation_integration(project_file, expected):
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-measures-bad-2.yml')
 ])
-def test_bad_measures(project_file):
-    try:
-        BuildStockBatchBase.validate_measures_and_arguments(project_file)
-    except ValueError as er:
-        er = str(er)
-        assert "ReportingMeasure2 does not exist" in er
-        assert "Wrong argument value type for begin_day_of_month" in er
-        assert "Found unexpected argument key output_variable" in er
-        assert "Found unexpected argument value Huorly" in er
+def test_bad_reference_scenario(project_file):
 
-    else:
-        raise Exception("measures_and_arguments was supposed to raise ValueError for enforce-validate-measures-bad.yml")
+    with LogCapture(level=logging.INFO) as logs:
+        BuildStockBatchBase.validate_reference_scenario(project_file)
+        warning_logs = filter_logs(logs, 'WARNING')
+        assert "non-existing upgrade' does not match " in warning_logs
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml')
+])
+def test_good_reference_scenario(project_file):
+    with LogCapture(level=logging.INFO) as logs:
+        assert BuildStockBatchBase.validate_reference_scenario(project_file)
+        warning_logs = filter_logs(logs, 'WARNING')
+        error_logs = filter_logs(logs, 'ERROR')
+        assert warning_logs == ''
+        assert error_logs == ''
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-measures-bad-2.yml')
+])
+def test_bad_measures(project_file):
+
+    with LogCapture(level=logging.INFO) as logs:
+        try:
+            BuildStockBatchBase.validate_measures_and_arguments(project_file)
+        except ValueError as er:
+            er = str(er)
+            warning_logs = filter_logs(logs, 'WARNING')
+            assert "Required argument calendar_year for" in warning_logs
+            assert "ReportingMeasure2 does not exist" in er
+            assert "Wrong argument value type for begin_day_of_month" in er
+            assert "Found unexpected argument key output_variable" in er
+            assert "Found unexpected argument value Huorly" in er
+            assert "Invalid multiplier 'Fixed(1)" in er
+            assert "Required argument include_enduse_subcategories" in er
+
+        else:
+            raise Exception("measures_and_arguments was supposed to raise ValueError for"
+                            " enforce-validate-measures-bad.yml")
 
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml'),
 ])
 def test_good_measures(project_file):
-    assert BuildStockBatchBase.validate_measures_and_arguments(project_file)
+    with LogCapture(level=logging.INFO) as logs:
+        assert BuildStockBatchBase.validate_measures_and_arguments(project_file)
+        warning_logs = filter_logs(logs, 'WARNING')
+        error_logs = filter_logs(logs, 'ERROR')
+        assert warning_logs == ''
+        assert error_logs == ''
 
 
 @pytest.mark.parametrize("project_file", [
