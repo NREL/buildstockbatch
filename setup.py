@@ -84,7 +84,7 @@ setuptools.setup(
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
-            'buildstock_aws=buildstockbatch.aws:main'
+            'buildstock_aws=buildstockbatch.aws.aws:main'
         ]
     },
     cmdclass={'test': PyTest},

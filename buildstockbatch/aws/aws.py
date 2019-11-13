@@ -151,9 +151,6 @@ class AwsDynamo(AwsJobBase):
                 raise
 
 
-
-
-
 class AwsBatchEnv(AwsJobBase):
     """
     Class to manage the AWS Batch environment and Step Function controller.
@@ -1550,7 +1547,6 @@ class AwsBatchEnv(AwsJobBase):
         )
 
         try:
-            #print("INSTANCEPROFILE")
             response = self.iam.create_instance_profile(
                 InstanceProfileName=self.emr_instance_profile_name
             )
@@ -1558,9 +1554,6 @@ class AwsBatchEnv(AwsJobBase):
             self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
 
             logger.info("EMR Instance Profile created")
-
-            #print(self.emr_instance_profile_name)
-            #print(self.emr_job_flow_role_arn)
 
             response = self.iam.add_role_to_instance_profile(
                 InstanceProfileName=self.emr_instance_profile_name,
@@ -1574,10 +1567,6 @@ class AwsBatchEnv(AwsJobBase):
                     InstanceProfileName=self.emr_instance_profile_name
                 )
                 self.emr_instance_profile_arn = response['InstanceProfile']['Arn']
-
-        #print("EMRINSTANCEPROFILE", self.emr_instance_profile_arn)
-
-
 
     def upload_assets(self):
 
@@ -1597,7 +1586,6 @@ cluster = YarnCluster(
 client = Client(cluster)
 from buildstockbatch.postprocessing import combine_results, create_athena_tables
 results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results/'
-full_path = '{self.emr_simulation_output_full_path}'
 
 from fs import open_fs
 import pandas as pd
@@ -1640,9 +1628,6 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
-
-        #print("CREATE EMR", self.priv_vpc_subnet_id_1)
-
         script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
         bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'
 
@@ -1878,20 +1863,8 @@ class AwsBatch(DockerBatchBase):
         """
         logger.info("Beginning cleanup of AWS resources...")
 
-        # firehose_env = AwsFirehose(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        # firehose_env.clean()
-
-        #lambda_env = AwsLambda(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        #lambda_env.clean()
-
-        #emr_env = AwsEMR(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        #emr_env.clean()
-
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         batch_env.clean()
-
-        # glue_env = AWSGlueTransform(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        # glue_env.clean()
 
         sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
         sns_env.clean()
@@ -2002,8 +1975,6 @@ class AwsBatch(DockerBatchBase):
                 on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
             )
 
-
-
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         logger.info(
@@ -2040,7 +2011,6 @@ class AwsBatch(DockerBatchBase):
         dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
         dynamo_env.create_summary_table()
         dynamo_env.add_dynamo_task_permissions()
-
 
         # State machine
         batch_env.create_state_machine_roles()

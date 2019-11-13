@@ -204,8 +204,7 @@ class AwsJobBase():
         self.emr_worker_memory = aws_config['emr']['slave_memory_size']
         self.emr_total_workers = aws_config['emr']['n_workers']
         self.emr_worker_vcores = aws_config['emr']['worker_vcores']
-        self.emr_simulation_output_full_path = aws_config['emr']['simulation_output_full_path']
-        self.emr_instance_profile_name=f'{self.job_identifier}_emr_instance_profile'
+        self.emr_instance_profile_name = f'{self.job_identifier}_emr_instance_profile'
 
         # Lambda
 
@@ -292,7 +291,7 @@ state machine will then launch an EMR cluster with a job to combine the results 
         f.write(content)
         logger.info(f'{file_name} written.')
 
-    def upload_s3_file(self,file_name, s3_destination_bucket, s3_destination_key):
+    def upload_s3_file(self, file_name, s3_destination_bucket, s3_destination_key):
         self.s3.upload_file(file_name, s3_destination_bucket, s3_destination_key)
 
     def zip_and_s3_load(self, string_to_zip, file_name, zip_name, s3_destination_bucket, s3_destination_key):
