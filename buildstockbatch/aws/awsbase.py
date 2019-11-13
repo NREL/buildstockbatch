@@ -285,27 +285,3 @@ Notifications of execution progress will be sent to {self.operator_email} once t
 Summary results are transimitted to the DynamoDB table {self.dynamo_table_name}.  Once processing is complete the
 state machine will then launch an EMR cluster with a job to combine the results and create an AWS Glue table. 
 """
-
-    def write_file(self, file_name, content):
-        f = open(file_name, "w")
-        f.write(content)
-        logger.info(f'{file_name} written.')
-
-    def upload_s3_file(self, file_name, s3_destination_bucket, s3_destination_key):
-        self.s3.upload_file(file_name, s3_destination_bucket, s3_destination_key)
-
-    def zip_and_s3_load(self, string_to_zip, file_name, zip_name, s3_destination_bucket, s3_destination_key):
-        zip_archive = zipfile.ZipFile(zip_name, mode='w', compression=zipfile.ZIP_STORED)
-
-        info = zipfile.ZipInfo(file_name)
-        info.date_time = time.localtime()
-        info.external_attr = 0o100755 << 16
-
-        zip_archive.writestr(info, string_to_zip, zipfile.ZIP_DEFLATED)
-
-        zip_archive.close()
-
-        self.upload_s3_file(zip_name, s3_destination_bucket, s3_destination_key)
-
-        logger.info(f'{zip_name} uploaded to bucket {s3_destination_bucket} under key {s3_destination_key}')
-

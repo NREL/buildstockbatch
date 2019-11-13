@@ -13,7 +13,7 @@ import argparse
 import base64
 import boto3
 from fs import open_fs
-from fs.copy import copy_fs
+from fs.copy import copy_fs, copy_file
 from fs.walk import Walker
 import gzip
 import itertools
@@ -33,6 +33,7 @@ import tempfile
 import re
 import time
 import io
+import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.postprocessing import (
@@ -1038,9 +1039,6 @@ class AwsBatchEnv(AwsJobBase):
 
         '''
 
-        #print(job_definition)
-
-
         while True:
 
             try:
@@ -1570,8 +1568,6 @@ class AwsBatchEnv(AwsJobBase):
 
     def upload_assets(self):
 
-        upload_path = os.path.dirname(os.path.abspath(__file__))
-
         bsb_post_script = f'''
 from dask_yarn import YarnCluster
 from dask.distributed import Client
@@ -1619,12 +1615,18 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
 
         '''
 
-        self.write_file(f'{upload_path}/s3_assets/bsb_post.py', bsb_post_script)
-        self.write_file(f'{upload_path}/s3_assets/bsb_post.sh', bsb_post_bash)
         logger.info('Uploading EMR support assets...')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.py', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.py')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bsb_post.sh', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh')
-        self.upload_s3_file(f'{upload_path}/s3_assets/bootstrap-dask-custom', self.s3_bucket, f'{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom')
+        s3fs = open_fs(f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}")
+        with s3fs.open(f'{self.s3_emr_folder_name}/bsb_post.py', 'w', encoding='utf-8') as f:
+            f.write(bsb_post_script)
+        with s3fs.open(f'{self.s3_emr_folder_name}/bsb_post.sh', 'w', encoding='utf-8') as f:
+            f.write(bsb_post_bash)
+        copy_file(
+            os.path.join(os.path.abspath(__file__)),
+            's3_assets/bootstrap-dask-custom',
+            s3fs,
+            f'{self.s3_emr_folder_name}/bootstrap-dask-custom'
+        )
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
@@ -1710,18 +1712,17 @@ def lambda_handler(event, context):
     pprint(response)
 
 '''
-
-        self.zip_and_s3_load(function_script,
-                             'emr_function.py',
-                             'emr_function.py.zip',
-                             self.s3_bucket,
-                             f'{self.s3_lambda_code_emr_cluster_key}')
+        with io.BytesIO() as f:
+            with zipfile.ZipFile(f, mode='w', compression=zipfile.ZIP_STORED) as zf:
+                zi = zipfile.ZipInfo('emr_function.py')
+                zi.date_time = time.localtime()
+                zi.external_attr = 0o100755 << 16
+                zf.writestr(zi, function_script, zipfile.ZIP_DEFLATED)
+            f.seek(0)
+            self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_code_emr_cluster_key)
 
         while True:
             try:
-                #print(self.lambda_emr_job_step_function_name)
-                #print('lambda role', self.lambda_emr_job_step_execution_role_arn)
-
                 self.aws_lambda.create_function(
                     FunctionName=self.lambda_emr_job_step_function_name,
                     Runtime='python3.7',
