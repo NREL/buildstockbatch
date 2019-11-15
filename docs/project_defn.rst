@@ -170,7 +170,8 @@ To include certain parameter option combinations, specify them in a list or by u
     - Vintage|1950s
     - Location Region|CR02
 
-The above example would include buildings in climate region 2 built in the 1950s.
+The above example would include buildings in climate region 2 built in the 1950s. A list, except for that inside an
+``or`` block is always interpreted as ``and`` block.
 
 Or
 ..
@@ -190,6 +191,42 @@ Not
 .. code-block:: yaml
 
   not: Heating Fuel|Propane
+
+This will select buildings that does not have Propane Fuel type.
+
+.. code-block:: yaml
+
+    not:
+      - Vintage|1950s
+      - Location Region|CR02
+
+This will select buildings that are not both Vintage 1950s **and** in location region CR02. It should be noted that this
+**will** select buildings of 1950s vintage provided they aren't in region CR02. It will also select buildings in
+location CR02 provided they aren't of vintage 1950s. If only those buildings that are neither of Vintage 1950s nor in
+region CR02 needs to be selected, the following logic should be used:
+
+.. code-block:: yaml
+
+      - not: Vintage|1950s
+      - not: Location Region|CR02
+
+or,
+
+.. code-block:: yaml
+
+      and:
+        - not: Vintage|1950s
+        - not: Location Region|CR02
+
+or,
+
+.. code-block:: yaml
+
+    not:
+      or:
+        - Vintage|1950s
+        - Location Region|CR02
+
 
 Combining Logic
 ...............

@@ -27,7 +27,7 @@ upgrades:
           - value: 3.9
             multiplier: Size, Heating System (kBtu/h)
         lifetime: 20
-        reference_scenario: Reference 80% AFUE Furnace (gas, propane, oil)
+
       - option: HVAC System Heating Propane|Propane Furnace, 96% AFUE
         apply_logic:
           - HVAC System Heating Propane|Propane Furnace, 60% AFUE
@@ -37,7 +37,7 @@ upgrades:
           - value: 3.9
             multiplier: Size, Heating System (kBtu/h)
         lifetime: 20
-        reference_scenario: Reference 80% AFUE Furnace (gas, propane, oil)
+
       - option: HVAC System Heating Fuel Oil|Oil Furnace, 95% AFUE
         apply_logic:
           or:
@@ -49,7 +49,7 @@ upgrades:
           - value: 3.9
             multiplier: Size, Heating System (kBtu/h)
         lifetime: 15
-        reference_scenario: Reference 80% AFUE Furnace (gas, propane, oil)
+    reference_scenario: Reference 80% AFUE Furnace (gas, propane, oil)
   - upgrade_name: LEDs
     options:
       - option: Lighting|100% LED
