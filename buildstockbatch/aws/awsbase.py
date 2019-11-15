@@ -174,7 +174,7 @@ class AwsJobBase():
 
         self.s3_bucket = aws_config['s3']['bucket']
         self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
-        self.s3_bucket_prefix = aws_config['s3']['prefix']
+        self.s3_bucket_prefix = aws_config['s3']['prefix'].rstrip('/')
         #self.s3_results_bucket = f'{self.s3_bucket}'
         #self.s3_results_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         #self.s3_results_backup_bucket = f"{self.s3_bucket}-backups"

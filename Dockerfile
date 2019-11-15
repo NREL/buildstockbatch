@@ -16,7 +16,7 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.11-Linux-x86
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc
 
-RUN conda install -c conda-forge -y pandas dask pyarrow && \
+RUN conda install -c conda-forge -y pandas dask pyarrow "python-dateutil<2.8.1" && \
     python -m pip install --upgrade pip
 
 COPY . /buildstock-batch/

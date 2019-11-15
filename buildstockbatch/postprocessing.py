@@ -354,7 +354,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     return s3_bucket, s3_prefix_output
 
 
-def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
+def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     logger.info("Creating Athena tables using glue crawler")
 
     region_name = aws_conf.get('region_name', 'us-west-2')
@@ -370,12 +370,8 @@ def create_athena_tables(aws_conf, output_dir, s3_bucket, s3_prefix):
             'Exclusions': []
         }]
     }
-    if output_dir is None:
-        output_folder_name = s3_prefix.split('/')[-1]
-    else:
-        output_folder_name = os.path.basename(output_dir)
-    crawler_name = db_name+'_'+output_folder_name
-    tbl_prefix = output_folder_name + '_'
+    crawler_name = db_name + '_' + tbl_prefix
+    tbl_prefix = tbl_prefix + '_'
 
     def create_crawler():
         glueClient.create_crawler(Name=crawler_name,

@@ -65,6 +65,7 @@ setuptools.setup(
         'boto3>=1.9.66',
         'fs',
         'fs-s3fs',
+        'awsretry',
     ],
     extras_require={
         'dev': [

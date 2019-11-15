@@ -276,4 +276,4 @@ class BuildStockBatchBase(object):
         if 's3' in aws_conf or force_upload:
             s3_bucket, s3_prefix = upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
-                create_athena_tables(aws_conf, self.output_dir, s3_bucket, s3_prefix)
+                create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)

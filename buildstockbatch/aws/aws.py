@@ -10,6 +10,7 @@ This class contains the object & methods that allow for usage of the library wit
 :license: BSD-3
 """
 import argparse
+from awsretry import AWSRetry
 import base64
 import boto3
 from fs import open_fs
@@ -184,8 +185,6 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.propagate = False
 
-
-
     def __repr__(self):
 
         return super().__repr__()
@@ -244,11 +243,9 @@ class AwsBatchEnv(AwsJobBase):
             policies_list=[lambda_policy]
         )
 
-
     def create_vpc(self):
-
         cidrs_in_use = set()
-        vpc_response = self.ec2.describe_vpcs()
+        vpc_response = AWSRetry.backoff()(self.ec2.describe_vpcs)()
         for vpc in vpc_response['Vpcs']:
             cidrs_in_use.add(vpc['CidrBlock'])
             for cidr_assoc in vpc['CidrBlockAssociationSet']:
@@ -1088,8 +1085,8 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
-
-        self.vpc_id = response['Vpcs'][0]['VpcId']
+        # FIXME: What if the vpc didn't get created?
+        # self.vpc_id = response['Vpcs'][0]['VpcId']
 
         """
         Responsible for cleaning artifacts for EMR.
@@ -1284,7 +1281,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Find Nat Gateways and VPCs
 
-        response = self.ec2.describe_vpcs(
+        response = AWSRetry.backoff()(self.ec2.describe_vpcs)(
             Filters=[
                 {
                     'Name': 'tag:Name',
@@ -1568,9 +1565,17 @@ class AwsBatchEnv(AwsJobBase):
 
     def upload_assets(self):
 
+        tbl_prefix = self.s3_bucket_prefix.split('/')[-1]
+        if not tbl_prefix:
+            tbl_prefix = self.job_identifier
+
         bsb_post_script = f'''
 from dask_yarn import YarnCluster
 from dask.distributed import Client
+import json
+from fs import open_fs
+
+from buildstockbatch.postprocessing import combine_results, create_athena_tables
 
 cluster = YarnCluster(
     deploy_mode='local',
@@ -1580,31 +1585,17 @@ cluster = YarnCluster(
 )
 
 client = Client(cluster)
-from buildstockbatch.postprocessing import combine_results, create_athena_tables
-results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results/'
 
-from fs import open_fs
-import pandas as pd
-import os
-from fs.copy import copy_file
-
-s3fs = open_fs(results_s3_loc)
-
-s3fs.getinfo(full_path).is_file
-
-with s3fs.open(full_path, 'rb') as f:
-    df = pd.read_parquet(f, engine='pyarrow')
-
+results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results'
 combine_results(results_s3_loc)
 
-conf = dict(
-    region_name='us-west-2',
-    athena=dict(database_name='{self.job_identifier}',
-                glue_service_role='service-role/AWSGlueServiceRole-default',
-                max_crawling_time=600)
-    )
+s3fs = open_fs('s3://{self.s3_bucket}/{self.s3_bucket_prefix}')
+with s3fs.open('config.json', 'r') as f:
+    cfg = json.load(f)
 
-create_athena_tables(conf, None, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/')
+conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
+
+create_athena_tables(conf, {tbl_prefix}, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results')
 
 '''
 
@@ -1617,15 +1608,16 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
 
         logger.info('Uploading EMR support assets...')
         s3fs = open_fs(f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}")
-        with s3fs.open(f'{self.s3_emr_folder_name}/bsb_post.py', 'w', encoding='utf-8') as f:
+        emr_folder = s3fs.makedir(self.s3_emr_folder_name)
+        with emr_folder.open('bsb_post.py', 'w', encoding='utf-8') as f:
             f.write(bsb_post_script)
-        with s3fs.open(f'{self.s3_emr_folder_name}/bsb_post.sh', 'w', encoding='utf-8') as f:
+        with emr_folder.open('bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
         copy_file(
-            os.path.join(os.path.abspath(__file__)),
+            os.path.dirname(os.path.abspath(__file__)),
             's3_assets/bootstrap-dask-custom',
-            s3fs,
-            f'{self.s3_emr_folder_name}/bootstrap-dask-custom'
+            emr_folder,
+            'bootstrap-dask-custom'
         )
         logger.info('EMR support assets uploaded.')
 
@@ -1803,7 +1795,7 @@ class AwsBatch(DockerBatchBase):
         self.ecr = boto3.client('ecr', region_name=self.region)
         self.s3 = boto3.client('s3', region_name=self.region)
         self.s3_bucket = self.cfg['aws']['s3']['bucket']
-        self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix']
+        self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix'].rstrip('/')
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
         self.batch_array_size = self.cfg['aws']['batch_array_size']
         self.boto3_session = boto3.Session(region_name=self.region)
@@ -1997,7 +1989,7 @@ class AwsBatch(DockerBatchBase):
 
         batch_env.create_job_definition(
             image_url,
-            command=['python3', '/buildstock-batch/buildstockbatch/aws.py'],
+            command=['python3', '-m', 'buildstockbatch.aws.aws'],
             vcpus=1,
             memory=1024,
             env_vars=env_vars
@@ -2085,7 +2077,7 @@ class AwsBatch(DockerBatchBase):
         logger.debug('Reading config')
         with io.BytesIO() as f:
             s3.download_fileobj(bucket, '{}/config.json'.format(prefix), f)
-            cfg = json.loads(f.getvalue(), encoding='utf-8')
+            cfg = json.loads(f.getvalue())
 
         logger.debug('Getting job information')
         jobs_file_path = sim_dir.parent / 'jobs.tar.gz'
@@ -2130,17 +2122,18 @@ class AwsBatch(DockerBatchBase):
             ))
             walker = Walker(exclude_dirs=asset_dirs)
             s3fs = open_fs(f"s3://{bucket}/{prefix}")
-            upload_fs = s3fs.makedirs(
-                f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"
-            )
+            upload_path = f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"
+            if s3fs.isdir(upload_path):
+                s3fs.removetree(upload_path)
+            upload_fs = s3fs.makedirs(upload_path)
             copy_fs(
                 str(sim_dir),
                 upload_fs,
                 walker=walker,
-                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug('Upload {dst_path}')
+                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Upload {dst_path}')
             )
 
-            logger.debug('Writing output data to Firehose')
+            logger.debug('Writing output data to Dynamo')
             datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
             out_osw_filepath = sim_dir / 'out.osw'
             if os.path.isfile(out_osw_filepath):
@@ -2152,47 +2145,22 @@ class AwsBatch(DockerBatchBase):
                     dp_out = {}
                 dp_out.update(out_osw)
                 dp_out['_id'] = sim_id
+                dp_out2 = {}
                 for key in dp_out.keys():
-                    dp_out[to_camelcase(key)] = dp_out.pop(key)
-                '''
-                try:
-                    response = firehose.put_record(
-                        DeliveryStreamName=firehose_name,
-                        Record={
-                            'Data': json.dumps(dp_out) + '\n'
-                        }
-                    )
-                    logger.info(response)
-
-                except Exception as e:
-                    logger.error(str(e))
-                '''
+                    dp_out2[to_camelcase(key)] = dp_out[key]
 
                 item_def = {}
 
                 item_def.update(cls.create_dynamo_field('building_id', str(building_id)))
                 item_def.update(cls.create_dynamo_field('upgrade_idx', str(upgrade_idx)))
 
-                for key, value in dp_out.items():
+                for key, value in dp_out2.items():
                     item_def.update(cls.create_dynamo_field(key, value))
 
                 dynamo.put_item(
                     TableName=f"{job_name}_summary_table",
                     Item=item_def
                 )
-                '''
-                try:
-                    response = dynamo.put_record(
-                        DeliveryStreamName=firehose_name,
-                        Record={
-                            'Data': json.dumps(dp_out) + '\n'
-                        }
-                    )
-                    logger.info(response)
-
-                except Exception as e:
-                    logger.error(str(e))
-                '''
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
