@@ -1085,12 +1085,11 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
-        # FIXME: What if the vpc didn't get created?
-        # self.vpc_id = response['Vpcs'][0]['VpcId']
+        try:
+            self.vpc_id = response['Vpcs'][0]['VpcId']
+        except (KeyError, IndexError):
+            self.vpc_id = None
 
-        """
-        Responsible for cleaning artifacts for EMR.
-        """
         logger.info("Cleaning up EMR.")
 
         try:
@@ -1110,12 +1109,11 @@ class AwsBatchEnv(AwsJobBase):
         self.iam_helper.delete_role(self.emr_job_flow_role_name)
         self.iam_helper.delete_role(self.emr_service_role_name)
 
-
         logger.info(
-            f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
+            f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted."
+        )
 
         logger.info(f'Deleting Security group {self.emr_cluster_security_group_name}.')
-
         default_sg_response = self.ec2.describe_security_groups(
             Filters=[
                 {
@@ -1126,20 +1124,16 @@ class AwsBatchEnv(AwsJobBase):
                 },
             ]
         )
+
         logger.info("Removing egress from default security group.")
         for group in default_sg_response['SecurityGroups']:
-            #print(group)
-            #print(self.vpc_id)
             if group['VpcId'] == self.vpc_id:
                 default_group_id = group['GroupId']
                 dsg = self.ec2r.SecurityGroup(default_group_id)
-                #print(dsg)
-                #print(len(dsg.ip_permissions_egress))
                 if len(dsg.ip_permissions_egress):
-                    response =  dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
+                    response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
-
-        sg_response = self.ec2.describe_security_groups(
+        sg_response = AWSRetry.backoff()(self.ec2.describe_security_groups)(
             Filters=[
                 {
                     'Name': 'group-name',
@@ -1150,11 +1144,8 @@ class AwsBatchEnv(AwsJobBase):
             ]
         )
 
-
         try:
-
             group_id = sg_response['SecurityGroups'][0]['GroupId']
-
             sg = self.ec2r.SecurityGroup(group_id)
             if len(sg.ip_permissions):
                 sg.revoke_ingress(IpPermissions=sg.ip_permissions)
@@ -1166,7 +1157,6 @@ class AwsBatchEnv(AwsJobBase):
                     )
                     break
                 except:
-
                     logger.info("Waiting for security group ingress rules to be removed ...")
                     time.sleep(5)
 
@@ -1518,7 +1508,9 @@ class AwsBatchEnv(AwsJobBase):
                 "glue:DeleteTable",
                 "glue:ListCrawlers",
                 "glue:UpdateCrawler",
-                "glue:CreateCrawler"
+                "glue:CreateCrawler",
+                "glue:GetCrawlerMetrics",
+                "glue:BatchDeleteTable"
             ],
             "Resource": "*"
         },
@@ -1575,7 +1567,7 @@ from dask.distributed import Client
 import json
 from fs import open_fs
 
-from buildstockbatch.postprocessing import combine_results, create_athena_tables
+from postprocessing import combine_results, create_athena_tables
 
 cluster = YarnCluster(
     deploy_mode='local',
@@ -1595,7 +1587,7 @@ with s3fs.open('config.json', 'r') as f:
 
 conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
 
-create_athena_tables(conf, {tbl_prefix}, '{self.s3_bucket}', '{self.s3_bucket_prefix}/results')
+create_athena_tables(conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
 
 '''
 
@@ -1613,12 +1605,19 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
             f.write(bsb_post_script)
         with emr_folder.open('bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
+        here = os.path.dirname(os.path.abspath(__file__))
         copy_file(
-            os.path.dirname(os.path.abspath(__file__)),
+            here,
             's3_assets/bootstrap-dask-custom',
             emr_folder,
             'bootstrap-dask-custom'
         )
+        with tempfile.TemporaryFile('w+b') as f:
+            with tarfile.open(fileobj=f, mode='w:gz') as tarf:
+                tarf.add(os.path.join(here, '..', 'postprocessing.py'), arcname='postprocessing.py')
+                tarf.add(os.path.join(here, 's3_assets', 'setup_postprocessing.py'), arcname='setup.py')
+            f.seek(0)
+            emr_folder.upload('postprocessing.tar.gz', f)
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
@@ -1670,6 +1669,7 @@ def lambda_handler(event, context):
                 'Name': 'launchFromS3',
                 'ScriptBootstrapAction': {{
                     'Path': '{bootstrap_action}',
+                    'Args': ['s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz']
                 }}
             }},
         ],

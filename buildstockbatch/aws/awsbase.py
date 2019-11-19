@@ -192,7 +192,6 @@ class AwsJobBase():
         self.emr_master_instance_type = aws_config['emr']['master_instance_type']
         self.emr_slave_instance_type = aws_config['emr']['slave_instance_type']
         self.emr_cluster_instance_count = aws_config['emr']['cluster_instance_count']
-        #self.emr_ec2_key_name = aws_config['emr_ec2_key_name']
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
         self.emr_job_flow_role_name = f'{self.job_identifier}_emr_job_flow_role'

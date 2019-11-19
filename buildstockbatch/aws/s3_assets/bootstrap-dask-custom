@@ -1,74 +1,6 @@
 #!/bin/bash
-HELP="Usage: bootstrap-dask [OPTIONS]
-
-Example AWS EMR Bootstrap Action to install and configure Dask and Jupyter
-
-By default it does the following things:
-- Installs miniconda
-- Installs dask, distributed, dask-yarn, pyarrow, and s3fs. This list can be
-  extended using the --conda-packages flag below.
-- Packages this environment for distribution to the workers.
-- Installs and starts a jupyter notebook server running on port 8888. This can
-  be disabled with the --no-jupyter flag below.
-
-Options:
-    --jupyter / --no-jupyter    Whether to also install and start a Jupyter
-                                Notebook Server. Default is True.
-    --password, -pw             Set the password for the Jupyter Notebook
-                                Server. Default is 'dask-user'.
-    --conda-packages            Extra packages to install from conda.
-"
 
 set -e
-
-# Parse Inputs. This is specific to this script, and can be ignored
-# -----------------------------------------------------------------
-JUPYTER_PASSWORD="dask-user"
-EXTRA_CONDA_PACKAGES=""
-JUPYTER="true"
-
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        -h|--help)
-            echo "$HELP"
-            exit 0
-            ;;
-        --no-jupyter)
-            JUPYTER="false"
-            shift
-            ;;
-        --jupyter)
-            JUPYTER="true"
-            shift
-            ;;
-        -pw|--password)
-            JUPYTER_PASSWORD="$2"
-            shift
-            shift
-            ;;
-        --conda-packages)
-            shift
-            PACKAGES=()
-            while [[ $# -gt 0 ]]; do
-                case $1 in
-                    -*)
-                        break
-                        ;;
-                    *)
-                        PACKAGES+=($1)
-                        shift
-                        ;;
-                esac
-            done
-            EXTRA_CONDA_PACKAGES="${PACKAGES[@]}"
-            ;;
-        *)
-            echo "error: unrecognized argument: $1"
-            exit 2
-            ;;
-    esac
-done
-
 
 # -----------------------------------------------------------------------------
 # 1. Check if running on the master node. If not, there's nothing do.
@@ -106,28 +38,17 @@ conda install \
 -c conda-forge \
 -y \
 -q \
-python=3.6 \
-"distributed<2" \
-"dask<2" \
-dask-yarn>=0.4.1 \
+python=3.7 \
+"dask-yarn>=0.7.0" \
 pandas \
-pyarrow>=0.13 \
+"pyarrow>=0.14.1" \
+pandas \
 s3fs \
-nomkl \
 conda-pack \
-bokeh \
-$EXTRA_CONDA_PACKAGES
+tornado=5 
 
-conda update -c conda-forge -y pyarrow
-
-pip install fs-s3fs
-
-aws s3 cp s3://buildstockbatch-test/noeltest21/buildstockbatch.tar.gz $HOME/buildstockbatch.tar.gz
-cd $HOME
-tar xvzf buildstockbatch.tar.gz
-rm buildstockbatch.tar.gz
-cd buildstockbatch
-pip install .
+aws s3 cp "$1" $HOME/postprocessing.tar.gz
+pip install $HOME/postprocessing.tar.gz
 
 # -----------------------------------------------------------------------------
 # 4. Package the environment to be distributed to worker nodes
@@ -150,10 +71,12 @@ conda list
 # few things easier:
 #
 # - Configure the cluster's dashboard link to show the proxied version through
-#   jupyter nbserverproxy. This allows access to the dashboard with only an ssh
+#   jupyter-server-proxy. This allows access to the dashboard with only an ssh
 #   tunnel to the notebook.
 #
 # - Specify the pre-packaged python environment, so users don't have to
+#
+# - Set the default deploy-mode to local, so the dashboard proxying works
 #
 # - Specify the location of the native libhdfs library so pyarrow can find it
 #   on the workers and the client (if submitting applications).
@@ -163,10 +86,11 @@ mkdir -p $HOME/.config/dask
 cat <<EOT >> $HOME/.config/dask/config.yaml
 distributed:
   dashboard:
-    link: "http://$(echo `ec2-metadata -p` | cut -d ":" -f 2 | cut -c 2-):{port}/status"
+    link: "/proxy/{port}/status"
 
 yarn:
   environment: /home/hadoop/environment.tar.gz
+  deploy-mode: local
 
   worker:
     env:
@@ -179,81 +103,3 @@ EOT
 # Also set ARROW_LIBHDFS_DIR in ~/.bashrc so it's set for the local user
 echo -e '\nexport ARROW_LIBHDFS_DIR=/usr/lib/hadoop/lib/native' >> $HOME/.bashrc
 
-
-# -----------------------------------------------------------------------------
-# 7. If Jupyter isn't requested, we're done
-# -----------------------------------------------------------------------------
-if [[ "$JUPYTER" == "false" ]]; then
-    exit 0
-fi
-
-
-# -----------------------------------------------------------------------------
-# 8. Install jupyter notebook server and dependencies
-#
-# We do this after packaging the worker environments to keep the tar.gz as
-# small as possible.
-#
-# We install the following packages:
-#
-# - notebook: the Jupyter Notebook Server
-# - ipywidgets: used to provide an interactive UI for the YarnCluster objects
-# - nbserverproxy: used to proxy the dask dashboard through the notebook server
-# -----------------------------------------------------------------------------
-if [[ "$JUPYTER" == "true" ]]; then
-    echo "Installing Jupyter"
-    conda install \
-    -c defaults \
-    -c conda-forge \
-    -y \
-    -q \
-    python=3.6 \
-    notebook \
-    ipywidgets \
-    nbserverproxy
-fi
-
-
-# -----------------------------------------------------------------------------
-# 9. List all packages in the client environment
-# -----------------------------------------------------------------------------
-echo "Packages installed in the client environment:"
-conda list
-
-
-# -----------------------------------------------------------------------------
-# 10. Configure Jupyter Notebook
-# -----------------------------------------------------------------------------
-echo "Configuring Jupyter"
-mkdir -p $HOME/.jupyter
-HASHED_PASSWORD=`python -c "from notebook.auth import passwd; print(passwd('$JUPYTER_PASSWORD'))"`
-cat <<EOF >> $HOME/.jupyter/jupyter_notebook_config.py
-c.NotebookApp.password = u'$HASHED_PASSWORD'
-c.NotebookApp.open_browser = False
-c.NotebookApp.ip = '0.0.0.0'
-EOF
-
-
-# -----------------------------------------------------------------------------
-# 11. Define an upstart service for the Jupyter Notebook Server
-#
-# This sets the notebook server up to properly run as a background service.
-# -----------------------------------------------------------------------------
-echo "Configuring Jupyter Notebook Upstart Service"
-cat <<EOF > /tmp/jupyter-notebook.conf
-description "Jupyter Notebook Server"
-start on runlevel [2345]
-stop on runlevel [016]
-respawn
-respawn limit unlimited
-exec su - hadoop -c "jupyter notebook" >> /var/log/jupyter-notebook.log 2>&1
-EOF
-sudo mv /tmp/jupyter-notebook.conf /etc/init/
-
-
-# -----------------------------------------------------------------------------
-# 12. Start the Jupyter Notebook Server
-# -----------------------------------------------------------------------------
-echo "Starting Jupyter Notebook Server"
-sudo initctl reload-configuration
-sudo initctl start jupyter-notebook

@@ -44,7 +44,7 @@ aws:
   job_identifier: noeltest12
   s3:
     bucket: buildstockbatch-test8
-    prefix: noeltest12d
+    prefix: noeltest12h
   region: us-west-2
   use_spot: true
   # Percent of on-demand for max bid on spot
