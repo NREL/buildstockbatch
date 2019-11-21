@@ -20,7 +20,6 @@ from fs.errors import ResourceNotFound, FileExpected, DirectoryExists
 import gzip
 import json
 import logging
-import os
 import random
 import re
 import sys

@@ -13,6 +13,7 @@ import argparse
 from awsretry import AWSRetry
 import base64
 import boto3
+from botocore.exceptions import ClientError
 from fs import open_fs
 from fs.copy import copy_fs, copy_file
 from fs.walk import Walker
@@ -333,8 +334,6 @@ class AwsBatchEnv(AwsJobBase):
             AvailabilityZone=f"{self.region}a",
             VpcId=self.vpc_id
         )
-
-        #print(priv_response_1)
 
         self.priv_vpc_subnet_id_1 = priv_response_1['Subnet']['SubnetId']
 
@@ -934,7 +933,6 @@ class AwsBatchEnv(AwsJobBase):
 
         '''
 
-
         sns_policy = f'''{{
             "Version": "2012-10-17",
             "Statement": [
@@ -1156,7 +1154,7 @@ class AwsBatchEnv(AwsJobBase):
                         GroupId=group_id
                     )
                     break
-                except:
+                except ClientError:
                     logger.info("Waiting for security group ingress rules to be removed ...")
                     time.sleep(5)
 
@@ -1166,7 +1164,6 @@ class AwsBatchEnv(AwsJobBase):
                 logger.info(f'Security group {self.emr_cluster_security_group_name} does not exist - skipping...')
             else:
                 raise
-
 
         try:
             self.aws_lambda.delete_function(
@@ -1192,9 +1189,6 @@ class AwsBatchEnv(AwsJobBase):
                 raise
 
         self.iam_helper.delete_role(self.lambda_emr_job_step_execution_role)
-
-
-
 
         state_machines = self.step_functions.list_state_machines()
 
@@ -1317,13 +1311,9 @@ class AwsBatchEnv(AwsJobBase):
 
             )
 
-            #print("ROUTE TABLES", rtas_response)
-
             for route_table in rtas_response['RouteTables']:
                 route_table_id = route_table['RouteTableId']
                 for association in route_table['Associations']:
-
-
                     if not association['Main']:
                         response = self.ec2.disassociate_route_table(
                             AssociationId=association['RouteTableAssociationId']
@@ -1337,15 +1327,12 @@ class AwsBatchEnv(AwsJobBase):
                                 logger.info("Route table removed.")
                                 break
                             except Exception as e:
-                                rt_counter = rt_counter -1
+                                rt_counter = rt_counter - 1
                                 if 'DependencyViolation' in str(e):
-                                    #print(str(e))
-                                    logger.info(
-                                        "Waiting for association to be released before deleting route table.  Sleeping...")
+                                    logger.info("Waiting for association to be released before deleting route table.  Sleeping...")  # noqa E501
                                     time.sleep(5)
                                 else:
                                     raise
-
 
             igw_response = self.ec2.describe_internet_gateways(
                 Filters=[
@@ -1441,17 +1428,14 @@ class AwsBatchEnv(AwsJobBase):
                 AllocationId=this_address
             )
 
-
     def create_emr_security_groups(self):
 
         try:
-
             response = self.ec2.create_security_group(
                 Description='EMR Job Flow Security Group (full cluster access)',
                 GroupName=self.emr_cluster_security_group_name,
                 VpcId=self.vpc_id
             )
-            #print(response)
             self.emr_cluster_security_group_id = response['GroupId']
 
         except Exception as e:
@@ -1475,8 +1459,13 @@ class AwsBatchEnv(AwsJobBase):
         try:
             response = self.ec2.authorize_security_group_ingress(
                 GroupId=self.emr_cluster_security_group_id,
-                IpPermissions= [dict(IpProtocol='-1',
-                                UserIdGroupPairs=[dict(GroupId=self.emr_cluster_security_group_id, UserId = self.account)])],
+                IpPermissions=[dict(
+                    IpProtocol='-1',
+                    UserIdGroupPairs=[dict(
+                        GroupId=self.emr_cluster_security_group_id,
+                        UserId=self.account
+                    )]
+                )]
             )
         except Exception as e:
             if 'already exists' in str(e):
@@ -1622,9 +1611,9 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
 
     def create_emr_cluster_function(self):
         script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
-        bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'
+        bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'  # noqa E501
 
-        function_script = f''' 
+        function_script = f'''
 
 import json
 import boto3
@@ -2122,7 +2111,7 @@ class AwsBatch(DockerBatchBase):
             ))
             walker = Walker(exclude_dirs=asset_dirs)
             s3fs = open_fs(f"s3://{bucket}/{prefix}")
-            upload_path = f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"
+            upload_path = f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"  # noqa E501
             if s3fs.isdir(upload_path):
                 s3fs.removetree(upload_path)
             upload_fs = s3fs.makedirs(upload_path)
