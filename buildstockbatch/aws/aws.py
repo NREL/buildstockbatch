@@ -1640,7 +1640,7 @@ def lambda_handler(event, context):
             'SlaveInstanceType': '{self.emr_slave_instance_type}',
             'InstanceCount': {self.emr_cluster_instance_count},
             'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
-            'KeepJobFlowAliveWhenNoSteps': True,
+            'KeepJobFlowAliveWhenNoSteps': False,
             'EmrManagedMasterSecurityGroup': '{self.emr_cluster_security_group_id}',
             'EmrManagedSlaveSecurityGroup': '{self.emr_cluster_security_group_id}',
             'ServiceAccessSecurityGroup': '{self.batch_security_group}'
