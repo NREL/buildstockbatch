@@ -47,6 +47,8 @@ Information about baseline simulations are listed under the
 -  ``n_buildings_represented``: The number of buildings that this sample
    is meant to represent.
 -  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
+-  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
+- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -65,13 +67,13 @@ Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
 
 Under the ``upgrades`` key is a list of upgrades to apply with the
-following properties;
+following properties:
 
--  ``upgrade_name``: The name that will be in the outputs for this
+-  ``upgrade_name``: (required) The name that will be in the outputs for this
    upgrade scenario.
 -  ``options``: A list of options to apply as part of this upgrade.
 
-   -  ``option``: The option to apply, in the format ``parameter|option`` which can be found in 
+   -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in 
       `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_
       in `OpenStudio-BuildStock`_.
    -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See 
@@ -88,8 +90,11 @@ following properties;
           or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
-- ``package_apply_logic``: The conditions under which this package of upgrades should be performed.
+- ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
   See :ref:`filtering-logic`.
+- ``reference_scenario``: (optional) The `upgrade_name` which should act as a reference to this upgrade to calculate
+  savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
+  Buildstockbatch will not do the savings calculation.
 
 Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -100,6 +105,11 @@ annual simulation results. These arguments are passed directly to the
 in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
 Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you're using.
 The best thing you can do is to verify that it works with what is in your branch.
+
+Additional Reporting Measures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
+Any columns reported by these additional measures will be appended to the results csv.
 
 Output Directory
 ~~~~~~~~~~~~~~~~
@@ -160,7 +170,8 @@ To include certain parameter option combinations, specify them in a list or by u
     - Vintage|1950s
     - Location Region|CR02
 
-The above example would include buildings in climate region 2 built in the 1950s.
+The above example would include buildings in climate region 2 built in the 1950s. A list, except for that inside an
+``or`` block is always interpreted as ``and`` block.
 
 Or
 ..
@@ -180,6 +191,42 @@ Not
 .. code-block:: yaml
 
   not: Heating Fuel|Propane
+
+This will select buildings that does not have Propane Fuel type.
+
+.. code-block:: yaml
+
+    not:
+      - Vintage|1950s
+      - Location Region|CR02
+
+This will select buildings that are not both Vintage 1950s **and** in location region CR02. It should be noted that this
+**will** select buildings of 1950s vintage provided they aren't in region CR02. It will also select buildings in
+location CR02 provided they aren't of vintage 1950s. If only those buildings that are neither of Vintage 1950s nor in
+region CR02 needs to be selected, the following logic should be used:
+
+.. code-block:: yaml
+
+      - not: Vintage|1950s
+      - not: Location Region|CR02
+
+or,
+
+.. code-block:: yaml
+
+      and:
+        - not: Vintage|1950s
+        - not: Location Region|CR02
+
+or,
+
+.. code-block:: yaml
+
+    not:
+      or:
+        - Vintage|1950s
+        - Location Region|CR02
+
 
 Combining Logic
 ...............
@@ -251,6 +298,10 @@ Postprocessing Configuration Options
 The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
+
+    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
+       The aggregated timeseries is generated as:
+       aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
 
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_

@@ -57,6 +57,11 @@ class DockerBatchBase(BuildStockBatchBase):
 
         self._weather_dir = None
 
+    @staticmethod
+    def validate_project(project_file):
+        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        # LocalDocker specific code goes here
+
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
@@ -77,7 +82,8 @@ class LocalDockerBatch(DockerBatchBase):
         return self._weather_dir.name
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, measures_only,
+                     cfg, i, upgrade_idx=None):
         try:
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
         except SimulationExists:
@@ -100,13 +106,17 @@ class LocalDockerBatch(DockerBatchBase):
             json.dump(osw, f, indent=4)
 
         docker_client = docker.client.from_env()
+        args = [
+            'openstudio',
+            'run',
+            '-w', 'in.osw',
+            '--debug'
+        ]
+        if measures_only:
+            args.insert(2, '--measures_only')
         container_output = docker_client.containers.run(
             cls.docker_image(),
-            [
-                'openstudio',
-                'run',
-                '-w', 'in.osw'
-            ],
+            args,
             remove=True,
             volumes=docker_volume_mounts,
             name=sim_id
@@ -120,11 +130,15 @@ class LocalDockerBatch(DockerBatchBase):
 
         cls.cleanup_sim_dir(sim_dir)
 
-    def run_batch(self, n_jobs=-1):
+    def run_batch(self, n_jobs=-1, measures_only=False, sampling_only=False):
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        if sampling_only:
+            return
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         run_building_d = functools.partial(
@@ -133,13 +147,17 @@ class LocalDockerBatch(DockerBatchBase):
             self.buildstock_dir,
             self.weather_dir,
             self.results_dir,
+            measures_only,
             self.cfg
         )
-        baseline_sims = map(run_building_d, building_ids)
         upgrade_sims = []
         for i in range(len(self.cfg.get('upgrades', []))):
             upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
-        all_sims = itertools.chain(baseline_sims, *upgrade_sims)
+        if not self.skip_baseline_sims:
+            baseline_sims = map(run_building_d, building_ids)
+            all_sims = itertools.chain(baseline_sims, *upgrade_sims)
+        else:
+            all_sims = itertools.chain(*upgrade_sims)
         Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
     @property
@@ -192,9 +210,17 @@ def main():
     parser = argparse.ArgumentParser()
     print(BuildStockBatchBase.LOGO)
     parser.add_argument('project_filename')
-    parser.add_argument('-j', type=int,
-                        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
-                        default=-1)
+    parser.add_argument(
+        '-j',
+        type=int,
+        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
+        default=-1
+    )
+    parser.add_argument(
+        '-m', '--measures_only',
+        action='store_true',
+        help='Only apply the measures, but don\'t run simulations. Useful for debugging.'
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--postprocessonly',
                        help='Only do postprocessing, useful for when the simulations are already done',
@@ -202,10 +228,23 @@ def main():
     group.add_argument('--uploadonly',
                        help='Only upload to S3, useful when postprocessing is already done. Ignores the '
                        'upload flag in yaml', action='store_true')
+    group.add_argument('--validateonly', help='Only validate the project YAML file and references. Nothing is executed',
+                       action='store_true')
+    group.add_argument('--samplingonly', help='Run the sampling only.',
+                       action='store_true')
     args = parser.parse_args()
+    if not os.path.isfile(args.project_filename):
+        raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
+
+    # Validate the project, and in case of the --validateonly flag return True if validation passes
+    LocalDockerBatch.validate_project(args.project_filename)
+    if args.validateonly:
+        return True
     batch = LocalDockerBatch(args.project_filename)
-    if not (args.postprocessonly or args.uploadonly):
-        batch.run_batch(n_jobs=args.j)
+    if not (args.postprocessonly or args.uploadonly or args.validateonly):
+        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only, sampling_only=args.samplingonly)
+    if args.measures_only or args.samplingonly:
+        return
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)
     else:

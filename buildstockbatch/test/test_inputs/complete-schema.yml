@@ -1,0 +1,95 @@
+stock_type: residential
+buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
+project_directory: project_singlefamilydetached
+output_directory: /scratch/epresent/YAML1s
+weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
+schema_version: 0.1
+baseline:
+  n_datapoints: 30
+  n_buildings_represented: 81221016
+  measures_to_ignore:
+    - ResidentialConstructionsSlab
+upgrades:
+  - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
+    options:
+      - option: HVAC System Heating Natural Gas|Gas Furnace, 96% AFUE
+        apply_logic:
+          or:
+            - HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+            - HVAC System Heating Natural Gas|Gas Furnace, 68% AFUE
+            - HVAC System Heating Natural Gas|Gas Furnace, 72% AFUE
+            - HVAC System Heating Natural Gas|Gas Furnace, 76% AFUE
+            - HVAC System Heating Natural Gas|Gas Furnace, 80% AFUE
+            - HVAC System Heating Natural Gas|Gas Furnace, 85% AFUE
+        costs:
+          - value: 2600
+            multiplier: Fixed (1)
+          - value: 3.9
+            multiplier: Size, Heating System (kBtu/h)
+        lifetime: 20
+
+      - option: HVAC System Heating Propane|Propane Furnace, 96% AFUE
+        apply_logic:
+          - HVAC System Heating Propane|Propane Furnace, 60% AFUE
+        costs:
+          - value: 4100
+            multiplier: Fixed (1)
+          - value: 3.9
+            multiplier: Size, Heating System (kBtu/h)
+        lifetime: 20
+
+      - option: HVAC System Heating Fuel Oil|Oil Furnace, 95% AFUE
+        apply_logic:
+          or:
+            - HVAC System Heating Fuel Oil|Oil Furnace, 76% AFUE
+            - HVAC System Heating Fuel Oil|Oil Furnace, 80% AFUE
+        costs:
+          - value: 4100
+            multiplier: Fixed (1)
+          - value: 3.9
+            multiplier: Size, Heating System (kBtu/h)
+        lifetime: 15
+    reference_scenario: Reference 80% AFUE Furnace (gas, propane, oil)
+  - upgrade_name: LEDs
+    options:
+      - option: Lighting|100% LED
+        apply_logic:
+          - or:
+            - Lighting|100% Incandescent
+            - Lighting|60% CFL
+            - Lighting|100% LED, Low Efficacy
+          - not: Lighting|100% CFL
+          - not: Geometry Garage|3 Car
+          - and:
+            - Lighting|60% CFL Hardwired, 34% CFL Plugin
+            - Lighting|60% LED Hardwired, 34% CFL Plugin
+          - Geometry Stories|1
+        costs:
+          - value: 0.40
+            multiplier: Floor Area, Lighting (ft^2)
+        lifetime: 78.28
+timeseries_csv_export:
+  reporting_frequency: Hourly
+  include_enduse_subcategories: true
+downselect:
+  resample: False
+  logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+eagle:
+  account: enduse
+  n_jobs: 100
+  minutes_per_sim: 2
+  sampling:
+    time: 20
+  postprocessing:
+    time: 60
+    n_workers: 3
+postprocessing:
+  aws:
+    region_name: us-east-1
+    s3:
+      bucket: mybucket
+      prefix: buildstock-athena/new
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: new-buildstock-analysis
+      max_crawling_time: 300

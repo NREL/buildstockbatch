@@ -1,0 +1,24 @@
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+baseline:
+  n_datapoints: 30
+  n_buildings_represented: 81221016
+upgrades:
+  - upgrade_name: good upgrade
+    options:
+      - option: Vintage|<1940
+        apply_logic:
+          - or:
+            - Insulation Slab|Good Option
+            - Insulation Slab|None
+          - not: Insulation Wall|Good Option
+          - and:
+              - Vintage|1960s||Vintage|1960s
+              - Vintage|1980s
+      - option: Insulation Finished Basement|Good Option
+        apply_logic:
+          - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1960s||Vintage|1940s
+downselect:
+  resample: False
+  logic: Vintage|2000s
