@@ -6,7 +6,7 @@ output_directory: ../national_test_outputs
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 100  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 1000  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -44,7 +44,7 @@ aws:
   job_identifier: noeltest12
   s3:
     bucket: buildstockbatch-test8
-    prefix: noeltest12h
+    prefix: noeltest12i
   region: us-west-2
   use_spot: true
   # Percent of on-demand for max bid on spot
