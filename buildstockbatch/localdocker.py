@@ -59,7 +59,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @staticmethod
     def validate_project(project_file):
-        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
         # LocalDocker specific code goes here
 
     @classmethod
@@ -73,6 +73,11 @@ class LocalDockerBatch(DockerBatchBase):
         super().__init__(project_filename)
         logger.debug('Pulling docker image')
         self.docker_client.images.pull(self.docker_image())
+
+    @staticmethod
+    def validate_project(project_file):
+        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        # LocalDocker specific code goes here
 
     @property
     def weather_dir(self):

@@ -35,6 +35,7 @@ import tempfile
 import re
 import time
 import io
+import yaml
 import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
@@ -1568,15 +1569,15 @@ cluster = YarnCluster(
 client = Client(cluster)
 
 results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results'
-combine_results(results_s3_loc)
 
 s3fs = open_fs('s3://{self.s3_bucket}/{self.s3_bucket_prefix}')
 with s3fs.open('config.json', 'r') as f:
     cfg = json.load(f)
 
-conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
+combine_results(results_s3_loc, cfg)
 
-create_athena_tables(conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
+aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
+create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
 
 '''
 
@@ -1788,6 +1789,11 @@ class AwsBatch(DockerBatchBase):
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
         self.batch_array_size = self.cfg['aws']['batch_array_size']
         self.boto3_session = boto3.Session(region_name=self.region)
+    
+    @staticmethod
+    def validate_project(project_file):
+        super(AwsBatch, AwsBatch).validate_project(project_file)
+        # AWS Batch specific validation goes here
 
     @classmethod
     def docker_image(cls):
@@ -2128,7 +2134,8 @@ class AwsBatch(DockerBatchBase):
             if os.path.isfile(out_osw_filepath):
                 out_osw = read_out_osw(str(sim_dir), str(out_osw_filepath.relative_to(sim_dir)))
                 dp_out = flatten_datapoint_json(
-                    read_data_point_out_json(str(sim_dir), str(datapoint_out_filepath.relative_to(sim_dir)))
+                    [],
+                    read_data_point_out_json(str(sim_dir), [], str(datapoint_out_filepath.relative_to(sim_dir)))
                 )
                 if dp_out is None:
                     dp_out = {}
@@ -2201,8 +2208,32 @@ def main():
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
-        parser.add_argument('-c', '--clean', action='store_true')
+        parser.add_argument(
+            '-c', '--clean', 
+            action='store_true',
+            help='After the simulation is done, run with --clean to clean up AWS environment'
+        )
+        parser.add_argument(
+            '--validateonly',
+            help='Only validate the project YAML file and references. Nothing is executed',
+            action='store_true'
+        )
         args = parser.parse_args()
+
+        # load the yaml project file
+        if not os.path.isfile(args.project_filename):
+            raise FileNotFoundError(
+                'The project file {} doesn\'t exist'.format(args.project_filename)
+            )
+        project_filename = os.path.abspath(args.project_filename)
+        with open(project_filename, 'r') as f:
+            cfg = yaml.load(f, Loader=yaml.SafeLoader)
+
+        # validate the project, and in case of the --validateonly flag return True if validation passes
+        AwsBatch.validate_project(project_filename)
+        if args.validateonly:
+            return True
+
         batch = AwsBatch(args.project_filename)
         if args.clean:
             batch.clean()

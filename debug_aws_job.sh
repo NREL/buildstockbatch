@@ -2,12 +2,10 @@
 
 docker run -it --rm \
     -v $(pwd):/buildstock-batch \
-    -v ~/.aws:/root/.aws \
-    -e AWS_PROFILE=dev \
     -e AWS_BATCH_JOB_ARRAY_INDEX=5 \
     -e S3_BUCKET=buildstockbatch-test8 \
-    -e S3_PREFIX=noeltest11a \
-    -e JOB_NAME=noeltest11 \
+    -e S3_PREFIX=noeltest30a \
+    -e JOB_NAME=noeltest30 \
     -e REGION=us-west-2 \
     --name debugbsb \
     nrel/buildstockbatch \
