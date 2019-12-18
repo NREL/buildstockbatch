@@ -701,7 +701,7 @@ class AwsBatchEnv(AwsJobBase):
                                                            f"Task role for Batch job {self.job_identifier}",
                                                            policies_list=[task_permissions_policy])
 
-        if self.batch_use_spot != 'false':
+        if self.batch_use_spot:
             # Spot Fleet Role
             self.spot_service_role_arn = self.iam_helper.role_stitcher(
                 self.batch_spot_service_role_name,
@@ -718,71 +718,45 @@ class AwsBatchEnv(AwsJobBase):
 
         """
 
-        if self.batch_use_spot == 'true':
-            type = 'SPOT'
-            try:
-                self.batch.create_compute_environment(
-                    computeEnvironmentName=self.batch_compute_environment_name,
-                    type='MANAGED',
-                    state='ENABLED',
-                    computeResources={
-                        'type': type,
-                        'minvCpus': 0,
-                        'maxvCpus': maxCPUs,
-                        'desiredvCpus': 0,
-                        'instanceTypes': [
-                            'optimal',
-                        ],
-                        'imageId': self.batch_compute_environment_ami,
-                        'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
-                        'securityGroupIds': [self.batch_security_group],
-                        'instanceRole': self.instance_profile_arn,
-                        'bidPercentage': 100,
-                        'spotIamFleetRole': self.spot_service_role_arn
-                    },
-                    serviceRole=self.service_role_arn
-                )
+        try:
+            compute_resources = {
+                'minvCpus': 0,
+                'maxvCpus': maxCPUs,
+                'desiredvCpus': 0,
+                'instanceTypes': [
+                    'optimal',
+                ],
+                'imageId': self.batch_compute_environment_ami,
+                'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
+                'securityGroupIds': [self.batch_security_group],
+                'instanceRole': self.instance_profile_arn
+            }
 
-                logger.info('Service Role created')
+            if self.batch_use_spot:
+                compute_resources.update({
+                    'type': 'SPOT',
+                    'bidPercentage': 100,
+                    'spotIamFleetRole': self.spot_service_role_arn
+                })
+            else:
+                compute_resources['type'] = 'EC2'
 
-            except Exception as e:
-                if 'Object already exists' in str(e):
-                    logger.info('Compute environment not created - already exists')
-                else:
-                    raise
+            self.batch.create_compute_environment(
+                computeEnvironmentName=self.batch_compute_environment_name,
+                type='MANAGED',
+                state='ENABLED',
+                computeResources=compute_resources,
+                serviceRole=self.service_role_arn
+            )
 
-        else:
-            type = 'EC2'
-            try:
-                self.batch.create_compute_environment(
-                    computeEnvironmentName=self.batch_compute_environment_name,
-                    type='MANAGED',
-                    state='ENABLED',
-                    computeResources={
-                        'type': type,
-                        'minvCpus': 0,
-                        'maxvCpus': maxCPUs,
-                        'desiredvCpus': 0,
-                        'instanceTypes': [
-                            'optimal',
-                        ],
-                        'imageId': self.batch_compute_environment_ami,
-                        'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
-                        'securityGroupIds': [self.batch_security_group],
-                        'ec2KeyPair': 'nrel-aws-dev-us-west-2',
-                        'instanceRole': self.instance_profile_arn
-                    },
-                    serviceRole=self.service_role_arn
-                )
+            logger.info(f'Compute environment {self.batch_compute_environment_name} created.')
 
-                logger.info(f'Compute environment {self.batch_compute_environment_name} created.')
-
-            except Exception as e:
-                if 'Object already exists' in str(e):
-                    logger.info(
-                        f'Compute environment {self.batch_compute_environment_name} not created - already exists')
-                else:
-                    raise
+        except Exception as e:
+            if 'Object already exists' in str(e):
+                logger.info(
+                    f'Compute environment {self.batch_compute_environment_name} not created - already exists')
+            else:
+                raise
 
     def create_job_queue(self):
         """
