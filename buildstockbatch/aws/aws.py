@@ -198,51 +198,56 @@ class AwsBatchEnv(AwsJobBase):
 
         # EMR
 
-        lambda_policy = f'''{{
+        lambda_policy = {
             "Version": "2012-10-17",
             "Statement": [
-                {{
+                {
                     "Effect": "Allow",
                     "Action": "logs:CreateLogGroup",
-                    "Resource": "arn:aws:logs:{self.region}:{self.account}:*"
-                }},
-                {{
+                    "Resource": f"arn:aws:logs:{self.region}:{self.account}:*"
+                },
+                {
                     "Effect": "Allow",
                     "Action": [
                         "logs:CreateLogStream",
                         "logs:PutLogEvents"
                     ],
                     "Resource": [
-                        "arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
+                        f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
                     ]
-                }},
-                {{
+                },
+                {
                     "Effect": "Allow",
                     "Action": "elasticmapreduce:RunJobFlow",
                     "Resource": "*"
-                }},
-                {{
+                },
+                {
 
                     "Effect": "Allow",
                     "Action": "iam:PassRole",
                     "Resource": [
-                        "arn:aws:iam::{self.account}:role/EMR_DefaultRole",
-                        "arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
-                        "arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole",
-                        "{self.emr_job_flow_role_arn}",
-                        "{self.emr_service_role_arn}"
+                        f"arn:aws:iam::{self.account}:role/EMR_DefaultRole",
+                        f"arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
+                        f"arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole",
+                        self.emr_job_flow_role_arn,
+                        self.emr_service_role_arn
                     ]
-                }}
+                },
+                {
+                    "Effect": "Allow",
+                    "Action": "s3:GetObject",
+                    "Resource": [
+                        f"arn:aws:s3:::{self.s3_bucket}/*"
+                    ]
+                }
             ]
-        }}
-
-        '''
+        }
 
         self.lambda_emr_job_step_execution_role_arn = self.iam_helper.role_stitcher(
             self.lambda_emr_job_step_execution_role,
             'lambda',
             f'Lambda execution role for {self.lambda_emr_job_step_function_name}',
-            policies_list=[lambda_policy]
+            policies_list=[json.dumps(lambda_policy, indent=4)]
         )
 
     def create_vpc(self):
@@ -378,7 +383,7 @@ class AwsBatchEnv(AwsJobBase):
 
         self.internet_gateway_id = ig_response['InternetGateway']['InternetGatewayId']
 
-        self.ec2.create_tags(
+        AWSRetry.backoff()(self.ec2.create_tags)(
             Resources=[
                 self.internet_gateway_id
             ],
@@ -1255,7 +1260,7 @@ class AwsBatchEnv(AwsJobBase):
         for vpc in response['Vpcs']:
             this_vpc = vpc['VpcId']
 
-            ng_response = self.ec2.describe_nat_gateways(
+            ng_response = AWSRetry.backoff()(self.ec2.describe_nat_gateways)(
                 Filters=[
                     {
                         'Name': 'vpc-id',
@@ -1274,7 +1279,7 @@ class AwsBatchEnv(AwsJobBase):
                         NatGatewayId=this_natgw
                     )
 
-            rtas_response = self.ec2.describe_route_tables(
+            rtas_response = AWSRetry.backoff()(self.ec2.describe_route_tables)(
                 Filters=[
                     {
                         'Name': 'vpc-id',
@@ -1309,7 +1314,7 @@ class AwsBatchEnv(AwsJobBase):
                                 else:
                                     raise
 
-            igw_response = self.ec2.describe_internet_gateways(
+            igw_response = AWSRetry.backoff()(self.ec2.describe_internet_gateways)(
                 Filters=[
                     {
                         'Name': 'tag:Name',
@@ -1588,8 +1593,74 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
         script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
         bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'  # noqa E501
 
+        run_job_flow_args = dict(
+            Name=self.emr_cluster_name,
+            LogUri=self.emr_log_uri,
+
+            ReleaseLabel='emr-5.23.0',
+            Instances={
+                'MasterInstanceType': self.emr_master_instance_type,
+                'SlaveInstanceType': self.emr_slave_instance_type,
+                'InstanceCount': self.emr_cluster_instance_count,
+                'Ec2SubnetId': self.priv_vpc_subnet_id_1,
+                'KeepJobFlowAliveWhenNoSteps': False,
+                'EmrManagedMasterSecurityGroup': self.emr_cluster_security_group_id,
+                'EmrManagedSlaveSecurityGroup': self.emr_cluster_security_group_id,
+                'ServiceAccessSecurityGroup': self.batch_security_group
+            },
+
+            Applications=[
+                {
+                    'Name': 'Hadoop'
+                },
+            ],
+
+            BootstrapActions=[
+                {
+                    'Name': 'launchFromS3',
+                    'ScriptBootstrapAction': {
+                        'Path': bootstrap_action,
+                        'Args': [f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz']
+                    }
+                },
+            ],
+
+            Steps=[
+                {
+                    'Name': 'Dask',
+                    'ActionOnFailure': 'TERMINATE_CLUSTER',
+
+                    'HadoopJarStep': {
+                        'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
+                        'Args': [script_name]
+                    }
+                },
+            ],
+
+            VisibleToAllUsers=True,
+            JobFlowRole=self.emr_instance_profile_name,
+            ServiceRole=self.emr_service_role_name,
+            Tags=[
+                {
+                    'Key': 'org',
+                    'Value': 'ops'
+                },
+            ],
+            AutoScalingRole='EMR_AutoScaling_DefaultRole',
+            ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
+            EbsRootVolumeSize=100
+        )
+
+        with io.BytesIO() as f:
+            f.write(json.dumps(run_job_flow_args).encode())
+            f.seek(0)
+            self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
+
+
         function_script = f'''
 
+import os
+import io
 import json
 import boto3
 from pprint import pprint
@@ -1601,70 +1672,16 @@ def lambda_handler(event, context):
 
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
 
-    session = boto3.Session(region_name='{self.region}')
+    session = boto3.Session(region_name=os.environ['REGION'])
 
-    client = session.client("emr")
+    s3 = session.client('s3')
+    with io.BytesIO() as f:
+        s3.download_fileobj(os.environ['BUCKET'], os.environ['EMR_CONFIG_JSON_KEY'], f)
+        args = json.loads(f.getvalue())
 
-    response = client.run_job_flow(
-        Name='{self.emr_cluster_name}',
-        LogUri='{self.emr_log_uri}',
+    emr = session.client("emr")
 
-        ReleaseLabel='emr-5.23.0',
-        Instances={{
-            'MasterInstanceType': '{self.emr_master_instance_type}',
-            'SlaveInstanceType': '{self.emr_slave_instance_type}',
-            'InstanceCount': {self.emr_cluster_instance_count},
-            'Ec2SubnetId': '{self.priv_vpc_subnet_id_1}',
-            'KeepJobFlowAliveWhenNoSteps': False,
-            'EmrManagedMasterSecurityGroup': '{self.emr_cluster_security_group_id}',
-            'EmrManagedSlaveSecurityGroup': '{self.emr_cluster_security_group_id}',
-            'ServiceAccessSecurityGroup': '{self.batch_security_group}'
-        }},
-
-        Applications=[
-            {{
-                'Name': 'Hadoop'
-            }},
-
-        ],
-
-        BootstrapActions=[
-            {{
-                'Name': 'launchFromS3',
-                'ScriptBootstrapAction': {{
-                    'Path': '{bootstrap_action}',
-                    'Args': ['s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz']
-                }}
-            }},
-        ],
-
-        Steps=[
-            {{
-                'Name': 'Dask',
-                'ActionOnFailure': 'TERMINATE_CLUSTER',
-
-                'HadoopJarStep': {{
-                    'Jar': 's3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar',
-                    'Args': ['{script_name}']
-                }}
-            }},
-        ],
-
-        VisibleToAllUsers=True,
-        JobFlowRole='{self.emr_instance_profile_name}',
-        ServiceRole='{self.emr_service_role_name}',
-        Tags=[
-            {{
-                'Key': 'org',
-                'Value': 'ops'
-            }},
-        ],
-        AutoScalingRole='EMR_AutoScaling_DefaultRole',
-        ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
-        EbsRootVolumeSize=100
-
-
-    )
+    response = emr.run_job_flow(**args)
     pprint(response)
 
 '''
@@ -1692,6 +1709,13 @@ def lambda_handler(event, context):
                     Timeout=900,
                     MemorySize=128,
                     Publish=True,
+                    Environment={
+                        'Variables': {
+                            'REGION': self.region,
+                            'BUCKET': self.s3_bucket,
+                            'EMR_CONFIG_JSON_KEY': self.s3_lambda_emr_config_key
+                        }
+                    },
                     Tags={
                         'job': self.job_identifier
                     }

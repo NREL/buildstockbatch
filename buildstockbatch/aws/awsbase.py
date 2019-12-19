@@ -172,6 +172,7 @@ class AwsJobBase():
         self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_bucket_prefix = aws_config['s3']['prefix'].rstrip('/')
         self.s3_lambda_code_emr_cluster_key = f'{self.s3_bucket_prefix}/lambda_functions/emr_function.py.zip'
+        self.s3_lambda_emr_config_key = f'{self.s3_bucket_prefix}/lambda_functions/emr_config.json'
         self.s3_emr_folder_name = 'emr'
 
         # EMR
