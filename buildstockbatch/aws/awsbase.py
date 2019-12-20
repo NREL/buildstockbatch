@@ -176,9 +176,11 @@ class AwsJobBase():
         self.s3_emr_folder_name = 'emr'
 
         # EMR
-        self.emr_master_instance_type = aws_config['emr']['master_instance_type']
-        self.emr_slave_instance_type = aws_config['emr']['slave_instance_type']
-        self.emr_cluster_instance_count = aws_config['emr']['cluster_instance_count']
+        emr_config = aws_config.get('emr', {})
+        self.emr_master_instance_type = emr_config.get('master_instance_type', 'm5.xlarge')
+        self.emr_slave_instance_type = emr_config.get('slave_instance_type', 'r5.4xlarge')
+        self.emr_slave_instance_count = emr_config.get('slave_instance_count', 2)
+        self.emr_dask_worker_vcores = emr_config.get('dask_worker_vcores', 2)
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
         self.emr_job_flow_role_name = f'{self.job_identifier}_emr_job_flow_role'
@@ -187,9 +189,6 @@ class AwsJobBase():
         self.emr_service_role_arn = ''
         self.emr_cluster_security_group_id = ''
         self.emr_log_uri = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/'
-        self.emr_worker_memory = aws_config['emr']['slave_memory_size']
-        self.emr_total_workers = aws_config['emr']['n_workers']
-        self.emr_worker_vcores = aws_config['emr']['worker_vcores']
         self.emr_instance_profile_name = f'{self.job_identifier}_emr_instance_profile'
 
         # Lambda

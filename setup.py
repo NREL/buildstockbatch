@@ -63,7 +63,7 @@ setuptools.setup(
         'pyarrow>=0.14.1',
         'dask[complete]>=2.1.0',
         'docker',
-        'boto3>=1.9.66',
+        'boto3>=1.10.44',
         'fs',
         'fs-s3fs',
         'docutils<0.15,>=0.10',

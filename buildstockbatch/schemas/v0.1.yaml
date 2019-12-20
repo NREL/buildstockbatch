@@ -24,15 +24,13 @@ aws-spec:
   spot_bid_percent: num(min=1, max=100, required=True)
   batch_array_size: num(min=1, max=10000, required=True)
   notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', required=True)
-  emr: include('aws-emr-spec', required=True)
+  emr: include('aws-emr-spec', required=False)
 
 aws-emr-spec:
-  master_instance_type: str(required=True)
-  slave_instance_type: str(required=True)
-  cluster_instance_count: int(min=2, required=True)
-  slave_memory_size: num(min=1, required=True)
-  n_workers: int(min=1, required=True)
-  worker_vcores: int(min=1, required=True)
+  master_instance_type: str(required=False)
+  slave_instance_type: str(required=False)
+  slave_instance_count: int(min=1, required=False)
+  dask_worker_vcores: int(min=1, required=False)
 
 hpc-spec:
   account: str(required=True)

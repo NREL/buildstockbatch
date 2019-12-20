@@ -1529,6 +1529,12 @@ class AwsBatchEnv(AwsJobBase):
         tbl_prefix = self.s3_bucket_prefix.split('/')[-1]
         if not tbl_prefix:
             tbl_prefix = self.job_identifier
+        
+        instance_info = self.ec2.describe_instance_types(InstanceTypes=[self.emr_slave_instance_type])
+        instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
+        instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
+        n_dask_workers = self.emr_slave_instance_count * instance_ncpus / self.emr_dask_worker_vcores
+        worker_memory = round(instance_memory / instance_ncpus * self.emr_dask_worker_vcores * 0.95)
 
         bsb_post_script = f'''
 from dask_yarn import YarnCluster
@@ -1540,9 +1546,9 @@ from postprocessing import combine_results, create_athena_tables
 
 cluster = YarnCluster(
     deploy_mode='local',
-    worker_vcores=2,
-    worker_memory='{self.emr_worker_memory} GB',
-    n_workers={self.emr_total_workers}
+    worker_vcores={self.emr_dask_worker_vcores},
+    worker_memory='{worker_memory} MiB',
+    n_workers={n_dask_workers}
 )
 
 client = Client(cluster)
@@ -1599,9 +1605,21 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
 
             ReleaseLabel='emr-5.23.0',
             Instances={
-                'MasterInstanceType': self.emr_master_instance_type,
-                'SlaveInstanceType': self.emr_slave_instance_type,
-                'InstanceCount': self.emr_cluster_instance_count,
+                'InstanceGroups': [
+                    {
+                        'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
+                        'InstanceRole': 'MASTER',
+                        'InstanceType': self.emr_master_instance_type,
+                        'InstanceCount': 1
+                    },
+                    {
+                        'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
+                        'InstanceRole': 'CORE',
+                        'InstanceType': self.emr_slave_instance_type,
+                        'InstanceCount': self.emr_slave_instance_count
+                    },
+                    
+                ],
                 'Ec2SubnetId': self.priv_vpc_subnet_id_1,
                 'KeepJobFlowAliveWhenNoSteps': False,
                 'EmrManagedMasterSecurityGroup': self.emr_cluster_security_group_id,
