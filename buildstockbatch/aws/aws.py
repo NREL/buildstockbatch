@@ -1533,7 +1533,7 @@ class AwsBatchEnv(AwsJobBase):
         instance_info = self.ec2.describe_instance_types(InstanceTypes=[self.emr_slave_instance_type])
         instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
         instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
-        n_dask_workers = self.emr_slave_instance_count * instance_ncpus / self.emr_dask_worker_vcores
+        n_dask_workers = self.emr_slave_instance_count * instance_ncpus // self.emr_dask_worker_vcores
         worker_memory = round(instance_memory / instance_ncpus * self.emr_dask_worker_vcores * 0.95)
 
         bsb_post_script = f'''
