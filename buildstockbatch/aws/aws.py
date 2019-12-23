@@ -38,17 +38,13 @@ import io
 import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
+from buildstockbatch.base import ValidationError
 
 from buildstockbatch.aws.awsbase import (
     AwsJobBase
 )
 
 logger = logging.getLogger(__name__)
-
-
-def upload_file_to_s3(*args, **kwargs):
-    s3 = boto3.client('s3')
-    s3.upload_file(*args, **kwargs)
 
 
 def compress_file(in_filename, out_filename):
@@ -1707,9 +1703,28 @@ class AwsBatch(DockerBatchBase):
         self.boto3_session = boto3.Session(region_name=self.region)
 
     @staticmethod
+    def validate_instance_types(project_file):
+        cfg = AwsBatch.get_project_configuration(project_file)
+        aws_config = cfg['aws']
+        boto3_session = boto3.Session(region_name=aws_config['region'])
+        ec2 = boto3_session.client('ec2')
+        job_base = AwsJobBase('genericjobid', aws_config, boto3_session)
+        instance_types_requested = set()
+        instance_types_requested.add(job_base.emr_master_instance_type)
+        instance_types_requested.add(job_base.emr_slave_instance_type)
+        inst_type_resp = ec2.describe_instance_type_offerings(Filters=[{
+            'Name': 'instance-type',
+            'Values': list(instance_types_requested)
+        }])
+        instance_types_available = set([x['InstanceType'] for x in inst_type_resp['InstanceTypeOfferings']])
+        if not instance_types_requested == instance_types_available:
+            instance_types_not_available = instance_types_requested - instance_types_available
+            raise ValidationError(f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}.")
+
+    @staticmethod
     def validate_project(project_file):
         super(AwsBatch, AwsBatch).validate_project(project_file)
-        # AWS Batch specific validation goes here
+        AwsBatch.validate_instance_types(project_file)
 
     @classmethod
     def docker_image(cls):

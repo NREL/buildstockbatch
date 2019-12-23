@@ -39,6 +39,10 @@ class SimulationExists(Exception):
     pass
 
 
+class ValidationError(Exception):
+    pass
+
+
 class BuildStockBatchBase(object):
 
     OS_VERSION = '2.8.1'
@@ -326,10 +330,10 @@ class BuildStockBatchBase(object):
             if int(minor) >= 0:
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
-                    raise ValueError('Both/neither weather_files_url and weather_files_path found in yaml root')
+                    raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
                 if ('n_datapoints' in cfg['baseline'].keys()) is \
                    ('buildstock_csv' in cfg['baseline'].keys()):
-                    raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+                    raise ValidationError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
         return True
 
     @staticmethod
@@ -470,7 +474,7 @@ class BuildStockBatchBase(object):
             return True
         else:
             logger.error(error_msgs)
-            raise ValueError(error_msgs)
+            raise ValidationError(error_msgs)
 
     @staticmethod
     def validate_options_lookup(project_file):
