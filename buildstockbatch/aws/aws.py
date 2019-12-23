@@ -63,97 +63,6 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
-class AwsDynamo(AwsJobBase):
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        super().__init__(job_name, aws_config, boto3_session)
-        self.dynamodb = self.session.client('dynamodb')
-
-    def create_summary_table(self):
-
-        # Does the table exist?  If so it will be replaced.
-        try:
-            self.dynamodb.delete_table(
-                TableName=self.dynamo_table_name
-            )
-
-            logger.warning("Previously existing dynamo table deleted.")
-
-        except Exception as e:
-            if 'ResourceNotFoundException' not in str(e):
-                raise
-
-        while True:
-            try:
-                self.dynamodb.create_table(
-                    AttributeDefinitions=[
-                        {
-                            'AttributeName': 'upgrade_idx',
-                            'AttributeType': 'S'
-                        },
-                        {
-                            'AttributeName': 'building_id',
-                            'AttributeType': 'S'
-                        },
-                    ],
-                    TableName=self.dynamo_table_name,
-                    KeySchema=[
-                        {
-                            'AttributeName': 'upgrade_idx',
-                            'KeyType': 'HASH'
-                        },
-                        {
-                            'AttributeName': 'building_id',
-                            'KeyType': 'RANGE'
-                        },
-                    ],
-                    BillingMode='PAY_PER_REQUEST',
-                )
-                logger.info(f"Dynamo table {self.dynamo_table_name} created.")
-                break
-            except Exception as e:
-                if 'ResourceInUseException' in str(e):
-                    logger.info('Waiting for deletion of existing Dynamo table.  Sleeping...')
-                    time.sleep(5)
-                else:
-                    raise
-
-    def add_dynamo_task_permissions(self):
-        dynamo_role_policy = f'''{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Sid": "TaskFH",
-                    "Effect": "Allow",
-                    "Action": [
-                        "dynamodb:PutItem"
-                    ],
-                    "Resource": [
-                        "{self.dynamo_table_arn}"
-                    ]
-                }}
-            ]
-        }}'''
-
-        self.iam.put_role_policy(
-            RoleName=self.batch_ecs_task_role_name,
-            PolicyName=self.dynamo_task_policy_name,
-            PolicyDocument=dynamo_role_policy
-        )
-
-    def clean(self):
-        try:
-            self.dynamodb.delete_table(
-                TableName=self.dynamo_table_name
-            )
-
-            logger.info("Dynamo table deleted.")
-
-        except Exception as e:
-            if 'ResourceNotFoundException' not in str(e):
-                raise
-
-
 class AwsBatchEnv(AwsJobBase):
     """
     Class to manage the AWS Batch environment and Step Function controller.
@@ -831,7 +740,7 @@ class AwsBatchEnv(AwsJobBase):
                 'environment': self.generate_name_value_inputs(env_vars)
             },
             retryStrategy={
-                'attempts': 5
+                'attempts': 2
             }
         )
 
@@ -1870,9 +1779,6 @@ class AwsBatch(DockerBatchBase):
         sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
         sns_env.clean()
 
-        dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        dynamo_env.clean()
-
     def run_batch(self):
         """
         Run a batch of simulations using AWS Batch
@@ -2008,11 +1914,6 @@ class AwsBatch(DockerBatchBase):
         sns_env.create_topic()
         sns_env.subscribe_to_topic()
 
-        # Dynamo DB
-        dynamo_env = AwsDynamo(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        dynamo_env.create_summary_table()
-        dynamo_env.add_dynamo_task_permissions()
-
         # State machine
         batch_env.create_state_machine_roles()
         batch_env.create_state_machine()
@@ -2029,33 +1930,6 @@ class AwsBatch(DockerBatchBase):
 
         batch_env.start_state_machine_execution(array_size)
 
-        # old method to submit the job
-        # batch_env.submit_job(array_size)
-
-    @classmethod
-    def create_dynamo_field(cls, key, value):
-
-        if value == '':
-            value = ' '
-
-        if isinstance(value, bool):
-            this_type = 'BOOL'
-        elif isinstance(value, (int, float)):
-            this_type = 'N'
-        else:
-            this_type = "S"
-
-        # this is an override fix for our keys - not yet sure what changed
-        if key == 'building_id' or key == 'upgrade_idx':
-            this_type = "S"
-
-        if this_type == 'BOOL':
-            this_item = {key: {this_type: value}}
-        else:
-            this_item = {key: {this_type: str(value)}}
-
-        return this_item
-
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
         """
@@ -2069,7 +1943,6 @@ class AwsBatch(DockerBatchBase):
         logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
         # firehose = boto3.client('firehose', region_name=region)
-        dynamo = boto3.client('dynamodb', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
 
         # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
@@ -2140,36 +2013,6 @@ class AwsBatch(DockerBatchBase):
                 walker=walker,
                 on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Upload {dst_path}')
             )
-
-            logger.debug('Writing output data to Dynamo')
-            datapoint_out_filepath = sim_dir / 'run' / 'data_point_out.json'
-            out_osw_filepath = sim_dir / 'out.osw'
-            if os.path.isfile(out_osw_filepath):
-                out_osw = read_out_osw(str(sim_dir), str(out_osw_filepath.relative_to(sim_dir)))
-                dp_out = flatten_datapoint_json(
-                    [],
-                    read_data_point_out_json(str(sim_dir), [], str(datapoint_out_filepath.relative_to(sim_dir)))
-                )
-                if dp_out is None:
-                    dp_out = {}
-                dp_out.update(out_osw)
-                dp_out['_id'] = sim_id
-                dp_out2 = {}
-                for key in dp_out.keys():
-                    dp_out2[to_camelcase(key)] = dp_out[key]
-
-                item_def = {}
-
-                item_def.update(cls.create_dynamo_field('building_id', str(building_id)))
-                item_def.update(cls.create_dynamo_field('upgrade_idx', str(upgrade_idx)))
-
-                for key, value in dp_out2.items():
-                    item_def.update(cls.create_dynamo_field(key, value))
-
-                dynamo.put_item(
-                    TableName=f"{job_name}_summary_table",
-                    Item=item_def
-                )
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):

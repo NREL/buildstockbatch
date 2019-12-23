@@ -206,8 +206,8 @@ class AwsJobBase():
         self.batch_spot_service_role_name = f"spot_fleet_role_{self.job_identifier}"
         self.batch_ecs_task_role_name = f"ecs_task_role_{self.job_identifier}"
         self.batch_task_policy_name = f"ecs_task_policy_{self.job_identifier}"
-        self.batch_use_spot = aws_config['use_spot']
-        self.batch_spot_bid_percent = aws_config['spot_bid_percent']
+        self.batch_use_spot = aws_config.get('use_spot', True)
+        self.batch_spot_bid_percent = aws_config.get('spot_bid_percent', 100)
 
         # Step Functions
         self.state_machine_name = f"{self.job_identifier}_state_machine"
@@ -215,11 +215,6 @@ class AwsJobBase():
 
         # SNS
         self.sns_state_machine_topic = f"{self.job_identifier}_state_machine_notifications"
-
-        # Dynamo
-        self.dynamo_table_name = f"{self.job_identifier}_summary_table"
-        self.dynamo_table_arn = f"arn:aws:dynamodb:{self.region}:{self.account}:table/{self.dynamo_table_name}"
-        self.dynamo_task_policy_name = f"{self.job_identifier}_dynamod_db_task_policy"
 
         # VPC
         self.vpc_name = self.job_identifier
@@ -237,6 +232,6 @@ S3 Prefix for Source Data:  {self.s3_bucket_prefix}
 
 A state machine {self.state_machine_name} will execute an AWS Batch job {self.job_identifier} against the source data.
 Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
-Summary results are transimitted to the DynamoDB table {self.dynamo_table_name}.  Once processing is complete the
+Once processing is complete the
 state machine will then launch an EMR cluster with a job to combine the results and create an AWS Glue table.
 """

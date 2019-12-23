@@ -36,14 +36,12 @@ eagle:
     n_workers: 3
 aws:
   # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
-  job_identifier: noeltest30
+  job_identifier: noeltest31
   s3:
     bucket: buildstockbatch-test8
-    prefix: noeltest30l
+    prefix: noeltest31b
   region: us-west-2
   use_spot: true
-  # Percent of on-demand for max bid on spot
-  spot_bid_percent: 100
   batch_array_size: 1000
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: noel.merket@nrel.gov
