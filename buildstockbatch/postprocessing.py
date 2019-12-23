@@ -219,7 +219,8 @@ def write_output(results_dir, group_pq):
     write_dataframe_as_parquet(pq, results_dir, file_path)
 
 
-def combine_results(results_dir, config, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[], dask_bag_partition_size=500):
+def combine_results(results_dir, config, skip_timeseries=False, aggregate_timeseries=False,
+                    reporting_measures=[], dask_bag_partition_size=500):
     fs = open_fs(results_dir)
 
     sim_out_dir = 'simulation_output'

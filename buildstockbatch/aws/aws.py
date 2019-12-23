@@ -35,7 +35,6 @@ import tempfile
 import re
 import time
 import io
-import yaml
 import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
@@ -1529,7 +1528,7 @@ class AwsBatchEnv(AwsJobBase):
         tbl_prefix = self.s3_bucket_prefix.split('/')[-1]
         if not tbl_prefix:
             tbl_prefix = self.job_identifier
-        
+
         instance_info = self.ec2.describe_instance_types(InstanceTypes=[self.emr_slave_instance_type])
         instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
         instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
@@ -1618,7 +1617,6 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
                         'InstanceType': self.emr_slave_instance_type,
                         'InstanceCount': self.emr_slave_instance_count
                     },
-                    
                 ],
                 'Ec2SubnetId': self.priv_vpc_subnet_id_1,
                 'KeepJobFlowAliveWhenNoSteps': False,
@@ -1673,7 +1671,6 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
             f.write(json.dumps(run_job_flow_args).encode())
             f.seek(0)
             self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
-
 
         function_script = f'''
 
@@ -1805,7 +1802,7 @@ class AwsBatch(DockerBatchBase):
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
         self.batch_array_size = self.cfg['aws']['batch_array_size']
         self.boto3_session = boto3.Session(region_name=self.region)
-    
+
     @staticmethod
     def validate_project(project_file):
         super(AwsBatch, AwsBatch).validate_project(project_file)
@@ -2225,7 +2222,7 @@ def main():
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
         parser.add_argument(
-            '-c', '--clean', 
+            '-c', '--clean',
             action='store_true',
             help='After the simulation is done, run with --clean to clean up AWS environment'
         )
@@ -2236,17 +2233,8 @@ def main():
         )
         args = parser.parse_args()
 
-        # load the yaml project file
-        if not os.path.isfile(args.project_filename):
-            raise FileNotFoundError(
-                'The project file {} doesn\'t exist'.format(args.project_filename)
-            )
-        project_filename = os.path.abspath(args.project_filename)
-        with open(project_filename, 'r') as f:
-            cfg = yaml.load(f, Loader=yaml.SafeLoader)
-
         # validate the project, and in case of the --validateonly flag return True if validation passes
-        AwsBatch.validate_project(project_filename)
+        AwsBatch.validate_project(os.path.abspath(args.project_filename))
         if args.validateonly:
             return True
 
