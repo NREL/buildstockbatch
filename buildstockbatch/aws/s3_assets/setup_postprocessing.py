@@ -7,7 +7,7 @@ setup(
     py_modules=['postprocessing'],
     install_requires=[
         'dask[complete]',
-        'fs-s3fs',
+        's3fs>=0.4.0',
         'boto3',
         'pandas',
         'pyarrow>=0.14.1',

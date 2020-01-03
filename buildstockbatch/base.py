@@ -12,6 +12,7 @@ This is the base class mixed into the deployment specific classes (i.e. eagle, l
 
 from dask.distributed import Client
 import difflib
+from fsspec.implementations.local import LocalFileSystem
 import gzip
 import logging
 import math
@@ -260,12 +261,13 @@ class BuildStockBatchBase(object):
     @staticmethod
     def cleanup_sim_dir(sim_dir):
 
+        fs = LocalFileSystem()
+
         # Convert the timeseries data to parquet
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
-            timeseries_filedir, timeseries_filename = os.path.split(timeseries_filepath)
-            write_dataframe_as_parquet(tsdf, timeseries_filedir, os.path.splitext(timeseries_filename)[0] + '.parquet')
+            write_dataframe_as_parquet(tsdf, fs, os.path.splitext(timeseries_filepath)[0] + '.parquet')
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
@@ -717,8 +719,10 @@ class BuildStockBatchBase(object):
 
         reporting_measures = self.cfg.get('reporting_measures', [])
 
+        fs = LocalFileSystem()
+
         if not skip_combine:
-            combine_results(self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
+            combine_results(fs, self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
                             aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})

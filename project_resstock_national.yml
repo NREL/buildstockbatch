@@ -6,7 +6,7 @@ output_directory: ../national_test_outputs
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 200  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 3000  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -39,10 +39,10 @@ aws:
   job_identifier: noeltest31
   s3:
     bucket: buildstockbatch-test8
-    prefix: noeltest31b
+    prefix: noeltest31h
   region: us-west-2
   use_spot: true
-  batch_array_size: 1000
+  batch_array_size: 3000
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: noel.merket@nrel.gov
 

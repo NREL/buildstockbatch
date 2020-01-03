@@ -14,9 +14,6 @@ from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
-from fs import open_fs
-from fs.copy import copy_fs, copy_file
-from fs.walk import Walker
 import gzip
 import itertools
 from joblib import Parallel, delayed
@@ -28,6 +25,7 @@ import os
 import pandas as pd
 import pathlib
 import random
+from s3fs import S3FileSystem
 import shutil
 import subprocess
 import tarfile
@@ -45,6 +43,35 @@ from buildstockbatch.aws.awsbase import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def upload_file_to_s3(*args, **kwargs):
+    s3 = boto3.client('s3')
+    s3.upload_file(*args, **kwargs)
+
+
+def upload_directory_to_s3(local_directory, bucket, prefix):
+    local_dir_abs = pathlib.Path(local_directory).absolute()
+
+    def filename_generator():
+        for dirpath, dirnames, filenames in os.walk(local_dir_abs):
+            for filename in filenames:
+                if filename.startswith('.'):
+                    continue
+                local_filepath = pathlib.Path(dirpath, filename)
+                s3_key = pathlib.PurePosixPath(
+                    prefix,
+                    local_filepath.relative_to(local_dir_abs)
+                )
+                yield local_filepath, s3_key
+
+    logger.debug('Uploading {} => {}/{}'.format(local_dir_abs, bucket, prefix))
+
+    Parallel(n_jobs=-1, verbose=9)(
+        delayed(upload_file_to_s3)(str(local_file), bucket, s3_key.as_posix())
+        for local_file, s3_key
+        in filename_generator()
+    )
 
 
 def compress_file(in_filename, out_filename):
@@ -1438,7 +1465,7 @@ class AwsBatchEnv(AwsJobBase):
 from dask_yarn import YarnCluster
 from dask.distributed import Client
 import json
-from fs import open_fs
+from s3fs import S3FileSystem
 
 from postprocessing import combine_results, create_athena_tables
 
@@ -1451,13 +1478,13 @@ cluster = YarnCluster(
 
 client = Client(cluster)
 
-results_s3_loc = 's3://{self.s3_bucket}/{self.s3_bucket_prefix}/results'
+results_s3_loc = '{self.s3_bucket}/{self.s3_bucket_prefix}/results'
 
-s3fs = open_fs('s3://{self.s3_bucket}/{self.s3_bucket_prefix}')
-with s3fs.open('config.json', 'r') as f:
+fs = S3FileSystem()
+with fs.open('{self.s3_bucket}/{self.s3_bucket_prefix}/config.json', 'r') as f:
     cfg = json.load(f)
 
-combine_results(results_s3_loc, cfg)
+combine_results(fs, results_s3_loc, cfg)
 
 aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
 create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
@@ -1472,25 +1499,19 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
         '''
 
         logger.info('Uploading EMR support assets...')
-        s3fs = open_fs(f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}")
-        emr_folder = s3fs.makedir(self.s3_emr_folder_name)
-        with emr_folder.open('bsb_post.py', 'w', encoding='utf-8') as f:
+        fs = S3FileSystem()
+        emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
+        fs.makedirs(emr_folder)
+        with fs.open(f'{emr_folder}/bsb_post.py', 'w', encoding='utf-8') as f:
             f.write(bsb_post_script)
-        with emr_folder.open('bsb_post.sh', 'w', encoding='utf-8') as f:
+        with fs.open(f'{emr_folder}/bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
         here = os.path.dirname(os.path.abspath(__file__))
-        copy_file(
-            here,
-            's3_assets/bootstrap-dask-custom',
-            emr_folder,
-            'bootstrap-dask-custom'
-        )
-        with tempfile.TemporaryFile('w+b') as f:
+        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
+        with fs.open(f'{emr_folder}/postprocessing.tar.gz', 'wb') as f:
             with tarfile.open(fileobj=f, mode='w:gz') as tarf:
                 tarf.add(os.path.join(here, '..', 'postprocessing.py'), arcname='postprocessing.py')
                 tarf.add(os.path.join(here, 's3_assets', 'setup_postprocessing.py'), arcname='setup.py')
-            f.seek(0)
-            emr_folder.upload('postprocessing.tar.gz', f)
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
@@ -1884,12 +1905,7 @@ class AwsBatch(DockerBatchBase):
             os.makedirs(tmppath / 'results' / 'simulation_output')
 
             logger.debug('Uploading files to S3')
-            copy_fs(
-                str(tmppath),
-                f"s3://{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}",
-                workers=cpu_count(),
-                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Uploaded {dst_path}')
-            )
+            upload_directory_to_s3(tmppath, self.cfg['aws']['s3']['bucket'], self.cfg['aws']['s3']['prefix'])
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -2010,18 +2026,23 @@ class AwsBatch(DockerBatchBase):
             logger.debug('Uploading simulation outputs for building_id = {}, upgrade_id = {}'.format(
                 building_id, upgrade_idx
             ))
-            walker = Walker(exclude_dirs=asset_dirs)
-            s3fs = open_fs(f"s3://{bucket}/{prefix}")
-            upload_path = f"results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"  # noqa E501
-            if s3fs.isdir(upload_path):
-                s3fs.removetree(upload_path)
-            upload_fs = s3fs.makedirs(upload_path)
-            copy_fs(
-                str(sim_dir),
-                upload_fs,
-                walker=walker,
-                on_copy=lambda src_fs, src_path, dst_fs, dst_path: logger.debug(f'Upload {dst_path}')
-            )
+            fs = S3FileSystem()
+            upload_path = f"{bucket}/{prefix}/results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"  # noqa E501
+            if fs.isdir(upload_path):
+                fs.rm(upload_path, recursive=True)
+            fs.makedirs(upload_path)
+            for dirpath, dirnames, filenames in os.walk(sim_dir):
+                if dirpath == str(sim_dir):
+                    for dirname in set(dirnames).intersection(asset_dirs):
+                        dirnames.remove(dirname)
+                for dirname in dirnames:
+                    relpath = os.path.relpath(os.path.join(dirpath, dirname), sim_dir)
+                    fs.makedirs(f"{upload_path}/{relpath}")
+                for filename in filenames:
+                    abspath = os.path.join(dirpath, filename)
+                    relpath = os.path.relpath(abspath, sim_dir)
+                    logger.debug(f'Upload {relpath}')
+                    fs.put(abspath, f"{upload_path}/{relpath}")
 
             logger.debug('Clearing out simulation directory')
             for item in set(os.listdir(sim_dir)).difference(asset_dirs):
