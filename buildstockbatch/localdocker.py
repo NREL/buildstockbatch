@@ -103,7 +103,7 @@ class LocalDockerBatch(DockerBatchBase):
             (os.path.join(project_dir, 'seeds'), 'seeds', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
-        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])
+        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
             if not os.path.exists(dir_to_make):

@@ -20,7 +20,6 @@ from joblib import Parallel, delayed
 import json
 import logging
 import math
-from multiprocessing import cpu_count
 import os
 import pandas as pd
 import pathlib
@@ -1740,7 +1739,9 @@ class AwsBatch(DockerBatchBase):
         instance_types_available = set([x['InstanceType'] for x in inst_type_resp['InstanceTypeOfferings']])
         if not instance_types_requested == instance_types_available:
             instance_types_not_available = instance_types_requested - instance_types_available
-            raise ValidationError(f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}.")
+            raise ValidationError(
+                f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}."  # noqa E501
+            )
 
     @staticmethod
     def validate_project(project_file):

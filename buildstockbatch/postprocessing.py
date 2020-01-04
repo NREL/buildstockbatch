@@ -27,7 +27,6 @@ import pandas as pd
 from pathlib import Path
 import pyarrow as pa
 from pyarrow import parquet
-from s3fs import S3FileSystem
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ def read_data_point_out_json(fs, reporting_measures, filename):
     try:
         with fs.open(filename, 'r') as f:
             d = json.load(f)
-    except (ResourceNotFound, FileExpected, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError):
         return None
     else:
         if 'SimulationOutputReport' not in d:
@@ -99,7 +98,7 @@ def read_out_osw(fs, filename):
     try:
         with fs.open(filename, 'r') as f:
             d = json.load(f)
-    except (ResourceNotFound, FileExpected, json.JSONDecodeError):
+    except (FileNotFoundError, json.JSONDecodeError):
         return None
     else:
         out_d = {}
@@ -139,7 +138,7 @@ def add_timeseries(fs, results_dir, inp1, inp2):
             with fs.open(full_path, 'rb') as f:
                 file1 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
                 file1 = file1 * get_factor(inp1)
-        except ResourceNotFound:
+        except FileNotFoundError:
             file1 = pd.DataFrame()  # if the timeseries file is missing, set it to empty dataframe
     else:
         file1 = inp1
@@ -150,7 +149,7 @@ def add_timeseries(fs, results_dir, inp1, inp2):
             with fs.open(full_path, 'rb') as f:
                 file2 = pd.read_parquet(f, engine='pyarrow').set_index('Time')
                 file2 = file2 * get_factor(inp2)
-        except ResourceNotFound:
+        except FileNotFoundError:
             file2 = pd.DataFrame()
     else:
         file2 = inp2
@@ -385,7 +384,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
     partitions_to_write = []
     for upgrade_id, sim_dirs_in_upgrade in results_by_upgrade.items():
         partitions_to_write.extend([
-            (upgrade_id, group_id, chunk) 
+            (upgrade_id, group_id, chunk)
             for group_id, chunk in enumerate(divide_chunks(sim_dirs_in_upgrade, group_size))
         ])
     t = time.time()
