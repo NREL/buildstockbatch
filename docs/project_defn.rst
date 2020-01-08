@@ -249,7 +249,8 @@ than 3500 sq.ft., and have only one storey.
 Eagle Configuration
 ~~~~~~~~~~~~~~~~~~~
 
-Under the ``eagle`` key is a list of configuration for running the batch job on the Eagle.
+Under the ``eagle`` key is a list of configuration for running the batch job on
+the Eagle supercomputer.
 
 *  ``n_jobs``: Number of eagle jobs to parallelize the simulation into
 *  ``minutes_per_sim``: Maximum allocated simulation time in minutes
@@ -263,6 +264,52 @@ Under the ``eagle`` key is a list of configuration for running the batch job on 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
     *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into
 
+AWS Configuration
+~~~~~~~~~~~~~~~~~
+
+The top-level ``aws`` key is used to specify options for running the batch job
+on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
+
+.. note::
+
+   Many of these options overlap with options specified in the
+   :ref:`postprocessing` section. The options here take pecedence when running
+   on AWS. In a future version we will break backwards compatibility in the
+   config file and have more consistent options.
+
+*  ``job_identifier``: A unique string that starts with an alphabetical character,
+   is up to 10 characters long, and only has letters, numbers or underscore.
+   This is used to name all the AWS service objects to be created and
+   differentiate it from other jobs.
+*  ``s3``: Configuration for project data storage on s3. When running on AWS,
+   this overrides the s3 configuration in the :ref:`post-config-opts`.
+
+    *  ``bucket``: The s3 bucket this project will use for simulation output and processed data storage.
+    *  ``prefix``: The s3 prefix at which the data will be stored. 
+
+*  ``region``: The AWS region in which the batch will be run and data stored.
+*  ``use_spot``: true or false. Defaults to false if missing. This tells the project
+   to use the `Spot Market <https://aws.amazon.com/ec2/spot/>`_ for data
+   simulations, which typically yields about 60-70% cost savings.
+*  ``spot_bid_percent``: Percent of on-demand price you're willing to pay for
+   your simulations. The batch will wait to run until the price drops below this
+   level.
+*  ``batch_array_size``: Number of concurrent simulations to run. Max: 10000.
+*  ``notifications_email``: Email to notify you of simulation completion.
+   You'll receive an email at the beginning where you'll need to accept the
+   subscription to receive further notification emails.
+*  ``emr``: Optional key to specify options for postprocessing using an EMR cluster. Generally the defaults should work fine.
+
+    * ``master_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
+    * ``slave_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
+    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. Increase this for a large dataset to get faster results. Default: 2.
+    * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
+
+
+.. _instance type: https://aws.amazon.com/ec2/instance-types/
+
+
+.. _postprocessing:
 
 Postprocessing
 ~~~~~~~~~~~~~~
@@ -291,6 +338,8 @@ keys, consult your AWS administrator to get them set up.
 * :ref:`Local Docker AWS setup instructions <aws-user-config-local>`
 * :ref:`Eagle AWS setup instructions <aws-user-config-eagle>`
 * `Detailed instructions from AWS <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+
+.. _post-config-opts:
 
 Postprocessing Configuration Options
 ....................................

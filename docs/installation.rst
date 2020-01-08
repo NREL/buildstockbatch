@@ -6,6 +6,8 @@ Both the local and Peregrine installations depend on the
 repository. Either ``git clone`` it or download a copy of it or your
 fork or branch of it with your projects.
 
+.. _local-install:
+
 Local
 ~~~~~
 
@@ -126,3 +128,16 @@ The ``-d`` and ``-e`` flags can also be combined if desired
 ::
 
    bash create_eagle_env.sh -d -e /projects/enduse/envs mydevenv
+
+
+Amazon Web Services
+~~~~~~~~~~~~~~~~~~~
+
+The installation instructions are the same as the :ref:`local-install`
+installation. You will need to use an AWS account with admin permissions. 
+
+.. note::
+
+   At some point we aim to have a permissions policy defining permissions
+   boundary required (including IAM, EC2, S3, EMR, Batch, etc) but for now it's
+   best to have admin rights on the account. 
