@@ -1879,11 +1879,11 @@ class AwsBatch(DockerBatchBase):
 
             os.makedirs(tmppath / 'jobs')
 
+            logger.info('Queueing jobs')
             for i in itertools.count(0):
                 batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
                 if not batch:
                     break
-                logger.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
                 job_json_filename = tmppath / 'jobs' / 'job{:05d}.json'.format(i)
                 with open(job_json_filename, 'w') as f:
                     json.dump({
@@ -1945,7 +1945,6 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_state_machine()
 
         # EMR Function
-
         batch_env.upload_assets()
         batch_env.create_emr_iam_roles()
         batch_env.create_emr_security_groups()
@@ -1953,8 +1952,9 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_emr_cluster_function()
 
         # start job
-
         batch_env.start_state_machine_execution(array_size)
+
+        logger.info('Batch job submitted. Check your email to subscribe to notifications.')
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):

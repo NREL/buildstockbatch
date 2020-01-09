@@ -130,8 +130,8 @@ The ``-d`` and ``-e`` flags can also be combined if desired
    bash create_eagle_env.sh -d -e /projects/enduse/envs mydevenv
 
 
-Amazon Web Services
-~~~~~~~~~~~~~~~~~~~
+Amazon Web Services (Beta)
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
