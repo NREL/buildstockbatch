@@ -134,10 +134,15 @@ Amazon Web Services
 ~~~~~~~~~~~~~~~~~~~
 
 The installation instructions are the same as the :ref:`local-install`
-installation. You will need to use an AWS account with admin permissions. 
+installation. You will need to use an AWS account with appropriate permissions.
 
-.. note::
+After installation the docker image needs to be built the first time before
+using it.
 
-   At some point we aim to have a permissions policy defining permissions
-   boundary required (including IAM, EC2, S3, EMR, Batch, etc) but for now it's
-   best to have admin rights on the account. 
+::
+
+   python build_docker_image.py
+
+It may take several minutes, especially over a slower internet connection. If
+you make changes to buildstockbatch, run this again before submitting another
+job.
