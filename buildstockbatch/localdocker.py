@@ -37,7 +37,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         if os.name == 'nt':
             try:
                 self.docker_client.ping()
-            except:
+            except:  # noqa: E722 (allow bare except in this case because error is weird non-class Windows API error)
                 logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
                 raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
 
