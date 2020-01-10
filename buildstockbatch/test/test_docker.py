@@ -5,7 +5,8 @@ from buildstockbatch.localdocker import LocalDockerBatch
 
 
 def test_docker_image_exists_on_docker_hub():
-    docker_image, docker_tag = LocalDockerBatch.docker_image().split(':')
+    local_docker_batch = LocalDockerBatch('TestLocalDockerBatchProject')
+    docker_image, docker_tag = local_docker_batch.docker_image.split(':')
     baseurl = 'https://registry.hub.docker.com/v2/'
     r1 = requests.get(baseurl)
     assert(r1.status_code == 401)
