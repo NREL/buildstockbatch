@@ -40,9 +40,8 @@ class SimulationExists(Exception):
 
 
 class BuildStockBatchBase(object):
-
-    OS_VERSION = '2.8.1'
-    OS_SHA = '88b69707f1'
+    DEFAULT_OS_VERSION = '2.8.1'
+    DEFAULT_OS_SHA = '88b69707f1'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -65,11 +64,11 @@ class BuildStockBatchBase(object):
         self._weather_dir = None
         # Call property to create directory and copy weather files there
         _ = self.weather_dir  # noqa: F841
-        # Load in overriding OS_VERSION and OS_SHA arguments if they exist in the YAML
-        if 'os_version' in self.cfg.keys():
-            self.OS_VERSION = self.cfg['os_version']
-        if 'os_sha' in self.cfg.keys():
-            self.OS_SHA = self.cfg['os_sha']
+        # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
+        # otherwise use defaults specified here.
+        self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
+        self.os_sha = self.cfg.get('os_sha', self.DEFAULT_OS_SHA)
+        logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
     def path_rel_to_projectfile(self, x):
         if os.path.isabs(x):
@@ -261,7 +260,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
-        #assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        # assert(BuildStockBatchBase.validate_options_lookup(project_file))
         logger.info('Base Validation Successful')
         return True
 

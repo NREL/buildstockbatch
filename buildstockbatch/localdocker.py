@@ -32,12 +32,21 @@ class LocalDockerBatch(BuildStockBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-        logger.debug('Pulling docker image')
-        self.docker_client.images.pull(self.docker_image())
+        # On Windows, check that the docker server is responding (that you have the Docker Daemon running)
+        # this will hopefully prevent other people from trying to debug bogus issues.
+        if os.name == 'nt':
+            try:
+                self.docker_client.ping()
+            except:  # noqa: E722 (allow bare except in this case because error is weird non-class Windows API error)
+                logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
+                raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
+
+        logger.debug(f"Pulling docker image {self.docker_image}")
+        self.docker_client.images.pull(self.docker_image)
 
         if self.stock_type == 'residential':
             self.sampler = ResidentialDockerSampler(
-                self.docker_image(),
+                self.docker_image,
                 self.cfg,
                 self.buildstock_dir,
                 self.project_dir
@@ -52,7 +61,7 @@ class LocalDockerBatch(BuildStockBatchBase):
                     self.project_dir
                 )
             elif sampling_algorithm == 'precomputed':
-                print('calling precomputed sampler')
+                logger.info('calling precomputed sampler')
                 self.sampler = PrecomputedDockerSampler(
                     self.output_dir,
                     self.cfg,
@@ -69,12 +78,12 @@ class LocalDockerBatch(BuildStockBatchBase):
         super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
         # LocalDocker specific code goes here
 
-    @classmethod
-    def docker_image(cls):
-        return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
+    @property
+    def docker_image(self):
+        return 'nrel/openstudio:{}'.format(self.os_version)
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, measures_only,
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
                      cfg, i, upgrade_idx=None):
         try:
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
@@ -107,7 +116,7 @@ class LocalDockerBatch(BuildStockBatchBase):
         if measures_only:
             args.insert(2, '--measures_only')
         container_output = docker_client.containers.run(
-            cls.docker_image(),
+            docker_image,
             args,
             remove=True,
             volumes=docker_volume_mounts,
@@ -134,6 +143,7 @@ class LocalDockerBatch(BuildStockBatchBase):
             self.project_dir,
             self.buildstock_dir,
             self.weather_dir,
+            self.docker_image,
             self.results_dir,
             measures_only,
             self.cfg
