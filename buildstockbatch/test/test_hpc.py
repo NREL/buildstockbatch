@@ -7,10 +7,15 @@ from unittest.mock import patch
 from buildstockbatch.hpc import HPCBatchBase
 
 
-def test_singularity_image_download_url():
-    url = HPCBatchBase.singularity_image_url()
-    r = requests.head(url)
-    assert r.status_code == requests.codes.ok
+def test_singularity_image_download_url(basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file()
+    with patch.object(HPCBatchBase, 'weather_dir', None), \
+            patch.object(HPCBatchBase, 'output_dir', results_dir), \
+            patch.object(HPCBatchBase, 'singularity_image', '/path/to/singularity.simg'):
+        hpc_batch_base = HPCBatchBase(project_filename)
+        url = hpc_batch_base.singularity_image_url
+        r = requests.head(url)
+        assert r.status_code == requests.codes.ok
 
 
 @patch('buildstockbatch.hpc.subprocess')

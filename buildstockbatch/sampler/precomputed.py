@@ -56,8 +56,6 @@ class PrecomputedBaseSampler(BuildStockSampler):
                 'to the number of rows in the buildstock.csv file. Remove or comment out baseline->n_datapoints from '
                 'your project file.'
             )
-        shutil.copyfile(os.path.abspath(sample_filename), os.path.join(os.path.dirname(os.path.abspath(output_path)),
-                                                                       'housing_characteristics', 'buildstock.csv'))
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
         else:
@@ -114,7 +112,7 @@ class PrecomputedSingularitySampler(PrecomputedBaseSampler):
 
 class PrecomputedDockerSampler(PrecomputedBaseSampler):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, output_dir, *args, **kwargs):
         """
         This class uses the Commercial Precomputed Sampler for local Docker deployments
         """
@@ -133,8 +131,21 @@ class PrecomputedDockerSampler(PrecomputedBaseSampler):
                 buildstock_path = self.cfg['baseline']['precomputed_sample']
                 if not os.path.isfile(buildstock_path):
                     raise RuntimeError('Cannot find buildstock file {}'.format(buildstock_path))
-                shutil.copy2(buildstock_path, os.path.join(self.project_dir, 'housing_characteristics'))
-                shutil.move(os.path.join(os.path.join(self.project_dir, 'housing_characteristics'),
-                                         os.path.basename(buildstock_path)), csv_path)
-                shutil.copy2(csv_path, os.path.join(self.project_dir, 'buildstock.csv'))
+                housing_chars_dir = os.path.join(self.project_dir, 'housing_characteristics')
+                housing_chars_buildstock_path = os.path.join(housing_chars_dir, os.path.basename(buildstock_path))
+                # Copy the arbitrarily named buildstock file into the housing_characteristics directory
+                # (unless it is already in that directory)
+                if os.path.abspath(buildstock_path) != os.path.abspath(housing_chars_buildstock_path):
+                    logger.debug(f"Copying {buildstock_path} to \n {housing_chars_buildstock_path}")
+                    shutil.copy2(buildstock_path, housing_chars_buildstock_path)
+                # Copy the arbitrarily named buildstock file to 'buildstock.csv'
+                # (unless it is already named 'buildstock.csv')
+                if os.path.abspath(housing_chars_buildstock_path) != os.path.abspath(csv_path):
+                    logger.debug(f"Copying {housing_chars_buildstock_path} to \n {csv_path}")
+                    shutil.copy2(housing_chars_buildstock_path, csv_path)
+                # Copy the 'buildstock.csv' file back to the project root
+                project_root_buildstock_path = os.path.join(self.project_dir, 'buildstock.csv')
+                if os.path.abspath(csv_path) != os.path.abspath(project_root_buildstock_path):
+                    logger.debug(f"Copying {housing_chars_buildstock_path} to \n {csv_path}")
+                    shutil.copy2(csv_path, project_root_buildstock_path)
         return self.check_sampling(csv_path, n_datapoints)

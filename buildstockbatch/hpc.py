@@ -66,7 +66,7 @@ class HPCBatchBase(BuildStockBatchBase):
                     self.project_dir
                 )
             elif sampling_algorithm == 'precomputed':
-                print('calling precomputed sampler')
+                logger.info('calling precomputed sampler')
                 self.sampler = PrecomputedSingularitySampler(
                     self.output_dir,
                     self.cfg,
@@ -82,11 +82,11 @@ class HPCBatchBase(BuildStockBatchBase):
     def output_dir(self):
         raise NotImplementedError
 
-    @classmethod
-    def singularity_image_url(cls):
+    @property
+    def singularity_image_url(self):
         return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=cls.OS_VERSION,
-                    sha=cls.OS_SHA
+                    ver=self.os_version,
+                    sha=self.os_sha
                 )
 
     @property
@@ -95,8 +95,8 @@ class HPCBatchBase(BuildStockBatchBase):
         if 'sys_image_dir' in self.cfg.keys():
             sys_image_dir = self.cfg['sys_image_dir']
             sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                ver=self.OS_VERSION,
-                sha=self.OS_SHA
+                ver=self.os_version,
+                sha=self.os_sha
             ))
             if os.path.isfile(sys_image):
                 return sys_image
@@ -104,8 +104,8 @@ class HPCBatchBase(BuildStockBatchBase):
                 raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
         # Use the expected HPC environment default if not explicitly defined in the YAML
         sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-            ver=self.OS_VERSION,
-            sha=self.OS_SHA
+            ver=self.os_version,
+            sha=self.os_sha
         ))
         if os.path.isfile(sys_image):
             return sys_image
