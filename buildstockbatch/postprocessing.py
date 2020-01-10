@@ -20,6 +20,7 @@ from fs.errors import ResourceNotFound, FileExpected
 import gzip
 import json
 import logging
+import numpy as np
 import os
 import random
 import re
@@ -30,6 +31,7 @@ import pandas as pd
 from pathlib import Path
 import pyarrow as pa
 from pyarrow import parquet
+from joblib import Parallel, delayed
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +217,7 @@ def write_output(results_dir, group_pq):
     logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
     write_dataframe_as_parquet(pq, results_dir, file_path)
 
-# Liang's edit starts
+
 def athena_return(year, ts_index, metadata):
     """
     Function to read the 15 minute time series parquet file, drop unneeded columns, & save to a new folder for gzip
@@ -225,7 +227,7 @@ def athena_return(year, ts_index, metadata):
     :return: Dictionary with id and success of the attempt to generate the athena parquet file
     """
 
-    print ('Processing the folder {}.'.format(metadata['building_id']))
+    print('Processing the folder {}.'.format(metadata['building_id']))
 
     ts_name_mapping = {
         'Electricity:Facility__[kWh]': 'electricity_facility_kWh',
@@ -265,23 +267,25 @@ def athena_return(year, ts_index, metadata):
         ts_df = ts_df[new_order]
         ts_df.to_parquet(output_path)
         return {'id': metadata['building_id'], 'good': True}
-    except ArrowIOError:
+    except pa.lib.ArrowIOError:
         return {'id': metadata['building_id'], 'good': False}
+
 
 def concat_athena_parquets(chunck, index):
     to_concat = []
     for file in chunck:
         try:
             to_concat.append(pd.read_parquet(file))
-        except ArrowIOError:
+        except pa.lib.ArrowIOError:
             continue
     to_save = pd.concat(to_concat)
     to_save.to_parquet(working_dir + 'athena_{}.parquet'.format(index))
 
+
 def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
-    #year = '2012'
-    #working_dir = '/projects/eedr/comstock/full-comstock/results/simulation_output/'
-    #results_dir = '/projects/eedr/comstock/full-comstock/results/parquet/baseline'
+    # year = '2012'
+    # working_dir = '/projects/eedr/comstock/full-comstock/results/simulation_output/'
+    # results_dir = '/projects/eedr/comstock/full-comstock/results/parquet/baseline'
 
     data_len_dic = {'2012': 35136,
                     '2013': 35040,
@@ -290,13 +294,13 @@ def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
                     '2016': 35136,
                     '2017': 35040}
 
-    if year not in ['2012','2013','2014','2015','2016','2017']:
+    if year not in ['2012', '2013', '2014', '2015', '2016', '2017']:
         raise RuntimeError('YEAR provided was {}'.format(year))
     # Iterate over the combination of scenarios and years in the LA100 study
-    metadf = pd.read_parquet(results_dir +'/results_up00.parquet')
-    #metadf = pd.read_parquet(results_dir +'/results_up00.parquet').iloc[0:20,:]
+    metadf = pd.read_parquet(results_dir + '/results_up00.parquet')
+    # metadf = pd.read_parquet(results_dir + '/results_up00.parquet').iloc[0:20,:]
     metadf = metadf.loc[metadf['completed_status'] == 'Success']
-    #metadf = pd.read_parquet(results_dir +'/results_up00.parquet')
+    # metadf = pd.read_parquet(results_dir +'/results_up00.parquet')
     cols_to_keep = [
         'building_id',
         'build_existing_model.aspect_ratio',
@@ -326,7 +330,7 @@ def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
         'building_id': 'building_id',
         'build_existing_model.aspect_ratio': 'aspect_ratio',
         'build_existing_model.changebuildinglocation_climate_zone': 'cz',
-        'build_existing_model.changebuildinglocation_weather_file_name':'weather_file',
+        'build_existing_model.changebuildinglocation_weather_file_name': 'weather_file',
         'build_existing_model.create_bar_from_building_type_ratios_bldg_type_a': 'bldg_type',
         'build_existing_model.create_bar_from_building_type_ratios_floor_height': 'ftf_height',
         'build_existing_model.create_bar_from_building_type_ratios_num_stories_above_grade': 'ns',
@@ -365,7 +369,7 @@ def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
 
     # Step 2. aggregate parquet files
     # Aggregate individual athena files into total_file_number files
-    #total_file_number = 140
+    # total_file_number = 140
     new_parquets = [
         working_dir + 'up00/bldg{0:07d}/athena.parquet'.format(dask_bag_list[item]['building_id']) for
         item in dask_bag_list
@@ -375,7 +379,7 @@ def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
     Parallel(n_jobs=-1, verbose=9)(
         delayed(concat_athena_parquets)(chunks[index], index) for index in range(len(chunks)))
     print('Completed aggregating athena parquet files for ComStock up00.')
-# Liang's edit ends
+
 
 def combine_results(results_dir, config, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
     fs = open_fs(results_dir)
