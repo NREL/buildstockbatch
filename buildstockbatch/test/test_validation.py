@@ -16,7 +16,7 @@ import pytest
 import types
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.localdocker import LocalDockerBatch
-from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from unittest.mock import patch
 from testfixtures import LogCapture
 import logging
@@ -76,7 +76,7 @@ def test_missing_required_key_fails(project_file):
 def test_xor_violations_fail(project_file):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValidationError):
             BuildStockBatchBase.validate_xor_schema_keys(project_file)
 
 
@@ -84,8 +84,8 @@ def test_xor_violations_fail(project_file):
     (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
@@ -132,7 +132,7 @@ def test_bad_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
         try:
             BuildStockBatchBase.validate_measures_and_arguments(project_file)
-        except ValueError as er:
+        except ValidationError as er:
             er = str(er)
             warning_logs = filter_logs(logs, 'WARNING')
             assert "Required argument calendar_year for" in warning_logs
