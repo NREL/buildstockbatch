@@ -32,6 +32,15 @@ class LocalDockerBatch(BuildStockBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
+        # On Windows, check that the docker server is responding (that you have the Docker Daemon running)
+        # this will hopefully prevent other people from trying to debug bogus issues.
+        if os.name == 'nt':
+            try:
+                self.docker_client.ping()
+            except:
+                logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
+                raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
+
         logger.debug(f"Pulling docker image {self.docker_image}")
         self.docker_client.images.pull(self.docker_image)
 
