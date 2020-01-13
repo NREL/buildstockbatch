@@ -63,13 +63,14 @@ setuptools.setup(
         'pyarrow>=0.14.1',
         'dask[complete]>=2.1.0',
         'docker',
-        'boto3',
-        'fs',
-        'fs-s3fs',
+        'boto3>=1.10.44',
+        's3fs>=0.4.0',
+        'fsspec>=0.6.0',
         'docutils<0.15,>=0.10',
         'yamale>=2.0',
         'ruamel.yaml>=0.16.5',
-        'testfixtures'
+        'testfixtures',
+        'awsretry',
     ],
     extras_require={
         'dev': [
@@ -89,6 +90,7 @@ setuptools.setup(
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
+            'buildstock_aws=buildstockbatch.aws.aws:main'
         ]
     },
     cmdclass={'test': PyTest},

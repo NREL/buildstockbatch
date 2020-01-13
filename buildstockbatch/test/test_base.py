@@ -1,5 +1,6 @@
 import csv
 import dask
+from fsspec.implementations.local import LocalFileSystem
 import glob
 import json
 import numpy as np
@@ -456,8 +457,9 @@ def test_write_parquet_no_index():
     df = pd.DataFrame(np.random.randn(6, 4), columns=list('abcd'), index=np.arange(6))
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        filename = 'df.parquet'
-        write_dataframe_as_parquet(df, tmpdir, filename)
+        fs = LocalFileSystem()
+        filename = os.path.join(tmpdir, 'df.parquet')
+        write_dataframe_as_parquet(df, fs, filename)
         schema = parquet.read_schema(os.path.join(tmpdir, filename))
         assert '__index_level_0__' not in schema.names
         assert df.columns.values.tolist() == schema.names

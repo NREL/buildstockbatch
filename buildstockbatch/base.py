@@ -12,6 +12,7 @@ This is the base class mixed into the deployment specific classes (i.e. eagle, l
 
 from dask.distributed import Client
 import difflib
+from fsspec.implementations.local import LocalFileSystem
 import gzip
 import logging
 import math
@@ -39,6 +40,10 @@ class SimulationExists(Exception):
     pass
 
 
+class ValidationError(Exception):
+    pass
+
+
 class BuildStockBatchBase(object):
 
     OS_VERSION = '2.8.1'
@@ -61,10 +66,6 @@ class BuildStockBatchBase(object):
         elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
             raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
                                                                                            project_filename))
-        self._weather_dir = None
-        # Call property to create directory and copy weather files there
-        _ = self.weather_dir  # noqa: F841
-
         if 'buildstock_csv' in self.cfg['baseline']:
             buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
             if not os.path.exists(buildstock_csv):
@@ -120,10 +121,7 @@ class BuildStockBatchBase(object):
 
     @property
     def weather_dir(self):
-        if self._weather_dir is None:
-            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
-            self._get_weather_files()
-        return self._weather_dir.name
+        raise NotImplementedError
 
     @property
     def buildstock_dir(self):
@@ -263,12 +261,13 @@ class BuildStockBatchBase(object):
     @staticmethod
     def cleanup_sim_dir(sim_dir):
 
+        fs = LocalFileSystem()
+
         # Convert the timeseries data to parquet
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
-            timeseries_filedir, timeseries_filename = os.path.split(timeseries_filepath)
-            write_dataframe_as_parquet(tsdf, timeseries_filedir, os.path.splitext(timeseries_filename)[0] + '.parquet')
+            write_dataframe_as_parquet(tsdf, fs, os.path.splitext(timeseries_filepath)[0] + '.parquet')
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
@@ -333,10 +332,10 @@ class BuildStockBatchBase(object):
             if int(minor) >= 0:
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
-                    raise ValueError('Both/neither weather_files_url and weather_files_path found in yaml root')
+                    raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
                 if ('n_datapoints' in cfg['baseline'].keys()) is \
                    ('buildstock_csv' in cfg['baseline'].keys()):
-                    raise ValueError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+                    raise ValidationError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
         return True
 
     @staticmethod
@@ -477,7 +476,7 @@ class BuildStockBatchBase(object):
             return True
         else:
             logger.error(error_msgs)
-            raise ValueError(error_msgs)
+            raise ValidationError(error_msgs)
 
     @staticmethod
     def validate_options_lookup(project_file):
@@ -720,12 +719,14 @@ class BuildStockBatchBase(object):
 
         reporting_measures = self.cfg.get('reporting_measures', [])
 
+        fs = LocalFileSystem()
+
         if not skip_combine:
-            combine_results(self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
+            combine_results(fs, self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
                             aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
             s3_bucket, s3_prefix = upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
-                create_athena_tables(aws_conf, self.output_dir, s3_bucket, s3_prefix)
+                create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)

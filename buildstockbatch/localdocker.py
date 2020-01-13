@@ -20,6 +20,8 @@ import logging
 import os
 import pandas as pd
 import shutil
+import sys
+import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
@@ -27,13 +29,11 @@ from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSam
 logger = logging.getLogger(__name__)
 
 
-class LocalDockerBatch(BuildStockBatchBase):
+class DockerBatchBase(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-        logger.debug('Pulling docker image')
-        self.docker_client.images.pull(self.docker_image())
 
         if self.stock_type == 'residential':
             self.sampler = ResidentialDockerSampler(
@@ -56,14 +56,36 @@ class LocalDockerBatch(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+        self._weather_dir = None
+
     @staticmethod
     def validate_project(project_file):
-        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
         # LocalDocker specific code goes here
 
     @classmethod
     def docker_image(cls):
         return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
+
+
+class LocalDockerBatch(DockerBatchBase):
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+        logger.debug('Pulling docker image')
+        self.docker_client.images.pull(self.docker_image())
+
+    @staticmethod
+    def validate_project(project_file):
+        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
+        # LocalDocker specific code goes here
+
+    @property
+    def weather_dir(self):
+        if self._weather_dir is None:
+            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
+            self._get_weather_files()
+        return self._weather_dir.name
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, measures_only,
@@ -74,15 +96,18 @@ class LocalDockerBatch(BuildStockBatchBase):
             return
 
         bind_mounts = [
-            (sim_dir, '/var/simdata/openstudio', 'rw'),
-            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
-            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'),
-             '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
-            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
-            (weather_dir, '/var/simdata/openstudio/weather', 'ro')
+            (sim_dir, '', 'rw'),
+            (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'seeds'), 'seeds', 'ro'),
+            (weather_dir, 'weather', 'ro')
         ]
-        docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
+        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
+        for bind in bind_mounts:
+            dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
+            if not os.path.exists(dir_to_make):
+                os.makedirs(dir_to_make)
 
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
@@ -94,16 +119,19 @@ class LocalDockerBatch(BuildStockBatchBase):
             'openstudio',
             'run',
             '-w', 'in.osw',
-            '--debug'
         ]
         if measures_only:
             args.insert(2, '--measures_only')
+        extra_kws = {}
+        if sys.platform.startswith('linux'):
+            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
             cls.docker_image(),
             args,
             remove=True,
             volumes=docker_volume_mounts,
-            name=sim_id
+            name=sim_id,
+            **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
             f_out.write(container_output)

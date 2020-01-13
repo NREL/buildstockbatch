@@ -4,6 +4,7 @@ weather_files_path: str(required=False)
 weather_files_url: str(required=False)
 stock_type: enum('residential', 'commercial', required=True)
 eagle: include('hpc-spec', required=False)
+aws: include('aws-spec', required=False)
 output_directory: str(required=False)
 sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
@@ -15,6 +16,22 @@ residential_simulation_controls: map(required=False)
 reporting_measures: list(str(), required=False)
 schema_version: num(required=False)
 ---
+aws-spec:
+  job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
+  s3: include('s3-aws-postprocessing-spec', required=True)
+  region: str(required=True)
+  use_spot: bool(required=False)
+  spot_bid_percent: num(min=1, max=100, required=False)
+  batch_array_size: num(min=1, max=10000, required=True)
+  notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', required=True)
+  emr: include('aws-emr-spec', required=False)
+
+aws-emr-spec:
+  master_instance_type: str(required=False)
+  slave_instance_type: str(required=False)
+  slave_instance_count: int(min=1, required=False)
+  dask_worker_vcores: int(min=1, required=False)
+
 hpc-spec:
   account: str(required=True)
   minutes_per_sim: int(max=120, required=False)
