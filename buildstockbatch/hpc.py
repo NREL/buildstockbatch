@@ -139,7 +139,7 @@ class HPCBatchBase(BuildStockBatchBase):
         assert(os.path.isdir(results_dir))
         return results_dir
 
-    def run_batch(self):
+    def run_batch(self, sampling_only=False):
 
         # create destination_dir and copy housing_characteristics into it
         destination_dir = os.path.dirname(self.sampler.csv_path)
@@ -163,6 +163,7 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             # otherwise just the plain sampling process needs to be run
             buildstock_csv_filename = self.run_sampling()
+
         # If the results directory already exists, implying the existence of results, require a user defined override
         # in the YAML file to allow for those results to be overwritten. Note that this will not impact the
         # postprocessonly or uploadonly flags as they do not ever invoke the run_batch function, instead skipping to the
@@ -175,7 +176,10 @@ class HPCBatchBase(BuildStockBatchBase):
                 else:
                     logger.warn('Overriding results in results directory in {}'.format(self.cfg['output_directory']))
 
-        # Determine the number of simulations expected to be executed
+        if sampling_only:
+            return
+
+        # read the results
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
 
         # find out how many buildings there are to simulate
