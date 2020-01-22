@@ -161,7 +161,23 @@ class BuildStockBatchBase(object):
         return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
-        return self.sampler.run_sampling(n_datapoints)
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
+        if 'buildstock_csv' in self.cfg['baseline']:
+            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
+            destination_filename = self.sampler.csv_path
+            if destination_filename != buildstock_csv:
+                if os.path.exists(destination_filename):
+                    logger.info("Removing {!r} before copying {!r} to that location."
+                                .format(destination_filename, buildstock_csv))
+                    os.remove(destination_filename)
+                shutil.copy(
+                    buildstock_csv,
+                    destination_filename
+                )
+            return destination_filename
+        else:
+            return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError
