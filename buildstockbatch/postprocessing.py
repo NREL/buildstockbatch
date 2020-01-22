@@ -14,7 +14,7 @@ import datetime as dt
 import gzip
 import json
 import logging
-import os
+# import os
 import random
 import re
 import sys
@@ -26,10 +26,10 @@ from pathlib import Path
 import boto3
 import dask
 import dask.bag as db
-import numpy as np
+# import numpy as np
 import pandas as pd
 import pyarrow as pa
-from joblib import Parallel, delayed
+# from joblib import Parallel, delayed
 from pyarrow import parquet
 
 logger = logging.getLogger(__name__)
@@ -402,8 +402,8 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
             map(partial(read_data_point_out_json, fs, reporting_measures)). \
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
-            datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
-                map(partial(flatten_datapoint_json, reporting_measures)).take(10)
+            datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).map(
+                partial(flatten_datapoint_json, reporting_measures)).take(10)
         ))
 
         if meta.shape == (0, 0):
