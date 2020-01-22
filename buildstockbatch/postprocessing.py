@@ -10,26 +10,27 @@ A module containing utility functions for postprocessing
 :license: BSD-3
 """
 
-from collections import defaultdict
-import dask.bag as db
-import dask
 import datetime as dt
-from functools import partial
 import gzip
 import json
 import logging
-import numpy as np
 import os
 import random
 import re
 import sys
 import time
-import boto3
-import pandas as pd
+from collections import defaultdict
+from functools import partial
 from pathlib import Path
+
+import boto3
+import dask
+import dask.bag as db
+import numpy as np
+import pandas as pd
 import pyarrow as pa
-from pyarrow import parquet
 from joblib import Parallel, delayed
+from pyarrow import parquet
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +127,6 @@ def write_dataframe_as_parquet(df, fs, filename):
 
 
 def add_timeseries(fs, results_dir, inp1, inp2):
-
     def get_factor(folder):
         path = f"{folder}/run/data_point_out.json"
         with fs.open(path, 'r') as f:
@@ -195,171 +195,172 @@ def write_output(fs, results_dir, args):
     logger.debug(f"The concatenated parquet file is consuming {sys.getsizeof(pq) / (1024 * 1024) :.2f} MB.")
     write_dataframe_as_parquet(pq, fs, file_path)
 
-def athena_return(year, ts_index, metadata):
-    """
-    Function to read the 15 minute time series parquet file, drop unneeded columns, & save to a new folder for gzip
-    :param year: year to create athena parquet files for
-    :param ts_index: Array of ISO8601 compliant interval timestamps
-    :param metadata: dictionary of metadata to append to the timeseries data
-    :return: Dictionary with id and success of the attempt to generate the athena parquet file
-    """
 
-    print('Processing the folder {}.'.format(metadata['building_id']))
-
-    ts_name_mapping = {
-        'Electricity:Facility__[kWh]': 'electricity_facility_kWh',
-        'Gas:Facility__[kBtu]': 'gas_facility_kBtu',
-        'Cooling:Electricity__[kWh]': 'cooling_electricity_kWh',
-        'ExteriorLights:Electricity__[kWh]': 'exterior_lights_electricity_kWh',
-        'Fans:Electricity__[kWh]': 'fans_electricity_kWh',
-        'Heating:Electricity__[kWh]': 'heating_electricity_kWh',
-        'InteriorEquipment:Electricity__[kWh]': 'interior_equipment_electricity_kWh',
-        'InteriorEquipment:Gas__[kBtu]': 'interior_equipment_gas_kBtu',
-        'Pumps:Electricity__[kWh]': 'pumps_electricity_kWh',
-        'WaterSystems:Electricity__[kWh]': 'water_systems_electricity_kWh',
-        'WaterSystems:Gas__[kBtu]': 'water_systems_gas_kBtu',
-        'Water:Facility__[gal]': 'water_facility_gal',
-        'Heating:Gas__[kBtu]': 'heating_gas_kBtu',
-        'HeatRejection:Electricity__[kWh]': 'heat_rejection_electricity_kWh',
-        'InteriorLights:Electricity__[kWh]': 'interior_lights_electricity_kWh',
-        'Refrigeration:Electricity__[kWh]': 'refrigeration_electricity_kWh'
-    }
-    try:
-        output_path = working_dir + 'up00/bldg{0:07d}/athena.parquet'.\
-            format(metadata['building_id'])
-        parquet_path = working_dir + 'up00/bldg{0:07d}/run/enduse_timeseries.parquet'.\
-            format(metadata['building_id'])
-        if not os.path.isfile(parquet_path):
-            return {'id': metadata['building_id'], 'good': False}
-        ts_df = pd.read_parquet(parquet_path, columns=ts_name_mapping.keys())
-        for key in ts_name_mapping.keys():
-            if key not in list(ts_df):
-                ts_df.loc[:, key] = 0.0
-        ts_df.columns = [ts_name_mapping[col] for col in ts_df.columns]
-        for key in metadata:
-            ts_df.loc[:, key] = metadata[key]
-        ts_df.index = ts_index[0:data_len_dic[year]]
-        new_order = [key for key in metadata.keys()]
-        _ = [new_order.append(key) for key in ts_name_mapping.values()]
-        ts_df = ts_df[new_order]
-        ts_df.to_parquet(output_path)
-        return {'id': metadata['building_id'], 'good': True}
-    except pa.lib.ArrowIOError:
-        return {'id': metadata['building_id'], 'good': False}
-
-
-def concat_athena_parquets(chunck, index):
-    to_concat = []
-    for file in chunck:
-        try:
-            to_concat.append(pd.read_parquet(file))
-        except pa.lib.ArrowIOError:
-            continue
-    to_save = pd.concat(to_concat)
-    to_save.to_parquet(working_dir + 'athena_{}.parquet'.format(index))
+# def athena_return(year, ts_index, metadata):
+#     """
+#     Function to read the 15 minute time series parquet file, drop unneeded columns, & save to a new folder for gzip
+#     :param year: year to create athena parquet files for
+#     :param ts_index: Array of ISO8601 compliant interval timestamps
+#     :param metadata: dictionary of metadata to append to the timeseries data
+#     :return: Dictionary with id and success of the attempt to generate the athena parquet file
+#     """
+#
+#     print('Processing the folder {}.'.format(metadata['building_id']))
+#
+#     ts_name_mapping = {
+#         'Electricity:Facility__[kWh]': 'electricity_facility_kWh',
+#         'Gas:Facility__[kBtu]': 'gas_facility_kBtu',
+#         'Cooling:Electricity__[kWh]': 'cooling_electricity_kWh',
+#         'ExteriorLights:Electricity__[kWh]': 'exterior_lights_electricity_kWh',
+#         'Fans:Electricity__[kWh]': 'fans_electricity_kWh',
+#         'Heating:Electricity__[kWh]': 'heating_electricity_kWh',
+#         'InteriorEquipment:Electricity__[kWh]': 'interior_equipment_electricity_kWh',
+#         'InteriorEquipment:Gas__[kBtu]': 'interior_equipment_gas_kBtu',
+#         'Pumps:Electricity__[kWh]': 'pumps_electricity_kWh',
+#         'WaterSystems:Electricity__[kWh]': 'water_systems_electricity_kWh',
+#         'WaterSystems:Gas__[kBtu]': 'water_systems_gas_kBtu',
+#         'Water:Facility__[gal]': 'water_facility_gal',
+#         'Heating:Gas__[kBtu]': 'heating_gas_kBtu',
+#         'HeatRejection:Electricity__[kWh]': 'heat_rejection_electricity_kWh',
+#         'InteriorLights:Electricity__[kWh]': 'interior_lights_electricity_kWh',
+#         'Refrigeration:Electricity__[kWh]': 'refrigeration_electricity_kWh'
+#     }
+#     try:
+#         output_path = working_dir + 'up00/bldg{0:07d}/athena.parquet'. \
+#             format(metadata['building_id'])
+#         parquet_path = working_dir + 'up00/bldg{0:07d}/run/enduse_timeseries.parquet'. \
+#             format(metadata['building_id'])
+#         if not os.path.isfile(parquet_path):
+#             return {'id': metadata['building_id'], 'good': False}
+#         ts_df = pd.read_parquet(parquet_path, columns=ts_name_mapping.keys())
+#         for key in ts_name_mapping.keys():
+#             if key not in list(ts_df):
+#                 ts_df.loc[:, key] = 0.0
+#         ts_df.columns = [ts_name_mapping[col] for col in ts_df.columns]
+#         for key in metadata:
+#             ts_df.loc[:, key] = metadata[key]
+#         ts_df.index = ts_index[0:data_len_dic[year]]
+#         new_order = [key for key in metadata.keys()]
+#         _ = [new_order.append(key) for key in ts_name_mapping.values()]
+#         ts_df = ts_df[new_order]
+#         ts_df.to_parquet(output_path)
+#         return {'id': metadata['building_id'], 'good': True}
+#     except pa.lib.ArrowIOError:
+#         return {'id': metadata['building_id'], 'good': False}
 
 
-def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
-    # year = '2012'
-    # working_dir = '/projects/eedr/comstock/full-comstock/results/simulation_output/'
-    # results_dir = '/projects/eedr/comstock/full-comstock/results/parquet/baseline'
+# def concat_athena_parquets(chunck, index):
+#     to_concat = []
+#     for file in chunck:
+#         try:
+#             to_concat.append(pd.read_parquet(file))
+#         except pa.lib.ArrowIOError:
+#             continue
+#     to_save = pd.concat(to_concat)
+#     to_save.to_parquet(working_dir + 'athena_{}.parquet'.format(index))
 
-    data_len_dic = {'2012': 35136,
-                    '2013': 35040,
-                    '2014': 35040,
-                    '2015': 35040,
-                    '2016': 35136,
-                    '2017': 35040}
 
-    if year not in ['2012', '2013', '2014', '2015', '2016', '2017']:
-        raise RuntimeError('YEAR provided was {}'.format(year))
-    # Iterate over the combination of scenarios and years in the LA100 study
-    metadf = pd.read_parquet(results_dir + '/results_up00.parquet')
-    # metadf = pd.read_parquet(results_dir + '/results_up00.parquet').iloc[0:20,:]
-    metadf = metadf.loc[metadf['completed_status'] == 'Success']
-    # metadf = pd.read_parquet(results_dir +'/results_up00.parquet')
-    cols_to_keep = [
-        'building_id',
-        'build_existing_model.aspect_ratio',
-        'build_existing_model.changebuildinglocation_climate_zone',
-        'build_existing_model.changebuildinglocation_weather_file_name',
-        'build_existing_model.create_bar_from_building_type_ratios_bldg_type_a',
-        'build_existing_model.create_bar_from_building_type_ratios_floor_height',
-        'build_existing_model.create_bar_from_building_type_ratios_num_stories_above_grade',
-        'build_existing_model.create_bar_from_building_type_ratios_template',
-        'build_existing_model.create_bar_from_building_type_ratios_total_bldg_floor_area',
-        'build_existing_model.create_typical_building_from_model_system_type',
-        'build_existing_model.envelope_code',
-        'build_existing_model.ext_lgt_code',
-        'build_existing_model.hvac_code',
-        'build_existing_model.int_equip_code',
-        'build_existing_model.int_lgt_code',
-        'build_existing_model.swh_code',
-        'simulation_output_report.hours_cooling_setpoint_not_met',
-        'simulation_output_report.hours_heating_setpoint_not_met',
-        'simulation_output_report.total_site_electricity_kwh',
-        'simulation_output_report.total_site_natural_gas_therm'
-    ]
-    cols_to_drop = list(metadf)
-    [cols_to_drop.remove(col) for col in list(metadf) if col in cols_to_keep]
-    metadf = metadf.drop(cols_to_drop, axis=1)
-    col_name_mapping = {
-        'building_id': 'building_id',
-        'build_existing_model.aspect_ratio': 'aspect_ratio',
-        'build_existing_model.changebuildinglocation_climate_zone': 'cz',
-        'build_existing_model.changebuildinglocation_weather_file_name': 'weather_file',
-        'build_existing_model.create_bar_from_building_type_ratios_bldg_type_a': 'bldg_type',
-        'build_existing_model.create_bar_from_building_type_ratios_floor_height': 'ftf_height',
-        'build_existing_model.create_bar_from_building_type_ratios_num_stories_above_grade': 'ns',
-        'build_existing_model.create_bar_from_building_type_ratios_template': 'built_code',
-        'build_existing_model.create_bar_from_building_type_ratios_total_bldg_floor_area': 'sqft',
-        'build_existing_model.create_typical_building_from_model_system_type': 'system_type',
-        'build_existing_model.envelope_code': 'env_code',
-        'build_existing_model.ext_lgt_code': 'ext_lgt_code',
-        'build_existing_model.hvac_code': 'hvac_code',
-        'build_existing_model.int_equip_code': 'int_equip_code',
-        'build_existing_model.int_lgt_code': 'int_lgt_code',
-        'build_existing_model.swh_code': 'swh_code',
-        'simulation_output_report.hours_cooling_setpoint_not_met': 'clg_stp_not_met',
-        'simulation_output_report.hours_heating_setpoint_not_met': 'htg_stp_not_met',
-        'simulation_output_report.total_site_electricity_kwh': 'total_site_elec_kwh',
-        'simulation_output_report.total_site_natural_gas_therm': 'total_site_gas_therm',
-    }
-    metadf.columns = [col_name_mapping[column] for column in metadf.columns]
-    dask_bag_list = metadf.to_dict(orient='index')
-    # Pre-instantiate the index that will be set on each parquet file
-    start = dt.datetime(int(year), 1, 1, 0)
-    intervals = [step * 15 for step in range(data_len_dic[year])]
-    index = [start + dt.timedelta(minutes=interval) for interval in intervals]
-    index = [timestamp.isoformat() for timestamp in index]
+# def combine_results_ComStock(working_dir, results_dir, year, total_file_number):
+#     # year = '2012'
+#     # working_dir = '/projects/eedr/comstock/full-comstock/results/simulation_output/'
+#     # results_dir = '/projects/eedr/comstock/full-comstock/results/parquet/baseline'
+#
+#     data_len_dic = {'2012': 35136,
+#                     '2013': 35040,
+#                     '2014': 35040,
+#                     '2015': 35040,
+#                     '2016': 35136,
+#                     '2017': 35040}
+#
+#     if year not in ['2012', '2013', '2014', '2015', '2016', '2017']:
+#         raise RuntimeError('YEAR provided was {}'.format(year))
+#     # Iterate over the combination of scenarios and years in the LA100 study
+#     metadf = pd.read_parquet(results_dir + '/results_up00.parquet')
+#     # metadf = pd.read_parquet(results_dir + '/results_up00.parquet').iloc[0:20,:]
+#     metadf = metadf.loc[metadf['completed_status'] == 'Success']
+#     # metadf = pd.read_parquet(results_dir +'/results_up00.parquet')
+#     cols_to_keep = [
+#         'building_id',
+#         'build_existing_model.aspect_ratio',
+#         'build_existing_model.changebuildinglocation_climate_zone',
+#         'build_existing_model.changebuildinglocation_weather_file_name',
+#         'build_existing_model.create_bar_from_building_type_ratios_bldg_type_a',
+#         'build_existing_model.create_bar_from_building_type_ratios_floor_height',
+#         'build_existing_model.create_bar_from_building_type_ratios_num_stories_above_grade',
+#         'build_existing_model.create_bar_from_building_type_ratios_template',
+#         'build_existing_model.create_bar_from_building_type_ratios_total_bldg_floor_area',
+#         'build_existing_model.create_typical_building_from_model_system_type',
+#         'build_existing_model.envelope_code',
+#         'build_existing_model.ext_lgt_code',
+#         'build_existing_model.hvac_code',
+#         'build_existing_model.int_equip_code',
+#         'build_existing_model.int_lgt_code',
+#         'build_existing_model.swh_code',
+#         'simulation_output_report.hours_cooling_setpoint_not_met',
+#         'simulation_output_report.hours_heating_setpoint_not_met',
+#         'simulation_output_report.total_site_electricity_kwh',
+#         'simulation_output_report.total_site_natural_gas_therm'
+#     ]
+#     cols_to_drop = list(metadf)
+#     [cols_to_drop.remove(col) for col in list(metadf) if col in cols_to_keep]
+#     metadf = metadf.drop(cols_to_drop, axis=1)
+#     col_name_mapping = {
+#         'building_id': 'building_id',
+#         'build_existing_model.aspect_ratio': 'aspect_ratio',
+#         'build_existing_model.changebuildinglocation_climate_zone': 'cz',
+#         'build_existing_model.changebuildinglocation_weather_file_name': 'weather_file',
+#         'build_existing_model.create_bar_from_building_type_ratios_bldg_type_a': 'bldg_type',
+#         'build_existing_model.create_bar_from_building_type_ratios_floor_height': 'ftf_height',
+#         'build_existing_model.create_bar_from_building_type_ratios_num_stories_above_grade': 'ns',
+#         'build_existing_model.create_bar_from_building_type_ratios_template': 'built_code',
+#         'build_existing_model.create_bar_from_building_type_ratios_total_bldg_floor_area': 'sqft',
+#         'build_existing_model.create_typical_building_from_model_system_type': 'system_type',
+#         'build_existing_model.envelope_code': 'env_code',
+#         'build_existing_model.ext_lgt_code': 'ext_lgt_code',
+#         'build_existing_model.hvac_code': 'hvac_code',
+#         'build_existing_model.int_equip_code': 'int_equip_code',
+#         'build_existing_model.int_lgt_code': 'int_lgt_code',
+#         'build_existing_model.swh_code': 'swh_code',
+#         'simulation_output_report.hours_cooling_setpoint_not_met': 'clg_stp_not_met',
+#         'simulation_output_report.hours_heating_setpoint_not_met': 'htg_stp_not_met',
+#         'simulation_output_report.total_site_electricity_kwh': 'total_site_elec_kwh',
+#         'simulation_output_report.total_site_natural_gas_therm': 'total_site_gas_therm',
+#     }
+#     metadf.columns = [col_name_mapping[column] for column in metadf.columns]
+#     dask_bag_list = metadf.to_dict(orient='index')
+#     # Pre-instantiate the index that will be set on each parquet file
+#     start = dt.datetime(int(year), 1, 1, 0)
+#     intervals = [step * 15 for step in range(data_len_dic[year])]
+#     index = [start + dt.timedelta(minutes=interval) for interval in intervals]
+#     index = [timestamp.isoformat() for timestamp in index]
+#
+#     # Create bag of dgen_return dictionaries to iterate over
+#     distro_results = db. \
+#         from_sequence(dask_bag_list, partition_size=500). \
+#         map(lambda x: dask_bag_list[x]). \
+#         map(lambda x: athena_return(year, index, x))
+#     all_res = compute(distro_results)
+#     # Document any failures - we need to deal with these somehow.
+#     failure_true_false_df = pd.DataFrame(all_res[0])
+#     failure_true_false_df.loc[failure_true_false_df.good == False].to_csv(working_dir + 'athena_pyarrow_failures.csv')
+#     print('Completed generating parquet files for each building folder.')
+#
+#     # Step 2. aggregate parquet files
+#     # Aggregate individual athena files into total_file_number files
+#     # total_file_number = 140
+#     new_parquets = [
+#         working_dir + 'up00/bldg{0:07d}/athena.parquet'.format(dask_bag_list[item]['building_id']) for
+#         item in dask_bag_list
+#     ]
+#     random.shuffle(new_parquets)
+#     chunks = np.array_split(new_parquets, total_file_number)
+#     Parallel(n_jobs=-1, verbose=9)(
+#         delayed(concat_athena_parquets)(chunks[index], index) for index in range(len(chunks)))
+#     print('Completed aggregating athena parquet files for ComStock up00.')
 
-    # Create bag of dgen_return dictionaries to iterate over
-    distro_results = db.\
-        from_sequence(dask_bag_list, partition_size=500).\
-        map(lambda x: dask_bag_list[x]).\
-        map(lambda x: athena_return(year, index, x))
-    all_res = compute(distro_results)
-    # Document any failures - we need to deal with these somehow.
-    failure_true_false_df = pd.DataFrame(all_res[0])
-    failure_true_false_df.loc[failure_true_false_df.good == False].to_csv(working_dir + 'athena_pyarrow_failures.csv')
-    print('Completed generating parquet files for each building folder.')
-
-    # Step 2. aggregate parquet files
-    # Aggregate individual athena files into total_file_number files
-    # total_file_number = 140
-    new_parquets = [
-        working_dir + 'up00/bldg{0:07d}/athena.parquet'.format(dask_bag_list[item]['building_id']) for
-        item in dask_bag_list
-    ]
-    random.shuffle(new_parquets)
-    chunks = np.array_split(new_parquets, total_file_number)
-    Parallel(n_jobs=-1, verbose=9)(
-        delayed(concat_athena_parquets)(chunks[index], index) for index in range(len(chunks)))
-    print('Completed aggregating athena parquet files for ComStock up00.')
 
 def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_timeseries=False,
                     reporting_measures=[], dask_bag_partition_size=500):
-
     sim_out_dir = f'{results_dir}/simulation_output'
     results_csvs_dir = f'{results_dir}/results_csvs'
     parquet_dir = f'{results_dir}/parquet'
@@ -396,22 +397,22 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
 
         logger.info('Computing results for upgrade {} with {} simulations'.format(upgrade_id, len(sim_dir_list)))
 
-        datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size).\
-            map("{}/run/data_point_out.json".format).\
-            map(partial(read_data_point_out_json, fs, reporting_measures)).\
+        datapoint_output_jsons = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size). \
+            map("{}/run/data_point_out.json".format). \
+            map(partial(read_data_point_out_json, fs, reporting_measures)). \
             filter(lambda x: x is not None)
         meta = pd.DataFrame(list(
             datapoint_output_jsons.filter(lambda x: 'SimulationOutputReport' in x.keys()).
-            map(partial(flatten_datapoint_json, reporting_measures)).take(10)
+                map(partial(flatten_datapoint_json, reporting_measures)).take(10)
         ))
 
         if meta.shape == (0, 0):
             meta = None
 
-        data_point_out_df_d = datapoint_output_jsons.map(partial(flatten_datapoint_json, reporting_measures)).\
+        data_point_out_df_d = datapoint_output_jsons.map(partial(flatten_datapoint_json, reporting_measures)). \
             to_dataframe(meta=meta).rename(columns=to_camelcase)
 
-        out_osws = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size).\
+        out_osws = db.from_sequence(sim_dir_list, partition_size=dask_bag_partition_size). \
             map("{}/out.osw".format)
 
         out_osw_df_d = out_osws.map(partial(read_out_osw, fs)).filter(lambda x: x is not None).to_dataframe()
@@ -445,7 +446,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
         # baseline simulation or because some of the simulation for an upgrade has failed.
         if valid_index is not None:  # only if there is a valid upgrade name for current upgrade
             current_upgrade_name = upgrade_names.iloc[valid_index]
-        # end: find the name of the current upgrade
+            # end: find the name of the current upgrade
             for upgrade in config.get('upgrades', []):  # find the configuration for current upgrade
                 if upgrade['upgrade_name'] == current_upgrade_name:
                     reference_scenario = upgrade.get('reference_scenario', None)  # and extract reference_scenario
@@ -465,7 +466,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
 
         for reporting_measure in reporting_measures:
             reporting_measure_cols = sorted([col for col in results_df.columns if
-                                            col.startswith(to_camelcase(reporting_measure))])
+                                             col.startswith(to_camelcase(reporting_measure))])
             sorted_cols += reporting_measure_cols
 
         results_df = results_df.reindex(columns=sorted_cols, copy=False)
@@ -538,7 +539,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
 
     avg_parquet_size = total_size / count
 
-    group_size = int(1.3*1024*1024*1024 / avg_parquet_size)
+    group_size = int(1.3 * 1024 * 1024 * 1024 / avg_parquet_size)
     if group_size < 1:
         group_size = 1
 
