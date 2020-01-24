@@ -96,6 +96,16 @@ following properties:
   savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
   Buildstockbatch will not do the savings calculation.
 
+Simulation Annual Outputs Options
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Include the ``simulation_output`` key to optionally include annual totals for end use subcategories (i.e., interior equipment broken out by end use) along with
+the usual annual simulation results. This argument is passed directly into the
+`SimulationOutputReport measure <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/SimulationOutputReport/measure.xml>`_
+in OpenStudio-BuildStock. Please refer to the measure argument there to determine what to set it to in your config file.
+Note that this measure and presence of any arguments may be different depending on which version of OpenStudio-BuildStock you're using.
+The best thing you can do is to verify that it works with what is in your branch.
+
 Time Series Export Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
