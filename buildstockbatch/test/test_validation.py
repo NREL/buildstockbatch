@@ -142,6 +142,7 @@ def test_bad_measures(project_file):
             assert "Found unexpected argument value Huorly" in er
             assert "Invalid multiplier 'Fixed(1)" in er
             assert "Required argument include_enduse_subcategories" in er
+            assert "Found unexpected argument key include_enduse_subcategory" in er
 
         else:
             raise Exception("measures_and_arguments was supposed to raise ValueError for"
