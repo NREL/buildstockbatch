@@ -72,10 +72,15 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
+        sim_output_args = {
+            'include_enduse_subcategories': False
+        }
+        sim_output_args.update(self.cfg.get('simulation_output', {}))
+
         osw['steps'].extend([
             {
                 'measure_dir_name': 'SimulationOutputReport',
-                'arguments': {}
+                'arguments': sim_output_args
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',

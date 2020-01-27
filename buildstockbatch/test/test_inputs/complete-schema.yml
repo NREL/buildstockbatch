@@ -68,6 +68,8 @@ upgrades:
           - value: 0.40
             multiplier: Floor Area, Lighting (ft^2)
         lifetime: 78.28
+simulation_output:
+  include_enduse_subcategories: true
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true

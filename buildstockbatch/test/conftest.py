@@ -34,6 +34,9 @@ def basic_residential_project_file():
                     'n_datapoints': 10,
                     'n_buildings_represented': 80000000
                 },
+                'simulation_output': {
+                    'include_enduse_subcategories': True
+                },
                 'timeseries_csv_export': {
                     'reporting_frequency': 'Hourly',
                     'include_enduse_subcategories': True
