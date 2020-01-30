@@ -46,8 +46,8 @@ class ValidationError(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.8.1'
-    OS_SHA = '88b69707f1'
+    OS_VERSION = '2.9.1'
+    OS_SHA = '3472e8b799'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
