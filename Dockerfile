@@ -1,4 +1,4 @@
-FROM nrel/openstudio:2.8.0
+FROM nrel/openstudio:2.9.1
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH

@@ -92,7 +92,7 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
-                logger.debug('Downloading singularity image')
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url()}')
                 r = requests.get(self.singularity_image_url(), stream=True)
                 with open(singularity_image_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
