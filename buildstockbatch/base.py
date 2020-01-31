@@ -156,6 +156,7 @@ class BuildStockBatchBase(object):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
         if 'buildstock_csv' in self.cfg['baseline']:
+            logger.debug("Reusing the buildstock_csv")
             buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
             destination_filename = self.sampler.csv_path
             if destination_filename != buildstock_csv:
@@ -169,6 +170,7 @@ class BuildStockBatchBase(object):
                 )
             return destination_filename
         else:
+            logger.debug("Running fresh sampling")
             return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
@@ -203,6 +205,7 @@ class BuildStockBatchBase(object):
 
     def downselect(self):
         downselect_resample = self.cfg['downselect'].get('resample', True)
+        logger.debug("Starting downselect sampling")
         if downselect_resample:
             logger.debug('Performing initial sampling to figure out number of samples for downselect')
             n_samples_init = 350000
