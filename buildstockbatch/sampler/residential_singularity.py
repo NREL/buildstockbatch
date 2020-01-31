@@ -44,7 +44,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
+        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'singularity',
             'exec',
@@ -58,5 +58,6 @@ class ResidentialSingularitySampler(BuildStockSampler):
             '-n', str(n_datapoints),
             '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
         ]
+        logger.debug(f"Starting singularity sampling with options: {' '.join(args)}")
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
         return self.csv_path

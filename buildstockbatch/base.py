@@ -171,7 +171,9 @@ class BuildStockBatchBase(object):
             return destination_filename
         else:
             logger.debug("Running fresh sampling")
-            return self.sampler.run_sampling(n_datapoints)
+            buildstock_csv_filename = self.sampler.run_sampling(n_datapoints)
+            logger.debug("Sampling completed")
+            return buildstock_csv_filename
 
     def run_batch(self):
         raise NotImplementedError

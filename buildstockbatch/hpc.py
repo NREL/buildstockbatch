@@ -126,7 +126,7 @@ class HPCBatchBase(BuildStockBatchBase):
             os.path.join(self.project_dir, 'housing_characteristics'),
             destination_dir
         )
-        logger.debug("Copying housing characteristics copied")
+        logger.debug("Housing characteristics copied.")
         # run sampling
         #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
         #   constructor ensures that 'downselect' not in self.cfg and
