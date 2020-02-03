@@ -58,6 +58,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
             '-n', str(n_datapoints),
             '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
         ]
-        logger.debug(f"Starting singularity sampling with options: {' '.join(args)}")
+        logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
+        logger.debug("Singularity sampling completed.")
         return self.csv_path
