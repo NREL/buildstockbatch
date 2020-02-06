@@ -362,7 +362,7 @@ class BuildStockBatchBase(object):
         measure_names = {
                         'ResidentialSimulationControls': 'residential_simulation_controls',
                         'BuildExistingModel': 'baseline',
-                        'SimulationOutputReport': 'simulation_output_report',
+                        'SimulationOutputReport': 'simulation_output',
                         'ServerDirectoryCleanup': None,
                         'ApplyUpgrade': 'upgrades',
                         'TimeseriesCSVExport': 'timeseries_csv_export'
@@ -387,7 +387,7 @@ class BuildStockBatchBase(object):
                 continue
 
             # check argument value types for residential simulation controls and timeseries csv export measures
-            if measure_name in ['ResidentialSimulationControls', 'TimeseriesCSVExport']:
+            if measure_name in ['ResidentialSimulationControls', 'SimulationOutputReport', 'TimeseriesCSVExport']:
                 root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
                 expected_arguments = {}
                 required_args_with_default = {}

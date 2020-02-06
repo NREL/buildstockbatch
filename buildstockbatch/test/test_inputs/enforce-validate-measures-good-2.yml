@@ -28,7 +28,8 @@ upgrades:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
     reference_scenario: cool upgrade
-
+simulation_output:
+  include_enduse_subcategories: true
 timeseries_csv_export:
   reporting_frequency: Timestep
   include_enduse_subcategories: true
