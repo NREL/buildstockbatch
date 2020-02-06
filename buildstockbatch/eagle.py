@@ -423,6 +423,7 @@ def main():
         assert(not sampling_only)
         batch.run_job_batch(job_array_number)
     elif post_process:
+        logger.debug("Starting postprocessing")
         # else, we might be in a post-processing step
         # Postprocessing should not have been scheduled if measures only or sampling only are run
         assert(not measures_only)
@@ -432,6 +433,7 @@ def main():
         else:
             batch.process_results()
     else:
+        logger.debug("Kicking off batch")
         # default job_array_number == 0 task is to kick the whole BuildStock
         # process off, that is, to create samples and then create batch jobs
         # to run them

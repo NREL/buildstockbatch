@@ -72,7 +72,7 @@ class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        logger.debug('Pulling docker image')
+        logger.debug(f'Pulling docker image: {self.docker_image()}')
         self.docker_client.images.pull(self.docker_image())
 
     @staticmethod

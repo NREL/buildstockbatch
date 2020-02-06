@@ -92,7 +92,7 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
-                logger.debug('Downloading singularity image')
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url()}')
                 r = requests.get(self.singularity_image_url(), stream=True)
                 with open(singularity_image_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
@@ -118,6 +118,7 @@ class HPCBatchBase(BuildStockBatchBase):
     def run_batch(self, sampling_only=False):
 
         # create destination_dir and copy housing_characteristics into it
+        logger.debug("Copying housing characteristics")
         destination_dir = os.path.dirname(self.sampler.csv_path)
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
@@ -125,7 +126,7 @@ class HPCBatchBase(BuildStockBatchBase):
             os.path.join(self.project_dir, 'housing_characteristics'),
             destination_dir
         )
-
+        logger.debug("Housing characteristics copied.")
         # run sampling
         #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
         #   constructor ensures that 'downselect' not in self.cfg and
