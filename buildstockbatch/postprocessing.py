@@ -108,8 +108,8 @@ def read_out_osw(fs, filename):
             'completed_status'
         ]
         for key in keys_to_copy:
-            out_d[key] = d[key]
-        for step in d['steps']:
+            out_d[key] = d.get(key, None)
+        for step in d.get('steps', []):
             if step['measure_dir_name'] == 'BuildExistingModel':
                 out_d['building_id'] = step['arguments']['building_id']
         return out_d
@@ -264,7 +264,8 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
             if col in results_df.columns:
                 del results_df[col]
         for col in ('started_at', 'completed_at'):
-            results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ'))
+            results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if x is not None
+                                                  else None)
 
         if upgrade_id > 0:
             cols_to_keep = list(
