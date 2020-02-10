@@ -229,20 +229,6 @@ def test_provide_buildstock_csv(basic_residential_project_file):
             with pytest.raises(FileNotFoundError) as ex:
                 bsb = BuildStockBatchBase(project_filename)
 
-        # Test downselect mutually exclusive
-        with open(project_filename, 'r') as f:
-            cfg = yaml.safe_load(f)
-        cfg['baseline']['buildstock_csv'] = buildstock_csv
-        cfg['downselect'] = {'resample': True, 'logic': []}
-        with open(project_filename, 'w') as f:
-            yaml.dump(cfg, f)
-
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            with pytest.raises(RuntimeError) as ex:
-                bsb = BuildStockBatchBase(project_filename)
-            assert('Remove or comment out the downselect key' in str(ex.value))
-
 
 def test_downselect_integer_options(basic_residential_project_file):
     with tempfile.TemporaryDirectory() as buildstock_csv_dir:
