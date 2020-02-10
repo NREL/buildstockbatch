@@ -79,11 +79,6 @@ class BuildStockBatchBase(object):
                     'equal to the number of rows in the buildstock.csv file. Remove or comment out '
                     'baseline->n_datapoints from your project file.'
                 )
-            if 'downselect' in self.cfg:
-                raise RuntimeError(
-                    'A buildstock_csv was provided, which isn\'t compatible with downselecting.'
-                    'Remove or comment out the downselect key from your project file.'
-                )
 
         self.sampler = None
 
