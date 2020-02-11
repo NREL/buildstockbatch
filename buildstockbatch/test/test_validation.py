@@ -86,6 +86,8 @@ def test_xor_violations_fail(project_file):
     (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-bad.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-good.yml'), True),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
