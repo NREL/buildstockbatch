@@ -230,6 +230,7 @@ def test_provide_buildstock_csv(basic_residential_project_file):
                 bsb = BuildStockBatchBase(project_filename)
 
 
+
 def test_downselect_integer_options(basic_residential_project_file):
     with tempfile.TemporaryDirectory() as buildstock_csv_dir:
         buildstock_csv = os.path.join(buildstock_csv_dir, 'buildstock.csv')

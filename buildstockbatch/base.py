@@ -286,6 +286,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
+        assert(BuildStockBatchBase.validate_misc_constraints(project_file))
         assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
@@ -323,6 +324,16 @@ class BuildStockBatchBase(object):
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file, parser='ruamel')
         return yamale.validate(schema, data, strict=True)
+
+    @staticmethod
+    def validate_misc_constraints(project_file):
+        # validate other miscellaneous constraints
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if 'buildstock_csv' in cfg['baseline']:
+            if cfg.get('downselect', {'resample': False}).get('resample', True):
+                raise ValidationError("Downselect with resampling cannot be used when using buildstock_csv. \n"
+                                      "Please set resample: False in downselect, or do not use buildstock_csv.")
+        return True
 
     @staticmethod
     def validate_xor_schema_keys(project_file):
