@@ -20,6 +20,8 @@ import logging
 import os
 import pandas as pd
 import shutil
+import sys
+import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler, PrecomputedDockerSampler
@@ -27,7 +29,7 @@ from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDoc
 logger = logging.getLogger(__name__)
 
 
-class LocalDockerBatch(BuildStockBatchBase):
+class DockerBatchBase(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
@@ -40,9 +42,6 @@ class LocalDockerBatch(BuildStockBatchBase):
             except:  # noqa: E722 (allow bare except in this case because error is weird non-class Windows API error)
                 logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
                 raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
-
-        logger.debug(f"Pulling docker image {self.docker_image}")
-        self.docker_client.images.pull(self.docker_image)
 
         if self.stock_type == 'residential':
             self.sampler = ResidentialDockerSampler(
@@ -73,14 +72,36 @@ class LocalDockerBatch(BuildStockBatchBase):
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
+        self._weather_dir = None
+
+    @staticmethod
+    def validate_project(project_file):
+        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
+        # LocalDocker specific code goes here
+
+    @property
+    def docker_image(self):
+        return 'nrel/openstudio:{}'.format(self.os_version)
+
+
+class LocalDockerBatch(DockerBatchBase):
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+        logger.debug(f'Pulling docker image: {self.docker_image()}')
+        self.docker_client.images.pull(self.docker_image())
+
     @staticmethod
     def validate_project(project_file):
         super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
         # LocalDocker specific code goes here
 
     @property
-    def docker_image(self):
-        return 'nrel/openstudio:{}'.format(self.os_version)
+    def weather_dir(self):
+        if self._weather_dir is None:
+            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
+            self._get_weather_files()
+        return self._weather_dir.name
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
@@ -91,15 +112,18 @@ class LocalDockerBatch(BuildStockBatchBase):
             return
 
         bind_mounts = [
-            (sim_dir, '/var/simdata/openstudio', 'rw'),
-            (os.path.join(buildstock_dir, 'measures'), '/var/simdata/openstudio/measures', 'ro'),
-            (os.path.join(buildstock_dir, 'resources'), '/var/simdata/openstudio/lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'),
-             '/var/simdata/openstudio/lib/housing_characteristics', 'ro'),
-            (os.path.join(project_dir, 'seeds'), '/var/simdata/openstudio/seeds', 'ro'),
-            (weather_dir, '/var/simdata/openstudio/weather', 'ro')
+            (sim_dir, '', 'rw'),
+            (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
+            (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
+            (os.path.join(project_dir, 'seeds'), 'seeds', 'ro'),
+            (weather_dir, 'weather', 'ro')
         ]
-        docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
+        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
+        for bind in bind_mounts:
+            dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
+            if not os.path.exists(dir_to_make):
+                os.makedirs(dir_to_make)
 
         osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
@@ -111,16 +135,19 @@ class LocalDockerBatch(BuildStockBatchBase):
             'openstudio',
             'run',
             '-w', 'in.osw',
-            '--debug'
         ]
         if measures_only:
             args.insert(2, '--measures_only')
+        extra_kws = {}
+        if sys.platform.startswith('linux'):
+            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
             docker_image,
             args,
             remove=True,
             volumes=docker_volume_mounts,
-            name=sim_id
+            name=sim_id,
+            **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
             f_out.write(container_output)
@@ -131,11 +158,15 @@ class LocalDockerBatch(BuildStockBatchBase):
 
         cls.cleanup_sim_dir(sim_dir)
 
-    def run_batch(self, n_jobs=-1, measures_only=False):
+    def run_batch(self, n_jobs=-1, measures_only=False, sampling_only=False):
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:
             buildstock_csv_filename = self.run_sampling()
+
+        if sampling_only:
+            return
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         run_building_d = functools.partial(
@@ -228,6 +259,8 @@ def main():
                        'upload flag in yaml', action='store_true')
     group.add_argument('--validateonly', help='Only validate the project YAML file and references. Nothing is executed',
                        action='store_true')
+    group.add_argument('--samplingonly', help='Run the sampling only.',
+                       action='store_true')
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
@@ -238,8 +271,8 @@ def main():
         return True
     batch = LocalDockerBatch(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
-        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only)
-    if args.measures_only:
+        batch.run_batch(n_jobs=args.j, measures_only=args.measures_only, sampling_only=args.samplingonly)
+    if args.measures_only or args.samplingonly:
         return
     if args.uploadonly:
         batch.process_results(skip_combine=True, force_upload=True)

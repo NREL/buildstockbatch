@@ -46,7 +46,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
         """
         if n_datapoints is None:
             raise AttributeError('n_datapoints passed to sampler is None. Please specify for this sampler')
-        logging.debug('Sampling, n_datapoints={}'.format(n_datapoints))
+        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         args = [
             'singularity',
             'exec',
@@ -60,5 +60,7 @@ class ResidentialSingularitySampler(BuildStockSampler):
             '-n', str(n_datapoints),
             '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
         ]
+        logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
         subprocess.run(args, check=True, env=os.environ, cwd=self.output_dir)
+        logger.debug("Singularity sampling completed.")
         return self.csv_path

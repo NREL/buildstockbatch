@@ -8,7 +8,6 @@
    "id" : "bldg0000003up01",
    "measure_paths" : [ "measures" ],
    "seed_file" : "seeds/EmptySeedModel.osm",
-   "started_at" : "20190417T172709Z",
    "steps" : [
       {
          "arguments" : {

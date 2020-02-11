@@ -14,6 +14,7 @@ import docker
 import logging
 import os
 import shutil
+import sys
 import time
 
 from .base import BuildStockSampler
@@ -42,9 +43,13 @@ class ResidentialDockerSampler(BuildStockSampler):
         """
         if n_datapoints is None:
             raise AttributeError('n_datapoints passed to sampler is None. Please specify for this sampler')
-        docker_client = docker.DockerClient.from_env()
         logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
+
+        docker_client = docker.DockerClient.from_env()
         tick = time.time()
+        extra_kws = {}
+        if sys.platform.startswith('linux'):
+            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
             self.docker_image,
             [
@@ -58,7 +63,8 @@ class ResidentialDockerSampler(BuildStockSampler):
             volumes={
                 self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
             },
-            name='buildstock_sampling'
+            name='buildstock_sampling',
+            **extra_kws
         )
         tick = time.time() - tick
         for line in container_output.decode('utf-8').split('\n'):

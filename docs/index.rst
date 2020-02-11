@@ -10,7 +10,7 @@ This set of tools provides an alternative means to PAT to run and manage the bat
 simulations for the
 `OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
 building stock energy modeling platform. It can be used to run the
-simulations locally, on Amazon Web Services (coming soon), or on NREL's
+simulations locally, on Amazon Web Services (beta), or on NREL's
 supercomputer, Eagle.
 
 .. toctree::

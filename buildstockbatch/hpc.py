@@ -113,7 +113,7 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
-                logger.debug('Downloading singularity image')
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url()}')
                 r = requests.get(self.singularity_image_url(), stream=True)
                 if r.status_code != requests.codes.ok:
                     logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
@@ -139,9 +139,10 @@ class HPCBatchBase(BuildStockBatchBase):
         assert(os.path.isdir(results_dir))
         return results_dir
 
-    def run_batch(self):
+    def run_batch(self, sampling_only=False):
 
         # create destination_dir and copy housing_characteristics into it
+        logger.debug("Copying housing characteristics")
         destination_dir = os.path.dirname(self.sampler.csv_path)
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
@@ -149,7 +150,7 @@ class HPCBatchBase(BuildStockBatchBase):
             os.path.join(self.project_dir, 'housing_characteristics'),
             destination_dir
         )
-
+        logger.debug("Housing characteristics copied.")
         # run sampling
         #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
         #   constructor ensures that 'downselect' not in self.cfg and
@@ -174,6 +175,9 @@ class HPCBatchBase(BuildStockBatchBase):
                         self.cfg['output_directory']))
                 else:
                     logger.warn('Overriding results in results directory in {}'.format(self.cfg['output_directory']))
+
+        if sampling_only:
+            return
 
         # Determine the number of simulations expected to be executed
         df = pd.read_csv(buildstock_csv_filename, index_col=0)

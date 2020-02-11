@@ -1,5 +1,6 @@
 import csv
 import dask
+from fsspec.implementations.local import LocalFileSystem
 import glob
 import json
 import numpy as np
@@ -228,20 +229,6 @@ def test_provide_buildstock_csv(basic_residential_project_file):
             with pytest.raises(FileNotFoundError) as ex:
                 bsb = BuildStockBatchBase(project_filename)
 
-        # Test downselect mutually exclusive
-        with open(project_filename, 'r') as f:
-            cfg = yaml.safe_load(f)
-        cfg['baseline']['buildstock_csv'] = buildstock_csv
-        cfg['downselect'] = {'resample': True, 'logic': []}
-        with open(project_filename, 'w') as f:
-            yaml.dump(cfg, f)
-
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            with pytest.raises(RuntimeError) as ex:
-                bsb = BuildStockBatchBase(project_filename)
-            assert('Remove or comment out the downselect key' in str(ex.value))
-
 
 def test_downselect_integer_options(basic_residential_project_file):
     with tempfile.TemporaryDirectory() as buildstock_csv_dir:
@@ -456,8 +443,9 @@ def test_write_parquet_no_index():
     df = pd.DataFrame(np.random.randn(6, 4), columns=list('abcd'), index=np.arange(6))
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        filename = 'df.parquet'
-        write_dataframe_as_parquet(df, tmpdir, filename)
+        fs = LocalFileSystem()
+        filename = os.path.join(tmpdir, 'df.parquet')
+        write_dataframe_as_parquet(df, fs, filename)
         schema = parquet.read_schema(os.path.join(tmpdir, filename))
         assert '__index_level_0__' not in schema.names
         assert df.columns.values.tolist() == schema.names
