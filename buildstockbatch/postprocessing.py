@@ -196,10 +196,6 @@ def write_output(fs, results_dir, args):
     write_dataframe_as_parquet(pq, fs, file_path)
 
 
-def combine_results(results_dir, config, skip_timeseries=False, aggregate_timeseries=False, reporting_measures=[]):
-    fs = open_fs(results_dir)
-def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_timeseries=False,
-                    reporting_measures=[], dask_bag_partition_size=500):
 def athena_return(year, ts_index, metadata):
     """
     Function to read the 15 minute time series parquet file, drop unneeded columns, & save to a new folder for gzip
