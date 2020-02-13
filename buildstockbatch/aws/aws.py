@@ -1927,11 +1927,12 @@ class AwsBatch(DockerBatchBase):
             self.container_repo['repositoryUri']
         )
 
+        job_env_cfg = self.cfg['aws'].get('job-environment', {})
         batch_env.create_job_definition(
             image_url,
             command=['python3', '-m', 'buildstockbatch.aws.aws'],
-            vcpus=1,
-            memory=1024,
+            vcpus=job_env_cfg.get('vcpus', 1),
+            memory=job_env_cfg.get('memory', 1024),
             env_vars=env_vars
         )
 
