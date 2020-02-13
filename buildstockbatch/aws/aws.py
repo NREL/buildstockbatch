@@ -1927,7 +1927,7 @@ class AwsBatch(DockerBatchBase):
             self.container_repo['repositoryUri']
         )
 
-        job_env_cfg = self.cfg['aws'].get('job-environment', {})
+        job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
             image_url,
             command=['python3', '-m', 'buildstockbatch.aws.aws'],
