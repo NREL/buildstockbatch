@@ -1665,6 +1665,9 @@ def lambda_handler(event, context):
                 elif 'Function already exist' in str(e):
                     logger.info(f'Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...')
                     break
+                elif 'ARN does not refer to a valid principal' in str(e):
+                    logger.info('Waiting for roles/permissions to propagate to allow Lambda function creation ...')
+                    time.sleep(5)
                 else:
                     raise
 
