@@ -862,7 +862,6 @@ class AwsBatchEnv(AwsJobBase):
         job_definition = f'''{{
   "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
   "StartAt": "Submit Batch Job",
-  "TimeoutSeconds": 3600,
   "States": {{
     "Submit Batch Job": {{
       "Type": "Task",
