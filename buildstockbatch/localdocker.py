@@ -100,7 +100,6 @@ class LocalDockerBatch(DockerBatchBase):
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
-            (os.path.join(project_dir, 'seeds'), 'seeds', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
@@ -137,7 +136,7 @@ class LocalDockerBatch(DockerBatchBase):
             f_out.write(container_output)
 
         # Clean up directories created with the docker mounts
-        for dirname in ('lib', 'measures', 'seeds', 'weather'):
+        for dirname in ('lib', 'measures', 'weather'):
             shutil.rmtree(os.path.join(sim_dir, dirname), ignore_errors=True)
 
         cls.cleanup_sim_dir(sim_dir)
