@@ -89,9 +89,6 @@ class BuildStockBatchBase(object):
             return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
 
     def _get_weather_files(self):
-        local_weather_dir = os.path.join(self.project_dir, 'weather')
-        for filename in os.listdir(local_weather_dir):
-            shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
             weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
