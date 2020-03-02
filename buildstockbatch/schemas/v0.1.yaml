@@ -26,6 +26,11 @@ aws-spec:
   batch_array_size: num(min=1, max=10000, required=True)
   notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', required=True)
   emr: include('aws-emr-spec', required=False)
+  job_environment: include('aws-job-environment', required=False)
+
+aws-job-environment:
+  vcpus: int(min=1, max=36, required=False)
+  memory: int(min=1024, required=False)
 
 aws-emr-spec:
   master_instance_type: str(required=False)
