@@ -142,7 +142,7 @@ def test_bad_measures(project_file):
             assert "Wrong argument value type for begin_day_of_month" in er
             assert "Found unexpected argument key output_variable" in er
             assert "Found unexpected argument value Huorly" in er
-            assert "Invalid multiplier 'Fixed(1)" in er
+            assert "Fixed(1)" in er
             assert "Required argument include_enduse_subcategories" in er
             assert "Found unexpected argument key include_enduse_subcategory" in er
 
@@ -193,7 +193,7 @@ def test_bad_options_validation(project_file):
         assert "Invalid Option" in er
         assert "Insulation Wall|Good Option||" in er
         assert " 1980s" in er
-        assert "Vintage|1941s" in er
+        assert "1941s" in er
         assert "Option name empty" in er
         assert "Insulation Slat" in er
         assert "Vintage|1960s|Vintage|1960s" in er
