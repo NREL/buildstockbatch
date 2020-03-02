@@ -1971,10 +1971,7 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
-        # firehose = boto3.client('firehose', region_name=region)
         sim_dir = pathlib.Path('/var/simdata/openstudio')
-
-        # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
@@ -1995,6 +1992,7 @@ class AwsBatch(DockerBatchBase):
         with tarfile.open(jobs_file_path, 'r') as tar_f:
             jobs_d = json.load(tar_f.extractfile('jobs/job{:05d}.json'.format(job_id)), encoding='utf-8')
         logger.debug('Number of simulations = {}'.format(len(jobs_d['batch'])))
+        os.remove(jobs_file_path)
 
         logger.debug('Getting weather files')
         df = pd.read_csv(str(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv'), index_col=0)
@@ -2054,6 +2052,13 @@ class AwsBatch(DockerBatchBase):
                     shutil.rmtree(item)
                 elif os.path.isfile(item):
                     os.remove(item)
+
+            for filename in os.listdir(sim_dir):
+                file_path = os.path.join(sim_dir, filename)
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
 
 
 def main():
