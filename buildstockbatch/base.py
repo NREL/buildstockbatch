@@ -26,7 +26,7 @@ import yaml
 import yamale
 import zipfile
 import csv
-from collections import defaultdict
+from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
@@ -466,16 +466,18 @@ class BuildStockBatchBase(object):
                             value = choice.find('./value')
                             value = value.text if value is not None else ''
                             valid_multipliers.add(value)
-
+                invalid_multipliers = Counter()
                 for upgrade_count, upgrade in enumerate(cfg['upgrades']):
-                    upgrade_name = upgrade.get('upgrade_name', '') + f' (Upgrade Number: {upgrade_count})'
                     for option_count, option in enumerate(upgrade['options']):
-                        option_name = option.get('option', '') + f' (Option Number: {option_count})'
                         for cost_indx, cost_entry in enumerate(option.get('costs', [])):
                             if cost_entry['multiplier'] not in valid_multipliers:
-                                error_msgs += f"* Invalid multiplier '{cost_entry['multiplier']}' specified "\
-                                              f"in option {option_name} in upgrade {upgrade_name}. The list of valid "\
-                                              f"multipliers are {valid_multipliers}.\n"
+                                invalid_multipliers[cost_entry['multiplier']] += 1
+
+                if invalid_multipliers:
+                    error_msgs += "* The following multipliers values are invalid: \n"
+                    for multiplier, count in invalid_multipliers.items():
+                        error_msgs += f"    '{multiplier}' - Used {count} times \n"
+                    error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
 
         if warning_msgs:
             logger.warning(warning_msgs)
@@ -489,7 +491,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_options_lookup(project_file):
         """
-        Validates that the parameter|options specified in the project yaml file is avaliable in the options_lookup.tsv
+        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
@@ -513,6 +515,10 @@ class BuildStockBatchBase(object):
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
 
+        invalid_option_spec_counter = Counter()
+        invalid_param_counter = Counter()
+        invalid_option_counter_dict = defaultdict(Counter)
+
         def get_errors(source_str, option_str):
             """
             Gives multiline descriptive error message if the option_str is invalid. Returns '' otherwise
@@ -523,15 +529,16 @@ class BuildStockBatchBase(object):
                      if not returns error message, close matches, and specifies where the error occurred (source_str)
             """
             if '||' in option_str and '&&' in option_str:
-                return f"* Option specification '{option_str}' has both || and &&, which is not supported. " \
-                    f"{source_str}\n"
+                invalid_option_spec_counter[(option_str, "has both || and && (not supported)")] += 1
+                return ""
 
             if '||' in option_str or '&&' in option_str:
                 splitter = '||' if '||' in option_str else '&&'
                 errors = ''
                 broken_options = option_str.split(splitter)
                 if broken_options[-1] == '':
-                    return f"* Option spec '{option_str}' has a trailing '{splitter}'. {source_str}\n"
+                    invalid_option_spec_counter[(option_str, f"has trailing 'splitter'")] += 1
+                    return ""
                 for broken_option_str in broken_options:
                     new_source_str = source_str + f" in composite option '{option_str}'"
                     errors += get_errors(new_source_str, broken_option_str)
@@ -543,25 +550,20 @@ class BuildStockBatchBase(object):
             try:
                 parameter_name, option_name = option_str.split('|')
             except ValueError:
-                return f"* Option specification '{option_str}' has too many or too few '|' (exactly 1 required)." \
-                    f" {source_str}\n"
+                invalid_option_spec_counter[(option_str, "has has too many or too few '|' (exactly 1 required).")] += 1
+                return ""
 
             if parameter_name not in param_option_dict:
-                error_str = f"* Parameter name '{parameter_name}' does not exist in options_lookup. \n"
                 close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(), 1)
-                if close_match:
-                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
-                error_str += f"{source_str}\n"
-                return error_str
+                close_match = close_match[0] if close_match else ""
+                invalid_param_counter[(parameter_name, close_match)] += 1
+                return ""
 
             if not option_name or option_name not in param_option_dict[parameter_name]:
-                error_str = f"* Option name '{option_name}' does not exist in options_lookup " \
-                    f"for parameter '{parameter_name}'. \n"
                 close_match = difflib.get_close_matches(option_name, list(param_option_dict[parameter_name]), 1)
-                if close_match:
-                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
-                error_str += f"{source_str}\n"
-                return error_str
+                close_match = close_match[0] if close_match else ""
+                invalid_option_counter_dict[parameter_name][(option_name, close_match)] += 1
+                return ""
 
             return ''
 
@@ -616,7 +618,31 @@ class BuildStockBatchBase(object):
             error_message += get_errors(source_str, option_str)
 
         if error_message:
-            error_message = "Following option/parameter name(s) in the yaml file is(are) invalid. \n" + error_message
+            error_message = "Following option/parameter entries have problem:\n" + error_message + "\n"
+
+        if invalid_option_spec_counter:
+            error_message += "* Following option/parameter entries have problem:\n"
+            for (invalid_entry, error), count in invalid_option_spec_counter.items():
+                error_message += f"  '{invalid_entry}' {error} - used '{count}' times\n"
+
+        if invalid_param_counter:
+            error_message += "* Following parameters do not exist in options_lookup.tsv\n"
+            for (param, close_match), count in invalid_param_counter.items():
+                error_message += f"  '{param}' - used '{count}' times."
+                if close_match:
+                    error_message += f" Maybe you meant to use '{close_match}'.\n"
+                else:
+                    error_message += "\n"
+
+        if invalid_option_counter_dict:
+            "* Following options do not exist in options_lookup.tsv\n"
+            for param, options_counter in invalid_option_counter_dict.items():
+                for (option, close_match), count in options_counter.items():
+                    error_message += f"For param '{param}', invalid option '{option}' - used {count} times."
+                    if close_match:
+                        error_message += f" Maybe you meant to use '{close_match}'.\n"
+                    else:
+                        error_message += "\n"
 
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\

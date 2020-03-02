@@ -862,7 +862,6 @@ class AwsBatchEnv(AwsJobBase):
         job_definition = f'''{{
   "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
   "StartAt": "Submit Batch Job",
-  "TimeoutSeconds": 3600,
   "States": {{
     "Submit Batch Job": {{
       "Type": "Task",
@@ -1666,6 +1665,9 @@ def lambda_handler(event, context):
                 elif 'Function already exist' in str(e):
                     logger.info(f'Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...')
                     break
+                elif 'ARN does not refer to a valid principal' in str(e):
+                    logger.info('Waiting for roles/permissions to propagate to allow Lambda function creation ...')
+                    time.sleep(5)
                 else:
                     raise
 
@@ -1926,11 +1928,12 @@ class AwsBatch(DockerBatchBase):
             self.container_repo['repositoryUri']
         )
 
+        job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
             image_url,
             command=['python3', '-m', 'buildstockbatch.aws.aws'],
-            vcpus=1,
-            memory=1024,
+            vcpus=job_env_cfg.get('vcpus', 1),
+            memory=job_env_cfg.get('memory', 1024),
             env_vars=env_vars
         )
 
