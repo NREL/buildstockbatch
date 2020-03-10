@@ -12,12 +12,16 @@ A module containing utility functions for postprocessing
 
 from collections import defaultdict
 import dask.bag as db
+import dask.dataframe as dd
 import dask
 import datetime as dt
 from functools import partial
 import gzip
+import itertools
 import json
 import logging
+import math
+import numpy as np
 import random
 import re
 import sys
@@ -157,10 +161,10 @@ def add_timeseries(fs, results_dir, inp1, inp2):
     return file1.add(file2, fill_value=0)
 
 
-def write_output(fs, results_dir, args):
+def write_ts_output(fs, ts_dir, args):
     upgrade_id, group_id, folders = args
 
-    folder_path = f"{results_dir}/parquet/timeseries/upgrade={upgrade_id}"
+    folder_path = f"{ts_dir}/upgrade={upgrade_id}"
     fs.makedirs(folder_path, exist_ok=True)
 
     file_path = f"{folder_path}/Group{group_id}.parquet"
@@ -192,6 +196,134 @@ def write_output(fs, results_dir, args):
     write_dataframe_as_parquet(pq, fs, file_path)
 
 
+def clean_up_results_df(df, cfg, keep_upgrade_id=False):
+    results_df = df.copy()
+    cols_to_remove = (
+        'build_existing_model.weight',
+        'simulation_output_report.weight',
+        'build_existing_model.workflow_json',
+        'simulation_output_report.upgrade_name'
+    )
+    for col in cols_to_remove:
+        if col in results_df.columns:
+            del results_df[col]
+    for col in ('started_at', 'completed_at'):
+        results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if x is not None
+                                              else None)
+    reference_scenarios = dict([(i, x.get('reference_scenario')) for i, x in enumerate(cfg.get('upgrades', []), 1)])
+    results_df['reference_scenario'] = results_df['upgrade'].map(reference_scenarios).fillna(np.nan)
+
+    # standardize the column orders
+    first_few_cols = [
+        'building_id',
+        'started_at',
+        'completed_at',
+        'completed_status',
+        'apply_upgrade.applicable',
+        'apply_upgrade.upgrade_name',
+        'apply_upgrade.reference_scenario'
+    ]
+    if keep_upgrade_id:
+        first_few_cols.insert(1, 'upgrade')
+
+    build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
+    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
+    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+
+    for reporting_measure in cfg.get('reporting_measures', []):
+        reporting_measure_cols = sorted([col for col in results_df.columns if
+                                        col.startswith(to_camelcase(reporting_measure))])
+        sorted_cols += reporting_measure_cols
+
+    results_df = results_df.reindex(columns=sorted_cols, copy=False)
+
+    for col in results_df.columns:
+        if col.startswith('simulation_output_report.'):
+            results_df[col] = pd.to_numeric(results_df[col], errors='coerce')
+
+    return results_df
+
+
+def get_results_by_upgrade(fs, sim_out_dir):
+    results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
+    for item in fs.ls(sim_out_dir):
+        m = re.search(r'up(\d+)', item)
+        if not m:
+            continue
+        upgrade_id = int(m.group(1))
+        for subitem in fs.ls(item):
+            m = re.search(r'bldg(\d+)', subitem)
+            if not m:
+                continue
+            results_by_upgrade[upgrade_id].append(subitem)
+    return results_by_upgrade
+
+
+def timeseries_combine(fs, sim_out_dir, ts_dir):
+    """
+    Combine the enduse_timeseries.parquet files into fewer, larger files and organize by upgrade
+
+    :param fs: fsspec filesystem
+    :param sim_out_dir: directory containing simulation outputs to aggregate
+    :param ts_dir: directory to output aggregated timeseries data
+    """
+
+    # Delete and create anew the ts_dir
+    if fs.exists(ts_dir):
+        fs.rm(ts_dir, recursive=True)
+    fs.makedirs(ts_dir)
+
+    results_by_upgrade = get_results_by_upgrade(fs, sim_out_dir)
+    # get the list of all the building simulation results directories
+    all_dirs = list(itertools.chain.from_iterable(results_by_upgrade.values()))
+
+    # Create directories in serial section to avoid race conditions
+    for upgrade_id in results_by_upgrade.keys():
+        folder_path = f"{ts_dir}/upgrade={upgrade_id}"
+        if not fs.exists(folder_path):
+            fs.makedirs(folder_path)
+
+    # find the avg size of time_series parquet files
+    total_size = 0
+    count = 0
+    sample_size = 10 if len(all_dirs) >= 10 else len(all_dirs)
+    for rnd_ts_index in random.sample(range(len(all_dirs)), sample_size):
+        full_path = f"{all_dirs[rnd_ts_index]}/run/enduse_timeseries.parquet"
+        try:
+            with fs.open(full_path, 'rb') as f:
+                pq = pd.read_parquet(f, engine='pyarrow')
+        except FileNotFoundError:
+            logger.warning(f" Time series file does not exist: {full_path}")
+        else:
+            total_size += sys.getsizeof(pq)
+            count += 1
+
+    if count == 0:
+        logger.error('No valid timeseries file could be found.')
+        return
+
+    avg_parquet_size = total_size / count
+
+    group_size = int(1.3*1024*1024*1024 / avg_parquet_size)
+    if group_size < 1:
+        group_size = 1
+
+    logger.info(f"Each parquet file is {avg_parquet_size / (1024 * 1024) :.2f} MB in memory.")
+    logger.info(f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
+
+    logger.info("Combining the parquets")
+    partitions_to_write = []
+    for upgrade_id, sim_dirs_in_upgrade in results_by_upgrade.items():
+        partitions_to_write.extend([
+            (upgrade_id, group_id, chunk)
+            for group_id, chunk in enumerate(divide_chunks(sim_dirs_in_upgrade, group_size))
+        ])
+    t = time.time()
+    dask.compute([dask.delayed(write_ts_output)(fs, ts_dir, x) for x in partitions_to_write])
+    diff = time.time() - t
+    logger.info(f"Combining the parquets took {diff:.2f} seconds")
+
+
 def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_timeseries=False,
                     reporting_measures=[], dask_bag_partition_size=500):
 
@@ -212,19 +344,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
             fs.rm(dr, recursive=True)
         fs.makedirs(dr)
 
-    all_dirs = list()  # get the list of all the building simulation results directories
-    results_by_upgrade = defaultdict(list)  # all the results directories, keyed by upgrades
-    for item in fs.ls(sim_out_dir):
-        m = re.search(r'up(\d+)', item)
-        if not m:
-            continue
-        upgrade_id = int(m.group(1))
-        for subitem in fs.ls(item):
-            m = re.search(r'bldg(\d+)', subitem)
-            if not m:
-                continue
-            results_by_upgrade[upgrade_id].append(subitem)
-            all_dirs.append(subitem)
+    results_by_upgrade = get_results_by_upgrade(sim_out_dir)
 
     # create the results.csv and results.parquet files
     for upgrade_id, sim_dir_list in results_by_upgrade.items():
@@ -254,57 +374,15 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
         data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
         results_df = out_osw_df.merge(data_point_out_df, how='left', on='building_id')
-        cols_to_remove = (
-            'build_existing_model.weight',
-            'simulation_output_report.weight',
-            'build_existing_model.workflow_json',
-            'simulation_output_report.upgrade_name'
-        )
-        for col in cols_to_remove:
-            if col in results_df.columns:
-                del results_df[col]
-        for col in ('started_at', 'completed_at'):
-            results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if x is not None
-                                                  else None)
+        results_df['upgrade'] = upgrade_id
+
+        results_df = clean_up_results_df(results_df, config)
 
         if upgrade_id > 0:
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
             )
             results_df = results_df[cols_to_keep]
-
-        # Add reference_scenario column to the dataframe
-        # begin: find the name of the current upgrade
-        upgrade_names = results_df['apply_upgrade.upgrade_name']
-        valid_index = upgrade_names.first_valid_index()
-        # some rows in results_upxx.csv might have blank entry for apply_upgrade.upgrade_name. Either because it is a
-        # baseline simulation or because some of the simulation for an upgrade has failed.
-        if valid_index is not None:  # only if there is a valid upgrade name for current upgrade
-            current_upgrade_name = upgrade_names.iloc[valid_index]
-        # end: find the name of the current upgrade
-            for upgrade in config.get('upgrades', []):  # find the configuration for current upgrade
-                if upgrade['upgrade_name'] == current_upgrade_name:
-                    reference_scenario = upgrade.get('reference_scenario', None)  # and extract reference_scenario
-                    if reference_scenario:
-                        results_df['apply_upgrade.reference_scenario'] = reference_scenario
-                        break
-
-        # standardize the column orders
-        first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
-                          'apply_upgrade.applicable', 'apply_upgrade.upgrade_name', 'apply_upgrade.reference_scenario']
-
-        build_existing_model_cols = sorted([col for col in results_df.columns if
-                                            col.startswith('build_existing_model')])
-        simulation_output_cols = sorted([col for col in results_df.columns if
-                                         col.startswith('simulation_output_report')])
-        sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
-
-        for reporting_measure in reporting_measures:
-            reporting_measure_cols = sorted([col for col in results_df.columns if
-                                            col.startswith(to_camelcase(reporting_measure))])
-            sorted_cols += reporting_measure_cols
-
-        results_df = results_df.reindex(columns=sorted_cols, copy=False)
 
         # Save to CSV
         logger.debug('Saving to csv.gz')
@@ -345,53 +423,75 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
         logger.info("Timeseries aggregation skipped.")
         return
 
-    # Time series combine
+    timeseries_combine(fs, sim_out_dir, ts_dir)
 
-    # Create directories in serial section to avoid race conditions
-    for upgrade_id in results_by_upgrade.keys():
-        folder_path = f"{ts_dir}/upgrade={upgrade_id}"
-        if not fs.exists(folder_path):
-            fs.makedirs(folder_path)
 
-    # find the avg size of time_series parqeut files
-    total_size = 0
-    count = 0
-    sample_size = 10 if len(all_dirs) >= 10 else len(all_dirs)
-    for rnd_ts_index in random.sample(range(len(all_dirs)), sample_size):
-        full_path = f"{all_dirs[rnd_ts_index]}/run/enduse_timeseries.parquet"
-        try:
-            with fs.open(full_path, 'rb') as f:
-                pq = pd.read_parquet(f, engine='pyarrow')
-        except FileNotFoundError:
-            logger.warning(f" Time series file does not exist: {full_path}")
+def combine_results2(fs, results_dir, do_timeseries=True):
+    sim_output_dir = f'{results_dir}/simulation_output'
+    ts_in_dir = f'{sim_output_dir}/timeseries'
+    results_csvs_dir = f'{results_dir}/results_csvs'
+    parquet_dir = f'{results_dir}/parquet'
+    ts_dir = f'{results_dir}/parquet/timeseries'
+    dirs = [results_csvs_dir, parquet_dir]
+    if do_timeseries:
+        dirs.append(ts_dir)
+
+    # clear and create the postprocessing results directories
+    for dr in dirs:
+        if fs.exists(dr):
+            fs.rm(dr, recursive=True)
+        fs.makedirs(dr)
+
+    # Results "CSV"
+    results_df = dd.read_parquet(f'{sim_output_dir}/results_job*.parquet', engine='pyarrow')
+    results_df = results_df.compute()
+
+    for upgrade_id, df in results_df.groupby('upgrade'):
+        if upgrade_id > 0:
+            cols_to_keep = list(
+                filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
+            )
+            for col in df.columns:
+                if col not in cols_to_keep:
+                    del df[col]
+        del df['upgrade']
+        df.set_index('building_id', inplace=True)
+        df.sort_index(inplace=True)
+
+        # Write CSV
+        csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
+        logger.info(f'Writing {csv_filename}')
+        with fs.open(csv_filename, 'wb') as f:
+            with gzip.open(f, 'wt', encoding='utf-8') as gf:
+                df.to_csv(gf, index=True)
+
+        # Write Parquet
+        if upgrade_id == 0:
+            results_parquet_dir = f"{parquet_dir}/baseline"
         else:
-            total_size += sys.getsizeof(pq)
-            count += 1
+            results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
+        if not fs.exists(results_parquet_dir):
+            fs.makedirs(results_parquet_dir)
+        write_dataframe_as_parquet(
+            df.reset_index(),
+            fs,
+            f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+        )
 
-    if count == 0:
-        logger.error('No valid timeseries file could be found.')
-        return
-
-    avg_parquet_size = total_size / count
-
-    group_size = int(1.3*1024*1024*1024 / avg_parquet_size)
-    if group_size < 1:
-        group_size = 1
-
-    logger.info(f"Each parquet file is {avg_parquet_size / (1024 * 1024) :.2f} MB in memory.")
-    logger.info(f"Combining {group_size} of them together, so that the size in memory is around 1.5 GB")
-
-    logger.info("Combining the parquets")
-    partitions_to_write = []
-    for upgrade_id, sim_dirs_in_upgrade in results_by_upgrade.items():
-        partitions_to_write.extend([
-            (upgrade_id, group_id, chunk)
-            for group_id, chunk in enumerate(divide_chunks(sim_dirs_in_upgrade, group_size))
-        ])
-    t = time.time()
-    dask.compute([dask.delayed(write_output)(fs, results_dir, x) for x in partitions_to_write])
-    diff = time.time() - t
-    logger.info(f"Took {diff:.2f} seconds")
+        if do_timeseries:
+            # Timeseries
+            ts_df = dd.read_parquet(f'{ts_in_dir}/job=*/upgrade={upgrade_id}/*.parquet', engine='pyarrow')
+            mem = ts_df.memory_usage(deep=True).sum().compute()
+            npartitions = math.ceil(mem / 1e9)
+            ts_df = ts_df.set_index('building_id', npartitions=npartitions)
+            ts_df = ts_df.map_partitions(lambda x: x.sort_values(['building_id', 'time']))
+            ts_out_loc = f"{fs.protocol}://{ts_dir}/upgrade={upgrade_id}"
+            logger.info(f'Writing {ts_out_loc}')
+            ts_df.to_parquet(
+                ts_out_loc,
+                engine='pyarrow',
+                flavor='spark'
+            )
 
 
 def upload_results(aws_conf, output_dir, results_dir):

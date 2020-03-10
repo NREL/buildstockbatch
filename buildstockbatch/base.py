@@ -37,7 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 class SimulationExists(Exception):
-    pass
+
+    def __init__(self, msg, sim_id, sim_dir):
+        super().__init__(msg)
+        self.sim_id = sim_id
+        self.sim_dir = sim_dir
 
 
 class ValidationError(Exception):
@@ -247,9 +251,9 @@ class BuildStockBatchBase(object):
         sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
         if os.path.exists(sim_dir):
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
-                raise SimulationExists('{} exists and finished successfully'.format(sim_id))
+                raise SimulationExists('{} exists and finished successfully'.format(sim_id), sim_id, sim_dir)
             elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
-                raise SimulationExists('{} exists and failed'.format(sim_id))
+                raise SimulationExists('{} exists and failed'.format(sim_id), sim_id, sim_dir)
             else:
                 shutil.rmtree(sim_dir)
 

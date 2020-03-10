@@ -11,7 +11,8 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
+from fsspec.implementations.local import LocalFileSystem
 import functools
 import itertools
 from joblib import delayed, Parallel
@@ -33,6 +34,7 @@ import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
 from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
+from . import postprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +53,18 @@ class EagleBatch(BuildStockBatchBase):
     local_project_dir = local_scratch / 'project'
     local_buildstock_dir = local_scratch / 'buildstock'
     local_weather_dir = local_scratch / 'weather'
-    local_output_dir = local_scratch
+    local_output_dir = local_scratch / 'output'
     local_singularity_img = local_scratch / 'openstudio.simg'
+    local_housing_characteristics_dir = local_scratch / 'housing_characteristics'
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        output_dir = self.output_dir
+        output_dir = pathlib.Path(self.output_dir)
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
+        os.makedirs(output_dir / 'results' / 'simulation_output', exist_ok=True)
+        weather_dir = self.weather_dir  # noqa E841
 
         if self.stock_type == 'residential':
             self.sampler = ResidentialSingularitySampler(
@@ -238,7 +243,7 @@ class EagleBatch(BuildStockBatchBase):
         )
         self.clear_and_copy_dir(
             pathlib.Path(self.output_dir) / 'housing_characteristics',
-            self.local_output_dir / 'housing_characteristics'
+            self.local_housing_characteristics_dir
         )
         if os.path.exists(self.local_singularity_img):
             os.remove(self.local_singularity_img)
@@ -255,91 +260,130 @@ class EagleBatch(BuildStockBatchBase):
             self.cfg
         )
         tick = time.time()
-        with Parallel(n_jobs=1, verbose=9) as parallel:
-            parallel(itertools.starmap(run_building_d, args['batch']))
+        with Parallel(n_jobs=-1, verbose=9) as parallel:
+            dpouts = parallel(itertools.starmap(run_building_d, args['batch']))
         tick = time.time() - tick
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
+
+        logger.info('Processing results')
+        results_df = pd.DataFrame(dpouts).rename(columns=postprocessing.to_camelcase)
+        results_df = postprocessing.clean_up_results_df(results_df, self.cfg, keep_upgrade_id=True)
+
+        fs = LocalFileSystem()
+        lustre_sim_out_dir = pathlib.Path(self.results_dir) / 'simulation_output'
+        results_parquet = lustre_sim_out_dir / f'results_job{job_array_number}.parquet'
+        logger.info(f'Writing results to {results_parquet}')
+        postprocessing.write_dataframe_as_parquet(results_df, fs, str(results_parquet))
+
+        simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
+        logger.info(f'Compressing simulation outputs to {simout_filename}')
+        local_sim_out_dir = self.local_output_dir / 'simulation_output'
+        subprocess.run(
+            [
+                'tar',
+                'cf', str(simout_filename),
+                '-I', 'pigz',
+                '-C', str(local_sim_out_dir),
+                '.'
+            ],
+            check=True
+        )
+
+        # Create a dask LocalCluster on just this node.
+        dask_cluster = LocalCluster(n_workers=9, local_directory='/tmp/scratch/dask-worker-space-bstk')
+        dask_client = Client(dask_cluster)  # noqa E841
+        fs = LocalFileSystem()
+        postprocessing.timeseries_combine(
+            fs,
+            local_sim_out_dir,
+            lustre_sim_out_dir / 'timeseries' / f'job={job_array_number}'
+        )
 
     @classmethod
     def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
 
         try:
-            sim_id, remote_sim_dir = cls.make_sim_dir(
-                i,
-                upgrade_idx,
-                os.path.join(output_dir, 'results', 'simulation_output')
-            )
-        except SimulationExists:
-            return
-
-        try:
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(cls.local_output_dir, 'simulation_output'))
-        except SimulationExists:
-            return
+        except SimulationExists as ex:
+            sim_dir = ex.sim_dir
+        else:
+            # Generate the osw for this simulation
+            osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+            with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
+                json.dump(osw, f, indent=4)
 
-        # Generate the osw for this simulation
-        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
-        with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
-            json.dump(osw, f, indent=4)
+            # Copy other necessary stuff into the simulation directory
+            dirs_to_mount = [
+                os.path.join(cls.local_buildstock_dir, 'measures'),
+                os.path.join(cls.local_project_dir, 'seeds'),
+                cls.local_weather_dir,
+            ]
 
-        # Copy other necessary stuff into the simulation directory
-        dirs_to_mount = [
-            os.path.join(cls.local_buildstock_dir, 'measures'),
-            os.path.join(cls.local_project_dir, 'seeds'),
-            cls.local_weather_dir,
-        ]
+            # Call singularity to run the simulation
+            local_resources_dir = cls.local_buildstock_dir / 'resources'
+            args = [
+                'singularity', 'exec',
+                '--contain',
+                '-e',
+                '--pwd', '/var/simdata/openstudio',
+                '-B', f'{sim_dir}:/var/simdata/openstudio',
+                '-B', f'{local_resources_dir}:/lib/resources',
+                '-B', f'{cls.local_housing_characteristics_dir}:/lib/housing_characteristics'
+            ]
+            runscript = [
+                'ln -s /lib /var/simdata/openstudio/lib'
+            ]
+            for src in dirs_to_mount:
+                container_mount = '/' + os.path.basename(src)
+                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
+                runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+            runscript.append('openstudio run -w in.osw')
+            if get_bool_env_var('MEASURESONLY'):
+                runscript[-1] += ' --measures_only'
+            args.extend([
+                cls.local_singularity_img,
+                'bash', '-x'
+            ])
+            logger.debug(' '.join(map(str, args)))
+            with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                try:
+                    subprocess.run(
+                        args,
+                        check=True,
+                        input='\n'.join(runscript).encode('utf-8'),
+                        stdout=f_out,
+                        stderr=subprocess.STDOUT,
+                        cwd=cls.local_output_dir
+                    )
+                except subprocess.CalledProcessError:
+                    pass
+                finally:
+                    # Clean up the symbolic links we created in the container
+                    for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                        try:
+                            os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
+                        except FileNotFoundError:
+                            pass
 
-        # Call singularity to run the simulation
-        args = [
-            'singularity', 'exec',
-            '--contain',
-            '-e',
-            '--pwd', '/var/simdata/openstudio',
-            '-B', '{}:/var/simdata/openstudio'.format(sim_dir),
-            '-B', '{}:/lib/resources'.format(os.path.join(cls.local_buildstock_dir, 'resources')),
-            '-B', '{}:/lib/housing_characteristics'.format(os.path.join(cls.local_output_dir, 'housing_characteristics'))
-        ]
-        runscript = [
-            'ln -s /lib /var/simdata/openstudio/lib'
-        ]
-        for src in dirs_to_mount:
-            container_mount = '/' + os.path.basename(src)
-            args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
-            container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
-            runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
-        runscript.append('openstudio run -w in.osw')
-        if get_bool_env_var('MEASURESONLY'):
-            runscript[-1] += ' --measures_only'
-        args.extend([
-            cls.local_singularity_img,
-            'bash', '-x'
-        ])
-        logger.debug(' '.join(map(str, args)))
-        with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
-            try:
-                subprocess.run(
-                    args,
-                    check=True,
-                    input='\n'.join(runscript).encode('utf-8'),
-                    stdout=f_out,
-                    stderr=subprocess.STDOUT,
-                    cwd=cls.local_output_dir
-                )
-            except subprocess.CalledProcessError:
-                pass
-            finally:
-                # Clean up the symbolic links we created in the container
-                for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
-                    try:
-                        os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
-                    except FileNotFoundError:
-                        pass
-
-                cls.cleanup_sim_dir(sim_dir)
-
-        # Copy the results to the remote directory
-        cls.clear_and_copy_dir(sim_dir, remote_sim_dir)
-        shutil.rmtree(sim_dir, ignore_errors=True)
+                    cls.cleanup_sim_dir(sim_dir)
+        finally:
+            sim_dir = pathlib.Path(sim_dir)
+            reporting_measures = cfg.get('reporting_measures', [])
+            fs = LocalFileSystem()
+            dpout = postprocessing.read_data_point_out_json(
+                fs, reporting_measures, str(sim_dir / 'run' / 'data_point_out.json')
+            )
+            if dpout is None:
+                dpout = {}
+            else:
+                dpout = postprocessing.flatten_datapoint_json(reporting_measures, dpout)
+            out_osw = postprocessing.read_out_osw(fs, str(sim_dir / 'out.osw'))
+            if out_osw:
+                dpout.update(out_osw)
+            dpout['building_id'] = i
+            dpout['upgrade'] = 0 if upgrade_idx is None else upgrade_idx + 1
+            return dpout
 
     def queue_jobs(self, array_ids=None):
         eagle_cfg = self.cfg['eagle']
@@ -470,6 +514,20 @@ class EagleBatch(BuildStockBatchBase):
 
     def get_dask_client(self):
         return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
+
+    def process_results(self, skip_combine=False, force_upload=False):
+        self.get_dask_client()  # noqa: F841
+
+        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
+
+        fs = LocalFileSystem()
+        postprocessing.combine_results2(fs, self.results_dir, do_timeseries=do_timeseries)
+
+        aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
+        if 's3' in aws_conf or force_upload:
+            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
+            if 'athena' in aws_conf:
+                postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 
 
 logging_config = {
