@@ -1840,7 +1840,6 @@ class AwsBatch(DockerBatchBase):
                 tar_f.add(buildstock_path / 'measures', 'measures')
                 tar_f.add(buildstock_path / 'resources', 'lib/resources')
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
-                tar_f.add(project_path / 'weather', 'weather')
             logger.debug('Compressing weather files')
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
