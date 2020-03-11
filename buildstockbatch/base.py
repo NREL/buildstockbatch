@@ -249,7 +249,7 @@ class BuildStockBatchBase(object):
 
         # Check to see if the simulation is done already and skip it if so.
         sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
-        if os.path.exists(sim_dir):
+        if os.path.exists(sim_dir) and not overwrite_existing:
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
                 raise SimulationExists('{} exists and finished successfully'.format(sim_id), sim_id, sim_dir)
             elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
@@ -258,7 +258,7 @@ class BuildStockBatchBase(object):
                 shutil.rmtree(sim_dir)
 
         # Create the simulation directory
-        os.makedirs(sim_dir)
+        os.makedirs(sim_dir, exist_ok=overwrite_existing)
 
         return sim_id, sim_dir
 

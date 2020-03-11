@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import sys
 import time
+import traceback
 import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
@@ -254,11 +255,15 @@ class EagleBatch(BuildStockBatchBase):
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
 
-        run_building_d = functools.partial(
-            delayed(self.run_building),
-            self.output_dir,
-            self.cfg
-        )
+        @delayed
+        def run_building_d(i, upgrade_idx):
+            try:
+                return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
+            except Exception:
+                _, sim_dir = self.make_sim_dir(i, upgrade_idx, self.results_dir, overwrite_existing=True)
+                with open(os.path.join(sim_dir, f'traceback.out'), 'w') as f:
+                    traceback.print_exc(file=f)
+
         tick = time.time()
         with Parallel(n_jobs=-1, verbose=9) as parallel:
             dpouts = parallel(itertools.starmap(run_building_d, args['batch']))
