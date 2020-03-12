@@ -77,7 +77,7 @@ def test_reference_scenario(basic_residential_project_file):
 
     # test results.csv files
     test_path = os.path.join(results_dir, 'results_csvs')
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).set_index('building_id').sort_index()
     assert len(test_csv['apply_upgrade.reference_scenario'].unique()) == 1
     assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
 

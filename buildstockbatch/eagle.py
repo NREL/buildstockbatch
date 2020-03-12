@@ -13,7 +13,6 @@ This class contains the object & methods that allow for usage of the library wit
 import argparse
 from dask.distributed import Client, LocalCluster
 from fsspec.implementations.local import LocalFileSystem
-import functools
 import itertools
 from joblib import delayed, Parallel
 import json
@@ -347,7 +346,7 @@ class EagleBatch(BuildStockBatchBase):
             if get_bool_env_var('MEASURESONLY'):
                 runscript[-1] += ' --measures_only'
             args.extend([
-                cls.local_singularity_img,
+                str(cls.local_singularity_img),
                 'bash', '-x'
             ])
             logger.debug(' '.join(map(str, args)))

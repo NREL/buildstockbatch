@@ -211,7 +211,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if x is not None
                                               else None)
     reference_scenarios = dict([(i, x.get('reference_scenario')) for i, x in enumerate(cfg.get('upgrades', []), 1)])
-    results_df['reference_scenario'] = results_df['upgrade'].map(reference_scenarios).fillna(np.nan)
+    results_df['apply_upgrade.reference_scenario'] = results_df['upgrade'].map(reference_scenarios).fillna(np.nan)
 
     # standardize the column orders
     first_few_cols = [
@@ -237,9 +237,9 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
 
-    for col in results_df.columns:
-        if col.startswith('simulation_output_report.'):
-            results_df[col] = pd.to_numeric(results_df[col], errors='coerce')
+    # for col in results_df.columns:
+    #     if col.startswith('simulation_output_report.') and not col == 'simulation_output_report.applicable':
+    #         results_df[col] = pd.to_numeric(results_df[col], errors='coerce')
 
     return results_df
 
@@ -344,7 +344,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
             fs.rm(dr, recursive=True)
         fs.makedirs(dr)
 
-    results_by_upgrade = get_results_by_upgrade(sim_out_dir)
+    results_by_upgrade = get_results_by_upgrade(fs, sim_out_dir)
 
     # create the results.csv and results.parquet files
     for upgrade_id, sim_dir_list in results_by_upgrade.items():
