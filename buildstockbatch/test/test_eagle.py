@@ -25,7 +25,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
     cfg = EagleBatch.get_project_configuration(project_filename)
 
     with patch.object(EagleBatch, 'weather_dir', None), \
-            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg') as singularity_image, \
+            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'), \
             patch.object(EagleBatch, 'create_osw', return_value=osw_dict), \
             patch.object(EagleBatch, 'make_sim_dir', return_value=('bldg0000001up00', sim_path)):
 
