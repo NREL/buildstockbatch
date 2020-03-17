@@ -451,9 +451,8 @@ def combine_results2(fs, results_dir, do_timeseries=True):
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
             )
-            for col in df.columns:
-                if col not in cols_to_keep:
-                    del df[col]
+            df = df[cols_to_keep]
+        df = df.copy()
         del df['upgrade']
         df.set_index('building_id', inplace=True)
         df.sort_index(inplace=True)
