@@ -224,11 +224,6 @@ class EagleBatch(BuildStockBatchBase):
 
     def run_job_batch(self, job_array_number):
 
-        # Move resources to the local scratch directory
-        self.clear_and_copy_dir(
-            pathlib.Path(self.project_dir) / 'seeds',
-            self.local_project_dir / 'seeds'
-        )
         self.clear_and_copy_dir(
             pathlib.Path(self.buildstock_dir) / 'resources',
             self.local_buildstock_dir / 'resources'

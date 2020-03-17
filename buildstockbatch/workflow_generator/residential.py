@@ -66,8 +66,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
-            'seed_file': 'seeds/EmptySeedModel.osm',
-            'weather_file': 'weather/Placeholder.epw'
         }
 
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
