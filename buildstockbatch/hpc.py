@@ -229,7 +229,6 @@ class HPCBatchBase(BuildStockBatchBase):
         # Copy other necessary stuff into the simulation directory
         dirs_to_mount = [
             os.path.join(buildstock_dir, 'measures'),
-            os.path.join(project_dir, 'seeds'),
             weather_dir,
         ]
 

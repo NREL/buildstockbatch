@@ -436,7 +436,7 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Route table created.")
 
-        self.ec2.create_tags(
+        AWSRetry.backoff()(self.ec2.create_tags)(
             Resources=[
                 self.priv_route_table_id
             ],
@@ -1300,17 +1300,9 @@ class AwsBatchEnv(AwsJobBase):
                         else:
                             raise
 
-            while True:
-                try:
-
-                    self.ec2.delete_vpc(
-                        VpcId=this_vpc
-                    )
-
-                    break
-
-                except Exception:
-                    raise
+            AWSRetry.backoff()(self.ec2.delete_vpc)(
+                VpcId=this_vpc
+            )
 
         # Find the Elastic IP from the NAT
         response = self.ec2.describe_addresses(
@@ -1840,8 +1832,6 @@ class AwsBatch(DockerBatchBase):
                 tar_f.add(buildstock_path / 'measures', 'measures')
                 tar_f.add(buildstock_path / 'resources', 'lib/resources')
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
-                tar_f.add(project_path / 'seeds', 'seeds')
-                tar_f.add(project_path / 'weather', 'weather')
             logger.debug('Compressing weather files')
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
@@ -1997,13 +1987,15 @@ class AwsBatch(DockerBatchBase):
         logger.debug('Number of simulations = {}'.format(len(jobs_d['batch'])))
 
         logger.debug('Getting weather files')
+        weather_dir = sim_dir / 'weather'
+        os.makedirs(weather_dir)
         df = pd.read_csv(str(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv'), index_col=0)
         epws_to_download = df.loc[[x[0] for x in jobs_d['batch']], 'Location Weather Filename'].unique().tolist()
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))
                 s3.download_fileobj(bucket, '{}/weather/{}.gz'.format(prefix, epw_filename), f_gz)
-                with open(sim_dir / 'weather' / epw_filename, 'wb') as f_out:
+                with open(weather_dir / epw_filename, 'wb') as f_out:
                     logger.debug('Extracting {}'.format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 

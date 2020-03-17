@@ -55,7 +55,6 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
             '-B', f'{tmp_path}/openstudio_buildstock/resources:/lib/resources',
             '-B', f'{tmp_path}/output/housing_characteristics:/lib/housing_characteristics',
             '-B', f'{tmp_path}/openstudio_buildstock/measures:/measures:ro',
-            '-B', f'{tmp_path}/project_resstock_national/seeds:/seeds:ro',
             '-B', f'{tmp_path}/weather:/weather:ro',
             singularity_image,
             'bash', '-x'

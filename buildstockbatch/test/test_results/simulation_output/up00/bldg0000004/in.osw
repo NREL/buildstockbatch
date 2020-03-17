@@ -38,7 +38,5 @@
     "created_at": "2019-04-17T11:27:00.841129",
     "measure_paths": [
         "measures"
-    ],
-    "seed_file": "seeds/EmptySeedModel.osm",
-    "weather_file": "weather/Placeholder.epw"
+    ]
 }
