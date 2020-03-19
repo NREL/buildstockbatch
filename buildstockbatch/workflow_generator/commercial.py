@@ -105,7 +105,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 "measure_type": "ReportingMeasure"
             },
             {
-                "measure_dir_name": "TimeseriesCSVExport",
+                "measure_dir_name": "comstock_sensitivity_reports",
                 "arguments": {},
                 "measure_type": "ReportingMeasure"
             }
