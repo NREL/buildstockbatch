@@ -103,6 +103,11 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     "inc_output_variables": False
                 },
                 "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "TimeseriesCSVExport",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
             }
         ])
 
