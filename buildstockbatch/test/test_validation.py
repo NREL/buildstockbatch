@@ -140,11 +140,10 @@ def test_bad_measures(project_file):
             assert "Required argument calendar_year for" in warning_logs
             assert "ReportingMeasure2 does not exist" in er
             assert "Wrong argument value type for begin_day_of_month" in er
-            assert "Found unexpected argument key output_variable" in er
-            assert "Found unexpected argument value Huorly" in er
+            assert "Found unexpected argument key include_end_use_consumptions" in er
+            assert "Found unexpected argument value huorly" in er
             assert "Fixed(1)" in er
-            assert "Required argument include_enduse_subcategories" in er
-            assert "Found unexpected argument key include_enduse_subcategory" in er
+            assert "Required argument include_timeseries_total_loads for" in warning_logs
 
         else:
             raise Exception("measures_and_arguments was supposed to raise ValueError for"

@@ -34,13 +34,12 @@ upgrades:
     reference_scenario: non-existing upgrade
 
 simulation_output:
-  include_enduse_subcategory: true
-
-timeseries_csv_export:
-  reporting_frequency: Huorly
-#  include_enduse_subcategories: true
-  output_variable:
-    - Zone Mean Air Temperature
+  timeseries_frequency: huorly
+  include_timeseries_zone_temperatures: false
+  include_timeseries_fuel_consumptions: false
+  include_end_use_consumptions: false
+  # include_timeseries_total_loads: false
+  include_timeseries_component_loads: false
 
 reporting_measures:
   - ReportingMeasure2

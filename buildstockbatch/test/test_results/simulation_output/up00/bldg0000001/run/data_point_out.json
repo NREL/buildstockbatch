@@ -8,7 +8,7 @@
     "applicable": true
   },
   "BuildExistingModel": {
-    "building_id": 1,
+    "building_unit_id": 1,
     "workflow_json": "measure-info.json",
     "sample_weight": 20000000.0,
     "location_region": "CR04",

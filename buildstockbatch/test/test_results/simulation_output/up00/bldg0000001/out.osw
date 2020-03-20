@@ -65,7 +65,7 @@
       },
       {
          "arguments" : {
-            "building_id" : 1,
+            "building_unit_id" : 1,
             "sample_weight" : 20000000,
             "workflow_json" : "measure-info.json"
          },
@@ -351,7 +351,7 @@
             "step_result" : "Success",
             "step_values" : [
                {
-                  "name" : "building_id",
+                  "name" : "building_unit_id",
                   "value" : 1
                },
                {
