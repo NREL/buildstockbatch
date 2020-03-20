@@ -148,8 +148,8 @@ class HPCBatchBase(BuildStockBatchBase):
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
 
         # find out how many buildings there are to simulate
-        building_ids = df.index.tolist()
-        n_datapoints = len(building_ids)
+        building_unit_ids = df.index.tolist()
+        n_datapoints = len(building_unit_ids)
         # number of simulations is number of buildings * number of upgrades
         n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
 
@@ -160,10 +160,10 @@ class HPCBatchBase(BuildStockBatchBase):
         #     larger than we need, now that we know n_sims
         n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
-        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
+        upgrade_sims = itertools.product(building_unit_ids, range(len(self.cfg.get('upgrades', []))))
         if not self.skip_baseline_sims:
             # create batches of simulations
-            baseline_sims = zip(building_ids, itertools.repeat(None))
+            baseline_sims = zip(building_unit_ids, itertools.repeat(None))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
         else:
             all_sims = list(itertools.chain(upgrade_sims))
@@ -222,7 +222,7 @@ class HPCBatchBase(BuildStockBatchBase):
             return
 
         # Generate the osw for this simulation
-        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+        osw = cls.create_osw(cfg, sim_id, building_unit_id=i, upgrade_idx=upgrade_idx)
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 

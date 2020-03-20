@@ -1849,8 +1849,8 @@ class AwsBatch(DockerBatchBase):
 
             # Collect simulations to queue
             df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            building_ids = df.index.tolist()
-            n_datapoints = len(building_ids)
+            building_unit_ids = df.index.tolist()
+            n_datapoints = len(building_unit_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
             logger.debug('Total number of simulations = {}'.format(n_sims))
 
@@ -1863,8 +1863,8 @@ class AwsBatch(DockerBatchBase):
             n_sims_per_job = max(n_sims_per_job, 2)
             logger.debug('Number of simulations per array job = {}'.format(n_sims_per_job))
 
-            baseline_sims = zip(building_ids, itertools.repeat(None))
-            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
+            baseline_sims = zip(building_unit_ids, itertools.repeat(None))
+            upgrade_sims = itertools.product(building_unit_ids, range(len(self.cfg.get('upgrades', []))))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
             random.shuffle(all_sims)
             all_sims_iter = iter(all_sims)
@@ -1999,9 +1999,9 @@ class AwsBatch(DockerBatchBase):
                     logger.debug('Extracting {}'.format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 
-        for building_id, upgrade_idx in jobs_d['batch']:
-            sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
-            osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
+        for building_unit_id, upgrade_idx in jobs_d['batch']:
+            sim_id = 'bldg{:07d}up{:02d}'.format(building_unit_id, 0 if upgrade_idx is None else upgrade_idx + 1)
+            osw = cls.create_osw(cfg, sim_id, building_unit_id, upgrade_idx)
             with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                 json.dump(osw, f, indent=4)
             with open(sim_dir / 'os_stdout.log', 'w') as f_out:
@@ -2019,11 +2019,11 @@ class AwsBatch(DockerBatchBase):
 
             cls.cleanup_sim_dir(sim_dir)
 
-            logger.debug('Uploading simulation outputs for building_id = {}, upgrade_id = {}'.format(
-                building_id, upgrade_idx
+            logger.debug('Uploading simulation outputs for building_unit_id = {}, upgrade_id = {}'.format(
+                building_unit_id, upgrade_idx
             ))
             fs = S3FileSystem()
-            upload_path = f"{bucket}/{prefix}/results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"  # noqa E501
+            upload_path = f"{bucket}/{prefix}/results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_unit_id:07d}"  # noqa E501
             if fs.isdir(upload_path):
                 fs.rm(upload_path, recursive=True)
             fs.makedirs(upload_path)

@@ -98,6 +98,7 @@ class LocalDockerBatch(DockerBatchBase):
         bind_mounts = [
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources', 'hpxml-measures'), 'resources/hpxml-measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
@@ -108,7 +109,7 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
 
-        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+        osw = cls.create_osw(cfg, sim_id, building_unit_id=i, upgrade_idx=upgrade_idx)
 
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
@@ -151,7 +152,7 @@ class LocalDockerBatch(DockerBatchBase):
             return
 
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
-        building_ids = df.index.tolist()
+        building_unit_ids = df.index.tolist()
         run_building_d = functools.partial(
             delayed(self.run_building),
             self.project_dir,
@@ -163,9 +164,9 @@ class LocalDockerBatch(DockerBatchBase):
         )
         upgrade_sims = []
         for i in range(len(self.cfg.get('upgrades', []))):
-            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
+            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_unit_ids))
         if not self.skip_baseline_sims:
-            baseline_sims = map(run_building_d, building_ids)
+            baseline_sims = map(run_building_d, building_unit_ids)
             all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         else:
             all_sims = itertools.chain(*upgrade_sims)

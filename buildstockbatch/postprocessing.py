@@ -88,8 +88,8 @@ def flatten_datapoint_json(reporting_measures, d):
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
 
-    new_d['building_id'] = new_d['BuildExistingModel.building_id']
-    del new_d['BuildExistingModel.building_id']
+    new_d['building_unit_id'] = new_d['BuildExistingModel.building_unit_id']
+    del new_d['BuildExistingModel.building_unit_id']
 
     return new_d
 
@@ -111,7 +111,7 @@ def read_out_osw(fs, filename):
             out_d[key] = d.get(key, None)
         for step in d.get('steps', []):
             if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_id'] = step['arguments']['building_id']
+                out_d['building_unit_id'] = step['arguments']['building_unit_id']
         return out_d
 
 
@@ -173,10 +173,10 @@ def write_output(fs, results_dir, args):
             new_pq = pd.read_parquet(f, engine='pyarrow')
         new_pq.rename(columns=to_camelcase, inplace=True)
 
-        building_id_match = re.search(r'bldg(\d+)', folder)
-        assert building_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
-        building_id = int(building_id_match.group(1))
-        new_pq['building_id'] = building_id
+        building_unit_id_match = re.search(r'bldg(\d+)', folder)
+        assert building_unit_id_match, f"The building results folder format should be: ~bldg(\\d+). Got: {folder} "
+        building_unit_id = int(building_unit_id_match.group(1))
+        new_pq['building_unit_id'] = building_unit_id
         parquets.append(new_pq)
 
     if not parquets:  # if no valid simulation is found for this group
@@ -253,7 +253,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
 
         data_point_out_df, out_osw_df = dask.compute(data_point_out_df_d, out_osw_df_d)
 
-        results_df = out_osw_df.merge(data_point_out_df, how='left', on='building_id')
+        results_df = out_osw_df.merge(data_point_out_df, how='left', on='building_unit_id')
         cols_to_remove = (
             'build_existing_model.weight',
             'simulation_output_report.weight',
@@ -290,7 +290,7 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
                         break
 
         # standardize the column orders
-        first_few_cols = ['building_id', 'started_at', 'completed_at', 'completed_status',
+        first_few_cols = ['building_unit_id', 'started_at', 'completed_at', 'completed_status',
                           'apply_upgrade.applicable', 'apply_upgrade.upgrade_name', 'apply_upgrade.reference_scenario']
 
         build_existing_model_cols = sorted([col for col in results_df.columns if
