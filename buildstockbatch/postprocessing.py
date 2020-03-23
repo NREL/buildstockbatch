@@ -15,7 +15,7 @@ import dask.bag as db
 import dask.dataframe as dd
 import dask
 import datetime as dt
-from functools import partial
+from functools import partial, reduce
 import gzip
 import itertools
 import json
@@ -34,6 +34,7 @@ from pyarrow import parquet
 
 logger = logging.getLogger(__name__)
 
+print('hi5')
 
 def divide_chunks(l, n):
     """
@@ -202,6 +203,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         'build_existing_model.weight',
         'simulation_output_report.weight',
         'build_existing_model.workflow_json',
+        'build_existing_model.applicable',
         'simulation_output_report.upgrade_name'
     )
     for col in cols_to_remove:
@@ -211,7 +213,8 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         results_df[col] = results_df[col].map(lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if x is not None
                                               else None)
     reference_scenarios = dict([(i, x.get('reference_scenario')) for i, x in enumerate(cfg.get('upgrades', []), 1)])
-    results_df['apply_upgrade.reference_scenario'] = results_df['upgrade'].map(reference_scenarios).fillna(np.nan)
+    results_df['apply_upgrade.reference_scenario'] = \
+        results_df['upgrade'].map(reference_scenarios).fillna('').astype(str)
 
     # standardize the column orders
     first_few_cols = [
@@ -426,6 +429,34 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
     timeseries_combine(fs, sim_out_dir, ts_dir)
 
 
+def get_cols(filename):
+    schema = parquet.read_schema(filename)
+    return schema.names
+
+
+def read_write_ts_parquet(fs, all_cols, ts_tmp_dir, filename):
+    with fs.open(filename, 'rb') as f:
+        df = pd.read_parquet(f, engine='pyarrow')
+    for col in all_cols:
+        if col not in df.columns:
+            df[col] = np.nan
+    mem = df.memory_usage(deep=True).sum()
+    # Make files ~500MB in size
+    n_files_to_write = math.ceil(mem / 100e6)
+    building_ids = df['building_id'].unique()
+    job_id, upgrade_id, basename = re.search(r'job=(\d+)/upgrade=(\d+)/(.+)\.parquet', filename).groups()
+    exp_filenames = []
+    for i, building_ids_in_this_file in enumerate(np.array_split(building_ids, n_files_to_write), 1):
+        exp_filename = f'{ts_tmp_dir}/job{job_id}_up{upgrade_id}_{basename}_part{i}.parquet'
+        write_dataframe_as_parquet(
+            df.loc[df['building_id'].isin(building_ids_in_this_file), all_cols],
+            fs,
+            exp_filename
+        )
+        exp_filenames.append(exp_filename)
+    return exp_filenames
+
+
 def combine_results2(fs, results_dir, do_timeseries=True):
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
@@ -446,8 +477,27 @@ def combine_results2(fs, results_dir, do_timeseries=True):
     results_df = dd.read_parquet(f'{sim_output_dir}/results_job*.parquet', engine='pyarrow')
     results_df = results_df.compute()
 
+    if do_timeseries:
+
+        # Look at all the parquet files to see what columns are in all of them.
+        ts_filenames = fs.glob(f'{ts_in_dir}/job=*/upgrade=*/*.parquet')
+        all_ts_cols = reduce(
+            lambda x, y: set(x).union(y),
+            dask.compute(
+                map(dask.delayed(get_cols), ts_filenames)
+            )[0]
+        )
+
+        # Sort the columns
+        all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
+        all_ts_cols.difference_update(all_ts_cols_sorted)
+        all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith(']')))
+        all_ts_cols.difference_update(all_ts_cols_sorted)
+        all_ts_cols_sorted.extend(sorted(all_ts_cols))
+
     for upgrade_id, df in results_df.groupby('upgrade'):
         if upgrade_id > 0:
+            # Remove building characteristics for upgrade scenarios. 
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
             )
@@ -478,12 +528,41 @@ def combine_results2(fs, results_dir, do_timeseries=True):
         )
 
         if do_timeseries:
+            print('doing timeseries')
             # Timeseries
-            ts_df = dd.read_parquet(f'{ts_in_dir}/job=*/upgrade={upgrade_id}/*.parquet', engine='pyarrow')
+
+            # Create a place to store the partially processed timeseries files.
+            ts_tmp_dir = f'{sim_output_dir}/timeseries_temp'
+            if fs.exists(ts_tmp_dir):
+                fs.rm(ts_tmp_dir, recursive=True)
+            fs.makedirs(ts_tmp_dir)
+
+            # Make all the files have the same columns and split into more, smaller files.
+            ts_exp_filenames = dask.compute(map(
+                dask.delayed(partial(read_write_ts_parquet, fs, all_ts_cols_sorted, ts_tmp_dir)),
+                fs.glob(f'{ts_in_dir}/job=*/upgrade={upgrade_id}/*.parquet')
+            ))[0]
+
+            # Expand list of lists of filenames into one list.
+            ts_exp_filenames = itertools.chain.from_iterable(ts_exp_filenames)
+
+            # Read the files in as a dask dataframe.
+            ts_df = dd.read_parquet(
+                [f"{fs.protocol}://{x}" for x in ts_exp_filenames],
+                engine='pyarrow'
+            )
+
+            # Calculate memory usage and determine an optimal number of partitions (~1GB per partition)
             mem = ts_df.memory_usage(deep=True).sum().compute()
             npartitions = math.ceil(mem / 1e9)
+
+            # Index and sort by building_id
             ts_df = ts_df.set_index('building_id', npartitions=npartitions)
+
+            # Sort the data within partitions by building_id, then time
             ts_df = ts_df.map_partitions(lambda x: x.sort_values(['building_id', 'time']))
+
+            # Write out new dask timeseries dataframe.
             ts_out_loc = f"{fs.protocol}://{ts_dir}/upgrade={upgrade_id}"
             logger.info(f'Writing {ts_out_loc}')
             ts_df.to_parquet(
@@ -491,6 +570,8 @@ def combine_results2(fs, results_dir, do_timeseries=True):
                 engine='pyarrow',
                 flavor='spark'
             )
+
+            fs.rm(ts_tmp_dir, recursive=True)
 
 
 def upload_results(aws_conf, output_dir, results_dir):
