@@ -202,7 +202,6 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         'build_existing_model.weight',
         'simulation_output_report.weight',
         'build_existing_model.workflow_json',
-        'build_existing_model.applicable',
         'simulation_output_report.upgrade_name'
     )
     for col in cols_to_remove:
