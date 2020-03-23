@@ -11,8 +11,10 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client
 from fsspec.implementations.local import LocalFileSystem
+import glob
+import gzip
 import itertools
 from joblib import delayed, Parallel
 import json
@@ -20,8 +22,8 @@ import logging
 import math
 import os
 import pandas as pd
-import random
 import pathlib
+import random
 import re
 import requests
 import shlex
@@ -63,7 +65,6 @@ class EagleBatch(BuildStockBatchBase):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
-        os.makedirs(output_dir / 'results' / 'simulation_output', exist_ok=True)
         weather_dir = self.weather_dir  # noqa E841
 
         if self.stock_type == 'residential':
@@ -149,6 +150,12 @@ class EagleBatch(BuildStockBatchBase):
         return weather_dir
 
     def run_batch(self, sampling_only=False):
+
+        # Create simulation_output dir
+        sim_out_ts_dir = pathlib.Path(self.output_dir) / 'results' / 'simulation_output' / 'timeseries'
+        os.makedirs(sim_out_ts_dir, exist_ok=True)
+        for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
+            os.makedirs(sim_out_ts_dir / f'up{i:02d}')
 
         # create destination_dir and copy housing_characteristics into it
         logger.debug("Copying housing characteristics")
@@ -258,22 +265,33 @@ class EagleBatch(BuildStockBatchBase):
                 with open(os.path.join(sim_dir, f'traceback.out'), 'w') as f:
                     traceback.print_exc(file=f)
 
+        # Run the simulations, get the data_point_out.json info from each
         tick = time.time()
         with Parallel(n_jobs=-1, verbose=9) as parallel:
             dpouts = parallel(itertools.starmap(run_building_d, args['batch']))
         tick = time.time() - tick
         logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
-        logger.info('Processing results')
-        results_df = pd.DataFrame(dpouts).rename(columns=postprocessing.to_camelcase)
-        results_df = postprocessing.clean_up_results_df(results_df, self.cfg, keep_upgrade_id=True)
-
-        fs = LocalFileSystem()
+        # Save the aggregated dpouts as a json file
         lustre_sim_out_dir = pathlib.Path(self.results_dir) / 'simulation_output'
-        results_parquet = lustre_sim_out_dir / f'results_job{job_array_number}.parquet'
-        logger.info(f'Writing results to {results_parquet}')
-        postprocessing.write_dataframe_as_parquet(results_df, fs, str(results_parquet))
+        results_json = lustre_sim_out_dir / f'results_job{job_array_number}.json.gz'
+        logger.info(f'Writing results to {results_json}')
+        with gzip.open(results_json, 'wt', encoding='utf-8') as f:
+            json.dump(dpouts, f)
 
+        # Move timeseries parquet files results_dir / simulation_output / timeseries
+        logger.info('Moving enduse_timeseries.parquet files')
+        ts_dir = lustre_sim_out_dir / 'timeseries'
+        files_to_move = []
+        for filename in glob.glob(str(self.local_output_dir / 'simulation_output' / 'up*' / 'bldg*' / 'run' / 'enduse_timeseries.csv')):  # noqa E501
+            upgrade_id, building_id = map(int, re.search(r'up(\d+)/bldg(\d+)', filename).group())
+            files_to_move.append((
+                filename,
+                str(ts_dir / f'up{upgrade_id:02d}' / f'bldg{building_id:07d}.parquet')
+            ))
+        Parallel(n_jobs=-1, verbose=9)(delayed(shutil.move)(*args) for args in files_to_move)
+
+        # Compress simulation results
         simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
         logger.info(f'Compressing simulation outputs to {simout_filename}')
         local_sim_out_dir = self.local_output_dir / 'simulation_output'
@@ -286,16 +304,6 @@ class EagleBatch(BuildStockBatchBase):
                 '.'
             ],
             check=True
-        )
-
-        # Create a dask LocalCluster on just this node.
-        dask_cluster = LocalCluster(n_workers=9, local_directory='/tmp/scratch/dask-worker-space-bstk')
-        dask_client = Client(dask_cluster)  # noqa E841
-        fs = LocalFileSystem()
-        postprocessing.timeseries_combine(
-            fs,
-            local_sim_out_dir,
-            lustre_sim_out_dir / 'timeseries' / f'job={job_array_number}'
         )
 
     @classmethod

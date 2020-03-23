@@ -10,31 +10,30 @@ A module containing utility functions for postprocessing
 :license: BSD-3
 """
 
+import boto3
 from collections import defaultdict
 import dask.bag as db
 import dask.dataframe as dd
 import dask
 import datetime as dt
-from functools import partial, reduce
+from functools import partial
 import gzip
 import itertools
 import json
 import logging
 import math
 import numpy as np
-import random
-import re
-import sys
-import time
-import boto3
 import pandas as pd
 from pathlib import Path
 import pyarrow as pa
 from pyarrow import parquet
+import random
+import re
+import sys
+import time
 
 logger = logging.getLogger(__name__)
 
-print('hi5')
 
 def divide_chunks(l, n):
     """
@@ -434,27 +433,25 @@ def get_cols(filename):
     return schema.names
 
 
-def read_write_ts_parquet(fs, all_cols, ts_tmp_dir, filename):
+def read_results_json(fs, filename):
+    with fs.open(filename, 'rb') as f1:
+        with gzip.open(f1, 'rt', encoding='utf-8') as f2:
+            dpouts = json.load(f2)
+    return dpouts
+
+
+def read_enduse_timeseries_parquet(fs, filename, all_cols):
     with fs.open(filename, 'rb') as f:
         df = pd.read_parquet(f, engine='pyarrow')
-    for col in all_cols:
-        if col not in df.columns:
-            df[col] = np.nan
-    mem = df.memory_usage(deep=True).sum()
-    # Make files ~500MB in size
-    n_files_to_write = math.ceil(mem / 100e6)
-    building_ids = df['building_id'].unique()
-    job_id, upgrade_id, basename = re.search(r'job=(\d+)/upgrade=(\d+)/(.+)\.parquet', filename).groups()
-    exp_filenames = []
-    for i, building_ids_in_this_file in enumerate(np.array_split(building_ids, n_files_to_write), 1):
-        exp_filename = f'{ts_tmp_dir}/job{job_id}_up{upgrade_id}_{basename}_part{i}.parquet'
-        write_dataframe_as_parquet(
-            df.loc[df['building_id'].isin(building_ids_in_this_file), all_cols],
-            fs,
-            exp_filename
-        )
-        exp_filenames.append(exp_filename)
-    return exp_filenames
+    building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
+    df['building_id'] = building_id
+    for col in set(all_cols).difference(df.columns.values):
+        df[col] = np.nan
+    return df[['building_id'] + all_cols]
+
+
+def read_and_concat_enduse_timeseries_parquet(fs, filenames, all_cols):
+    return pd.concat(read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames)
 
 
 def combine_results2(fs, results_dir, do_timeseries=True):
@@ -474,19 +471,20 @@ def combine_results2(fs, results_dir, do_timeseries=True):
         fs.makedirs(dr)
 
     # Results "CSV"
-    results_df = dd.read_parquet(f'{sim_output_dir}/results_job*.parquet', engine='pyarrow')
-    results_df = results_df.compute()
+    results_jsons = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    dpouts = itertools.chain.from_iterable(
+        dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
+    )
+    results_df = pd.DataFrame(dpouts)
+    del dpouts
+    results_df = clean_up_results_df(results_df, keep_upgrade_id=True)
 
     if do_timeseries:
 
         # Look at all the parquet files to see what columns are in all of them.
-        ts_filenames = fs.glob(f'{ts_in_dir}/job=*/upgrade=*/*.parquet')
-        all_ts_cols = reduce(
-            lambda x, y: set(x).union(y),
-            dask.compute(
-                map(dask.delayed(get_cols), ts_filenames)
-            )[0]
-        )
+        ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
+        all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(get_cols).\
+            fold(lambda x, y: set(x).union(y)).compute()
 
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
@@ -497,7 +495,7 @@ def combine_results2(fs, results_dir, do_timeseries=True):
 
     for upgrade_id, df in results_df.groupby('upgrade'):
         if upgrade_id > 0:
-            # Remove building characteristics for upgrade scenarios. 
+            # Remove building characteristics for upgrade scenarios.
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
             )
@@ -528,39 +526,26 @@ def combine_results2(fs, results_dir, do_timeseries=True):
         )
 
         if do_timeseries:
-            print('doing timeseries')
-            # Timeseries
 
-            # Create a place to store the partially processed timeseries files.
-            ts_tmp_dir = f'{sim_output_dir}/timeseries_temp'
-            if fs.exists(ts_tmp_dir):
-                fs.rm(ts_tmp_dir, recursive=True)
-            fs.makedirs(ts_tmp_dir)
+            # Get the names of the timseries file for each simulation in this upgrade
+            ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
-            # Make all the files have the same columns and split into more, smaller files.
-            ts_exp_filenames = dask.compute(map(
-                dask.delayed(partial(read_write_ts_parquet, fs, all_ts_cols_sorted, ts_tmp_dir)),
-                fs.glob(f'{ts_in_dir}/job=*/upgrade={upgrade_id}/*.parquet')
-            ))[0]
+            # Calculate the mean and estimate the total memory usage
+            read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
+            get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
+            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, 36 * 3)))[0])
+            total_mem = mean_mem * len(ts_filenames)
 
-            # Expand list of lists of filenames into one list.
-            ts_exp_filenames = itertools.chain.from_iterable(ts_exp_filenames)
+            # Determine how many files should be in each partition and group the files
+            npartitions = math.ceil(total_mem / 300e6)  # 300 MB per partition
+            ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
-            # Read the files in as a dask dataframe.
-            ts_df = dd.read_parquet(
-                [f"{fs.protocol}://{x}" for x in ts_exp_filenames],
-                engine='pyarrow'
+            # Read the timeseries into a dask dataframe
+            read_and_concat_ts_pq_d = dask.delayed(
+                partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             )
-
-            # Calculate memory usage and determine an optimal number of partitions (~1GB per partition)
-            mem = ts_df.memory_usage(deep=True).sum().compute()
-            npartitions = math.ceil(mem / 1e9)
-
-            # Index and sort by building_id
-            ts_df = ts_df.set_index('building_id', npartitions=npartitions)
-
-            # Sort the data within partitions by building_id, then time
-            ts_df = ts_df.map_partitions(lambda x: x.sort_values(['building_id', 'time']))
+            ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
+            ts_df = ts_df.set_index('building_id', sorted=True)
 
             # Write out new dask timeseries dataframe.
             ts_out_loc = f"{fs.protocol}://{ts_dir}/upgrade={upgrade_id}"
@@ -570,8 +555,6 @@ def combine_results2(fs, results_dir, do_timeseries=True):
                 engine='pyarrow',
                 flavor='spark'
             )
-
-            fs.rm(ts_tmp_dir, recursive=True)
 
 
 def upload_results(aws_conf, output_dir, results_dir):
