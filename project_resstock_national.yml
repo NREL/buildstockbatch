@@ -1,12 +1,12 @@
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
-project_directory: project_singlefamilydetached  # Relative to buildstock_directory
+project_directory: project_multifamily_beta  # Relative to buildstock_directory
 output_directory: ../national_test_outputs
 #weather_files_url: https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 10000  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 40  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -21,10 +21,10 @@ upgrades:
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
-# downselect:
-#   resample: false
-#   logic:
-#     - not: Heating Fuel|Natural Gas
+downselect:
+  resample: false
+  logic:
+    - Geometry Building Type ACS|Single-Family Detached
 eagle:
   n_jobs: 200
   minutes_per_sim: 2
@@ -38,22 +38,22 @@ aws:
   # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
   job_identifier: noeltest31
   s3:
-    bucket: buildstockbatch-test8
-    prefix: noeltest31h
+    bucket: resbldg-datasets
+    prefix: testing/noeltest31m
   region: us-west-2
   use_spot: true
-  batch_array_size: 10000
+  batch_array_size: 10
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: noel.merket@nrel.gov
 
 postprocessing:
   aggregate_timeseries: true
-  aws:
-    region_name: 'us-west-2'
-    s3:
-      bucket: resbldg-datasets
-      prefix: resstock-athena/calibration_runs_new
-    athena:
-      glue_service_role: service-role/AWSGlueServiceRole-default
-      database_name: calibration_runs_testing
-      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+  # aws:
+  #   region_name: 'us-west-2'
+  #   s3:
+  #     bucket: resbldg-datasets
+  #     prefix: resstock-athena/calibration_runs_new
+  #   athena:
+  #     glue_service_role: service-role/AWSGlueServiceRole-default
+  #     database_name: calibration_runs_testing
+  #     max_crawling_time: 300 #time to wait for the crawler to complete before aborting it

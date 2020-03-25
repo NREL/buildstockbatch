@@ -14,6 +14,7 @@ from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
+from fsspec.implementations.local import LocalFileSystem
 import gzip
 import itertools
 from joblib import Parallel, delayed
@@ -36,10 +37,8 @@ import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
-
-from buildstockbatch.aws.awsbase import (
-    AwsJobBase
-)
+from buildstockbatch.aws.awsbase import AwsJobBase
+from buildstockbatch import postprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -1900,6 +1899,11 @@ class AwsBatch(DockerBatchBase):
             logger.debug('Uploading files to S3')
             upload_directory_to_s3(tmppath, self.cfg['aws']['s3']['bucket'], self.cfg['aws']['s3']['prefix'])
 
+        # Create the output directories
+        fs = S3FileSystem()
+        for upgrade_id in range(len(self.cfg.get('upgrades', [])) + 1):
+            fs.makedirs(f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/timeseries/up{upgrade_id:02d}")
+
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         logger.info(
@@ -1961,29 +1965,26 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f"region: {region}")
         s3 = boto3.client('s3')
-        # firehose = boto3.client('firehose', region_name=region)
-        sim_dir = pathlib.Path('/var/simdata/openstudio')
 
-        # firehose_name = f"{job_name.replace(' ', '_').replace('_yml','')}_firehose"
+        sim_dir = pathlib.Path('/var/simdata/openstudio')
 
         logger.debug('Downloading assets')
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
-        s3.download_file(bucket, '{}/assets.tar.gz'.format(prefix), str(assets_file_path))
+        s3.download_file(bucket, f'{prefix}/assets.tar.gz', str(assets_file_path))
         with tarfile.open(assets_file_path, 'r') as tar_f:
             tar_f.extractall(sim_dir)
         os.remove(assets_file_path)
-        asset_dirs = os.listdir(sim_dir)
 
         logger.debug('Reading config')
         with io.BytesIO() as f:
-            s3.download_fileobj(bucket, '{}/config.json'.format(prefix), f)
+            s3.download_fileobj(bucket, f'{prefix}/config.json', f)
             cfg = json.loads(f.getvalue())
 
         logger.debug('Getting job information')
         jobs_file_path = sim_dir.parent / 'jobs.tar.gz'
-        s3.download_file(bucket, '{}/jobs.tar.gz'.format(prefix), str(jobs_file_path))
+        s3.download_file(bucket, f'{prefix}/jobs.tar.gz', str(jobs_file_path))
         with tarfile.open(jobs_file_path, 'r') as tar_f:
-            jobs_d = json.load(tar_f.extractfile('jobs/job{:05d}.json'.format(job_id)), encoding='utf-8')
+            jobs_d = json.load(tar_f.extractfile(f'jobs/job{job_id:05d}.json'), encoding='utf-8')
         logger.debug('Number of simulations = {}'.format(len(jobs_d['batch'])))
 
         logger.debug('Getting weather files')
@@ -1994,58 +1995,106 @@ class AwsBatch(DockerBatchBase):
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))
-                s3.download_fileobj(bucket, '{}/weather/{}.gz'.format(prefix, epw_filename), f_gz)
+                s3.download_fileobj(bucket, f'{prefix}/weather/{epw_filename}.gz', f_gz)
                 with open(weather_dir / epw_filename, 'wb') as f_out:
                     logger.debug('Extracting {}'.format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
+        asset_dirs = os.listdir(sim_dir)
 
-        for building_id, upgrade_idx in jobs_d['batch']:
-            sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
-            osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
-            with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
-                json.dump(osw, f, indent=4)
-            with open(sim_dir / 'os_stdout.log', 'w') as f_out:
-                try:
-                    logger.debug('Running {}'.format(sim_id))
-                    subprocess.run(
-                        ['openstudio', 'run', '-w', 'in.osw'],
-                        check=True,
-                        stdout=f_out,
-                        stderr=subprocess.STDOUT,
-                        cwd=str(sim_dir)
-                    )
-                except subprocess.CalledProcessError:
-                    pass
+        fs = S3FileSystem()
+        local_fs = LocalFileSystem()
+        reporting_measures = cfg.get('reporting_measures', [])
+        dpouts = []
+        simulation_output_tar_filename = sim_dir.parent / 'simulation_outputs.tar.gz'
+        with tarfile.open(str(simulation_output_tar_filename), 'w:gz') as simout_tar:
+            for building_id, upgrade_idx in jobs_d['batch']:
+                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+                sim_id = f'bldg{building_id:07d}up{upgrade_id:02d}'
 
-            cls.cleanup_sim_dir(sim_dir)
+                # Create OSW
+                osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
+                with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
+                    json.dump(osw, f, indent=4)
 
-            logger.debug('Uploading simulation outputs for building_id = {}, upgrade_id = {}'.format(
-                building_id, upgrade_idx
-            ))
-            fs = S3FileSystem()
-            upload_path = f"{bucket}/{prefix}/results/simulation_output/up{0 if upgrade_idx is None else upgrade_idx + 1:02d}/bldg{building_id:07d}"  # noqa E501
-            if fs.isdir(upload_path):
-                fs.rm(upload_path, recursive=True)
-            fs.makedirs(upload_path)
-            for dirpath, dirnames, filenames in os.walk(sim_dir):
-                if dirpath == str(sim_dir):
-                    for dirname in set(dirnames).intersection(asset_dirs):
-                        dirnames.remove(dirname)
-                for dirname in dirnames:
-                    relpath = os.path.relpath(os.path.join(dirpath, dirname), sim_dir)
-                    fs.makedirs(f"{upload_path}/{relpath}")
-                for filename in filenames:
-                    abspath = os.path.join(dirpath, filename)
-                    relpath = os.path.relpath(abspath, sim_dir)
-                    logger.debug(f'Upload {relpath}')
-                    fs.put(abspath, f"{upload_path}/{relpath}")
+                # Run Simulation
+                with open(sim_dir / 'os_stdout.log', 'w') as f_out:
+                    try:
+                        logger.debug('Running {}'.format(sim_id))
+                        subprocess.run(
+                            ['openstudio', 'run', '-w', 'in.osw'],
+                            check=True,
+                            stdout=f_out,
+                            stderr=subprocess.STDOUT,
+                            cwd=str(sim_dir)
+                        )
+                    except subprocess.CalledProcessError:
+                        logger.debug(f'Simulation failed: see {sim_id}/os_stdout.log')
+                
+                # Clean Up
+                cls.cleanup_sim_dir(sim_dir)
 
-            logger.debug('Clearing out simulation directory')
-            for item in set(os.listdir(sim_dir)).difference(asset_dirs):
-                if os.path.isdir(item):
-                    shutil.rmtree(item)
-                elif os.path.isfile(item):
-                    os.remove(item)
+                # Read data_point_out.json
+                dpout = postprocessing.read_data_point_out_json(
+                    local_fs,
+                    reporting_measures,
+                    str(sim_dir / 'run' / 'data_point_out.json')
+                )
+                if dpout is None:
+                    dpout = {}
+                else:
+                    dpout = postprocessing.flatten_datapoint_json(reporting_measures, dpout)
+                out_osw = postprocessing.read_out_osw(local_fs, str(sim_dir / 'out.osw'))
+                if out_osw:
+                    dpout.update(out_osw)
+                dpout['building_id'] = building_id
+                dpout['upgrade'] = upgrade_id
+                dpouts.append(dpout)
+
+                # Upload timeseries file to s3
+                ts_filename_local = sim_dir / 'run' / 'enduse_timeseries.parquet'
+                if ts_filename_local.exists():
+                    upload_path = f"{bucket}/{prefix}/results/simulation_output/timeseries/up{upgrade_id:02d}/bldg{building_id:07d}.parquet"  # noqa E501
+                    logger.info(f'Uploading timeseries output to s3://{upload_path}')
+                    fs.put(str(ts_filename_local), upload_path)
+                    os.remove(ts_filename_local)
+
+                # Add the rest of the simulation outputs to the tar archive
+                logger.info('Archiving simulation outputs')
+                for dirpath, dirnames, filenames in os.walk(sim_dir):
+                    if dirpath == str(sim_dir):
+                        for dirname in set(dirnames).intersection(asset_dirs):
+                            dirnames.remove(dirname)
+                    for filename in filenames:
+                        abspath = os.path.join(dirpath, filename)
+                        relpath = os.path.relpath(abspath, sim_dir)
+                        simout_tar.add(abspath, os.path.join(sim_id, relpath))
+
+                # Clear directory for next simulation
+                logger.debug('Clearing out simulation directory')
+                for item in set(os.listdir(sim_dir)).difference(asset_dirs):
+                    if os.path.isdir(item):
+                        shutil.rmtree(item)
+                    elif os.path.isfile(item):
+                        os.remove(item)
+
+        # Upload simulation outputs tarfile to s3
+        fs.put(
+            str(simulation_output_tar_filename),
+            f'{bucket}/{prefix}/results/simulation_output/simulations_job{job_id}.tar.gz'
+        )
+
+        # Upload aggregated dpouts as a json file
+        with fs.open(f'{bucket}/{prefix}/results/simulation_output/results_job{job_id}.json.gz', 'wb') as f1:
+            with gzip.open(f1, 'wt', encoding='utf-8') as f2:
+                json.dump(dpouts, f2)
+
+        # Remove files (it helps docker if we don't leave a bunch of files laying around)
+        os.remove(simulation_output_tar_filename)
+        for item in os.listdir(sim_dir):
+            if os.path.isdir(item):
+                shutil.rmtree(item)
+            elif os.path.isfile(item):
+                os.remove(item)
 
 
 def main():

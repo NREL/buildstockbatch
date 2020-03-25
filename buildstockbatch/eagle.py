@@ -283,7 +283,7 @@ class EagleBatch(BuildStockBatchBase):
         logger.info('Moving enduse_timeseries.parquet files')
         ts_dir = lustre_sim_out_dir / 'timeseries'
         files_to_move = []
-        for filename in glob.glob(str(self.local_output_dir / 'simulation_output' / 'up*' / 'bldg*' / 'run' / 'enduse_timeseries.csv')):  # noqa E501
+        for filename in glob.glob(str(self.local_output_dir / 'simulation_output' / 'up*' / 'bldg*' / 'run' / 'enduse_timeseries.parquet')):  # noqa E501
             upgrade_id, building_id = map(int, re.search(r'up(\d+)/bldg(\d+)', filename).group())
             files_to_move.append((
                 filename,
