@@ -1902,7 +1902,7 @@ class AwsBatch(DockerBatchBase):
         # Create the output directories
         fs = S3FileSystem()
         for upgrade_id in range(len(self.cfg.get('upgrades', [])) + 1):
-            fs.makedirs(f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/timeseries/up{upgrade_id:02d}")
+            fs.makedirs(f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/timeseries/up{upgrade_id:02d}")  # noqa E501
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
@@ -2029,7 +2029,7 @@ class AwsBatch(DockerBatchBase):
                         )
                     except subprocess.CalledProcessError:
                         logger.debug(f'Simulation failed: see {sim_id}/os_stdout.log')
-                
+
                 # Clean Up
                 cls.cleanup_sim_dir(sim_dir)
 
