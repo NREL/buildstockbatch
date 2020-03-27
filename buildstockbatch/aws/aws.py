@@ -1972,7 +1972,6 @@ class AwsBatch(DockerBatchBase):
         with tarfile.open(assets_file_path, 'r') as tar_f:
             tar_f.extractall(sim_dir)
         os.remove(assets_file_path)
-        asset_dirs = os.listdir(sim_dir)
 
         logger.debug('Reading config')
         with io.BytesIO() as f:
@@ -1998,6 +1997,7 @@ class AwsBatch(DockerBatchBase):
                 with open(weather_dir / epw_filename, 'wb') as f_out:
                     logger.debug('Extracting {}'.format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
+        asset_dirs = os.listdir(sim_dir)
 
         for building_id, upgrade_idx in jobs_d['batch']:
             sim_id = 'bldg{:07d}up{:02d}'.format(building_id, 0 if upgrade_idx is None else upgrade_idx + 1)
