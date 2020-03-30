@@ -164,6 +164,9 @@ class HPCBatchBase(BuildStockBatchBase):
         else:
             # otherwise just the plain sampling process needs to be run
             buildstock_csv_filename = self.run_sampling()
+        # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the job
+        # array jobs - this is rare but can happen easily when lustre is lagging
+        _ = self.weather_dir
         # If the results directory already exists, implying the existence of results, require a user defined override
         # in the YAML file to allow for those results to be overwritten. Note that this will not impact the
         # postprocessonly or uploadonly flags as they do not ever invoke the run_batch function, instead skipping to the
