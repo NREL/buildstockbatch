@@ -16,6 +16,7 @@ import dask.bag as db
 import dask.dataframe as dd
 import dask
 import datetime as dt
+from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
 import itertools
@@ -29,6 +30,7 @@ import pyarrow as pa
 from pyarrow import parquet
 import random
 import re
+from s3fs import S3FileSystem
 import sys
 import time
 
@@ -549,10 +551,11 @@ def combine_results2(fs, results_dir, cfg, do_timeseries=True):
             ts_df = ts_df.set_index('building_id', sorted=True)
 
             # Write out new dask timeseries dataframe.
-            protocol = fs.protocol
-            if isinstance(protocol, list) or isinstance(protocol, tuple):
-                protocol = protocol[0]
-            ts_out_loc = f"{protocol}://{ts_dir}/upgrade={upgrade_id}"
+            if isinstance(fs, LocalFileSystem):
+                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
+            else:
+                assert isinstance(fs, S3FileSystem)
+                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
             logger.info(f'Writing {ts_out_loc}')
             ts_df.to_parquet(
                 ts_out_loc,

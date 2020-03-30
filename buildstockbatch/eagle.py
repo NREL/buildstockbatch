@@ -11,7 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
 from fsspec.implementations.local import LocalFileSystem
 import glob
 import gzip
@@ -284,7 +284,7 @@ class EagleBatch(BuildStockBatchBase):
         ts_dir = lustre_sim_out_dir / 'timeseries'
         files_to_move = []
         for filename in glob.glob(str(self.local_output_dir / 'simulation_output' / 'up*' / 'bldg*' / 'run' / 'enduse_timeseries.parquet')):  # noqa E501
-            upgrade_id, building_id = map(int, re.search(r'up(\d+)/bldg(\d+)', filename).group())
+            upgrade_id, building_id = map(int, re.search(r'up(\d+)/bldg(\d+)', filename).groups())
             files_to_move.append((
                 filename,
                 str(ts_dir / f'up{upgrade_id:02d}' / f'bldg{building_id:07d}.parquet')
@@ -519,7 +519,11 @@ class EagleBatch(BuildStockBatchBase):
             logger.debug('sbatch: {}'.format(line))
 
     def get_dask_client(self):
-        return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
+        if get_bool_env_var('DASKLOCALCLUSTER'):
+            cluster = LocalCluster(local_directory='/data/dask-tmp')
+            return Client(cluster)
+        else:
+            return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
