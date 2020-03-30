@@ -103,6 +103,16 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     "inc_output_variables": False
                 },
                 "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "comstock_sensitivity_reports",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "qoi_report",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
             }
         ])
 
