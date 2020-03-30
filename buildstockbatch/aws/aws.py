@@ -1456,7 +1456,7 @@ from dask.distributed import Client
 import json
 from s3fs import S3FileSystem
 
-from postprocessing import combine_results, create_athena_tables
+from postprocessing import combine_results2, create_athena_tables
 
 cluster = YarnCluster(
     deploy_mode='local',
@@ -1473,10 +1473,11 @@ fs = S3FileSystem()
 with fs.open('{self.s3_bucket}/{self.s3_bucket_prefix}/config.json', 'r') as f:
     cfg = json.load(f)
 
-combine_results(fs, results_s3_loc, cfg)
+combine_results2(fs, results_s3_loc, cfg)
 
 aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
-create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
+if 'athena' in aws_conf:
+    create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
 
 '''
 
@@ -1762,6 +1763,20 @@ class AwsBatch(DockerBatchBase):
             repo = resp['repository']
         return repo
 
+    def build_image(self):
+        """
+        Build the docker image to use in the batch simulation
+        """
+        root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
+        if not (root_path / 'Dockerfile').exists():
+            raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
+        logger.debug('Building docker image')
+        self.docker_client.images.build(
+            path=str(root_path),
+            tag=self.docker_image(),
+            rm=True
+        )
+
     def push_image(self):
         """
         Push the locally built docker image to the AWS docker repo
@@ -1778,9 +1793,9 @@ class AwsBatch(DockerBatchBase):
         )
         logger.debug(resp)
         image = self.docker_client.images.get(self.docker_image())
-        image.tag(repo_url)
+        image.tag(repo_url, tag=self.job_identifier)
         last_status = None
-        for x in self.docker_client.images.push(repo_url, stream=True):
+        for x in self.docker_client.images.push(repo_url, tag=self.job_identifier, stream=True):
             try:
                 y = json.loads(x)
             except json.JSONDecodeError:
@@ -1919,8 +1934,9 @@ class AwsBatch(DockerBatchBase):
         env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier,
                         REGION=self.region)
 
-        image_url = '{}:latest'.format(
-            self.container_repo['repositoryUri']
+        image_url = '{}:{}'.format(
+            self.container_repo['repositoryUri'],
+            self.job_identifier
         )
 
         job_env_cfg = self.cfg['aws'].get('job_environment', {})
@@ -2160,6 +2176,7 @@ def main():
         if args.clean:
             batch.clean()
         else:
+            batch.build_image()
             batch.push_image()
             batch.run_batch()
 

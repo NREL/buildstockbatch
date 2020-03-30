@@ -427,8 +427,9 @@ def combine_results(fs, results_dir, config, skip_timeseries=False, aggregate_ti
     timeseries_combine(fs, sim_out_dir, ts_dir)
 
 
-def get_cols(filename):
-    schema = parquet.read_schema(filename)
+def get_cols(fs, filename):
+    with fs.open(filename, 'rb') as f:
+        schema = parquet.read_schema(f)
     return schema.names
 
 
@@ -446,14 +447,14 @@ def read_enduse_timeseries_parquet(fs, filename, all_cols):
     df['building_id'] = building_id
     for col in set(all_cols).difference(df.columns.values):
         df[col] = np.nan
-    return df[['building_id'] + all_cols]
+    return df[all_cols]
 
 
 def read_and_concat_enduse_timeseries_parquet(fs, filenames, all_cols):
     return pd.concat(read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames)
 
 
-def combine_results2(fs, results_dir, do_timeseries=True):
+def combine_results2(fs, results_dir, cfg, do_timeseries=True):
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
     results_csvs_dir = f'{results_dir}/results_csvs'
@@ -474,15 +475,15 @@ def combine_results2(fs, results_dir, do_timeseries=True):
     dpouts = itertools.chain.from_iterable(
         dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
     )
-    results_df = pd.DataFrame(dpouts)
+    results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
     del dpouts
-    results_df = clean_up_results_df(results_df, keep_upgrade_id=True)
+    results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
     if do_timeseries:
 
         # Look at all the parquet files to see what columns are in all of them.
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
-        all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(get_cols).\
+        all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
             fold(lambda x, y: set(x).union(y)).compute()
 
         # Sort the columns
@@ -532,7 +533,8 @@ def combine_results2(fs, results_dir, do_timeseries=True):
             # Calculate the mean and estimate the total memory usage
             read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
-            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, 36 * 3)))[0])
+            sample_size = min(len(ts_filenames), 36 * 3)
+            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
             total_mem = mean_mem * len(ts_filenames)
 
             # Determine how many files should be in each partition and group the files
@@ -547,7 +549,10 @@ def combine_results2(fs, results_dir, do_timeseries=True):
             ts_df = ts_df.set_index('building_id', sorted=True)
 
             # Write out new dask timeseries dataframe.
-            ts_out_loc = f"{fs.protocol}://{ts_dir}/upgrade={upgrade_id}"
+            protocol = fs.protocol
+            if isinstance(protocol, list) or isinstance(protocol, tuple):
+                protocol = protocol[0]
+            ts_out_loc = f"{protocol}://{ts_dir}/upgrade={upgrade_id}"
             logger.info(f'Writing {ts_out_loc}')
             ts_df.to_parquet(
                 ts_out_loc,
