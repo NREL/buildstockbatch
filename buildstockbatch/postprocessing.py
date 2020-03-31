@@ -473,7 +473,8 @@ def combine_results2(fs, results_dir, cfg, do_timeseries=True):
         fs.makedirs(dr)
 
     # Results "CSV"
-    results_jsons = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
+    results_jsons = fs.glob(results_job_json_glob)
     dpouts = itertools.chain.from_iterable(
         dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
     )
@@ -562,6 +563,12 @@ def combine_results2(fs, results_dir, cfg, do_timeseries=True):
                 engine='pyarrow',
                 flavor='spark'
             )
+
+    # Remove aggregated files to save space
+    logger.info('Removing temporary files')
+    fs.rm(ts_in_dir, recursive=True)
+    for filename in fs.glob(results_job_json_glob):
+        fs.rm(filename)
 
 
 def upload_results(aws_conf, output_dir, results_dir):
