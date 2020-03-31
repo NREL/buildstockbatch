@@ -237,7 +237,7 @@ class BuildStockBatchBase(object):
         # Convert the timeseries data to parquet
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=[0])
             write_dataframe_as_parquet(tsdf, fs, os.path.splitext(timeseries_filepath)[0] + '.parquet')
 
         # Remove files already in data_point.zip
