@@ -6,7 +6,7 @@ output_directory: ../national_test_outputs
 weather_files_path: ../project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 20  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 6  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -50,12 +50,12 @@ aws:
 
 postprocessing:
   aggregate_timeseries: true
-  aws:
-    region_name: 'us-west-2'
-    s3:
-      bucket: resbldg-datasets
-      prefix: resstock-athena/calibration_runs_new
-    athena:
-      glue_service_role: service-role/AWSGlueServiceRole-default
-      database_name: testing
-      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+  # aws:
+  #   region_name: 'us-west-2'
+  #   s3:
+  #     bucket: resbldg-datasets
+  #     prefix: resstock-athena/calibration_runs_new
+  #   athena:
+  #     glue_service_role: service-role/AWSGlueServiceRole-default
+  #     database_name: testing
+  #     max_crawling_time: 300 #time to wait for the crawler to complete before aborting it

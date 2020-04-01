@@ -31,7 +31,7 @@ import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
-from .postprocessing import combine_results, upload_results, create_athena_tables, write_dataframe_as_parquet
+from buildstockbatch import postprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -260,15 +260,31 @@ class BuildStockBatchBase(object):
         return sim_id, sim_dir
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir):
+    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
+        """Clean up the output directory for a single simulation.
 
-        fs = LocalFileSystem()
+        :param sim_dir: simulation directory
+        :type sim_dir: str
+        :param dest_fs: filesystem destination of timeseries parquet file
+        :type dest_fs: fsspec filesystem
+        :param simout_ts_dir: simulation_output/timeseries directory to deposit timeseries parquet file
+        :type simout_ts_dir: str
+        :param upgrade_id: upgrade number for the simulation 0 for baseline, etc.
+        :type upgrade_id: int
+        :param building_id: building id from buildstock.csv
+        :type building_id: int
+        """
 
         # Convert the timeseries data to parquet
+        # and copy it to the results directory
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
-            write_dataframe_as_parquet(tsdf, fs, os.path.splitext(timeseries_filepath)[0] + '.parquet')
+            postprocessing.write_dataframe_as_parquet(
+                tsdf,
+                dest_fs,
+                f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
+            )
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
@@ -748,23 +764,14 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        if self.cfg.get('timeseries_csv_export', {}):
-            skip_timeseries = False
-        else:
-            skip_timeseries = True
-
-        aggregate_ts = self.cfg.get('postprocessing', {}).get('aggregate_timeseries', False)
-
-        reporting_measures = self.cfg.get('reporting_measures', [])
+        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
 
         fs = LocalFileSystem()
-
         if not skip_combine:
-            combine_results(fs, self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
-                            aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
+            postprocessing.combine_results2(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = upload_results(aws_conf, self.output_dir, self.results_dir)
+            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
-                create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
+                postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)

@@ -2046,33 +2046,20 @@ class AwsBatch(DockerBatchBase):
                     except subprocess.CalledProcessError:
                         logger.debug(f'Simulation failed: see {sim_id}/os_stdout.log')
 
-                # Clean Up
-                cls.cleanup_sim_dir(sim_dir)
+                # Clean Up simulation directory
+                cls.cleanup_sim_dir(
+                    sim_dir,
+                    fs,
+                    f"{bucket}/{prefix}/results/simulation_output/timeseries",
+                    upgrade_id,
+                    building_id
+                )
 
                 # Read data_point_out.json
-                dpout = postprocessing.read_data_point_out_json(
-                    local_fs,
-                    reporting_measures,
-                    str(sim_dir / 'run' / 'data_point_out.json')
-                )
-                if dpout is None:
-                    dpout = {}
-                else:
-                    dpout = postprocessing.flatten_datapoint_json(reporting_measures, dpout)
-                out_osw = postprocessing.read_out_osw(local_fs, str(sim_dir / 'out.osw'))
-                if out_osw:
-                    dpout.update(out_osw)
+                dpout = postprocessing.read_simulation_outputs(local_fs, reporting_measures, str(sim_dir))
                 dpout['building_id'] = building_id
                 dpout['upgrade'] = upgrade_id
                 dpouts.append(dpout)
-
-                # Upload timeseries file to s3
-                ts_filename_local = sim_dir / 'run' / 'enduse_timeseries.parquet'
-                if ts_filename_local.exists():
-                    upload_path = f"{bucket}/{prefix}/results/simulation_output/timeseries/up{upgrade_id:02d}/bldg{building_id:07d}.parquet"  # noqa E501
-                    logger.info(f'Uploading timeseries output to s3://{upload_path}')
-                    fs.put(str(ts_filename_local), upload_path)
-                    os.remove(ts_filename_local)
 
                 # Add the rest of the simulation outputs to the tar archive
                 logger.info('Archiving simulation outputs')

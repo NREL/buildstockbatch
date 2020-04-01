@@ -13,7 +13,6 @@ This class contains the object & methods that allow for usage of the library wit
 import argparse
 from dask.distributed import Client, LocalCluster
 from fsspec.implementations.local import LocalFileSystem
-import glob
 import gzip
 import itertools
 from joblib import delayed, Parallel
@@ -279,18 +278,6 @@ class EagleBatch(BuildStockBatchBase):
         with gzip.open(results_json, 'wt', encoding='utf-8') as f:
             json.dump(dpouts, f)
 
-        # Move timeseries parquet files results_dir / simulation_output / timeseries
-        logger.info('Moving enduse_timeseries.parquet files')
-        ts_dir = lustre_sim_out_dir / 'timeseries'
-        files_to_move = []
-        for filename in glob.glob(str(self.local_output_dir / 'simulation_output' / 'up*' / 'bldg*' / 'run' / 'enduse_timeseries.parquet')):  # noqa E501
-            upgrade_id, building_id = map(int, re.search(r'up(\d+)/bldg(\d+)', filename).groups())
-            files_to_move.append((
-                filename,
-                str(ts_dir / f'up{upgrade_id:02d}' / f'bldg{building_id:07d}.parquet')
-            ))
-        Parallel(n_jobs=-1, verbose=9)(delayed(shutil.move)(*args) for args in files_to_move)
-
         # Compress simulation results
         simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
         logger.info(f'Compressing simulation outputs to {simout_filename}')
@@ -308,6 +295,9 @@ class EagleBatch(BuildStockBatchBase):
 
     @classmethod
     def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
+
+        fs = LocalFileSystem()
+        upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
         try:
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(cls.local_output_dir, 'simulation_output'))
@@ -372,23 +362,19 @@ class EagleBatch(BuildStockBatchBase):
                         except FileNotFoundError:
                             pass
 
-                    cls.cleanup_sim_dir(sim_dir)
+                    # Clean up simulation directory
+                    cls.cleanup_sim_dir(
+                        sim_dir,
+                        fs,
+                        f'{output_dir}/results/simulation_output/timeseries',
+                        upgrade_id,
+                        i
+                    )
         finally:
-            sim_dir = pathlib.Path(sim_dir)
             reporting_measures = cfg.get('reporting_measures', [])
-            fs = LocalFileSystem()
-            dpout = postprocessing.read_data_point_out_json(
-                fs, reporting_measures, str(sim_dir / 'run' / 'data_point_out.json')
-            )
-            if dpout is None:
-                dpout = {}
-            else:
-                dpout = postprocessing.flatten_datapoint_json(reporting_measures, dpout)
-            out_osw = postprocessing.read_out_osw(fs, str(sim_dir / 'out.osw'))
-            if out_osw:
-                dpout.update(out_osw)
+            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir)
             dpout['building_id'] = i
-            dpout['upgrade'] = 0 if upgrade_idx is None else upgrade_idx + 1
+            dpout['upgrade'] = upgrade_id
             return dpout
 
     def queue_jobs(self, array_ids=None):
@@ -524,20 +510,6 @@ class EagleBatch(BuildStockBatchBase):
             return Client(cluster)
         else:
             return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
-
-    def process_results(self, skip_combine=False, force_upload=False):
-        self.get_dask_client()  # noqa: F841
-
-        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
-
-        fs = LocalFileSystem()
-        postprocessing.combine_results2(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
-
-        aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
-        if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
-            if 'athena' in aws_conf:
-                postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 
 
 logging_config = {

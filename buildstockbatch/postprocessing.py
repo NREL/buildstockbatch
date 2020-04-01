@@ -121,6 +121,31 @@ def read_out_osw(fs, filename):
         return out_d
 
 
+def read_simulation_outputs(fs, reporting_measures, sim_dir):
+    """Reat the simulation outputs and return as a dict
+
+    :param fs: filesystem to read from
+    :type fs: fsspec filesystem
+    :param reporting_measures: a list of reporting measure to pull results from
+    :type reporting_measures: list[str]
+    :param sim_dir: path to simulation output directory
+    :type sim_dir: str
+    :return: dpout [dict]
+    """
+
+    dpout = read_data_point_out_json(
+        fs, reporting_measures, f'{sim_dir}/run/data_point_out.json'
+    )
+    if dpout is None:
+        dpout = {}
+    else:
+        dpout = flatten_datapoint_json(reporting_measures, dpout)
+    out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
+    if out_osw:
+        dpout.update(out_osw)
+    return dpout
+
+
 def write_dataframe_as_parquet(df, fs, filename):
     tbl = pa.Table.from_pandas(df, preserve_index=False)
     with fs.open(filename, 'wb') as f:
@@ -228,6 +253,8 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     ]
     if keep_upgrade_id:
         first_few_cols.insert(1, 'upgrade')
+    if 'job_id' in results_df.columns:
+        first_few_cols.insert(2, 'job_id')
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
@@ -475,10 +502,14 @@ def combine_results2(fs, results_dir, cfg, do_timeseries=True):
     # Results "CSV"
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     results_jsons = fs.glob(results_job_json_glob)
-    dpouts = itertools.chain.from_iterable(
-        dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
-    )
+    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
+    dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
+    for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
+        for dpout in dpouts_for_this_job:
+            dpout['job_id'] = job_id
+    dpouts = itertools.chain.from_iterable(dpouts_by_job)
     results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
+
     del dpouts
     results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
