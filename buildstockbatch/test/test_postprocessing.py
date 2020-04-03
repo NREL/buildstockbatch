@@ -47,7 +47,7 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
 
     cfg = BuildStockBatchBase.get_project_configuration(project_filename)
 
-    postprocessing.combine_results2(fs, results_dir, cfg, do_timeseries=False)
+    postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
     for upgrade_id in (0, 1):
         df = pd.read_csv(str(results_dir / 'results_csvs' / f'results_up{upgrade_id:02d}.csv.gz'))

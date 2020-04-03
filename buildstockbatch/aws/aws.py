@@ -1456,7 +1456,7 @@ from dask.distributed import Client
 import json
 from s3fs import S3FileSystem
 
-from postprocessing import combine_results2, create_athena_tables
+from postprocessing import combine_results, create_athena_tables
 
 cluster = YarnCluster(
     deploy_mode='local',
@@ -1473,7 +1473,7 @@ fs = S3FileSystem()
 with fs.open('{self.s3_bucket}/{self.s3_bucket_prefix}/config.json', 'r') as f:
     cfg = json.load(f)
 
-combine_results2(fs, results_s3_loc, cfg)
+combine_results(fs, results_s3_loc, cfg)
 
 aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
 if 'athena' in aws_conf:

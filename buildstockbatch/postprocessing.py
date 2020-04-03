@@ -226,7 +226,18 @@ def read_and_concat_enduse_timeseries_parquet(fs, filenames, all_cols):
     return pd.concat(read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames)
 
 
-def combine_results2(fs, results_dir, cfg, do_timeseries=True):
+def combine_results(fs, results_dir, cfg, do_timeseries=True):
+    """Combine the results of the batch simulations.
+
+    :param fs: fsspec filesystem (currently supports local and s3)
+    :type fs: fsspec filesystem
+    :param results_dir: directory where results are stored and written
+    :type results_dir: str
+    :param cfg: project configuration (contents of yaml file)
+    :type cfg: dict
+    :param do_timeseries: process timeseries results, defaults to True
+    :type do_timeseries: bool, optional
+    """
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
     results_csvs_dir = f'{results_dir}/results_csvs'

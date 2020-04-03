@@ -772,7 +772,7 @@ class BuildStockBatchBase(object):
 
         fs = LocalFileSystem()
         if not skip_combine:
-            postprocessing.combine_results2(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+            postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
