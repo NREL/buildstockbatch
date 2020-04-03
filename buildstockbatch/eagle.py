@@ -372,9 +372,7 @@ class EagleBatch(BuildStockBatchBase):
                     )
         finally:
             reporting_measures = cfg.get('reporting_measures', [])
-            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir)
-            dpout['building_id'] = i
-            dpout['upgrade'] = upgrade_id
+            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
             return dpout
 
     def queue_jobs(self, array_ids=None):

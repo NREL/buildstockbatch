@@ -3,6 +3,7 @@ import os
 import pathlib
 import requests
 import shutil
+import tarfile
 from unittest.mock import patch
 
 from buildstockbatch.eagle import user_cli, EagleBatch
@@ -11,15 +12,13 @@ from buildstockbatch.eagle import user_cli, EagleBatch
 @patch('buildstockbatch.eagle.subprocess')
 def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_project_file):
 
-    here = pathlib.Path(__file__).resolve().parent
-    test_osw_path = here / 'test_results' / 'simulation_output' / 'up00' / 'bldg0000001' / 'in.osw'
-    with open(test_osw_path, 'r', encoding='utf-8') as f:
-        osw_dict = json.load(f)
+    tar_filename = pathlib.Path(__file__).resolve().parent / 'test_results' / 'simulation_output' / 'simulations_job0.tar.gz'  # noqa E501
+    with tarfile.open(tar_filename, 'r') as tarf:
+        osw_dict = json.loads(tarf.extractfile('up00/bldg0000001/in.osw').read().decode('utf-8'))
 
     project_filename, results_dir = basic_residential_project_file()
     tmp_path = pathlib.Path(results_dir).parent
     sim_path = tmp_path / 'output' / 'simulation_output' / 'up00' / 'bldg0000001'
-    shutil.rmtree(sim_path)
     os.makedirs(sim_path)
 
     cfg = EagleBatch.get_project_configuration(project_filename)

@@ -2056,9 +2056,9 @@ class AwsBatch(DockerBatchBase):
                 )
 
                 # Read data_point_out.json
-                dpout = postprocessing.read_simulation_outputs(local_fs, reporting_measures, str(sim_dir))
-                dpout['building_id'] = building_id
-                dpout['upgrade'] = upgrade_id
+                dpout = postprocessing.read_simulation_outputs(
+                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
+                )
                 dpouts.append(dpout)
 
                 # Add the rest of the simulation outputs to the tar archive

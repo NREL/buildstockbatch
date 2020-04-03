@@ -164,9 +164,7 @@ class LocalDockerBatch(DockerBatchBase):
 
         # Read data_point_out.json
         reporting_measures = cfg.get('reporting_measures', [])
-        dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir)
-        dpout['building_id'] = i
-        dpout['upgrade'] = upgrade_id
+        dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
     def run_batch(self, n_jobs=-1, measures_only=False, sampling_only=False):

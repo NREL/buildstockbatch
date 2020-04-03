@@ -111,7 +111,7 @@ def read_out_osw(fs, filename):
         return out_d
 
 
-def read_simulation_outputs(fs, reporting_measures, sim_dir):
+def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
     """Read the simulation outputs and return as a dict
 
     :param fs: filesystem to read from
@@ -120,6 +120,10 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir):
     :type reporting_measures: list[str]
     :param sim_dir: path to simulation output directory
     :type sim_dir: str
+    :param upgrade_id: id for upgrade, 0 for baseline, 1, 2...
+    :type upgrade_id: int
+    :param building_id: building id
+    :type building_id: int
     :return: dpout [dict]
     """
 
@@ -133,6 +137,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir):
     out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
     if out_osw:
         dpout.update(out_osw)
+    dpout['upgrade'] = upgrade_id
+    dpout['building_id'] = building_id
     return dpout
 
 
