@@ -57,7 +57,7 @@ class DockerBatchBase(BuildStockBatchBase):
                     self.project_dir
                 )
             else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+                raise NotImplementedError('Sampling algorithm "{}" is not implemented.'.format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
