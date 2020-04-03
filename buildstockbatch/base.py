@@ -350,6 +350,10 @@ class BuildStockBatchBase(object):
             if cfg.get('downselect', {'resample': False}).get('resample', True):
                 raise ValidationError("Downselect with resampling cannot be used when using buildstock_csv. \n"
                                       "Please set resample: False in downselect, or do not use buildstock_csv.")
+
+        if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
+            logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
+
         return True
 
     @staticmethod

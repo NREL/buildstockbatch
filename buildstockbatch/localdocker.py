@@ -167,7 +167,7 @@ class LocalDockerBatch(DockerBatchBase):
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
-    def run_batch(self, n_jobs=-1, measures_only=False, sampling_only=False):
+    def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         if 'downselect' in self.cfg:
             buildstock_csv_filename = self.downselect()
         else:
@@ -195,6 +195,9 @@ class LocalDockerBatch(DockerBatchBase):
             all_sims = itertools.chain(baseline_sims, *upgrade_sims)
         else:
             all_sims = itertools.chain(*upgrade_sims)
+        if n_jobs is None:
+            client = docker.client.from_env()
+            n_jobs = client.info()['NCPU']
         dpouts = Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
         sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
@@ -265,8 +268,8 @@ def main():
     parser.add_argument(
         '-j',
         type=int,
-        help='Number of parallel simulations, -1 is all cores, -2 is all cores except one',
-        default=-1
+        help='Number of parallel simulations. Default: all cores available to docker.',
+        default=None
     )
     parser.add_argument(
         '-m', '--measures_only',
