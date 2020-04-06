@@ -93,8 +93,7 @@ def test_residential_simulation_controls_config():
         'begin_month': 1,
         'begin_day_of_month': 1,
         'end_month': 12,
-        'end_day_of_month': 31,
-        'calendar_year': 2007
+        'end_day_of_month': 31
     }
     for k, v in default_args.items():
         assert(step0['arguments'][k] == v)
@@ -107,7 +106,7 @@ def test_residential_simulation_controls_config():
     args = osw['steps'][0]['arguments']
     assert(args['timesteps_per_hr'] == 2)
     assert(args['begin_month'] == 7)
-    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month', 'calendar_year'):
+    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month'):
         assert(args[argname] == default_args[argname])
 
 
