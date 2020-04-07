@@ -1,29 +1,9 @@
 [openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
 [openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.energyplus.ForwardTranslator] <1> Cannot find DaylightingControl for Object of type 'OS:ShadingControl' and named 'WindowShadingControl'
+[15:39:46.953572 WARN] No valid weather file defined in either the osm or osw.
+[15:41:21.457743 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:41:27.326561 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:41:27.326611 WARN] Assembly R-value (0.0) for 'Surface_2:0' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:27.326627 WARN] Assembly R-value (0.0) for 'Surface_2:90' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:27.326640 WARN] Assembly R-value (0.0) for 'Surface_2:180' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:27.326653 WARN] Assembly R-value (0.0) for 'Surface_2:270' below minimum expected value. Construction R-value increased to 2.17.

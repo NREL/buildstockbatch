@@ -1,13 +1,21 @@
 {
-   "completed_at" : "20190417T173116Z",
+   "completed_at" : "20200407T154335Z",
    "completed_status" : "Success",
-   "created_at" : "2019-04-17T11:27:00.841512",
-   "current_step" : 6,
-   "eplusout_err" : "Program Version,EnergyPlus, Version 9.0.1-bb7ca4f0da, YMD=2019.04.17 17:28,\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES CEIL FAN SCHEDULE ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES COOLING SEASON ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES HEATING SEASON ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 BATH EXHAUST SCHEDULE ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 DRYER EXHAUST SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES MV_1 RANGE EXHAUST SCHEDULE ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 AVAILABILITY SCHEDULE ALLDAY1 ON 9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"RES NV_1 TEMP SCHEDULE ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 29\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 30\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 31\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 32\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 33\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"SCHEDULE DAY 8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY1\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY10\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY11\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY12\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY2\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY3\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY4\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY5\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY6\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY7\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY8\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Day:Interval=\"WINDOW SHADING SCHEDULE ALLDAY9\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES CEIL FAN SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES COOLING SEASON\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES HEATING SEASON\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES MV_1 BATH EXHAUST SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES MV_1 DRYER EXHAUST SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES MV_1 RANGE EXHAUST SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES NV_1 AVAIL SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"RES NV_1 TEMP SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Year=\"WINDOW SHADING SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"RES BATH TEMPERATURE SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"RES CW TEMPERATURE SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"RES DW TEMPERATURE SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"RES SHOWER TEMPERATURE SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"RES SINK TEMPERATURE SCHEDULE\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 1\", no Interior Horizontal Insulation Material Name defined\n   **   ~~~   ** Interior Horizontal Insulation Depth will not be used.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 1\", no Exterior Horizontal Insulation Material Name defined\n   **   ~~~   ** Exterior Horizontal Insulation Width will not be used.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 1\", no Footing Material Name defined\n   **   ~~~   ** Footing Depth will not be used.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 2\", no Interior Horizontal Insulation Material Name defined\n   **   ~~~   ** Interior Horizontal Insulation Depth will not be used.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 2\", no Exterior Horizontal Insulation Material Name defined\n   **   ~~~   ** Exterior Horizontal Insulation Width will not be used.\n   ** Warning ** Foundation:Kiva=\"FOUNDATION KIVA 2\", no Footing Material Name defined\n   **   ~~~   ** Footing Depth will not be used.\n   ** Warning ** SurfaceProperty:ExposedFoundationPerimeter: SURFACE 7, TOTALEXPOSEDPERIMETER set as calculation method, but a value has been set for Exposed Perimeter Fraction. This value will be ignored.\n   ** Warning ** SurfaceProperty:ExposedFoundationPerimeter: SURFACE 1, TOTALEXPOSEDPERIMETER set as calculation method, but a value has been set for Exposed Perimeter Fraction. This value will be ignored.\n   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.\n   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.\n   ** Severe  ** For zone: UNFINISHED ATTIC ZONE it is not possible to calculate the volume from the surrounding surfaces so either provide the volume value or define all the surfaces to fully enclose the zone.\n   ** Warning ** Indicated Zone Volume <= 0.0 for Zone=UNFINISHED ATTIC ZONE\n   **   ~~~   ** The calculated Zone Volume was=0.00\n   **   ~~~   ** The simulation will continue with the Zone Volume set to 10.0 m3. \n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.\n   ** Warning ** CalculateZoneVolume: 1 zone is not fully enclosed. For more details use:  Output:Diagnostics,DisplayExtrawarnings; \n   ** Warning ** DetermineShadowingCombinations: There are 1 surfaces which are receiving surfaces and are non-convex.\n   **   ~~~   ** ...Shadowing values may be inaccurate. Check .shd report file for more surface shading details\n   **   ~~~   ** ...Add Output:Diagnostics,DisplayExtraWarnings; to see individual warnings for each surface.\n   ** Severe  ** DetermineShadowingCombinations: There are 1 surfaces which are casting surfaces and are non-convex.\n   **   ~~~   ** ...Shadowing values may be inaccurate. Check .shd report file for more surface shading details\n   **   ~~~   ** ...Add Output:Diagnostics,DisplayExtraWarnings; to see individual severes for each surface.\n   ** Warning ** The Standard Ratings is calculated for Coil:Cooling:DX:SingleSpeed = RES AC COOLING COIL but not at the AHRI test condition due to curve out of bound.\n   **   ~~~   **  Review the Standard Ratings calculations in the Engineering Reference for this coil type. Also, use Output:Diagnostics, DisplayExtraWarnings for further guidance.\n   ** Warning ** Check input. Pump nominal power or motor efficiency is set to 0, for pump=PUMP VARIABLE SPEED 1\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL DEFROST ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL CRANKCASE HEATER ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYCOOLING\", invalid Output Variable or Meter Name=\"UNITARY SYSTEM COOLING ANCILLARY ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:NATURALGASHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL GAS ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:NATURALGASHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL ANCILLARY GAS ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:NATURALGASHEATING\", no items assigned \n   **   ~~~   ** ...will not be shown with the Meter results. This may be caused by a Meter:Custom be assigned to another Meter:Custom.\n   ** Warning ** Meter:Custom=\"UNIT 1:FUELOILHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL FUELOIL#1 ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:FUELOILHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL ANCILLARY FUELOIL#1 ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:FUELOILHEATING\", no items assigned \n   **   ~~~   ** ...will not be shown with the Meter results. This may be caused by a Meter:Custom be assigned to another Meter:Custom.\n   ** Warning ** Meter:Custom=\"UNIT 1:PROPANEHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL PROPANE ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:PROPANEHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL ANCILLARY PROPANE ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:PROPANEHEATING\", no items assigned \n   **   ~~~   ** ...will not be shown with the Meter results. This may be caused by a Meter:Custom be assigned to another Meter:Custom.\n   ** Warning ** Output:Meter: invalid Key Name=\"UNIT 1:NATURALGASHEATING\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"UNIT 1:FUELOILHEATING\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"UNIT 1:PROPANEHEATING\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISTRICTCOOLING:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISTRICTHEATING:FACILITY\" - not found.\n   ** Warning ** Output:Meter:MeterFileOnly requested for \"Electricity:Facility\" (TimeStep), already on \"Output:Meter\". Will report to both eplusout.eso and eplusout.mtr\n   ************* Testing Individual Branch Integrity\n   ************* All Branches passed integrity testing\n   ************* Testing Individual Supply Air Path Integrity\n   ************* All Supply Air Paths passed integrity testing\n   ************* Testing Individual Return Air Path Integrity\n   ************* All Return Air Paths passed integrity testing\n   ************* No node connection errors were found.\n   ************* Beginning Simulation\n   ** Warning ** Processing Monthly Tabular Reports: Variable names not valid for this simulation\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual variables.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/01 02:10 - 02:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on each max iteration exceeded.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/02 10:15 - 10:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/04 09:50 - 10:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/05 09:45 - 09:50\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/05 09:50 - 10:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/05 09:50 - 09:55\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/05 10:00 - 10:05\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/06 04:30 - 04:40\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/06 04:50 - 05:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/06 05:30 - 05:40\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/06 05:50 - 06:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/09 02:10 - 02:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/09 07:10 - 07:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/09 07:20 - 07:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-ELECTRICITY\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-DISTILLATE OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-RESIDUAL OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-NATURAL GAS\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-COAL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ************* Simulation Error Summary *************\n   ************* There are 2 unused schedules in input.\n   ************* There are 44 unused week schedules in input.\n   ************* There are 26 unused day schedules in input.\n   ************* Use Output:Diagnostics,DisplayUnusedSchedules; to see them.\n   *************\n   ************* ===== Recurring Surface Error Summary =====\n   ************* The following surface error messages occurred.\n   *************\n   ************* Base Surface does not surround subsurface errors occuring...\n   ************* Check that the GlobalGeometryRules object is expressing the proper starting corner and direction [CounterClockwise/Clockwise]\n   *************\n   ** Warning ** Base surface does not surround subsurface (CHKSBS), Overlap Status=No-Overlap\n   **   ~~~   **   The base surround errors occurred 1 times.\n   **   ~~~   ** Surface \"SURFACE 28\" misses SubSurface \"UNIT 1 - SURFACE 13 - DOOR\"\n   *************\n   **   ~~~   **   The base surround errors occurred 1 times (total).\n   *************\n   *************\n   ************* ===== Recurring Error Summary =====\n   ************* The following recurring error messages occurred.\n   *************\n   *************  ** Warning ** SimHVAC: Exceeding Maximum iterations for all HVAC loops, during RUN PERIOD 1 continues\n   *************  **   ~~~   **   This error occurred 48 total times;\n   *************  **   ~~~   **   during Warmup 0 times;\n   *************  **   ~~~   **   during Sizing 0 times.\n   *************\n   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Completed Successfully-- 227 Warning; 2 Severe Errors; Elapsed Time=00hr 02min  9.07sec\n",
-   "hash" : "178FA87A",
+   "created_at" : "2020-04-07T09:39:29.094622",
+   "current_step" : 4,
+   "eplusout_err" : "Program Version,EnergyPlus, Version 9.2.0-921312fa1d, YMD=2020.04.07 15:41,\n   ** Warning ** ProcessScheduleInput: Schedule:Constant=\"ALWAYS ON CONTINUOUS\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** GetSurfaceData: Very small surface area[7.19348E-004], Surface=SURFACE SURFACE_3_-_WINDOW_5_BACK\n   ** Warning ** GetSurfaceData: Very small surface area[4.98018E-004], Surface=SURFACE SURFACE_5_-_DOOR_FRONT\n   ** Warning ** GetSurfaceData: Very small surface area[7.19348E-004], Surface=SURFACE SURFACE_5_-_WINDOW_4_FRONT\n   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.\n   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.\n   ** Warning ** CalculateZoneVolume: 1 zone is not fully enclosed. For more details use:  Output:Diagnostics,DisplayExtrawarnings; \n   ** Warning ** GetInputViewFactors: ComplexFenestrationProperty:SolarAbsorbedLayers=\"LIVING SPACE\", not enough values.\n   **   ~~~   ** ...Number of input values [165] is less than the required number=[289] Missing surface pairs will have a zero view factor.\n   ** Warning ** GetInputViewFactors: Output:DaylightFactors=\"LIVING SPACE\", not enough values.\n   **   ~~~   ** ...Number of input values [165] is less than the required number=[289] Missing surface pairs will have a zero view factor.\n   ** Warning ** The Standard Ratings is calculated for Coil:Cooling:DX:SingleSpeed = CENTRAL AC CLG COIL but not at the AHRI test condition due to curve out of bound.\n   **   ~~~   **  Review the Standard Ratings calculations in the Engineering Reference for this coil type. Also, use Output:Diagnostics, DisplayExtraWarnings for further guidance.\n   ** Warning ** Check input. Pump nominal power or motor efficiency is set to 0, for pump=PUMP VARIABLE SPEED 1\n   ** Warning ** Output:Meter: invalid Key Name=\"GAS:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"FUELOIL#1:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"PROPANE:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"OTHERFUEL1:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"OTHERFUEL2:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"GARAGE LIGHTING:INTERIORLIGHTS:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISHWASHER:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"MISC TV:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"MISC PLUG LOADS:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"ELECTRICITYPRODUCED:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:GAS\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:GAS\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:FUELOIL#1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:FUELOIL#1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:PROPANE\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:PROPANE\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:OTHERFUEL1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:OTHERFUEL1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"GARAGE LIGHTING:INTERIORLIGHTS:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISHWASHER:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"MISC TV:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"MISC PLUG LOADS:INTERIOREQUIPMENT:ELECTRICITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"ELECTRICITYPRODUCED:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:GAS\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:GAS\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:FUELOIL#1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:FUELOIL#1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:PROPANE\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:PROPANE\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"CLOTHES DRYER:INTERIOREQUIPMENT:OTHERFUEL1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"COOKING RANGE:INTERIOREQUIPMENT:OTHERFUEL1\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"GAS:FACILITY\" - not found.\n   ** Warning ** Output:Meter:MeterFileOnly: invalid Key Name=\"GAS:FACILITY\" - not found.\n   ** Warning ** Output:Meter:MeterFileOnly requested for \"Electricity:Facility\" (TimeStep), already on \"Output:Meter\". Will report to both eplusout.eso and eplusout.mtr\n   ************* Testing Individual Branch Integrity\n   ************* All Branches passed integrity testing\n   ************* Testing Individual Supply Air Path Integrity\n   ************* All Supply Air Paths passed integrity testing\n   ************* Testing Individual Return Air Path Integrity\n   ************* All Return Air Paths passed integrity testing\n   ************* No node connection errors were found.\n   ************* Beginning Simulation\n   ** Warning ** Processing Monthly Tabular Reports: Variable names not valid for this simulation\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual variables.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/03 14:20 - 14:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on each max iteration exceeded.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/28 20:20 - 20:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/18 13:00 - 13:10\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/20 10:10 - 10:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** CalcDoe2DXCoil: Coil:Cooling:DX:SingleSpeed=\"CENTRAL AC CLG COIL\" - Air volume flow rate per watt of rated total cooling capacity is out of range at 6.836E-005 m3/s/W.\n   **   ~~~   **  Environment=RUN PERIOD 1, at Simulation time=02/20 14:40 - 14:50\n   **   ~~~   ** Expected range for VolumeFlowPerRatedTotalCapacity=[2.684E-005--6.713E-005]\n   **   ~~~   ** Possible causes include inconsistent air flow rates in system components,\n   **   ~~~   ** or variable air volume [VAV] system using incorrect coil type.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/25 18:30 - 18:40\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/26 10:40 - 10:50\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 05:20 - 05:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 05:30 - 05:40\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 05:40 - 05:50\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 05:50 - 06:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 06:00 - 06:10\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 06:10 - 06:20\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 02/27 09:20 - 09:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 03/02 16:00 - 16:10\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-ELECTRICITY\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-DISTILLATE OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-RESIDUAL OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-NATURAL GAS\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-COAL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ************* Simulation Error Summary *************\n   ** Warning ** The following Report Variables were requested but not generated -- check.rdd file\n   **   ~~~   ** Either the IDF did not contain these elements, the variable name is misspelled,\n   **   ~~~   ** or the requested variable is an advanced output which requires Output : Diagnostics, DisplayAdvancedReportVariables;\n   ************* Key=*, VarName=CENTRAL AC SUPPLY FAN CLG DISAGGREGATE, Frequency=Monthly\n   ************* Key=*, VarName=LOADS_HTG_ROOFS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_CEILINGS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_WALLS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_RIM_JOISTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_FOUNDATION_WALLS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_DOORS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_WINDOWS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_SKYLIGHTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_FLOORS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_SLABS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_INTERNAL_MASS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_INFIL_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_NATVENT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_MECHVENT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_WHF_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_DUCTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_INTGAINS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_ROOFS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_CEILINGS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_WALLS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_RIM_JOISTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_FOUNDATION_WALLS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_DOORS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_WINDOWS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_SKYLIGHTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_FLOORS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_SLABS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_INTERNAL_MASS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_INFIL_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_NATVENT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_MECHVENT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_WHF_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_DUCTS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_INTGAINS_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_HTG_TOT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=*, VarName=LOADS_CLG_TOT_ANNUAL_OUTVAR, Frequency=\n   ************* Key=furnace htg coil, VarName=HEATING COIL CRANKCASE HEATER ELECTRIC ENERGY, Frequency=\n   ************* Key=furnace htg coil, VarName=HEATING COIL DEFROST ELECTRIC ENERGY, Frequency=\n   ************* Key=water heater, VarName=WATER HEATER GAS ENERGY, Frequency=\n   ************* Key=water heater, VarName=WATER HEATER FUELOIL#1 ENERGY, Frequency=\n   ************* Key=water heater, VarName=WATER HEATER PROPANE ENERGY, Frequency=\n   ************* Key=water heater, VarName=WATER HEATER OTHERFUEL1 ENERGY, Frequency=\n   ************* Key=furnace htg coil, VarName=HEATING COIL CRANKCASE HEATER ELECTRIC ENERGY, Frequency=Hourly\n   ************* Key=furnace htg coil, VarName=HEATING COIL DEFROST ELECTRIC ENERGY, Frequency=Hourly\n   ************* Key=water heater, VarName=WATER HEATER GAS ENERGY, Frequency=Hourly\n   ************* Key=water heater, VarName=WATER HEATER FUELOIL#1 ENERGY, Frequency=Hourly\n   ************* Key=water heater, VarName=WATER HEATER PROPANE ENERGY, Frequency=Hourly\n   ************* Key=water heater, VarName=WATER HEATER OTHERFUEL1 ENERGY, Frequency=Hourly\n   ************* There are 4 unused schedules in input.\n   ************* There are 6 unused week schedules in input.\n   ************* There are 7 unused day schedules in input.\n   ************* Use Output:Diagnostics,DisplayUnusedSchedules; to see them.\n   *************\n   ************* ===== Recurring Error Summary =====\n   ************* The following recurring error messages occurred.\n   *************\n   *************  ** Warning ** CalcDoe2DXCoil: Coil:Cooling:DX:SingleSpeed=\"CENTRAL AC CLG COIL\" - Air volume flow rate per watt of rated total cooling capacity is out of range error continues...\n   *************  **   ~~~   **   This error occurred 247987 total times;\n   *************  **   ~~~   **   during Warmup 0 times;\n   *************  **   ~~~   **   during Sizing 0 times.\n   *************  **   ~~~   **   Max=7.027925E-005  Min=6.714477E-005\n   *************\n   *************  ** Warning ** SimHVAC: Exceeding Maximum iterations for all HVAC loops, during RUN PERIOD 1 continues\n   *************  **   ~~~   **   This error occurred 64 total times;\n   *************  **   ~~~   **   during Warmup 0 times;\n   *************  **   ~~~   **   during Sizing 0 times.\n   *************\n   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Completed Successfully-- 248116 Warning; 0 Severe Errors; Elapsed Time=00hr 01min 45.48sec\n",
+   "file_paths" : [
+      "/var/simdata/openstudio/generated_files",
+      "./files",
+      "./weather",
+      "../../files",
+      "../../weather",
+      "./"
+   ],
+   "hash" : "A4C7209A",
    "id" : "bldg0000003up00",
-
-   "started_at" : "20190417T172710Z",
+   "measure_paths" : [ "measures", "resources/hpxml-measures" ],
+   "started_at" : "20200407T153946Z",
    "steps" : [
       {
          "arguments" : {
@@ -19,24 +27,25 @@
          },
          "measure_dir_name" : "ResidentialSimulationControls",
          "result" : {
-            "completed_at" : "20190417T172711Z",
+            "completed_at" : "20200407T153947Z",
             "measure_class_name" : "ResidentialSimulationControls",
             "measure_display_name" : "Set Residential Simulation Controls",
             "measure_name" : "residential_simulation_controls",
             "measure_taxonomy" : "Whole Building.Space Types",
             "measure_type" : "ModelMeasure",
             "measure_uid" : "874f921e-8f3c-458a-a82f-01b7d51a547e",
-            "measure_version_id" : "5a3fd7a9-2761-4ffe-9520-c7b97764f0d6",
-            "measure_version_modified" : "20190409T145403Z",
+            "measure_version_id" : "216217b4-1fc2-4ec5-a71f-9fa9b7458ab2",
+            "measure_version_modified" : "20200406T190911Z",
             "measure_xml_checksum" : "2C38F48B",
-            "started_at" : "20190417T172711Z",
+            "started_at" : "20200407T153947Z",
             "stderr" : "",
             "stdout" : "",
             "step_errors" : [],
             "step_files" : [],
             "step_info" : [
                "Set the simulation timesteps per hour to 6.",
-               "Set the run period begin and end month/day to 1/1 and 12/31, respectively."
+               "Set the run period begin and end month/day to 1/1 and 12/31, respectively.",
+               "Set the calendar year to  and the start day of week to UseWeatherFile; if you are running with AMY, this will be overridden by the AMY year."
             ],
             "step_result" : "Success",
             "step_values" : [
@@ -67,264 +76,145 @@
       {
          "arguments" : {
             "building_unit_id" : 3,
-            "sample_weight" : 20000000,
+            "sample_weight" : 27500000,
             "workflow_json" : "measure-info.json"
          },
          "measure_dir_name" : "BuildExistingModel",
          "result" : {
-            "completed_at" : "20190417T172752Z",
+            "completed_at" : "20200407T154130Z",
             "measure_class_name" : "BuildExistingModel",
             "measure_display_name" : "Build Existing Model",
             "measure_name" : "build_existing_model",
             "measure_taxonomy" : "Whole Building.Space Types",
             "measure_type" : "ModelMeasure",
             "measure_uid" : "dedf59bb-3b88-4f16-8755-2c1ff5519cbf",
-            "measure_version_id" : "7bbf2c06-cd16-4c2f-910e-ddd583363c7d",
-            "measure_version_modified" : "20181023T234455Z",
+            "measure_version_id" : "5e994bac-f933-4c5e-9df0-0fc4ac6f96e7",
+            "measure_version_modified" : "20200406T190911Z",
             "measure_xml_checksum" : "2C38F48B",
-            "started_at" : "20190417T172711Z",
+            "started_at" : "20200407T153947Z",
             "stderr" : "",
-            "stdout" : "[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n",
+            "stdout" : "[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n",
             "step_errors" : [],
             "step_files" : [],
-            "step_final_condition" : "HVAC objects updated as appropriate.",
             "step_info" : [
+               "Assigning option 'Standard' for parameter 'HPXML'.",
                "Assigning option 'CR09' for parameter 'Location Region'.",
-               "Assigning option 'FL_Orlando.Intl.AP.722050' for parameter 'Location'.",
-               "Assigning option 'USA_FL_Orlando.Intl.AP.722050_TMY3.epw' for parameter 'Location Weather Filename'.",
+               "Assigning option 'TX_Dallas-Fort.Worth.Intl.AP.722590' for parameter 'Location'.",
+               "Assigning option 'USA_TX_Dallas-Fort.Worth.Intl.AP.722590_TMY3.epw' for parameter 'Location Weather Filename'.",
                "Assigning option 'TMY3' for parameter 'Location Weather Year'.",
                "Assigning option '2000s' for parameter 'Vintage'.",
+               "Assigning option '2000-09' for parameter 'Vintage ACS'.",
                "Assigning option 'Electricity' for parameter 'Heating Fuel'.",
-               "Assigning option 'High' for parameter 'Usage Level'.",
+               "Assigning option 'Low' for parameter 'Usage Level'.",
+               "Assigning option 'Multi-Family with 5+ Units' for parameter 'Geometry Building Type RECS'.",
+               "Assigning option '50 or more Unit' for parameter 'Geometry Building Type ACS'.",
+               "Assigning option '54' for parameter 'Geometry Building Number Units MF'.",
+               "Assigning option 'None' for parameter 'Geometry Building Number Units SFA'.",
+               "Assigning option '50 or more Units high' for parameter 'Geometry Building Number Units HL'.",
                "Assigning option 'Slab' for parameter 'Geometry Foundation Type'.",
-               "Assigning option '1' for parameter 'Geometry Stories'.",
-               "Assigning option '2 Car' for parameter 'Geometry Garage'.",
-               "Assigning option '0-1499' for parameter 'Geometry House Size'.",
-               "Assigning option 'Auto' for parameter 'Occupants'.",
-               "Assigning option 'West' for parameter 'Orientation'.",
+               "Assigning option 'Masonry' for parameter 'Geometry Wall Type'.",
+               "Assigning option '3' for parameter 'Geometry Stories'.",
+               "Assigning option 'None' for parameter 'Geometry Garage'.",
+               "Assigning option '0-1499' for parameter 'Geometry Floor Area Bin'.",
+               "Assigning option '1000-1499' for parameter 'Geometry Floor Area'.",
+               "Assigning option '2' for parameter 'Bedrooms'.",
+               "Assigning option 'Double-Loaded Interior' for parameter 'Corridor'.",
+               "Assigning option '2' for parameter 'Occupants'.",
+               "Assigning option 'North' for parameter 'Orientation'.",
                "Assigning option '2 ft' for parameter 'Eaves'.",
                "Assigning option '20 ft^2' for parameter 'Door Area'.",
-               "Assigning option 'F15 B15 L15 R15' for parameter 'Window Areas'.",
+               "Assigning option 'F30 B30 L30 R30' for parameter 'Window Areas'.",
                "Assigning option 'None' for parameter 'Overhangs'.",
-               "Assigning option 'Left/Right at 15ft' for parameter 'Neighbors'.",
-               "Assigning option 'Ceiling R-30, Vented' for parameter 'Insulation Unfinished Attic'.",
-               "Assigning option 'Asphalt Shingles, Medium' for parameter 'Roof Material'.",
+               "Assigning option '27' for parameter 'Neighbors'.",
+               "Assigning option 'None' for parameter 'Insulation Ceiling'.",
+               "Assigning option 'R-30' for parameter 'Insulation Roof'.",
+               "Assigning option 'None' for parameter 'Radiant Barrier'.",
+               "Assigning option 'None' for parameter 'Roof Material Unfinished Attic'.",
+               "Assigning option 'Asphalt Shingles, Medium' for parameter 'Roof Material Finished Roof'.",
                "Assigning option 'Uninsulated' for parameter 'Insulation Slab'.",
                "Assigning option 'None' for parameter 'Insulation Crawlspace'.",
                "Assigning option 'None' for parameter 'Insulation Unfinished Basement'.",
                "Assigning option 'None' for parameter 'Insulation Finished Basement'.",
                "Assigning option 'None' for parameter 'Insulation Pier Beam'.",
-               "Assigning option 'R-13' for parameter 'Insulation Interzonal Floor'.",
-               "Assigning option 'Wood Stud, R-11' for parameter 'Insulation Wall'.",
-               "Assigning option 'Low-E, Double, Non-metal, Air, L-Gain' for parameter 'Windows'.",
+               "Assigning option 'CMU, 6-in Hollow, R-11' for parameter 'Insulation Wall'.",
+               "Assigning option 'Summer = 0.7, Winter = 0.7' for parameter 'Interior Shading'.",
+               "Assigning option '2+ Pane' for parameter 'Windows'.",
                "Assigning option 'Fiberglass' for parameter 'Doors'.",
                "Assigning option 'Electric Standard' for parameter 'Water Heater'.",
-               "Assigning option '200%' for parameter 'Hot Water Fixtures'.",
-               "Assigning option 'Uninsulated, HomeRun, PEX' for parameter 'Hot Water Distribution'.",
+               "Assigning option '50% Usage' for parameter 'Hot Water Fixtures'.",
+               "Assigning option 'Uninsulated, Standard' for parameter 'Hot Water Distribution'.",
                "Assigning option 'None' for parameter 'Solar Hot Water'.",
-               "Assigning option 'No' for parameter 'HVAC System Is Combined'.",
-               "Assigning option 'None' for parameter 'HVAC System Combined'.",
-               "Assigning option 'Electric Furnace' for parameter 'HVAC System Heating Electricity'.",
-               "Assigning option 'None' for parameter 'HVAC System Heating Natural Gas'.",
-               "Assigning option 'None' for parameter 'HVAC System Heating Propane'.",
-               "Assigning option 'None' for parameter 'HVAC System Heating Fuel Oil'.",
-               "Assigning option 'None' for parameter 'HVAC System Heating Other Fuel'.",
-               "Assigning option 'None' for parameter 'HVAC System Heating None'.",
+               "Assigning option 'No' for parameter 'HVAC System Is Heat Pump'.",
+               "Assigning option 'None' for parameter 'HVAC System Heat Pump'.",
+               "Assigning option 'Electric Furnace' for parameter 'HVAC System Heating'.",
                "Assigning option 'AC, SEER 10' for parameter 'HVAC System Cooling'.",
                "Assigning option 'Central' for parameter 'HVAC System Cooling Type'.",
                "Assigning option '70F' for parameter 'Heating Setpoint'.",
                "Assigning option '75F' for parameter 'Cooling Setpoint'.",
+               "Assigning option 'No' for parameter 'Heating Setpoint Has Offset'.",
+               "Assigning option 'No' for parameter 'Cooling Setpoint Has Offset'.",
+               "Assigning option '0F' for parameter 'Heating Setpoint Offset Magnitude'.",
+               "Assigning option '0F' for parameter 'Cooling Setpoint Offset Magnitude'.",
+               "Assigning option 'None' for parameter 'Heating Setpoint Offset Period'.",
+               "Assigning option 'None' for parameter 'Cooling Setpoint Offset Period'.",
                "Assigning option 'National Average' for parameter 'Ceiling Fan'.",
                "Assigning option 'None' for parameter 'Dehumidifier'.",
-               "Assigning option 'EF 15.9' for parameter 'Refrigerator'.",
-               "Assigning option 'Electric, 120% Usage' for parameter 'Cooking Range'.",
-               "Assigning option '290 Rated kWh, 120% Usage' for parameter 'Dishwasher'.",
-               "Assigning option 'EnergyStar, 120% Usage' for parameter 'Clothes Washer'.",
-               "Assigning option 'Electric, 120% Usage' for parameter 'Clothes Dryer'.",
+               "Assigning option 'EF 17.6' for parameter 'Refrigerator'.",
+               "Assigning option 'National Average' for parameter 'Refrigeration Schedule'.",
+               "Assigning option 'Electric, 80% Usage' for parameter 'Cooking Range'.",
+               "Assigning option 'National Average' for parameter 'Cooking Range Schedule'.",
+               "Assigning option 'None' for parameter 'Dishwasher'.",
+               "Assigning option 'Yes' for parameter 'Clothes Washer Presence'.",
+               "Assigning option 'EnergyStar, 80% Usage' for parameter 'Clothes Washer'.",
+               "Assigning option 'Electric, 80% Usage' for parameter 'Clothes Dryer'.",
                "Assigning option '100% CFL' for parameter 'Lighting'.",
-               "Assigning option '200%' for parameter 'Plug Loads'.",
-               "Assigning option 'EF 6.9, National Average' for parameter 'Misc Extra Refrigerator'.",
-               "Assigning option 'EF 12, National Average' for parameter 'Misc Freezer'.",
-               "Assigning option 'National Average' for parameter 'Misc Gas Fireplace'.",
-               "Assigning option 'National Average' for parameter 'Misc Gas Grill'.",
-               "Assigning option 'National Average' for parameter 'Misc Gas Lighting'.",
-               "Assigning option 'National Average' for parameter 'Misc Hot Tub Spa'.",
-               "Assigning option 'National Average' for parameter 'Misc Pool'.",
-               "Assigning option 'National Average' for parameter 'Misc Well Pump'.",
+               "Assigning option '100% Usage' for parameter 'Lighting Interior Use'.",
+               "Assigning option '100% Usage' for parameter 'Lighting Other Use'.",
+               "Assigning option 'No Exterior Use' for parameter 'Holiday Lighting'.",
+               "Assigning option '50%' for parameter 'Plug Loads'.",
+               "Assigning option 'National Average' for parameter 'Plug Loads Schedule'.",
+               "Assigning option 'None' for parameter 'Electric Vehicle'.",
+               "Assigning option 'None' for parameter 'Misc Extra Refrigerator'.",
+               "Assigning option 'None' for parameter 'Misc Freezer'.",
+               "Assigning option 'None' for parameter 'Misc Gas Fireplace'.",
+               "Assigning option 'None' for parameter 'Misc Gas Grill'.",
+               "Assigning option 'None' for parameter 'Misc Gas Lighting'.",
+               "Assigning option 'None' for parameter 'Misc Hot Tub Spa'.",
+               "Assigning option 'None' for parameter 'Misc Pool'.",
+               "Assigning option 'None' for parameter 'Misc Pool Heater'.",
+               "Assigning option 'None' for parameter 'Misc Pool Pump'.",
+               "Assigning option 'National Average' for parameter 'Misc Pool Schedule'.",
+               "Assigning option 'None' for parameter 'Misc Well Pump'.",
                "Assigning option '20% Leakage, R-8' for parameter 'Ducts'.",
-               "Assigning option '10 ACH50' for parameter 'Infiltration'.",
+               "Assigning option '15 ACH50' for parameter 'Infiltration'.",
                "Assigning option 'Year-Round, 3 days/wk' for parameter 'Natural Ventilation'.",
                "Assigning option 'None' for parameter 'Mechanical Ventilation'.",
-               "Assigning option 'Hour0' for parameter 'Bathroom Spot Vent Hour'.",
-               "Assigning option 'Hour18' for parameter 'Range Spot Vent Hour'.",
+               "Assigning option 'Hour2' for parameter 'Bathroom Spot Vent Hour'.",
+               "Assigning option 'Hour16' for parameter 'Range Spot Vent Hour'.",
                "Assigning option 'None' for parameter 'PV'.",
                "Assigning option 'Day3' for parameter 'Days Shifted'.",
-               "Calling ResidentialLocation measure with arguments:\nweather_directory -> ../../../../weather \nweather_file_name -> USA_FL_Orlando.Intl.AP.722050_TMY3.epw \ndst_start_date -> April 7 \ndst_end_date -> October 26",
-               "Setting weather file.",
-               "Setting site data.",
-               "Setting Building America climate zone to Hot-Humid.",
-               "Setting mains water temperature profile.",
-               "Set daylight saving time from 2007-Apr-07 to 2007-Oct-26.",
-               "Calling ResidentialGeometryCreateSingleFamilyDetached measure with arguments:\nfoundation_type -> slab \nfoundation_height -> 0 \nnum_floors -> 1 \ngarage_width -> 24 \ngarage_depth -> 24 \ngarage_protrusion -> 0.5 \ngarage_position -> Right \ntotal_ffa -> 1000 \nwall_height -> 8 \naspect_ratio -> 1.8 \nattic_type -> unfinished attic \nroof_type -> gable \nroof_pitch -> 6:12 \nnum_bedrooms -> 3 \nnum_bathrooms -> 1.5 \nnum_occupants -> auto \noccupants_weekday_sch -> 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.88, 0.41, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.29, 0.55, 0.90, 0.90, 0.90, 1.00, 1.00, 1.00 \noccupants_weekend_sch -> 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 1.00, 0.88, 0.41, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.24, 0.29, 0.55, 0.90, 0.90, 0.90, 1.00, 1.00, 1.00 \noccupants_monthly_sch -> 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 \norientation -> 90 \nroof_structure -> truss, cantilever \neaves_depth -> 2 \nneighbor_left_offset -> 15 \nneighbor_right_offset -> 15 \nneighbor_back_offset -> 0 \nneighbor_front_offset -> 0",
-               "Set garage space.",
-               "Set living space.",
-               "Set unfinished attic space.",
-               "Set garage attic space.",
-               "The building has been assigned 3 bedroom(s) and 1.5 bathroom(s) across 1 unit(s).",
-               "unit 1 has been assigned 2.64 occupant(s) for space 'living space'.",
-               "The building has been assigned 2.64 occupant(s) across 1 unit(s).",
-               "Added 10 res eaves.",
-               "Added 2 res neighbors shading surfaces.",
-               "The building's initial orientation was 0.0 azimuth.",
-               "The building's final orientation was 90.0 azimuth.",
-               "Calling ResidentialGeometryDoorArea measure with arguments:\ndoor_area -> 20",
-               "For unit 1 added 20.0 ft^2 door.",
-               "Calling ResidentialGeometryWindowSkylightArea measure with arguments:\nfront_wwr -> 0.15 \nback_wwr -> 0.15 \nleft_wwr -> 0.15 \nright_wwr -> 0.15 \nfront_window_area -> 0 \nback_window_area -> 0 \nleft_window_area -> 0 \nright_window_area -> 0 \nwindow_aspect_ratio -> 1.333 \nfront_skylight_area -> 0 \nback_skylight_area -> 0 \nleft_skylight_area -> 0 \nright_skylight_area -> 0 \noverhang_depth -> 0 \noverhang_offset -> 0 \noverhang_front_facade -> false \noverhang_back_facade -> false \noverhang_left_facade -> false \noverhang_right_facade -> false",
-               "Added 3 window(s), totaling 25.4 ft^2, to Surface 13.",
-               "Added 5 window(s), totaling 57.8 ft^2, to Surface 9.",
-               "Added 3 window(s), totaling 32.1 ft^2, to Surface 8.",
-               "Added 2 window(s), totaling 17.7 ft^2, to Surface 10.",
-               "No res overhangs to be added.",
-               "Calling ResidentialConstructionsUnfinishedAttic measure with arguments:\nceiling_r -> 30 \nceiling_install_grade -> 1 \nceiling_ins_thick_in -> 11.23 \nceiling_framing_factor -> 0.07 \nceiling_joist_height_in -> 3.5 \nceiling_drywall_thick_in -> 0.5 \nroof_cavity_r -> 0 \nroof_install_grade -> 1 \nroof_cavity_ins_thick_in -> 0 \nroof_framing_factor -> 0.07 \nroof_framing_thick_in -> 7.25 \nhas_radiant_barrier -> false \nroof_osb_thick_in -> 0.75 \nroof_rigid_r -> 0 \nroofing_material -> Asphalt Shingles, Medium",
-               "Material 'FloorUAAdditionalCeilingIns' was created.",
-               "Material 'FloorUATrussandIns' was created.",
-               "Material 'Drywall 0.5 in.' was created.",
-               "Construction 'FloorFinInsUnfinAttic' was created with 3 materials (FloorUAAdditionalCeilingIns | FloorUATrussandIns | Drywall 0.5 in.).",
-               "Surface 'Surface 15' has been assigned construction 'FloorFinInsUnfinAttic'.",
-               "Construction 'FloorFinInsUnfinAttic Reversed' was created with 3 materials (Drywall 0.5 in. | FloorUATrussandIns | FloorUAAdditionalCeilingIns).",
-               "Surface 'Surface 14' has been assigned construction 'FloorFinInsUnfinAttic Reversed'.",
-               "Material 'Asphalt Shingles, Medium' was created.",
-               "Material 'RoofSheathing' was created.",
-               "Material 'RoofUARoofIns' was created.",
-               "Construction 'RoofUnfinInsExt' was created with 3 materials (Asphalt Shingles, Medium | RoofSheathing | RoofUARoofIns).",
-               "Surface 'Surface 17' has been assigned construction 'RoofUnfinInsExt'.",
-               "Surface 'Surface 27' has been assigned construction 'RoofUnfinInsExt'.",
-               "Surface 'Surface 24' has been assigned construction 'RoofUnfinInsExt'.",
-               "Surface 'Surface 23' has been assigned construction 'RoofUnfinInsExt'.",
-               "Calling ResidentialConstructionsWallsWoodStud measure with arguments:\ncavity_r -> 11 \ninstall_grade -> 1 \ncavity_depth_in -> 3.5 \ncavity_filled -> true \nframing_factor -> 0.25 \ndrywall_thick_in -> 0.5 \nosb_thick_in -> 0.5 \nrigid_r -> 0.0 \nexterior_finish -> Vinyl, Light",
-               "Material 'Vinyl, Light' was created.",
-               "Material 'WallSheathing' was created.",
-               "Material 'WallStudAndCavity' was created.",
-               "Construction 'WallExtInsFin' was created with 4 materials (Vinyl, Light | WallSheathing | WallStudAndCavity | Drywall 0.5 in.).",
-               "Surface 'Surface 13' has been assigned construction 'WallExtInsFin'.",
-               "Surface 'Surface 8' has been assigned construction 'WallExtInsFin'.",
-               "Surface 'Surface 9' has been assigned construction 'WallExtInsFin'.",
-               "Surface 'Surface 10' has been assigned construction 'WallExtInsFin'.",
-               "Surface 'Surface 29' has been assigned construction 'WallExtInsFin'.",
-               "Surface 'Surface 28' has been assigned construction 'WallExtInsFin'.",
-               "Material 'WallStudAndCavity 1' was created.",
-               "Construction 'WallIntFinInsUnfin' was created with 2 materials (WallSheathing | WallStudAndCavity 1).",
-               "Surface 'Surface 12' has been assigned construction 'WallIntFinInsUnfin'.",
-               "Construction 'WallIntFinInsUnfin Reversed' was created with 2 materials (WallStudAndCavity 1 | WallSheathing).",
-               "Surface 'Surface 2' has been assigned construction 'WallIntFinInsUnfin Reversed'.",
-               "Surface 'Surface 11' has been assigned construction 'WallIntFinInsUnfin'.",
-               "Surface 'Surface 3' has been assigned construction 'WallIntFinInsUnfin Reversed'.",
-               "Material 'WallStudAndCavity 2' was created.",
-               "Construction 'WallExtUninsUnfin' was created with 3 materials (Vinyl, Light | WallSheathing | WallStudAndCavity 2).",
-               "Surface 'Surface 19' has been assigned construction 'WallExtUninsUnfin'.",
-               "Surface 'Surface 18' has been assigned construction 'WallExtUninsUnfin'.",
-               "Surface 'Surface 26' has been assigned construction 'WallExtUninsUnfin'.",
-               "Surface 'Surface 4' has been assigned construction 'WallExtUninsUnfin'.",
-               "Surface 'Surface 22' has been assigned construction 'WallExtUninsUnfin'.",
-               "Surface 'Surface 5' has been assigned construction 'WallExtUninsUnfin'.",
-               "Added internal mass object 'living space Partition' to space 'living space'",
-               "Material 'WallStudAndCavity 3' was created.",
-               "Construction 'WallIntFinUninsFin' was created with 2 materials (WallStudAndCavity 3 | Drywall 0.5 in.).",
-               "InternalMassDefinition 'living space Partition' has been assigned construction 'WallIntFinUninsFin'.",
-               "Material 'res furniture material living space' was created.",
-               "Construction 'res furniture construction living space' was created with 1 material (res furniture material living space).",
-               "InternalMassDefinition 'res furniture mass living space' has been assigned construction 'res furniture construction living space'.",
-               "Assigned internal mass object 'res furniture mass living space' to space 'living space'.",
-               "Construction 'res furniture construction garage space' was created with 1 material (res furniture material living space).",
-               "InternalMassDefinition 'res furniture mass garage space' has been assigned construction 'res furniture construction garage space'.",
-               "Assigned internal mass object 'res furniture mass garage space' to space 'garage space'.",
-               "Calling ResidentialConstructionsSlab measure with arguments:\nperimeter_r -> 0 \nperimeter_width -> 0 \nwhole_r -> 0 \ngap_r -> 0 \nexterior_r -> 0 \nexterior_depth -> 0",
-               "Material 'Concrete 4.0 in.' was created.",
-               "Material 'Floor Covering' was created.",
-               "Construction 'FloorFndGrndFinSlab' was created with 2 materials (Concrete 4.0 in. | Floor Covering).",
-               "Surface 'Surface 7' has been assigned construction 'FloorFndGrndFinSlab'.",
-               "Construction 'FloorFndGrndUnfinSlab' was created with 1 material (Concrete 4.0 in.).",
-               "Surface 'Surface 1' has been assigned construction 'FloorFndGrndUnfinSlab'.",
-               "Calling ResidentialConstructionsFloors measure with arguments:\ncavity_r -> 13 \ninstall_grade -> 1 \nframing_factor -> 0.13 \njoist_height_in -> 5.5",
-               "Material 'FloorFinStudAndAirFloor' was created.",
-               "Construction 'FloorUnfinUninsUnfin' was created with 2 materials (FloorFinStudAndAirFloor | RoofSheathing).",
-               "Surface 'Surface 20' has been assigned construction 'FloorUnfinUninsUnfin'.",
-               "Construction 'FloorUnfinUninsUnfin Reversed' was created with 2 materials (RoofSheathing | FloorFinStudAndAirFloor).",
-               "Surface 'Surface 6' has been assigned construction 'FloorUnfinUninsUnfin Reversed'.",
-               "Surface 'Surface 21 Reversed' has been assigned construction 'FloorUnfinUninsUnfin'.",
-               "Surface 'Surface 21' has been assigned construction 'FloorUnfinUninsUnfin Reversed'.",
-               "Calling ResidentialConstructionsWindowsSkylights measure with arguments:\nwindow_ufactor -> 0.37 \nwindow_shgc -> 0.3 \nwindow_heat_shade_mult -> 0.7 \nwindow_cool_shade_mult -> 0.7 \nskylight_ufactor -> 0.37 \nskylight_shgc -> 0.3 \nskylight_heat_shade_mult -> 0.7 \nskylight_cool_shade_mult -> 0.7",
-               "Material 'WindowMaterial' was created.",
-               "Construction 'WindowConstruction' was created with 1 material (WindowMaterial).",
-               "SubSurface 'Surface 10 - Window 2' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 10 - Window 1' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 8 - Window 3' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 8 - Window 2' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 13 - Window 1' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 9 - Window 5' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 13 - Window 2' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 8 - Window 1' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 13 - Window 3' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 9 - Window 3' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 9 - Window 1' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 9 - Window 2' has been assigned construction 'WindowConstruction'.",
-               "SubSurface 'Surface 9 - Window 4' has been assigned construction 'WindowConstruction'.",
-               "Construction and interior shades added to 13 window(s).",
-               "Calling ResidentialConstructionsDoors measure with arguments:\nufactor -> 0.2",
-               "Material 'DoorMaterial' was created.",
-               "Construction 'Door' was created with 1 material (DoorMaterial).",
-               "SubSurface 'unit 1 - Surface 13 - Door' has been assigned construction 'Door'.",
-               "Calling ResidentialHotWaterHeaterTank measure with arguments:\nfuel_type -> electric \ntank_volume -> auto \nsetpoint_temp -> 125 \nlocation -> auto \ncapacity -> 4.5 \nenergy_factor -> 0.92 \nrecovery_efficiency -> 0.98 \noffcyc_power -> 0 \noncyc_power -> 0",
-               "A new plant loop for DHW will be added to the model",
-               "Calling ResidentialHotWaterFixtures measure with arguments:\nshower_mult -> 2.0 \nsink_mult -> 2.0 \nbath_mult -> 2.0 \nplant_loop -> auto \nschedule_day_shift -> 3",
-               "Calling ResidentialHotWaterDistribution measure with arguments:\npipe_mat -> pex \ndist_layout -> home run \nspace -> interior \nrecirc_type -> none \ndist_ins -> 0",
-               "Calling ResidentialHVACCentralAirConditionerSingleSpeed measure with arguments:\nseer -> 10.0 \neer -> 8.9 \nshr -> 0.73 \nfan_power_rated -> 0.365 \nfan_power_installed -> 0.5 \ncrankcase_capacity -> 0.0 \ncrankcase_temp -> 55 \neer_capacity_derate_1ton -> 1.0 \neer_capacity_derate_2ton -> 1.0 \neer_capacity_derate_3ton -> 1.0 \neer_capacity_derate_4ton -> 1.0 \neer_capacity_derate_5ton -> 1.0 \ncapacity -> autosize \ndse -> NA",
-               "Added 'res ac clg supply fan' to 'res ac unitary system' of 'res ac asys'",
-               "Added 'res ac cooling coil' to 'res ac unitary system' of 'res ac asys'",
-               "Added 'res ac asys' to 'living zone' of unit 1",
-               "Calling ResidentialHVACFurnace measure with arguments:\nfuel_type -> electric \nafue -> 1.0 \ncapacity -> autosize \nfan_power_installed -> 0.5 \ndse -> NA",
-               "Added 'res fur electric htg supply fan' to 'res fur electric unitary system' of 'res fur electric asys'",
-               "Added 'res fur electric heating coil' to 'res fur electric unitary system' of 'res fur electric asys'",
-               "Added 'res fur electric asys' to 'living zone' of unit 1",
-               "Calling ResidentialHVACHeatingSetpoints measure with arguments:\nweekday_setpoint -> 70 \nweekend_setpoint -> 70 \nweekday_offset_magnitude -> 0 \nweekend_offset_magnitude -> 0 \nweekday_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nweekend_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nuse_auto_season -> false \nseason_start_month -> Jan \nseason_end_month -> Dec",
-               "Created new thermostat living zone temperature setpoint for living zone.",
-               "Set a dummy cooling setpoint schedule for living zone temperature setpoint.",
-               "Set the heating setpoint schedule for living zone temperature setpoint.",
-               "Calling ResidentialHVACCoolingSetpoints measure with arguments:\nweekday_setpoint -> 75 \nweekend_setpoint -> 75 \nweekday_offset_magnitude -> 0 \nweekend_offset_magnitude -> 0 \nweekday_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nweekend_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nuse_auto_season -> false \nseason_start_month -> Jan \nseason_end_month -> Dec",
-               "Found existing thermostat living zone temperature setpoint for living zone.",
-               "Set the cooling setpoint schedule for living zone temperature setpoint.",
-               "Calling ResidentialHVACCeilingFan measure with arguments:\ncoverage -> NA \nspecified_num -> 1 \npower -> 45 \ncontrol -> typical \nuse_benchmark_energy -> true \ncooling_setpoint_offset -> 0 \nmult -> 1 \nweekday_sch -> 0.04, 0.037, 0.037, 0.036, 0.033, 0.036, 0.043, 0.047, 0.034, 0.023, 0.024, 0.025, 0.024, 0.028, 0.031, 0.032, 0.039, 0.053, 0.063, 0.067, 0.071, 0.069, 0.059, 0.05 \nweekend_sch -> 0.04, 0.037, 0.037, 0.036, 0.033, 0.036, 0.043, 0.047, 0.034, 0.023, 0.024, 0.025, 0.024, 0.028, 0.031, 0.032, 0.039, 0.053, 0.063, 0.067, 0.071, 0.069, 0.059, 0.05 \nmonthly_sch -> 1.248, 1.257, 0.993, 0.989, 0.993, 0.827, 0.821, 0.821, 0.827, 0.99, 0.987, 1.248",
-               "Calling ResidentialApplianceRefrigerator measure with arguments:\nrated_annual_energy -> 480.0 \nmult -> 1.0 \nweekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nweekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nmonthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837 \nlocation -> auto",
-               "Calling ResidentialApplianceClothesWasher measure with arguments:\nimef -> 2.07 \nrated_annual_energy -> 123.0 \nannual_cost -> 9.0 \ntest_date -> 2007 \ndrum_volume -> 3.68 \ncold_cycle -> false \nthermostatic_control -> true \ninternal_heater -> false \nfill_sensor -> false \nmult_e -> 1.2 \nmult_hw -> 1.2 \nlocation -> auto \nplant_loop -> auto \nschedule_day_shift -> 3",
-               "Calling ResidentialApplianceClothesDryer measure with arguments:\nfuel_type -> electric \ncef -> 2.70 \nfuel_split -> 1.0 \nmult -> 1.2 \nlocation -> auto",
-               "Calling ResidentialApplianceDishwasher measure with arguments:\nnum_settings -> 12 \nrated_annual_energy -> 290.0 \nhas_internal_heater -> true \ncold_inlet -> false \ncold_use -> 0.0 \ntest_date -> 2007 \nannual_gas_cost -> 23.0 \nmult_e -> 1.2 \nmult_hw -> 1.2 \nlocation -> auto \nplant_loop -> auto \nschedule_day_shift -> 3",
-               "Calling ResidentialApplianceCookingRange measure with arguments:\nfuel_type -> electric \ncooktop_ef -> 0.74 \noven_ef -> 0.11 \nhas_elec_ignition -> true \nmult -> 1.2 \nweekday_sch -> 0.007, 0.007, 0.004, 0.004, 0.007, 0.011, 0.025, 0.042, 0.046, 0.048, 0.042, 0.050, 0.057, 0.046, 0.057, 0.044, 0.092, 0.150, 0.117, 0.060, 0.035, 0.025, 0.016, 0.011 \nweekend_sch -> 0.007, 0.007, 0.004, 0.004, 0.007, 0.011, 0.025, 0.042, 0.046, 0.048, 0.042, 0.050, 0.057, 0.046, 0.057, 0.044, 0.092, 0.150, 0.117, 0.060, 0.035, 0.025, 0.016, 0.011 \nmonthly_sch -> 1.097, 1.097, 0.991, 0.987, 0.991, 0.890, 0.896, 0.896, 0.890, 1.085, 1.085, 1.097 \nlocation -> auto",
-               "Calling ResidentialLighting measure with arguments:\nhw_cfl -> 1 \nhw_led -> 0 \nhw_lfl -> 0 \npg_cfl -> 1 \npg_led -> 0 \npg_lfl -> 0 \nin_eff -> 15 \ncfl_eff -> 55 \nled_eff -> 80 \nlfl_eff -> 88 \noption_type -> Lamp Fractions \nenergy_use_interior -> 900 \nenergy_use_garage -> 100 \nenergy_use_exterior -> 300",
-               "Lighting with 562 kWhs annual energy consumption has been assigned to unit 'unit 1'.",
-               "Lighting with 35 kWhs annual energy consumption has been assigned to the garage(s).",
-               "Lighting with 93 kWhs annual energy consumption has been assigned to the exterior.",
-               "Calling ResidentialMiscPlugLoads measure with arguments:\nmult -> 2.0 \nweekday_sch -> 0.04, 0.037, 0.037, 0.036, 0.033, 0.036, 0.043, 0.047, 0.034, 0.023, 0.024, 0.025, 0.024, 0.028, 0.031, 0.032, 0.039, 0.053, 0.063, 0.067, 0.071, 0.069, 0.059, 0.05 \nweekend_sch -> 0.04, 0.037, 0.037, 0.036, 0.033, 0.036, 0.043, 0.047, 0.034, 0.023, 0.024, 0.025, 0.024, 0.028, 0.031, 0.032, 0.039, 0.053, 0.063, 0.067, 0.071, 0.069, 0.059, 0.05 \nmonthly_sch -> 1.248, 1.257, 0.993, 0.989, 0.993, 0.827, 0.821, 0.821, 0.827, 0.99, 0.987, 1.248 \noption_type -> Multiplier \nenergy_use -> 2000 \nsens_frac -> 0.93 \nlat_frac -> 0.021",
-               "Calling ResidentialMiscLargeUncommonLoads measure with arguments:\nhas_fridge -> true \nfridge_rated_annual_energy -> 1102 \nfridge_mult -> 0.221 \nfridge_weekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfridge_weekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfridge_monthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837 \nfridge_location -> auto \nhas_freezer -> true \nfreezer_rated_annual_energy -> 935 \nfreezer_mult -> 0.342 \nfreezer_weekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfreezer_weekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfreezer_monthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837 \nfreezer_location -> auto \nhas_gas_fireplace -> true \ngas_fireplace_annual_energy -> 60 \ngas_fireplace_mult -> 0.032 \ngas_fireplace_scale_energy -> true \ngas_fireplace_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_fireplace_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_fireplace_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \ngas_fireplace_location -> auto \nhas_gas_grill -> true \ngas_grill_annual_energy -> 30 \ngas_grill_mult -> 0.029 \ngas_grill_scale_energy -> true \ngas_grill_weekday_sch -> 0.004, 0.001, 0.001, 0.002, 0.007, 0.012, 0.029, 0.046, 0.044, 0.041, 0.044, 0.046, 0.042, 0.038, 0.049, 0.059, 0.110, 0.161, 0.115, 0.070, 0.044, 0.019, 0.013, 0.007 \ngas_grill_weekend_sch -> 0.004, 0.001, 0.001, 0.002, 0.007, 0.012, 0.029, 0.046, 0.044, 0.041, 0.044, 0.046, 0.042, 0.038, 0.049, 0.059, 0.110, 0.161, 0.115, 0.070, 0.044, 0.019, 0.013, 0.007 \ngas_grill_monthly_sch -> 1.097, 1.097, 0.991, 0.987, 0.991, 0.890, 0.896, 0.896, 0.890, 1.085, 1.085, 1.097 \nhas_gas_lighting -> true \ngas_lighting_annual_energy -> 19 \ngas_lighting_mult -> 0.012 \ngas_lighting_scale_energy -> true \ngas_lighting_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_lighting_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_lighting_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \nhas_hot_tub_heater_elec -> true \nhas_hot_tub_heater_gas -> true \nhas_hot_tub_pump -> true \nhot_tub_heater_elec_annual_energy -> 1027.3 \nhot_tub_heater_elec_mult -> 0.048 \nhot_tub_heater_gas_annual_energy -> 81 \nhot_tub_heater_gas_mult -> 0.011 \nhot_tub_pump_annual_energy -> 1014.1 \nhot_tub_pump_mult -> 0.059 \nhot_tub_scale_energy -> true \nhot_tub_weekday_sch -> 0.024, 0.029, 0.024, 0.029, 0.047, 0.067, 0.057, 0.024, 0.024, 0.019, 0.015, 0.014, 0.014, 0.014, 0.024, 0.058, 0.126, 0.122, 0.068, 0.061, 0.051, 0.043, 0.024, 0.024 \nhot_tub_weekend_sch -> 0.024, 0.029, 0.024, 0.029, 0.047, 0.067, 0.057, 0.024, 0.024, 0.019, 0.015, 0.014, 0.014, 0.014, 0.024, 0.058, 0.126, 0.122, 0.068, 0.061, 0.051, 0.043, 0.024, 0.024 \nhot_tub_monthly_sch -> 0.921, 0.928, 0.921, 0.915, 0.921, 1.160, 1.158, 1.158, 1.160, 0.921, 0.915, 0.921 \nhas_pool_heater_elec -> true \nhas_pool_heater_gas -> true \nhas_pool_pump -> true \npool_heater_elec_annual_energy -> 2300 \npool_heater_elec_mult -> 0.004 \npool_heater_gas_annual_energy -> 222 \npool_heater_gas_mult -> 0.014 \npool_pump_annual_energy -> 2250 \npool_pump_mult -> 0.075 \npool_scale_energy -> true \npool_weekday_sch -> 0.003, 0.003, 0.003, 0.004, 0.008, 0.015, 0.026, 0.044, 0.084, 0.121, 0.127, 0.121, 0.120, 0.090, 0.075, 0.061, 0.037, 0.023, 0.013, 0.008, 0.004, 0.003, 0.003, 0.003 \npool_weekend_sch -> 0.003, 0.003, 0.003, 0.004, 0.008, 0.015, 0.026, 0.044, 0.084, 0.121, 0.127, 0.121, 0.120, 0.090, 0.075, 0.061, 0.037, 0.023, 0.013, 0.008, 0.004, 0.003, 0.003, 0.003 \npool_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \nhas_well_pump -> true \nwell_pump_annual_energy -> 400 \nwell_pump_mult -> 0.127 \nwell_pump_scale_energy -> true \nwell_pump_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \nwell_pump_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \nwell_pump_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154",
-               "An extra refrigerator with 244 kWhs annual energy consumption has been assigned to space 'garage space'.",
-               "A freezer with 320 kWhs annual energy consumption has been assigned to space 'garage space'.",
-               "A pool heater with 8 kWhs annual energy consumption has been assigned to outside.",
-               "A pool heater with 3 therms annual energy consumption has been assigned to outside.",
-               "A pool pump with 149 kWhs annual energy consumption has been assigned to outside.",
-               "A hot tub heater with 43 kWhs annual energy consumption has been assigned to outside.",
-               "A hot tub heater with 1 therms annual energy consumption has been assigned to outside.",
-               "A hot tub pump with 53 kWhs annual energy consumption has been assigned to outside.",
-               "A well pump with 45 kWhs annual energy consumption has been assigned to outside.",
-               "A gas fireplace with 2 therms annual energy consumption has been assigned to space 'living space'.",
-               "A gas grill with 1 therms annual energy consumption has been assigned to outside.",
-               "Gas lighting with 0 therms annual energy consumption has been assigned to outside.",
-               "Calling ResidentialAirflow measure with arguments:\nunfinished_attic_sla -> 0.00333 \ncrawl_ach -> 0 \nhas_water_heater_flue -> false \nhas_hvac_flue -> false \nclothes_dryer_exhaust -> 100 \nhas_fireplace_chimney -> false \nduct_location -> auto \nduct_total_leakage -> 0.2 \nduct_supply_frac -> 0.6 \nduct_return_frac -> 0.067 \nduct_ah_supply_frac -> 0.067 \nduct_ah_return_frac -> 0.267 \nduct_location_frac -> auto \nduct_num_returns -> auto \nduct_supply_area_mult -> 1 \nduct_return_area_mult -> 1 \nduct_r -> 8 \nliving_ach50 -> 10 \ngarage_ach50 -> 10 \nfinished_basement_ach -> 0 \nunfinished_basement_ach -> 0.1 \npier_beam_ach -> 100 \nshelter_coef -> auto \nterrain -> suburban \nnat_vent_htg_offset -> 1 \nnat_vent_clg_offset -> 1 \nnat_vent_ovlp_offset -> 1 \nnat_vent_htg_season -> true \nnat_vent_clg_season -> true \nnat_vent_ovlp_season -> true \nnat_vent_num_weekdays -> 3 \nnat_vent_num_weekends -> 0 \nnat_vent_frac_windows_open -> 0.33 \nnat_vent_frac_window_area_openable -> 0.2 \nnat_vent_max_oa_hr -> 0.0115 \nnat_vent_max_oa_rh -> 0.7 \nis_existing_home -> true \nmech_vent_type -> none \nmech_vent_infil_credit -> false \nmech_vent_total_efficiency -> 0 \nmech_vent_sensible_efficiency -> 0 \nmech_vent_fan_power -> 0 \nmech_vent_frac_62_2 -> 0 \nmech_vent_ashrae_std -> 2010 \nmech_vent_cfis_open_time -> 20.0 \nmech_vent_cfis_airflow_frac -> 1.0 \nbathroom_exhaust_hour -> 0 \nrange_exhaust_hour -> 18",
-               "Created ducts for res fur electric asys.",
-               "Created ducts for res ac asys.",
-               "Calling ResidentialHVACSizing measure with arguments:\nshow_debug_info -> false",
-               "Found central air conditioner in living zone.",
-               "Found furnace in living zone."
+               "Assigning option '0.13' for parameter 'Geometry Perimeter Footprint Ratio'.",
+               "Assigning option 'CBSA Dallas-Fort Worth-Arlington, TX' for parameter 'AHS Region'.",
+               "Assigning option '3A' for parameter 'ASHRAE IECC Climate Zone 2004'.",
+               "Assigning option 'TX' for parameter 'State'.",
+               "Assigning option 'West South Central' for parameter 'Census Division'.",
+               "Assigning option 'South' for parameter 'Census Region'.",
+               "Assigning option 'ERCOT' for parameter 'ISO RTO Region'.",
+               "Assigning option 'Hot-Humid' for parameter 'Building America Climate Zone'.",
+               "Assigning option 'TX, Dallas County' for parameter 'County'.",
+               "Assigning option 'TX, 02313' for parameter 'PUMA'.",
+               "Calling BuildResidentialHPXML measure with arguments:\nhpxml_path -> /var/simdata/openstudio/run/existing.xml \\nschedules_output_path -> ../schedules.csv \\nweather_dir -> ../../weather \\nweather_station_epw_filename -> USA_TX_Dallas-Fort.Worth.Intl.AP.722590_TMY3.epw \\ngeometry_unit_type -> 5+ unit building \\ngeometry_level -> Bottom \\ngeometry_horizontal_location -> Left \\ngeometry_wall_height -> 8 \\ngeometry_aspect_ratio -> 1.8 \\ngeometry_attic_type -> VentedAttic \\ngeometry_roof_type -> gable \\ngeometry_roof_pitch -> 6:12 \\ngeometry_num_bathrooms -> 1 \\ngeometry_inset_width -> 0 \\ngeometry_inset_depth -> 0 \\ngeometry_inset_position -> Right \\ngeometry_balcony_depth -> 0 \\ngeometry_num_units -> 54 \\ngeometry_unit_multiplier -> 1 \\ngeometry_foundation_type -> SlabOnGrade \\ngeometry_foundation_height -> 0 \\ngeometry_foundation_height_above_grade -> 0 \\ngeometry_num_floors_above_grade -> 3 \\ngeometry_garage_width -> 0 \\ngeometry_garage_depth -> 24 \\ngeometry_garage_protrusion -> 0.5 \\ngeometry_garage_position -> Right \\ngeometry_cfa -> 1220 \\ngeometry_num_bedrooms -> 2 \\ngeometry_corridor_position -> Double-Loaded Interior \\ngeometry_corridor_width -> 10 \\ngeometry_num_occupants -> 2 \\ngeometry_orientation -> 180 \\ngeometry_roof_structure -> truss, cantilever \\ngeometry_eaves_depth -> 2 \\ndoor_area -> 20 \\nwindow_front_wwr -> 0.30 \\nwindow_back_wwr -> 0.30 \\nwindow_left_wwr -> 0.30 \\nwindow_right_wwr -> 0.30 \\nwindow_area_front -> 0 \\nwindow_area_back -> 0 \\nwindow_area_left -> 0 \\nwindow_area_right -> 0 \\nwindow_aspect_ratio -> 1.333 \\nskylight_area_front -> 0 \\nskylight_area_back -> 0 \\nskylight_area_left -> 0 \\nskylight_area_right -> 0 \\noverhangs_front_depth -> 0 \\noverhangs_front_distance_to_top_of_window -> 0 \\noverhangs_back_depth -> 0 \\noverhangs_back_distance_to_top_of_window -> 0 \\noverhangs_left_depth -> 0 \\noverhangs_left_distance_to_top_of_window -> 0 \\noverhangs_right_depth -> 0 \\noverhangs_right_distance_to_top_of_window -> 0 \\nneighbor_front_distance -> 0 \\nneighbor_back_distance -> 0 \\nneighbor_left_distance -> 27 \\nneighbor_right_distance -> 27 \\nneighbor_front_height -> auto \\nneighbor_back_height -> auto \\nneighbor_left_height -> auto \\nneighbor_right_height -> auto \\nceiling_assembly_r -> 0 \\nroof_assembly_r -> 28.4 \\nroof_radiant_barrier -> false \\nroof_solar_absorptance -> 0.85 \\nroof_emittance -> 0.91 \\nslab_perimeter_insulation_r -> 0 \\nslab_perimeter_depth -> 0 \\nslab_under_insulation_r -> 0 \\nslab_under_width -> 0 \\nslab_carpet_fraction -> 0 \\nslab_carpet_r -> 0 \\nfloor_assembly_r -> 0 \\nfoundation_wall_insulation_r -> 0 \\nfoundation_wall_insulation_distance_to_top -> 0 \\nfoundation_wall_insulation_distance_to_bottom -> 0 \\nwall_type -> ConcreteMasonryUnit \\nwall_assembly_r -> 0 \\nwall_solar_absorptance -> 0.7 \\nwall_emittance -> 0.92 \\nwindow_interior_shading_summer -> 0.7 \\nwindow_interior_shading_winter -> 0.7 \\nwindow_ufactor -> 0.49 \\nwindow_shgc -> 0.56 \\nskylight_ufactor -> 0.49 \\nskylight_shgc -> 0.56 \\ndoor_rvalue -> 5 \\nwater_heater_type -> storage water heater \\nwater_heater_fuel_type -> electricity \\nwater_heater_location -> auto \\nwater_heater_tank_volume -> auto \\nwater_heater_heating_capacity -> 4.5 \\nwater_heater_efficiency_type -> EnergyFactor \\nwater_heater_efficiency -> 0.92 \\nwater_heater_recovery_efficiency -> 0.98 \\nwater_heater_standby_loss -> 0 \\nwater_heater_jacket_rvalue -> 0 \\nwater_heater_setpoint_temperature -> 125 \\nwater_fixtures_shower_low_flow -> false \\nwater_fixtures_sink_low_flow -> false \\ndhw_distribution_system_type -> Standard \\ndhw_distribution_standard_piping_length -> auto \\ndhw_distribution_recirc_control_type -> no control \\ndhw_distribution_recirc_piping_length -> 0 \\ndhw_distribution_recirc_branch_piping_length -> 0 \\ndhw_distribution_recirc_pump_power -> 0 \\ndhw_distribution_pipe_r -> 0 \\ndwhr_facilities_connected -> none \\ndwhr_equal_flow -> true \\ndwhr_efficiency -> 0.0 \\nsolar_thermal_system_type -> none \\nsolar_thermal_collector_area -> 40 \\nsolar_thermal_collector_loop_type -> liquid indirect \\nsolar_thermal_collector_type -> single glazing black \\nsolar_thermal_collector_azimuth -> 180 \\nsolar_thermal_collector_tilt -> roofpitch \\nsolar_thermal_collector_rated_optical_efficiency -> 0.77 \\nsolar_thermal_collector_rated_thermal_losses -> 0.793 \\nsolar_thermal_storage_volume -> auto \\nsolar_thermal_solar_fraction -> 0 \\nheat_pump_type -> none \\nheat_pump_heating_efficiency -> 0.78 \\nheat_pump_heating_capacity -> autosize \\nheat_pump_heating_capacity_17F -> autosize \\nheat_pump_fraction_heat_load_served -> 1 \\nheat_pump_cooling_efficiency -> 13.0 \\nheat_pump_cooling_capacity -> autosize \\nheat_pump_fraction_cool_load_served -> 1 \\nheat_pump_backup_fuel -> none \\nheat_pump_backup_heating_efficiency -> 1 \\nheat_pump_backup_heating_capacity -> autosize \\nheat_pump_mini_split_is_ducted -> false \\nheating_system_type -> Furnace \\nheating_system_fuel -> electricity \\nheating_system_heating_efficiency -> 1.0 \\nheating_system_heating_capacity -> autosize \\nheating_system_fraction_heat_load_served -> 1 \\nheating_system_electric_auxiliary_energy -> 0 \\ncooling_system_type -> central air conditioner \\ncooling_system_cooling_efficiency -> 10 \\ncooling_system_cooling_capacity -> autosize \\ncooling_system_fraction_cool_load_served -> 1 \\ncooling_system_evap_cooler_is_ducted -> false \\nsetpoint_heating_temp -> 70 \\nsetpoint_heating_setback_temp -> 70 \\nsetpoint_heating_setback_hours_per_week -> 0 \\nsetpoint_heating_setback_start_hour -> 0 \\nsetpoint_cooling_temp -> 75 \\nsetpoint_cooling_setup_temp -> 75 \\nsetpoint_cooling_setup_hours_per_week -> 0 \\nsetpoint_cooling_setup_start_hour -> 0 \\nceiling_fan_efficiency -> 100 \\nceiling_fan_quantity -> 1 \\nceiling_fan_cooling_setpoint_temp_offset -> 0 \\nrefrigerator_present -> true \\nrefrigerator_location -> auto \\nrefrigerator_rated_annual_kwh -> 434 \\ncooking_range_present -> true \\ncooking_range_fuel_type -> electricity \\ncooking_range_is_induction -> false \\noven_present -> true \\noven_is_convection -> false \\ndishwasher_present -> false \\ndishwasher_efficiency_type -> RatedAnnualkWh \\ndishwasher_efficiency -> 290 \\ndishwasher_place_setting_capacity -> 12 \\nclothes_washer_present -> true \\nclothes_washer_location -> auto \\nclothes_washer_efficiency_type -> IntegratedModifiedEnergyFactor \\nclothes_washer_efficiency -> 2.07 \\nclothes_washer_rated_annual_kwh -> 123 \\nclothes_washer_label_electric_rate -> 0.1218 \\nclothes_washer_label_gas_rate -> 1.065 \\nclothes_washer_label_annual_gas_cost -> 9 \\nclothes_washer_capacity -> 3.68 \\nclothes_dryer_present -> true \\nclothes_dryer_location -> auto \\nclothes_dryer_fuel_type -> electricity \\nclothes_dryer_efficiency_type -> CombinedEnergyFactor \\nclothes_dryer_efficiency -> 2.70 \\nclothes_dryer_control_type -> timer \\nplug_loads_television_annual_kwh -> 0 \\nplug_loads_other_annual_kwh -> 0 \\nplug_loads_other_frac_sensible -> 0 \\nplug_loads_other_frac_latent -> 0 \\nplug_loads_schedule_values -> false \\nplug_loads_weekday_fractions -> 0.035, 0.033, 0.032, 0.031, 0.032, 0.033, 0.037, 0.042, 0.043, 0.043, 0.043, 0.044, 0.045, 0.045, 0.044, 0.046, 0.048, 0.052, 0.053, 0.05, 0.047, 0.045, 0.04, 0.036 \\nplug_loads_weekend_fractions -> 0.035, 0.033, 0.032, 0.031, 0.032, 0.033, 0.037, 0.042, 0.043, 0.043, 0.043, 0.044, 0.045, 0.045, 0.044, 0.046, 0.048, 0.052, 0.053, 0.05, 0.047, 0.045, 0.04, 0.036 \\nplug_loads_monthly_multipliers -> 1.248, 1.257, 0.993, 0.989, 0.993, 0.827, 0.821, 0.821, 0.827, 0.99, 0.987, 1.248 \\nducts_supply_leakage_units -> CFM25 \\nducts_return_leakage_units -> CFM25 \\nducts_supply_leakage_value -> 75 \\nducts_return_leakage_value -> 25 \\nducts_supply_insulation_r -> 8 \\nducts_return_insulation_r -> 8 \\nducts_supply_location -> auto \\nducts_return_location -> auto \\nducts_supply_surface_area -> 150 \\nducts_return_surface_area -> 50 \\nair_leakage_units -> ACH50 \\nair_leakage_value -> 15 \\nair_leakage_shelter_coefficient -> auto \\nwindow_fraction_of_operable_area -> 0.33 \\nmech_vent_fan_type -> none \\nmech_vent_flow_rate -> 110 \\nmech_vent_hours_in_operation -> 24 \\nmech_vent_total_recovery_efficiency_type -> Unadjusted \\nmech_vent_total_recovery_efficiency -> 0 \\nmech_vent_sensible_recovery_efficiency_type -> Unadjusted \\nmech_vent_sensible_recovery_efficiency -> 0 \\nmech_vent_fan_power -> 30 \\nwhole_house_fan_present -> false \\nwhole_house_fan_flow_rate -> 0 \\nwhole_house_fan_power -> 0 \\npv_system_module_type_1 -> none \\npv_system_location_1 -> roof \\npv_system_tracking_1 -> fixed \\npv_system_array_azimuth_1 -> 180 \\npv_system_array_tilt_1 -> roofpitch \\npv_system_max_power_output_1 -> 4000 \\npv_system_inverter_efficiency_1 -> 0.96 \\npv_system_system_losses_fraction_1 -> 0.14 \\npv_system_module_type_2 -> none \\npv_system_location_2 -> roof \\npv_system_tracking_2 -> fixed \\npv_system_array_azimuth_2 -> 180 \\npv_system_array_tilt_2 -> 20 \\npv_system_max_power_output_2 -> 4000 \\npv_system_inverter_efficiency_2 -> 0.96 \\npv_system_system_losses_fraction_2 -> 0.14 \\nsimulation_control_timestep -> 10 \\nsimulation_control_begin_month -> 1 \\nsimulation_control_begin_day_of_month -> 1 \\nsimulation_control_end_month -> 12 \\nsimulation_control_end_day_of_month -> 31",
+               "Added 6 window(s), totaling 62.5 ft^2, to Surface 5.",
+               "Added 6 window(s), totaling 62.5 ft^2, to Surface 3.",
+               "Added 10 window(s), totaling 112.5 ft^2, to Surface 2.",
+               "Added 20.0 ft^2 door.",
+               "/var/simdata/openstudio/run/existing.xml: Validated against HPXML schema.",
+               "/var/simdata/openstudio/run/existing.xml: Validated against HPXML EnergyPlus Use Case.",
+               "Wrote file: /var/simdata/openstudio/run/existing.xml",
+               "Calling HPXMLtoOpenStudio measure with arguments:\nhpxml_path -> /var/simdata/openstudio/run/existing.xml \\nweather_dir -> ../../weather",
+               "EC_adj=1.0"
             ],
-            "step_initial_condition" : "No water heater model currently exists",
+            "step_initial_condition" : "The building started with 0 spaces.",
             "step_result" : "Success",
             "step_values" : [
                {
@@ -337,7 +227,11 @@
                },
                {
                   "name" : "sample_weight",
-                  "value" : 20000000
+                  "value" : 27500000
+               },
+               {
+                  "name" : "hpxml",
+                  "value" : "Standard"
                },
                {
                   "name" : "location_region",
@@ -345,11 +239,11 @@
                },
                {
                   "name" : "location",
-                  "value" : "FL_Orlando.Intl.AP.722050"
+                  "value" : "TX_Dallas-Fort.Worth.Intl.AP.722590"
                },
                {
                   "name" : "location_weather_filename",
-                  "value" : "USA_FL_Orlando.Intl.AP.722050_TMY3.epw"
+                  "value" : "USA_TX_Dallas-Fort.Worth.Intl.AP.722590_TMY3.epw"
                },
                {
                   "name" : "location_weather_year",
@@ -360,36 +254,76 @@
                   "value" : "2000s"
                },
                {
+                  "name" : "vintage_acs",
+                  "value" : "2000-09"
+               },
+               {
                   "name" : "heating_fuel",
                   "value" : "Electricity"
                },
                {
                   "name" : "usage_level",
-                  "value" : "High"
+                  "value" : "Low"
+               },
+               {
+                  "name" : "geometry_building_type_recs",
+                  "value" : "Multi-Family with 5+ Units"
+               },
+               {
+                  "name" : "geometry_building_type_acs",
+                  "value" : "50 or more Unit"
+               },
+               {
+                  "name" : "geometry_building_number_units_mf",
+                  "value" : "54"
+               },
+               {
+                  "name" : "geometry_building_number_units_sfa",
+                  "value" : "None"
+               },
+               {
+                  "name" : "geometry_building_number_units_hl",
+                  "value" : "50 or more Units high"
                },
                {
                   "name" : "geometry_foundation_type",
                   "value" : "Slab"
                },
                {
+                  "name" : "geometry_wall_type",
+                  "value" : "Masonry"
+               },
+               {
                   "name" : "geometry_stories",
-                  "value" : "1"
+                  "value" : "3"
                },
                {
                   "name" : "geometry_garage",
-                  "value" : "2 Car"
+                  "value" : "None"
                },
                {
-                  "name" : "geometry_house_size",
+                  "name" : "geometry_floor_area_bin",
                   "value" : "0-1499"
                },
                {
+                  "name" : "geometry_floor_area",
+                  "value" : "1000-1499"
+               },
+               {
+                  "name" : "bedrooms",
+                  "value" : "2"
+               },
+               {
+                  "name" : "corridor",
+                  "value" : "Double-Loaded Interior"
+               },
+               {
                   "name" : "occupants",
-                  "value" : "Auto"
+                  "value" : "2"
                },
                {
                   "name" : "orientation",
-                  "value" : "West"
+                  "value" : "North"
                },
                {
                   "name" : "eaves",
@@ -401,7 +335,7 @@
                },
                {
                   "name" : "window_areas",
-                  "value" : "F15 B15 L15 R15"
+                  "value" : "F30 B30 L30 R30"
                },
                {
                   "name" : "overhangs",
@@ -409,14 +343,26 @@
                },
                {
                   "name" : "neighbors",
-                  "value" : "Left/Right at 15ft"
+                  "value" : "27"
                },
                {
-                  "name" : "insulation_unfinished_attic",
-                  "value" : "Ceiling R-30, Vented"
+                  "name" : "insulation_ceiling",
+                  "value" : "None"
                },
                {
-                  "name" : "roof_material",
+                  "name" : "insulation_roof",
+                  "value" : "R-30"
+               },
+               {
+                  "name" : "radiant_barrier",
+                  "value" : "None"
+               },
+               {
+                  "name" : "roof_material_unfinished_attic",
+                  "value" : "None"
+               },
+               {
+                  "name" : "roof_material_finished_roof",
                   "value" : "Asphalt Shingles, Medium"
                },
                {
@@ -440,16 +386,16 @@
                   "value" : "None"
                },
                {
-                  "name" : "insulation_interzonal_floor",
-                  "value" : "R-13"
+                  "name" : "insulation_wall",
+                  "value" : "CMU, 6-in Hollow, R-11"
                },
                {
-                  "name" : "insulation_wall",
-                  "value" : "Wood Stud, R-11"
+                  "name" : "interior_shading",
+                  "value" : "Summer = 0.7, Winter = 0.7"
                },
                {
                   "name" : "windows",
-                  "value" : "Low-E, Double, Non-metal, Air, L-Gain"
+                  "value" : "2+ Pane"
                },
                {
                   "name" : "doors",
@@ -461,47 +407,27 @@
                },
                {
                   "name" : "hot_water_fixtures",
-                  "value" : "200%"
+                  "value" : "50% Usage"
                },
                {
                   "name" : "hot_water_distribution",
-                  "value" : "Uninsulated, HomeRun, PEX"
+                  "value" : "Uninsulated, Standard"
                },
                {
                   "name" : "solar_hot_water",
                   "value" : "None"
                },
                {
-                  "name" : "hvac_system_is_combined",
+                  "name" : "hvac_system_is_heat_pump",
                   "value" : "No"
                },
                {
-                  "name" : "hvac_system_combined",
+                  "name" : "hvac_system_heat_pump",
                   "value" : "None"
                },
                {
-                  "name" : "hvac_system_heating_electricity",
+                  "name" : "hvac_system_heating",
                   "value" : "Electric Furnace"
-               },
-               {
-                  "name" : "hvac_system_heating_natural_gas",
-                  "value" : "None"
-               },
-               {
-                  "name" : "hvac_system_heating_propane",
-                  "value" : "None"
-               },
-               {
-                  "name" : "hvac_system_heating_fuel_oil",
-                  "value" : "None"
-               },
-               {
-                  "name" : "hvac_system_heating_other_fuel",
-                  "value" : "None"
-               },
-               {
-                  "name" : "hvac_system_heating_none",
-                  "value" : "None"
                },
                {
                   "name" : "hvac_system_cooling",
@@ -520,6 +446,30 @@
                   "value" : "75F"
                },
                {
+                  "name" : "heating_setpoint_has_offset",
+                  "value" : "No"
+               },
+               {
+                  "name" : "cooling_setpoint_has_offset",
+                  "value" : "No"
+               },
+               {
+                  "name" : "heating_setpoint_offset_magnitude",
+                  "value" : "0F"
+               },
+               {
+                  "name" : "cooling_setpoint_offset_magnitude",
+                  "value" : "0F"
+               },
+               {
+                  "name" : "heating_setpoint_offset_period",
+                  "value" : "None"
+               },
+               {
+                  "name" : "cooling_setpoint_offset_period",
+                  "value" : "None"
+               },
+               {
                   "name" : "ceiling_fan",
                   "value" : "National Average"
                },
@@ -529,63 +479,107 @@
                },
                {
                   "name" : "refrigerator",
-                  "value" : "EF 15.9"
+                  "value" : "EF 17.6"
+               },
+               {
+                  "name" : "refrigeration_schedule",
+                  "value" : "National Average"
                },
                {
                   "name" : "cooking_range",
-                  "value" : "Electric, 120% Usage"
+                  "value" : "Electric, 80% Usage"
+               },
+               {
+                  "name" : "cooking_range_schedule",
+                  "value" : "National Average"
                },
                {
                   "name" : "dishwasher",
-                  "value" : "290 Rated kWh, 120% Usage"
+                  "value" : "None"
+               },
+               {
+                  "name" : "clothes_washer_presence",
+                  "value" : "Yes"
                },
                {
                   "name" : "clothes_washer",
-                  "value" : "EnergyStar, 120% Usage"
+                  "value" : "EnergyStar, 80% Usage"
                },
                {
                   "name" : "clothes_dryer",
-                  "value" : "Electric, 120% Usage"
+                  "value" : "Electric, 80% Usage"
                },
                {
                   "name" : "lighting",
                   "value" : "100% CFL"
                },
                {
+                  "name" : "lighting_interior_use",
+                  "value" : "100% Usage"
+               },
+               {
+                  "name" : "lighting_other_use",
+                  "value" : "100% Usage"
+               },
+               {
+                  "name" : "holiday_lighting",
+                  "value" : "No Exterior Use"
+               },
+               {
                   "name" : "plug_loads",
-                  "value" : "200%"
+                  "value" : "50%"
+               },
+               {
+                  "name" : "plug_loads_schedule",
+                  "value" : "National Average"
+               },
+               {
+                  "name" : "electric_vehicle",
+                  "value" : "None"
                },
                {
                   "name" : "misc_extra_refrigerator",
-                  "value" : "EF 6.9, National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_freezer",
-                  "value" : "EF 12, National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_gas_fireplace",
-                  "value" : "National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_gas_grill",
-                  "value" : "National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_gas_lighting",
-                  "value" : "National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_hot_tub_spa",
-                  "value" : "National Average"
+                  "value" : "None"
                },
                {
                   "name" : "misc_pool",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_heater",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_pump",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_schedule",
                   "value" : "National Average"
                },
                {
                   "name" : "misc_well_pump",
-                  "value" : "National Average"
+                  "value" : "None"
                },
                {
                   "name" : "ducts",
@@ -593,7 +587,7 @@
                },
                {
                   "name" : "infiltration",
-                  "value" : "10 ACH50"
+                  "value" : "15 ACH50"
                },
                {
                   "name" : "natural_ventilation",
@@ -605,11 +599,11 @@
                },
                {
                   "name" : "bathroom_spot_vent_hour",
-                  "value" : "Hour0"
+                  "value" : "Hour2"
                },
                {
                   "name" : "range_spot_vent_hour",
-                  "value" : "Hour18"
+                  "value" : "Hour16"
                },
                {
                   "name" : "pv",
@@ -620,309 +614,355 @@
                   "value" : "Day3"
                },
                {
-                  "name" : "weight",
-                  "value" : "20000000.0"
-               }
-            ],
-            "step_warnings" : []
-         }
-      },
-
-      {
-         "arguments" : {},
-         "measure_dir_name" : "SimulationOutputReport",
-         "result" : {
-            "completed_at" : "20190417T173049Z",
-            "measure_class_name" : "SimulationOutputReport",
-            "measure_display_name" : "Simulation Output Report",
-            "measure_name" : "simulation_output_report",
-            "measure_taxonomy" : "Reporting.QAQC",
-            "measure_type" : "ReportingMeasure",
-            "measure_uid" : "fc337100-8634-404e-8966-01243d292a79",
-            "measure_version_id" : "acca8501-9cd2-4d39-a391-8a45e3bb79ba",
-            "measure_version_modified" : "20190322T150803Z",
-            "measure_xml_checksum" : "2C8A3EEF",
-            "started_at" : "20190417T173025Z",
-            "stderr" : "",
-            "stdout" : "",
-            "step_errors" : [],
-            "step_files" : [],
-            "step_info" : [
-               "Registering 52.8 for total_site_energy_mbtu.",
-               "Registering 52.8 for net_site_energy_mbtu.",
-               "Registering 15294.46 for total_site_electricity_kwh.",
-               "Registering 15294.46 for net_site_electricity_kwh.",
-               "Registering 55.56 for electricity_heating_kwh.",
-               "Registering 3288.89 for electricity_cooling_kwh.",
-               "Registering 597.22 for electricity_interior_lighting_kwh.",
-               "Registering 91.67 for electricity_exterior_lighting_kwh.",
-               "Registering 7016.67 for electricity_interior_equipment_kwh.",
-               "Registering 2.78 for electricity_fans_heating_kwh.",
-               "Registering 766.67 for electricity_fans_cooling_kwh.",
-               "Registering 0.0 for electricity_pumps_heating_kwh.",
-               "Registering 0.0 for electricity_pumps_cooling_kwh.",
-               "Registering 3475.0 for electricity_water_systems_kwh.",
-               "Registering 0.0 for electricity_pv_kwh.",
-               "Registering 6.16 for total_site_natural_gas_therm.",
-               "Registering 0.0 for natural_gas_heating_therm.",
-               "Registering 6.16 for natural_gas_interior_equipment_therm.",
-               "Registering 0.0 for natural_gas_water_systems_therm.",
-               "Registering 0.0 for total_site_fuel_oil_mbtu.",
-               "Registering 0.0 for fuel_oil_heating_mbtu.",
-               "Registering 0.0 for fuel_oil_interior_equipment_mbtu.",
-               "Registering 0.0 for fuel_oil_water_systems_mbtu.",
-               "Registering 0.0 for total_site_propane_mbtu.",
-               "Registering 0.0 for propane_heating_mbtu.",
-               "Registering 0.0 for propane_interior_equipment_mbtu.",
-               "Registering 0.0 for propane_water_systems_mbtu.",
-               "Registering 0.0 for hours_heating_setpoint_not_met.",
-               "Registering 3.5 for hours_cooling_setpoint_not_met.",
-               "Registering 8406.76 for hvac_cooling_capacity_w.",
-               "Registering 3616.39 for hvac_heating_capacity_w.",
-               "Registering 0.0 for hvac_heating_supp_capacity_w.",
-               "Registering 20000000.0 for weight.",
-               "Registering  for upgrade_name.",
-               "Registering (blank) for upgrade_cost_usd."
-            ],
-            "step_result" : "Success",
-            "step_values" : [
-               {
-                  "name" : "total_site_energy_mbtu",
-                  "value" : 52.802891772654903
+                  "name" : "geometry_perimeter_footprint_ratio",
+                  "value" : "0.13"
                },
                {
-                  "name" : "net_site_energy_mbtu",
-                  "value" : 52.802891772654903
+                  "name" : "ahs_region",
+                  "value" : "CBSA Dallas-Fort Worth-Arlington, TX"
                },
                {
-                  "name" : "total_site_electricity_kwh",
-                  "value" : 15294.456680000001
+                  "name" : "ashrae_iecc_climate_zone_2004",
+                  "value" : "3A"
                },
                {
-                  "name" : "net_site_electricity_kwh",
-                  "value" : 15294.456680000001
+                  "name" : "state",
+                  "value" : "TX"
                },
                {
-                  "name" : "electricity_heating_kwh",
-                  "value" : 55.555600000000005
+                  "name" : "census_division",
+                  "value" : "West South Central"
                },
                {
-                  "name" : "electricity_cooling_kwh",
-                  "value" : 3288.8915200000001
+                  "name" : "census_region",
+                  "value" : "South"
                },
                {
-                  "name" : "electricity_interior_lighting_kwh",
-                  "value" : 597.22270000000003
+                  "name" : "iso_rto_region",
+                  "value" : "ERCOT"
                },
                {
-                  "name" : "electricity_exterior_lighting_kwh",
-                  "value" : 91.666740000000004
+                  "name" : "building_america_climate_zone",
+                  "value" : "Hot-Humid"
                },
                {
-                  "name" : "electricity_interior_equipment_kwh",
-                  "value" : 7016.6722800000007
+                  "name" : "county",
+                  "value" : "TX, Dallas County"
                },
                {
-                  "name" : "electricity_fans_heating_kwh",
-                  "value" : 2.7777800000000004
+                  "name" : "puma",
+                  "value" : "TX, 02313"
                },
                {
-                  "name" : "electricity_fans_cooling_kwh",
-                  "value" : 766.66728000000001
+                  "name" : "location_city",
+                  "value" : "Dallas Fort Worth Intl Ap"
                },
                {
-                  "name" : "electricity_pumps_heating_kwh",
-                  "value" : 0
+                  "name" : "location_state",
+                  "value" : "TX"
                },
                {
-                  "name" : "electricity_pumps_cooling_kwh",
-                  "value" : 0
+                  "name" : "location_latitude",
+                  "value" : "32.9"
                },
                {
-                  "name" : "electricity_water_systems_kwh",
-                  "value" : 3475.0027800000003
+                  "name" : "location_longitude",
+                  "value" : "-97.02"
                },
                {
-                  "name" : "electricity_pv_kwh",
-                  "value" : 0
-               },
-               {
-                  "name" : "total_site_natural_gas_therm",
-                  "value" : 6.1622795000000004
-               },
-               {
-                  "name" : "natural_gas_heating_therm",
-                  "value" : 0
-               },
-               {
-                  "name" : "natural_gas_interior_equipment_therm",
-                  "value" : 6.1622795000000004
-               },
-               {
-                  "name" : "natural_gas_water_systems_therm",
-                  "value" : 0
-               },
-               {
-                  "name" : "total_site_fuel_oil_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "fuel_oil_heating_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "fuel_oil_interior_equipment_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "fuel_oil_water_systems_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "total_site_propane_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "propane_heating_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "propane_interior_equipment_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "propane_water_systems_mbtu",
-                  "value" : 0
-               },
-               {
-                  "name" : "hours_heating_setpoint_not_met",
-                  "value" : 0
-               },
-               {
-                  "name" : "hours_cooling_setpoint_not_met",
-                  "value" : 3.5
-               },
-               {
-                  "name" : "hvac_cooling_capacity_w",
-                  "value" : 8406.7585212117701
-               },
-               {
-                  "name" : "hvac_heating_capacity_w",
-                  "value" : 3616.3924093997098
-               },
-               {
-                  "name" : "hvac_heating_supp_capacity_w",
-                  "value" : 0
+                  "name" : "climate_zone_ba",
+                  "value" : "Hot-Humid"
                },
                {
                   "name" : "weight",
-                  "value" : 20000000
-               },
-               {
-                  "name" : "upgrade_name",
-                  "value" : ""
-               },
-               {
-                  "name" : "upgrade_cost_usd",
-                  "value" : ""
+                  "value" : "27500000.0"
                }
             ],
-            "step_warnings" : []
+            "step_warnings" : [
+               "Could not load nokogiri, no HPXML validation performed.",
+               "Could not load nokogiri, no HPXML validation performed.",
+               "Assembly R-value (0.0) for 'Surface_2:0' below minimum expected value. Construction R-value increased to 2.17.",
+               "Assembly R-value (0.0) for 'Surface_2:90' below minimum expected value. Construction R-value increased to 2.17.",
+               "Assembly R-value (0.0) for 'Surface_2:180' below minimum expected value. Construction R-value increased to 2.17.",
+               "Assembly R-value (0.0) for 'Surface_2:270' below minimum expected value. Construction R-value increased to 2.17."
+            ]
          }
       },
       {
          "arguments" : {
-            "include_enduse_subcategories" : true,
-            "reporting_frequency" : "Hourly"
+            "include_timeseries_component_loads" : false,
+            "include_timeseries_end_use_consumptions" : true,
+            "include_timeseries_fuel_consumptions" : false,
+            "include_timeseries_total_loads" : false,
+            "include_timeseries_zone_temperatures" : false,
+            "timeseries_frequency" : "hourly"
          },
-         "measure_dir_name" : "TimeseriesCSVExport",
+         "measure_dir_name" : "SimulationOutputReport",
          "result" : {
-            "completed_at" : "20190417T173114Z",
-            "measure_class_name" : "TimeseriesCSVExport",
-            "measure_display_name" : "Timeseries CSV Export",
-            "measure_name" : "timeseries_csv_export",
+            "completed_at" : "20200407T154334Z",
+            "measure_class_name" : "SimulationOutputReport",
+            "measure_display_name" : "HPXML Simulation Output Report",
+            "measure_name" : "simulation_output_report",
             "measure_taxonomy" : "Reporting.QAQC",
             "measure_type" : "ReportingMeasure",
-            "measure_uid" : "2a3442c1-944d-4e91-9e11-11e0cf368c64",
-            "measure_version_id" : "36672e16-e698-41dd-b13b-fcbe3b44cbd8",
-            "measure_version_modified" : "20190409T145403Z",
-            "measure_xml_checksum" : "15BF4E57",
-            "started_at" : "20190417T173050Z",
+            "measure_uid" : "df9d170c-c21a-4130-866d-0d46b06073fd",
+            "measure_version_id" : "d127a9b1-3d7a-494a-a009-fc89ab8ba319",
+            "measure_version_modified" : "20200403T151237Z",
+            "measure_xml_checksum" : "9BF1E6AC",
+            "started_at" : "20200407T154324Z",
             "stderr" : "",
             "stdout" : "",
             "step_errors" : [],
             "step_files" : [],
             "step_info" : [
-               "Exporting total_site_electricity_kwh.",
-               "Exporting net_site_electricity_kwh.",
-               "Exporting electricity_heating_kwh.",
-               "Exporting electricity_central_system_heating_kwh.",
-               "Exporting electricity_cooling_kwh.",
-               "Exporting electricity_central_system_cooling_kwh.",
-               "Exporting electricity_interior_lighting_kwh.",
-               "Exporting electricity_exterior_lighting_kwh.",
-               "Exporting electricity_interior_equipment_kwh.",
-               "Exporting electricity_fans_heating_kwh.",
-               "Exporting electricity_fans_cooling_kwh.",
-               "Exporting electricity_pumps_heating_kwh.",
-               "Exporting electricity_central_system_pumps_heating_kwh.",
-               "Exporting electricity_pumps_cooling_kwh.",
-               "Exporting electricity_central_system_pumps_cooling_kwh.",
-               "Exporting electricity_water_systems_kwh.",
-               "Exporting electricity_pv_kwh.",
-               "Exporting total_site_natural_gas_therm.",
-               "Exporting natural_gas_heating_therm.",
-               "Exporting natural_gas_central_system_heating_therm.",
-               "Exporting natural_gas_interior_equipment_therm.",
-               "Exporting natural_gas_water_systems_therm.",
-               "Exporting total_site_fuel_oil_mbtu.",
-               "Exporting fuel_oil_heating_mbtu.",
-               "Exporting fuel_oil_central_system_heating_mbtu.",
-               "Exporting fuel_oil_interior_equipment_mbtu.",
-               "Exporting fuel_oil_water_systems_mbtu.",
-               "Exporting total_site_propane_mbtu.",
-               "Exporting propane_heating_mbtu.",
-               "Exporting propane_central_system_heating_mbtu.",
-               "Exporting propane_interior_equipment_mbtu.",
-               "Exporting propane_water_systems_mbtu.",
-               "Exporting total_site_energy_mbtu.",
-               "Exporting net_site_energy_mbtu.",
-               "Exporting electricity_refrigerator_kwh.",
-               "Exporting electricity_clothes_washer_kwh.",
-               "Exporting electricity_clothes_dryer_kwh.",
-               "Exporting natural_gas_clothes_dryer_therm.",
-               "Exporting propane_clothes_dryer_mbtu.",
-               "Exporting electricity_cooking_range_kwh.",
-               "Exporting natural_gas_cooking_range_therm.",
-               "Exporting propane_cooking_range_mbtu.",
-               "Exporting electricity_dishwasher_kwh.",
-               "Exporting electricity_plug_loads_kwh.",
-               "Exporting electricity_house_fan_kwh.",
-               "Exporting electricity_range_fan_kwh.",
-               "Exporting electricity_bath_fan_kwh.",
-               "Exporting electricity_ceiling_fan_kwh.",
-               "Exporting electricity_extra_refrigerator_kwh.",
-               "Exporting electricity_freezer_kwh.",
-               "Exporting electricity_pool_heater_kwh.",
-               "Exporting natural_gas_pool_heater_therm.",
-               "Exporting electricity_pool_pump_kwh.",
-               "Exporting electricity_hot_tub_heater_kwh.",
-               "Exporting natural_gas_hot_tub_heater_therm.",
-               "Exporting electricity_hot_tub_pump_kwh.",
-               "Exporting natural_gas_grill_therm.",
-               "Exporting natural_gas_lighting_therm.",
-               "Exporting natural_gas_fireplace_therm.",
-               "Exporting electricity_well_pump_kwh."
+               "Wrote annual output results to /var/simdata/openstudio/run/results_annual.csv.",
+               "Registering 42.37 for Electricity: Total MBtu.",
+               "Registering 0.0 for Natural Gas: Total MBtu.",
+               "Registering 0.0 for Fuel Oil: Total MBtu.",
+               "Registering 0.0 for Propane: Total MBtu.",
+               "Registering 0.0 for Wood: Total MBtu.",
+               "Registering 0.0 for Wood Pellets: Total MBtu.",
+               "Registering 18.49 for Electricity: Heating MBtu.",
+               "Registering 0.43 for Electricity: Heating Fans/Pumps MBtu.",
+               "Registering 8.92 for Electricity: Cooling MBtu.",
+               "Registering 1.59 for Electricity: Cooling Fans/Pumps MBtu.",
+               "Registering 5.59 for Electricity: Hot Water MBtu.",
+               "Registering 0.0 for Electricity: Hot Water Recirc Pump MBtu.",
+               "Registering 0.0 for Electricity: Hot Water Solar Thermal Pump MBtu.",
+               "Registering 2.47 for Electricity: Lighting Interior MBtu.",
+               "Registering 0.0 for Electricity: Lighting Garage MBtu.",
+               "Registering 0.23 for Electricity: Lighting Exterior MBtu.",
+               "Registering 0.0 for Electricity: Mech Vent MBtu.",
+               "Registering 0.0 for Electricity: Whole House Fan MBtu.",
+               "Registering 1.48 for Electricity: Refrigerator MBtu.",
+               "Registering 0.0 for Electricity: Dishwasher MBtu.",
+               "Registering 0.08 for Electricity: Clothes Washer MBtu.",
+               "Registering 1.47 for Electricity: Clothes Dryer MBtu.",
+               "Registering 1.4 for Electricity: Range/Oven MBtu.",
+               "Registering 0.23 for Electricity: Ceiling Fan MBtu.",
+               "Registering 0.0 for Electricity: Television MBtu.",
+               "Registering 0.0 for Electricity: Plug Loads MBtu.",
+               "Registering 0.0 for Electricity: PV MBtu.",
+               "Registering 0.0 for Natural Gas: Heating MBtu.",
+               "Registering 0.0 for Natural Gas: Hot Water MBtu.",
+               "Registering 0.0 for Natural Gas: Clothes Dryer MBtu.",
+               "Registering 0.0 for Natural Gas: Range/Oven MBtu.",
+               "Registering 0.0 for Fuel Oil: Heating MBtu.",
+               "Registering 0.0 for Fuel Oil: Hot Water MBtu.",
+               "Registering 0.0 for Fuel Oil: Clothes Dryer MBtu.",
+               "Registering 0.0 for Fuel Oil: Range/Oven MBtu.",
+               "Registering 0.0 for Propane: Heating MBtu.",
+               "Registering 0.0 for Propane: Hot Water MBtu.",
+               "Registering 0.0 for Propane: Clothes Dryer MBtu.",
+               "Registering 0.0 for Propane: Range/Oven MBtu.",
+               "Registering 0.0 for Wood: Heating MBtu.",
+               "Registering 0.0 for Wood: Hot Water MBtu.",
+               "Registering 0.0 for Wood: Clothes Dryer MBtu.",
+               "Registering 0.0 for Wood: Range/Oven MBtu.",
+               "Registering 0.0 for Wood Pellets: Heating MBtu.",
+               "Wrote timeseries output results to /var/simdata/openstudio/run/results_timeseries.csv."
             ],
             "step_result" : "Success",
             "step_values" : [
                {
-                  "name" : "reporting_frequency",
-                  "value" : "Hourly"
+                  "name" : "timeseries_frequency",
+                  "value" : "hourly"
                },
                {
-                  "name" : "include_enduse_subcategories",
+                  "name" : "include_timeseries_zone_temperatures",
+                  "value" : false
+               },
+               {
+                  "name" : "include_timeseries_fuel_consumptions",
+                  "value" : false
+               },
+               {
+                  "name" : "include_timeseries_end_use_consumptions",
                   "value" : true
+               },
+               {
+                  "name" : "include_timeseries_total_loads",
+                  "value" : false
+               },
+               {
+                  "name" : "include_timeseries_component_loads",
+                  "value" : false
+               },
+               {
+                  "name" : "electricity_total_m_btu",
+                  "value" : 42.369999999999997
+               },
+               {
+                  "name" : "natural_gas_total_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_total_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_total_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_total_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_pellets_total_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_heating_m_btu",
+                  "value" : 18.489999999999998
+               },
+               {
+                  "name" : "electricity_heating_fans_pumps_m_btu",
+                  "value" : 0.42999999999999999
+               },
+               {
+                  "name" : "electricity_cooling_m_btu",
+                  "value" : 8.9199999999999999
+               },
+               {
+                  "name" : "electricity_cooling_fans_pumps_m_btu",
+                  "value" : 1.5900000000000001
+               },
+               {
+                  "name" : "electricity_hot_water_m_btu",
+                  "value" : 5.5899999999999999
+               },
+               {
+                  "name" : "electricity_hot_water_recirc_pump_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_hot_water_solar_thermal_pump_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_lighting_interior_m_btu",
+                  "value" : 2.4700000000000002
+               },
+               {
+                  "name" : "electricity_lighting_garage_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_lighting_exterior_m_btu",
+                  "value" : 0.23000000000000001
+               },
+               {
+                  "name" : "electricity_mech_vent_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_whole_house_fan_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_refrigerator_m_btu",
+                  "value" : 1.48
+               },
+               {
+                  "name" : "electricity_dishwasher_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_clothes_washer_m_btu",
+                  "value" : 0.080000000000000002
+               },
+               {
+                  "name" : "electricity_clothes_dryer_m_btu",
+                  "value" : 1.47
+               },
+               {
+                  "name" : "electricity_range_oven_m_btu",
+                  "value" : 1.3999999999999999
+               },
+               {
+                  "name" : "electricity_ceiling_fan_m_btu",
+                  "value" : 0.23000000000000001
+               },
+               {
+                  "name" : "electricity_television_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_plug_loads_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_pv_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_heating_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_hot_water_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_clothes_dryer_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_range_oven_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_heating_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_hot_water_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_clothes_dryer_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_range_oven_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_heating_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_hot_water_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_clothes_dryer_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_range_oven_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_heating_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_hot_water_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_clothes_dryer_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_range_oven_m_btu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_pellets_heating_m_btu",
+                  "value" : 0
                }
             ],
             "step_warnings" : []
@@ -932,22 +972,22 @@
          "arguments" : {},
          "measure_dir_name" : "ServerDirectoryCleanup",
          "result" : {
-            "completed_at" : "20190417T173114Z",
+            "completed_at" : "20200407T154335Z",
             "measure_class_name" : "ServerDirectoryCleanup",
             "measure_display_name" : "Server Directory Cleanup",
             "measure_name" : "server_directory_cleanup",
             "measure_taxonomy" : "Calibration",
             "measure_type" : "ReportingMeasure",
             "measure_uid" : "ec7d04ad-0b7b-495b-825a-e1b6d28d1d3f",
-            "measure_version_id" : "9d0335bf-8823-468f-971e-3a53fe35248d",
-            "measure_version_modified" : "20171215T033256Z",
+            "measure_version_id" : "5136b80e-6294-409a-a11e-b1ff42157ae5",
+            "measure_version_modified" : "20200406T190911Z",
             "measure_xml_checksum" : "5F1EDF75",
-            "started_at" : "20190417T173114Z",
+            "started_at" : "20200407T154334Z",
             "stderr" : "",
             "stdout" : "",
             "step_errors" : [],
             "step_files" : [],
-            "step_final_condition" : "The following files were in the local run directory following the execution of this measure: ., .., 000_ResidentialSimulationControls, 001_BuildExistingModel, 002_BuildingCharacteristicsReport, 002_ServerDirectoryCleanup, 002_SimulationOutputReport, 002_TimeseriesCSVExport, 003_SimulationOutputReport, 004_TimeseriesCSVExport, 005_ServerDirectoryCleanup, enduse_timeseries.csv, eplusout.end, eplusout.err, eplusout.mtd, eplusout.mtr, eplusout.rdd, eplustbl.htm, in.epw, in.idf, measure_attributes.json, measures.osw, run.log, sqlite.err, started.job, stdout-energyplus, stdout-expandobject.",
+            "step_final_condition" : "The following files were in the local run directory following the execution of this measure: ., .., 000_ResidentialSimulationControls, 001_BuildExistingModel, 002_ServerDirectoryCleanup, 002_SimulationOutputReport, 003_ServerDirectoryCleanup, eplusout.end, eplusout.err, eplusout.mtd, eplusout.mtr, eplusout.rdd, eplustbl.htm, existing.xml, in.epw, in.idf, measures.osw, measure_attributes.json, results_annual.csv, results_timeseries.csv, run.log, sqlite.err, started.job, stdout-energyplus, stdout-expandobject.",
             "step_info" : [
                "Deleted ./../eplusout.sql from the run directory.",
                "Deleted ./../eplusout.audit from the run directory.",
@@ -959,13 +999,12 @@
                "Deleted ./../eplusout.eso from the run directory.",
                "Deleted ./../pre-preprocess.idf from the run directory."
             ],
-            "step_initial_condition" : "The following files were in the local run directory prior to the execution of this measure: ., .., 000_ResidentialSimulationControls, 001_BuildExistingModel, 002_BuildingCharacteristicsReport, 002_ServerDirectoryCleanup, 002_SimulationOutputReport, 002_TimeseriesCSVExport, 003_SimulationOutputReport, 004_TimeseriesCSVExport, 005_ServerDirectoryCleanup, enduse_timeseries.csv, eplusout.audit, eplusout.bnd, eplusout.eio, eplusout.end, eplusout.err, eplusout.eso, eplusout.mdd, eplusout.mtd, eplusout.mtr, eplusout.rdd, eplusout.shd, eplusout.sql, eplustbl.htm, in.epw, in.idf, in.osm, measure_attributes.json, measures.osw, pre-preprocess.idf, run.log, sqlite.err, started.job, stdout-energyplus, stdout-expandobject.",
+            "step_initial_condition" : "The following files were in the local run directory prior to the execution of this measure: ., .., 000_ResidentialSimulationControls, 001_BuildExistingModel, 002_ServerDirectoryCleanup, 002_SimulationOutputReport, 003_ServerDirectoryCleanup, eplusout.audit, eplusout.bnd, eplusout.eio, eplusout.end, eplusout.err, eplusout.eso, eplusout.mdd, eplusout.mtd, eplusout.mtr, eplusout.rdd, eplusout.shd, eplusout.sql, eplustbl.htm, existing.xml, in.epw, in.idf, in.osm, measures.osw, measure_attributes.json, pre-preprocess.idf, results_annual.csv, results_timeseries.csv, run.log, sqlite.err, started.job, stdout-energyplus, stdout-expandobject.",
             "step_result" : "Success",
             "step_values" : [],
             "step_warnings" : []
          }
       }
    ],
-   "updated_at" : "20190417T173117Z",
-   "weather_file" : "weather/Placeholder.epw"
+   "updated_at" : "20200407T154335Z"
 }

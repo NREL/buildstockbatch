@@ -2,29 +2,35 @@
 [openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
 [openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
 [openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.energyplus.ForwardTranslator] <1> Cannot find DaylightingControl for Object of type 'OS:ShadingControl' and named 'WindowShadingControl 1'
+[15:39:44.938637 WARN] No valid weather file defined in either the osm or osw.
+[15:41:24.132740 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:41:30.973807 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:41:30.973856 WARN] Assembly R-value (0.0) for 'Surface_27:45' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973872 WARN] Assembly R-value (0.0) for 'Surface_27:135' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973885 WARN] Assembly R-value (0.0) for 'Surface_27:225' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973898 WARN] Assembly R-value (0.0) for 'Surface_27:315' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973910 WARN] Assembly R-value (0.0) for 'Surface_24:45' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973922 WARN] Assembly R-value (0.0) for 'Surface_24:135' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973935 WARN] Assembly R-value (0.0) for 'Surface_24:225' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973947 WARN] Assembly R-value (0.0) for 'Surface_24:315' below minimum expected value. Construction R-value increased to 2.26.
+[15:41:30.973960 WARN] Assembly R-value (0.0) for 'Surface_10:45' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:30.973972 WARN] Assembly R-value (0.0) for 'Surface_10:135' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:30.973984 WARN] Assembly R-value (0.0) for 'Surface_10:225' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:30.973996 WARN] Assembly R-value (0.0) for 'Surface_10:315' below minimum expected value. Construction R-value increased to 2.17.
+[15:41:30.974008 WARN] Assembly R-value (0.0) for 'Surface_11' below minimum expected value. Construction R-value increased to 2.51.
+[15:43:26.616432 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:43:34.037906 WARN] The model contains existing objects and is being reset.
+[15:43:34.037979 WARN] Could not load nokogiri, no HPXML validation performed.
+[15:43:34.038001 WARN] Assembly R-value (0.0) for 'Surface_27:45' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038017 WARN] Assembly R-value (0.0) for 'Surface_27:135' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038032 WARN] Assembly R-value (0.0) for 'Surface_27:225' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038046 WARN] Assembly R-value (0.0) for 'Surface_27:315' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038060 WARN] Assembly R-value (0.0) for 'Surface_23:45' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038074 WARN] Assembly R-value (0.0) for 'Surface_23:135' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038092 WARN] Assembly R-value (0.0) for 'Surface_23:225' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038148 WARN] Assembly R-value (0.0) for 'Surface_23:315' below minimum expected value. Construction R-value increased to 2.26.
+[15:43:34.038165 WARN] Assembly R-value (0.0) for 'Surface_10:45' below minimum expected value. Construction R-value increased to 2.17.
+[15:43:34.038181 WARN] Assembly R-value (0.0) for 'Surface_10:135' below minimum expected value. Construction R-value increased to 2.17.
+[15:43:34.038196 WARN] Assembly R-value (0.0) for 'Surface_10:225' below minimum expected value. Construction R-value increased to 2.17.
+[15:43:34.038211 WARN] Assembly R-value (0.0) for 'Surface_10:315' below minimum expected value. Construction R-value increased to 2.17.
+[15:43:34.038226 WARN] Assembly R-value (0.0) for 'Surface_11' below minimum expected value. Construction R-value increased to 2.51.
