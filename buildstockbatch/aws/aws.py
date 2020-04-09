@@ -14,6 +14,7 @@ from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
+import csv
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import itertools
@@ -2006,8 +2007,18 @@ class AwsBatch(DockerBatchBase):
         logger.debug('Getting weather files')
         weather_dir = sim_dir / 'weather'
         os.makedirs(weather_dir)
-        df = pd.read_csv(str(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv'), index_col=0)
-        epws_to_download = df.loc[[x[0] for x in jobs_d['batch']], 'Location Weather Filename'].unique().tolist()
+        building_ids = [x[0] for x in jobs_d['batch']]
+        epws_to_download = set()
+        with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            loc_col = 'Location Weather Filename'
+            if loc_col not in csv_reader.fieldnames:
+                loc_col = 'Location'
+            for row in csv_reader:
+                if int(row['Building']) in building_ids:
+                    epws_to_download.add(row[loc_col])
+        if loc_col == 'Location':
+            epws_to_download = map('USA_{}.epw'.format, epws_to_download)
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))
