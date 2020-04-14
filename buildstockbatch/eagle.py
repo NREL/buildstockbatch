@@ -34,7 +34,7 @@ import traceback
 import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
+from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
 from . import postprocessing
 
 logger = logging.getLogger(__name__)
@@ -124,8 +124,8 @@ class EagleBatch(BuildStockBatchBase):
     @property
     def singularity_image_url(self):
         return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=self.OS_VERSION,
-                    sha=self.OS_SHA
+                    ver=self.os_version,
+                    sha=self.os_sha
                 )
 
     @property
@@ -152,8 +152,8 @@ class EagleBatch(BuildStockBatchBase):
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
-                logger.debug(f'Downloading singularity image: {self.singularity_image_url()}')
-                r = requests.get(self.singularity_image_url(), stream=True)
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url}')
+                r = requests.get(self.singularity_image_url, stream=True)
                 if r.status_code != requests.codes.ok:
                     logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
                     r.raise_for_status()

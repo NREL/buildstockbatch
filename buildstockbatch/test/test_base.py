@@ -137,7 +137,8 @@ def test_provide_buildstock_csv(basic_residential_project_file):
         project_filename, results_dir = basic_residential_project_file({
             'baseline': {
                 'n_buildings_represented': 80000000,
-                'buildstock_csv': buildstock_csv
+                'sampling_algorithm': 'precomputed',
+                'precomputed_sample': buildstock_csv
             }
         })
         sampler = MagicMock()
