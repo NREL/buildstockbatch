@@ -276,6 +276,8 @@ the Eagle supercomputer.
     *  ``time``: Maximum time in minutes to allocate postprocessing job
     *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into
 
+.. _aws-config:
+
 AWS Configuration
 ~~~~~~~~~~~~~~~~~
 
@@ -314,8 +316,14 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
     * ``master_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
     * ``slave_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. Increase this for a large dataset to get faster results. Default: 2.
+    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+      Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
+*  ``job_environment``: Specifies the computing requirements for each simulation.
+
+    * ``vcpus``: Number of CPUs needed. default: 1.
+    * ``memory``: Amount of RAM memory needed for each simulation in MiB. default 1024. For large multifamily buildings
+      this works better if set to 2048.
 
 
 .. _instance type: https://aws.amazon.com/ec2/instance-types/
@@ -356,19 +364,20 @@ keys, consult your AWS administrator to get them set up.
 Postprocessing Configuration Options
 ....................................
 
+.. warning::
+
+   The ``region_name`` and ``s3`` info here are **ignored** when running ``buildstock_aws``.
+   The configuration is defined in :ref:`aws-config`.
+
 The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
-
-    *  ``aggregate_timeseries``: true or false. Flag to enable or disable aggregating timeseries accross all the buildings.
-       The aggregated timeseries is generated as:
-       aggregated_timeseries = Sum_over_all_buildings(time_series * sample_weight / units_represented)
 
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
 
-        *  ``region_name``: The name of the aws region to use for database creation and other services
+        *  ``region_name``: The name of the aws region to use for database creation and other services.
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
 
             * ``bucket``: The s3 bucket into which the postprocessed data is to be uploaded to
@@ -379,8 +388,8 @@ The configuration options for postprocessing and AWS upload are:
 
             *  ``glue_service_role``: The data in s3 is catalogued using Amazon Glue data crawler. An IAM role must be
                present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
-               name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default". Consult
-               your AWS administrator for help.
+               name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default".
+               For help, consult the `AWS documentation for Glue Service Roles <https://docs.aws.amazon.com/glue/latest/dg/create-an-iam-role.html>`_.
             *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
             *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
                before aborting it.

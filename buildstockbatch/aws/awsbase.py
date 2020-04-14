@@ -177,9 +177,9 @@ class AwsJobBase():
 
         # EMR
         emr_config = aws_config.get('emr', {})
-        self.emr_master_instance_type = emr_config.get('master_instance_type', 'm5.xlarge')
+        self.emr_master_instance_type = emr_config.get('master_instance_type', 'm5.4xlarge')
         self.emr_slave_instance_type = emr_config.get('slave_instance_type', 'r5.4xlarge')
-        self.emr_slave_instance_count = emr_config.get('slave_instance_count', 2)
+        self.emr_slave_instance_count = emr_config.get('slave_instance_count', 4)
         self.emr_dask_worker_vcores = emr_config.get('dask_worker_vcores', 2)
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
@@ -198,7 +198,7 @@ class AwsJobBase():
 
         # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
-        self.batch_compute_environment_ami = 'ami-0a859713f8259be72'
+        self.batch_compute_environment_ami = 'ami-0184013939261b626'
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
         self.batch_service_role_name = f"batch_service_role_{self.job_identifier}"
         self.batch_instance_role_name = f"batch_instance_role_{self.job_identifier}"

@@ -9,3 +9,4 @@ venv/*
 *.zip
 .pytest_cache
 *.pyc
+.python-version

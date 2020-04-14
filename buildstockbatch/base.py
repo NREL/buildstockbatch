@@ -26,18 +26,22 @@ import yaml
 import yamale
 import zipfile
 import csv
-from collections import defaultdict
+from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
-from .postprocessing import combine_results, upload_results, create_athena_tables, write_dataframe_as_parquet
+from buildstockbatch import postprocessing
 
 logger = logging.getLogger(__name__)
 
 
 class SimulationExists(Exception):
-    pass
+
+    def __init__(self, msg, sim_id, sim_dir):
+        super().__init__(msg)
+        self.sim_id = sim_id
+        self.sim_dir = sim_dir
 
 
 class ValidationError(Exception):
@@ -80,9 +84,6 @@ class BuildStockBatchBase(object):
             return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
 
     def _get_weather_files(self):
-        local_weather_dir = os.path.join(self.project_dir, 'weather')
-        for filename in os.listdir(local_weather_dir):
-            shutil.copy(os.path.join(local_weather_dir, filename), self.weather_dir)
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
             weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
@@ -216,29 +217,45 @@ class BuildStockBatchBase(object):
 
         # Check to see if the simulation is done already and skip it if so.
         sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
-        if os.path.exists(sim_dir):
+        if os.path.exists(sim_dir) and not overwrite_existing:
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
-                raise SimulationExists('{} exists and finished successfully'.format(sim_id))
+                raise SimulationExists('{} exists and finished successfully'.format(sim_id), sim_id, sim_dir)
             elif os.path.exists(os.path.join(sim_dir, 'run', 'failed.job')):
-                raise SimulationExists('{} exists and failed'.format(sim_id))
+                raise SimulationExists('{} exists and failed'.format(sim_id), sim_id, sim_dir)
             else:
                 shutil.rmtree(sim_dir)
 
         # Create the simulation directory
-        os.makedirs(sim_dir)
+        os.makedirs(sim_dir, exist_ok=overwrite_existing)
 
         return sim_id, sim_dir
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir):
+    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
+        """Clean up the output directory for a single simulation.
 
-        fs = LocalFileSystem()
+        :param sim_dir: simulation directory
+        :type sim_dir: str
+        :param dest_fs: filesystem destination of timeseries parquet file
+        :type dest_fs: fsspec filesystem
+        :param simout_ts_dir: simulation_output/timeseries directory to deposit timeseries parquet file
+        :type simout_ts_dir: str
+        :param upgrade_id: upgrade number for the simulation 0 for baseline, etc.
+        :type upgrade_id: int
+        :param building_id: building id from buildstock.csv
+        :type building_id: int
+        """
 
         # Convert the timeseries data to parquet
+        # and copy it to the results directory
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=[0])
-            write_dataframe_as_parquet(tsdf, fs, os.path.splitext(timeseries_filepath)[0] + '.parquet')
+            postprocessing.write_dataframe_as_parquet(
+                tsdf,
+                dest_fs,
+                f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
+            )
 
         # Remove files already in data_point.zip
         zipfilename = os.path.join(sim_dir, 'run', 'data_point.zip')
@@ -263,7 +280,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
-        # assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_options_lookup(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -305,6 +322,10 @@ class BuildStockBatchBase(object):
             if cfg.get('downselect', {'resample': False}).get('resample', True):
                 raise ValidationError("Downselect with resampling cannot be used when using buildstock_csv. \n"
                                       "Please set resample: False in downselect, or do not use buildstock_csv.")
+
+        if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
+            logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
+
         return True
 
     @staticmethod
@@ -441,16 +462,18 @@ class BuildStockBatchBase(object):
                             value = choice.find('./value')
                             value = value.text if value is not None else ''
                             valid_multipliers.add(value)
-
+                invalid_multipliers = Counter()
                 for upgrade_count, upgrade in enumerate(cfg['upgrades']):
-                    upgrade_name = upgrade.get('upgrade_name', '') + f' (Upgrade Number: {upgrade_count})'
                     for option_count, option in enumerate(upgrade['options']):
-                        option_name = option.get('option', '') + f' (Option Number: {option_count})'
                         for cost_indx, cost_entry in enumerate(option.get('costs', [])):
                             if cost_entry['multiplier'] not in valid_multipliers:
-                                error_msgs += f"* Invalid multiplier '{cost_entry['multiplier']}' specified "\
-                                              f"in option {option_name} in upgrade {upgrade_name}. The list of valid "\
-                                              f"multipliers are {valid_multipliers}.\n"
+                                invalid_multipliers[cost_entry['multiplier']] += 1
+
+                if invalid_multipliers:
+                    error_msgs += "* The following multipliers values are invalid: \n"
+                    for multiplier, count in invalid_multipliers.items():
+                        error_msgs += f"    '{multiplier}' - Used {count} times \n"
+                    error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
 
         if warning_msgs:
             logger.warning(warning_msgs)
@@ -464,7 +487,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_options_lookup(project_file):
         """
-        Validates that the parameter|options specified in the project yaml file is avaliable in the options_lookup.tsv
+        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
         """
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
@@ -488,6 +511,10 @@ class BuildStockBatchBase(object):
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
 
+        invalid_option_spec_counter = Counter()
+        invalid_param_counter = Counter()
+        invalid_option_counter_dict = defaultdict(Counter)
+
         def get_errors(source_str, option_str):
             """
             Gives multiline descriptive error message if the option_str is invalid. Returns '' otherwise
@@ -498,15 +525,16 @@ class BuildStockBatchBase(object):
                      if not returns error message, close matches, and specifies where the error occurred (source_str)
             """
             if '||' in option_str and '&&' in option_str:
-                return f"* Option specification '{option_str}' has both || and &&, which is not supported. " \
-                    f"{source_str}\n"
+                invalid_option_spec_counter[(option_str, "has both || and && (not supported)")] += 1
+                return ""
 
             if '||' in option_str or '&&' in option_str:
                 splitter = '||' if '||' in option_str else '&&'
                 errors = ''
                 broken_options = option_str.split(splitter)
                 if broken_options[-1] == '':
-                    return f"* Option spec '{option_str}' has a trailing '{splitter}'. {source_str}\n"
+                    invalid_option_spec_counter[(option_str, f"has trailing 'splitter'")] += 1
+                    return ""
                 for broken_option_str in broken_options:
                     new_source_str = source_str + f" in composite option '{option_str}'"
                     errors += get_errors(new_source_str, broken_option_str)
@@ -518,25 +546,20 @@ class BuildStockBatchBase(object):
             try:
                 parameter_name, option_name = option_str.split('|')
             except ValueError:
-                return f"* Option specification '{option_str}' has too many or too few '|' (exactly 1 required)." \
-                    f" {source_str}\n"
+                invalid_option_spec_counter[(option_str, "has has too many or too few '|' (exactly 1 required).")] += 1
+                return ""
 
             if parameter_name not in param_option_dict:
-                error_str = f"* Parameter name '{parameter_name}' does not exist in options_lookup. \n"
                 close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(), 1)
-                if close_match:
-                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
-                error_str += f"{source_str}\n"
-                return error_str
+                close_match = close_match[0] if close_match else ""
+                invalid_param_counter[(parameter_name, close_match)] += 1
+                return ""
 
             if not option_name or option_name not in param_option_dict[parameter_name]:
-                error_str = f"* Option name '{option_name}' does not exist in options_lookup " \
-                    f"for parameter '{parameter_name}'. \n"
                 close_match = difflib.get_close_matches(option_name, list(param_option_dict[parameter_name]), 1)
-                if close_match:
-                    error_str += f"Maybe you meant to type '{close_match[0]}'. \n"
-                error_str += f"{source_str}\n"
-                return error_str
+                close_match = close_match[0] if close_match else ""
+                invalid_option_counter_dict[parameter_name][(option_name, close_match)] += 1
+                return ""
 
             return ''
 
@@ -591,7 +614,31 @@ class BuildStockBatchBase(object):
             error_message += get_errors(source_str, option_str)
 
         if error_message:
-            error_message = "Following option/parameter name(s) in the yaml file is(are) invalid. \n" + error_message
+            error_message = "Following option/parameter entries have problem:\n" + error_message + "\n"
+
+        if invalid_option_spec_counter:
+            error_message += "* Following option/parameter entries have problem:\n"
+            for (invalid_entry, error), count in invalid_option_spec_counter.items():
+                error_message += f"  '{invalid_entry}' {error} - used '{count}' times\n"
+
+        if invalid_param_counter:
+            error_message += "* Following parameters do not exist in options_lookup.tsv\n"
+            for (param, close_match), count in invalid_param_counter.items():
+                error_message += f"  '{param}' - used '{count}' times."
+                if close_match:
+                    error_message += f" Maybe you meant to use '{close_match}'.\n"
+                else:
+                    error_message += "\n"
+
+        if invalid_option_counter_dict:
+            "* Following options do not exist in options_lookup.tsv\n"
+            for param, options_counter in invalid_option_counter_dict.items():
+                for (option, close_match), count in options_counter.items():
+                    error_message += f"For param '{param}', invalid option '{option}' - used {count} times."
+                    if close_match:
+                        error_message += f" Maybe you meant to use '{close_match}'.\n"
+                    else:
+                        error_message += "\n"
 
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
@@ -693,23 +740,14 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        if self.cfg.get('timeseries_csv_export', {}):
-            skip_timeseries = False
-        else:
-            skip_timeseries = True
-
-        aggregate_ts = self.cfg.get('postprocessing', {}).get('aggregate_timeseries', False)
-
-        reporting_measures = self.cfg.get('reporting_measures', [])
+        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
 
         fs = LocalFileSystem()
-
         if not skip_combine:
-            combine_results(fs, self.results_dir, self.cfg, skip_timeseries=skip_timeseries,
-                            aggregate_timeseries=aggregate_ts, reporting_measures=reporting_measures)
+            postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = upload_results(aws_conf, self.output_dir, self.results_dir)
+            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
-                create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
+                postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)

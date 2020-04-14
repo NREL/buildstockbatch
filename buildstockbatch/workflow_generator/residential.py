@@ -66,15 +66,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
-            'seed_file': 'seeds/EmptySeedModel.osm',
-            'weather_file': 'weather/Placeholder.epw'
         }
 
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
-        sim_output_args = {
-            'include_enduse_subcategories': False
-        }
+        sim_output_args = {}
         sim_output_args.update(self.cfg.get('simulation_output', {}))
 
         osw['steps'].extend([
