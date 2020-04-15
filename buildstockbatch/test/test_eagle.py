@@ -6,7 +6,6 @@ import pytest
 import requests
 import shutil
 import tarfile
-import tempfile
 from unittest.mock import patch
 import yaml
 
