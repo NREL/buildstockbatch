@@ -40,7 +40,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
         :param output_path: Path the output csv file should occupy
         :return: Absolute path to the output buildstock.csv file
         """
-        sample_number = self.cfg['baseline'].get('n_datapoints', 350000)
+        sample_number = self.cfg['baseline'].get('n_datapoints', None)
         if isinstance(n_datapoints, int):
             sample_number = n_datapoints
         logging.debug('Loading samples from the project directory')
@@ -48,14 +48,22 @@ class PrecomputedBaseSampler(BuildStockSampler):
         if not sample_filename:
             sample_filename = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
         if not os.path.isfile(sample_filename):
-            raise RuntimeError('Unable to locate precomputed sampling file at `{}`'.format(sample_filename))
+            raise FileNotFoundError('Unable to locate precomputed sampling file at `{}`'.format(sample_filename))
         sample_df = pd.read_csv(sample_filename)
-        if sample_df.shape[0] != sample_number:
-            raise RuntimeError(
-                'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be equal '
-                'to the number of rows in the buildstock.csv file. Remove or comment out baseline->n_datapoints from '
-                'your project file.'
-            )
+        if sample_number:
+            if sample_df.shape[0] != sample_number:
+                raise RuntimeError(
+                    f'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be '
+                    f'equal to the number of rows in the buildstock.csv file. Remove or comment out baseline->'
+                    f'n_datapoints from your project file or set it equal to `{sample_df.shape[0]}`.'
+                )
+            else:
+                logger.warning(
+                    f'n_datapoints not specified in either the sampler invocation or the yaml file - using the number '
+                    f'of entries in the precomputed CSV, `{sample_df.shape[0]}` by default. To suppress this warning '
+                    f'message either specify n_datapoints in the run_sampling function invocation or in the baseline '
+                    f'section of the yaml.'
+                )
         if os.path.abspath(sample_filename) == os.path.abspath(output_path):
             return os.path.abspath(output_path)
         else:
@@ -103,7 +111,7 @@ class PrecomputedSingularitySampler(PrecomputedBaseSampler):
             if self.cfg['baseline'].get('precomputed_sample', False):
                 buildstock_path = self.cfg['baseline']['precomputed_sample']
                 if not os.path.isfile(buildstock_path):
-                    raise RuntimeError('Cannot find buildstock file {}'.format(buildstock_path))
+                    raise FileNotFoundError('Unable to locate precomputed sampling file {}'.format(buildstock_path))
                 shutil.copy2(buildstock_path, self.output_dir)
                 shutil.move(os.path.join(self.output_dir, os.path.basename(buildstock_path)), csv_path)
                 shutil.copy2(csv_path, os.path.join(self.output_dir, 'housing_characteristics', 'buildstock.csv'))

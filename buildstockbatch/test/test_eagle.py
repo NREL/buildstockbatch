@@ -1,12 +1,18 @@
 import json
 import os
+import pandas as pd
 import pathlib
+import pytest
 import requests
 import shutil
 import tarfile
+import tempfile
 from unittest.mock import patch
+import yaml
 
 from buildstockbatch.eagle import user_cli, EagleBatch
+
+here = os.path.dirname(os.path.abspath(__file__))
 
 
 @patch('buildstockbatch.eagle.subprocess')
@@ -84,6 +90,54 @@ def test_singularity_image_download_url(basic_residential_project_file):
         url = EagleBatch(project_filename).singularity_image_url
         r = requests.head(url)
         assert r.status_code == requests.codes.ok
+
+
+def test_provide_buildstock_csv(basic_residential_project_file):
+    buildstock_csv = os.path.join(here, 'buildstock.csv')
+    df = pd.read_csv(buildstock_csv)
+    project_filename, results_dir = basic_residential_project_file({
+        'baseline': {
+            'n_datapoints': 10,
+            'n_buildings_represented': 80000000,
+            'sampling_algorithm': 'precomputed',
+            'precomputed_sample': buildstock_csv
+        }
+    })
+    with patch.object(EagleBatch, 'weather_dir', None), \
+            patch.object(EagleBatch, 'results_dir', results_dir):
+        bsb = EagleBatch(project_filename)
+        sampling_output_csv = bsb.run_sampling()
+        print(f'sampling_output_csv is `{sampling_output_csv}`')
+        assert(sampling_output_csv == os.path.join(results_dir, 'buildstock.csv'))
+        df2 = pd.read_csv(sampling_output_csv)
+        assert(df2.shape == df.shape)
+
+    # Test n_datapoints do not match
+    with open(project_filename, 'r') as f:
+        cfg = yaml.safe_load(f)
+    cfg['baseline']['n_datapoints'] = 100
+    with open(project_filename, 'w') as f:
+        yaml.dump(cfg, f)
+
+    with patch.object(EagleBatch, 'weather_dir', None), \
+            patch.object(EagleBatch, 'results_dir', results_dir):
+        with pytest.raises(RuntimeError) as ex:
+            EagleBatch(project_filename).run_sampling()
+        assert('from your project file or set it equal to `10`.' in str(ex.value))
+
+    # Test file missing
+    with open(project_filename, 'r') as f:
+        cfg = yaml.safe_load(f)
+    del cfg['baseline']['n_datapoints']
+    cfg['baseline']['precomputed_sample'] = os.path.join(here, 'non_existant_file.csv')
+    with open(project_filename, 'w') as f:
+        yaml.dump(cfg, f)
+
+    with patch.object(EagleBatch, 'weather_dir', None), \
+            patch.object(EagleBatch, 'results_dir', results_dir):
+        with pytest.raises(FileNotFoundError) as ex:
+            EagleBatch(project_filename).run_sampling()
+        assert('Unable to locate precomputed sampling file' in str(ex.value))
 
 
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_measures_and_arguments')

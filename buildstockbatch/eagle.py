@@ -65,8 +65,16 @@ class EagleBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
-
-        if self.stock_type == 'residential':
+        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
+        if sampling_algorithm == 'precomputed':
+            logger.info('calling precomputed sampler')
+            self.sampler = PrecomputedSingularitySampler(
+                self.output_dir,
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'residential':
             self.sampler = ResidentialSingularitySampler(
                 self.singularity_image,
                 self.output_dir,
@@ -78,14 +86,6 @@ class EagleBatch(BuildStockBatchBase):
             sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':
                 self.sampler = CommercialSobolSingularitySampler(
-                    self.output_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            elif sampling_algorithm == 'precomputed':
-                logger.info('calling precomputed sampler')
-                self.sampler = PrecomputedSingularitySampler(
                     self.output_dir,
                     self.cfg,
                     self.buildstock_dir,

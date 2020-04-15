@@ -22,6 +22,7 @@ def basic_residential_project_file():
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'simulation_output'),
             os.path.join(output_directory, 'simulation_output')
         )
+        os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
 
         def _basic_residential_project_file(update_args={}):
             cfg = {

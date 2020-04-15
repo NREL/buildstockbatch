@@ -275,7 +275,7 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_misc_constraints(project_file))
-        assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
@@ -318,10 +318,10 @@ class BuildStockBatchBase(object):
     def validate_misc_constraints(project_file):
         # validate other miscellaneous constraints
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        if 'buildstock_csv' in cfg['baseline']:
+        if 'precomputed_sample' in cfg['baseline']:
             if cfg.get('downselect', {'resample': False}).get('resample', True):
-                raise ValidationError("Downselect with resampling cannot be used when using buildstock_csv. \n"
-                                      "Please set resample: False in downselect, or do not use buildstock_csv.")
+                raise ValidationError("Downselect with resampling cannot be used when using precomputed buildstock_csv."
+                                      "\nPlease set resample: False in downselect or use a different sampler.")
 
         if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
             logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
@@ -329,17 +329,19 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
-    def validate_xor_schema_keys(project_file):
+    def validate_xor_nor_schema_keys(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
         if int(major) >= 0:
             if int(minor) >= 0:
+                # xor
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
                     raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
-                if ('n_datapoints' in cfg['baseline'].keys()) is \
-                   ('buildstock_csv' in cfg['baseline'].keys()):
-                    raise ValidationError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+                # nor
+                if ('n_datapoints' not in cfg['baseline'].keys()) and \
+                   ('precomputed_sample' not in cfg['baseline'].keys()):
+                    raise ValidationError('Neither n_datapoints nor precomputed_sample found in yaml baseline key')
         return True
 
     @staticmethod

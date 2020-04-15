@@ -6,7 +6,7 @@ weather_files_path: /shared-projects/buildstock/weather/project_resstock_nationa
 schema_version: 0.1
 baseline:
   n_buildings_represented: 30000
-  buildstock_csv: mybuildstock.csv
+  precomputed_sample: mybuildstock.csv
 
 downselect:
   resample: False

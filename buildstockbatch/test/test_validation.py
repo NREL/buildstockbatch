@@ -77,7 +77,7 @@ def test_xor_violations_fail(project_file):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
         with pytest.raises(ValidationError):
-            BuildStockBatchBase.validate_xor_schema_keys(project_file)
+            BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
 @pytest.mark.parametrize("project_file,expected", [

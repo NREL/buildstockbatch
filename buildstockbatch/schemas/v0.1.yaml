@@ -59,7 +59,6 @@ sim-spec:
   n_buildings_represented: int(required=False)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
-  buildstock_csv: str(required=False)
   skip_sims: bool(required=False)
   measures_to_ignore: list(str(), required=False)
   sampling_algorithm: str(required=False)
