@@ -452,7 +452,7 @@ class EagleBatch(BuildStockBatchBase):
             for subdir in ('parquet', 'results_csvs'):
                 subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
                 if subdirpath.exists():
-                    raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')
+                    raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')  # noqa E501
 
         # Move old output logs and config to make way for new ones
         for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
