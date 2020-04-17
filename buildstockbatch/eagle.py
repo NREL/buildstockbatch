@@ -12,6 +12,7 @@ This class contains the object & methods that allow for usage of the library wit
 
 import argparse
 from dask.distributed import Client, LocalCluster
+import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import itertools
@@ -446,18 +447,22 @@ class EagleBatch(BuildStockBatchBase):
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
 
-        # Clear out some files that cause problems if we're rerunning this.
-
+        # Throw an error if the files already exist.
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
                 subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
                 if subdirpath.exists():
-                    shutil.rmtree(subdirpath)
+                    raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')
 
+        # Move old output logs and config to make way for new ones
         for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
             filepath = pathlib.Path(self.output_dir, filename)
             if filepath.exists():
-                os.remove(filepath)
+                last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
+                shutil.move(
+                    filepath,
+                    filepath.parent / f'{filepath.stem}_{last_mod_date:%Y%m%d%H%M}{filepath.suffix}'
+                )
 
         env = {}
         env.update(os.environ)

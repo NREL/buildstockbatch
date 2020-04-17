@@ -1480,6 +1480,7 @@ aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
 if 'athena' in aws_conf:
     create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
 
+postprocessing.remove_intermediate_files(fs, results_s3_loc)
 '''
 
         bsb_post_bash = f'''#!/bin/bash
