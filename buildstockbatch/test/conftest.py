@@ -13,7 +13,7 @@ def basic_residential_project_file():
         buildstock_directory = os.path.join(test_directory, 'openstudio_buildstock')
         shutil.copytree(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
-            os.path.join(buildstock_directory)
+            buildstock_directory
         )
         project_directory = 'project_resstock_national'
         os.makedirs(os.path.join(buildstock_directory, project_directory))
@@ -31,7 +31,7 @@ def basic_residential_project_file():
                 'output_directory': output_directory,
                 'weather_files_url': 'https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip',
                 'baseline': {
-                    'n_datapoints': 10,
+                    'n_datapoints': 8,
                     'n_buildings_represented': 80000000
                 },
                 'simulation_output': {
