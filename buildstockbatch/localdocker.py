@@ -93,8 +93,8 @@ class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        logger.debug(f'Pulling docker image: {self.docker_image()}')
-        self.docker_client.images.pull(self.docker_image())
+        logger.debug(f'Pulling docker image: {self.docker_image}')
+        self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
