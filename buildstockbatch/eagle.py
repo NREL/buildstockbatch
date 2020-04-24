@@ -341,6 +341,7 @@ class EagleBatch(BuildStockBatchBase):
             # Copy other necessary stuff into the simulation directory
             dirs_to_mount = [
                 os.path.join(cls.local_buildstock_dir, 'measures'),
+                os.path.join(cls.local_buildstock_dir, 'seeds'),
                 cls.local_weather_dir,
             ]
 
