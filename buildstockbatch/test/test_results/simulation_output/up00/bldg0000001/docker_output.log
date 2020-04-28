@@ -1,9 +1,0 @@
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step
-[15:39:48.536265 WARN] No valid weather file defined in either the osm or osw.
-[15:41:23.420127 WARN] Could not load nokogiri, no HPXML validation performed.
-[15:41:29.034076 WARN] Could not load nokogiri, no HPXML validation performed.
-[15:41:29.034125 WARN] Assembly R-value (0.0) for 'Surface_3:0' below minimum expected value. Construction R-value increased to 2.17.
-[15:41:29.034142 WARN] Assembly R-value (0.0) for 'Surface_3:90' below minimum expected value. Construction R-value increased to 2.17.
-[15:41:29.034155 WARN] Assembly R-value (0.0) for 'Surface_3:180' below minimum expected value. Construction R-value increased to 2.17.
-[15:41:29.034168 WARN] Assembly R-value (0.0) for 'Surface_3:270' below minimum expected value. Construction R-value increased to 2.17.

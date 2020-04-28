@@ -5,7 +5,7 @@ Local (Docker)
 ~~~~~~~~~~~~~~
 
 Running the simulations locally uses Docker. Docker needs to be configured to use all
-(or most) of the CPUs on your machine. To do so, click on the Docker icon up by the clock. It
+(or most) of the CPUs on your machine. To do so, click on the Docker icon by the clock. It
 looks like a little whale with boxes on its back. Select "Preferences..." and "Advanced".
 Slide the CPUs available to Docker to the number of concurrent simulations you want to run
 (probably all of them).
@@ -17,6 +17,7 @@ Running a project file is straightforward. Call the ``buildstock_docker`` comman
 
 .. warning::
 
+    In general, you should omit the ``-j`` argument, which will use all the cpus you made available to docker.
     Setting the ``-j`` flag for a number greater than the number of CPUs you made available in Docker
     will cause the simulations to run *slower* as the concurrent simulations will compete for CPUs.
 
@@ -94,6 +95,8 @@ file, something like this:
       batch_array_size: 10000
       # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
       notifications_email: your_email@somewhere.com
+
+See :ref:`aws-config` for details.
 
 Cleaning up after yourself
 ..........................

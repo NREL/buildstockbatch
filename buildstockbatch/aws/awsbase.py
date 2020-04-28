@@ -177,9 +177,9 @@ class AwsJobBase():
 
         # EMR
         emr_config = aws_config.get('emr', {})
-        self.emr_master_instance_type = emr_config.get('master_instance_type', 'm5.xlarge')
+        self.emr_master_instance_type = emr_config.get('master_instance_type', 'm5.4xlarge')
         self.emr_slave_instance_type = emr_config.get('slave_instance_type', 'r5.4xlarge')
-        self.emr_slave_instance_count = emr_config.get('slave_instance_count', 2)
+        self.emr_slave_instance_count = emr_config.get('slave_instance_count', 4)
         self.emr_dask_worker_vcores = emr_config.get('dask_worker_vcores', 2)
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
