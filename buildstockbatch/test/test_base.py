@@ -79,16 +79,16 @@ def test_combine_files_flexible(basic_residential_project_file):
     test_path = os.path.join(results_dir, 'results_csvs')
 
     test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
+        sort_values('buildingunitid').reset_index().drop(columns=['index'])
     reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
+        sort_values('buildingunitid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
     pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
 
     test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
+        sort_values('buildingunitid').reset_index().drop(columns=['index'])
     reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
+        sort_values('buildingunitid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
     pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
 
@@ -98,16 +98,16 @@ def test_combine_files_flexible(basic_residential_project_file):
 
     # results parquet
     test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+        rename(columns=simplify_columns).sort_values('buildingunitid').reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+        rename(columns=simplify_columns).sort_values('buildingunitid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+        rename(columns=simplify_columns).sort_values('buildingunitid').reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
+        rename(columns=simplify_columns).sort_values('buildingunitid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
