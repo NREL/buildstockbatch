@@ -50,8 +50,8 @@ class ValidationError(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '2.9.1'
-    OS_SHA = '3472e8b799'
+    OS_VERSION = '3.0.0'
+    # OS_SHA = '1c9617fa4e' # FIXME: not included in singularity image filename anymore?
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /

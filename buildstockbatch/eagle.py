@@ -116,16 +116,14 @@ class EagleBatch(BuildStockBatchBase):
 
     @classmethod
     def singularity_image_url(cls):
-        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=cls.OS_VERSION,
-                    sha=cls.OS_SHA
+        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}-Singularity.simg'.format(
+                    ver=cls.OS_VERSION
                 )
 
     @property
     def singularity_image(self):
-        sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-            ver=self.OS_VERSION,
-            sha=self.OS_SHA
+        sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}-Singularity.simg'.format(
+            ver=self.OS_VERSION
         ))
         if os.path.isfile(sys_image):
             return sys_image
