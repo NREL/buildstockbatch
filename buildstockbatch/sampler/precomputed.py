@@ -138,7 +138,7 @@ class PrecomputedDockerSampler(PrecomputedBaseSampler):
             if self.cfg['baseline'].get('precomputed_sample', False):
                 buildstock_path = self.cfg['baseline']['precomputed_sample']
                 if not os.path.isfile(buildstock_path):
-                    raise RuntimeError('Cannot find buildstock file {}'.format(buildstock_path))
+                    raise FileNotFoundError('Unable to locate precomputed sampling file {}'.format(buildstock_path))
                 housing_chars_dir = os.path.join(self.project_dir, 'housing_characteristics')
                 housing_chars_buildstock_path = os.path.join(housing_chars_dir, os.path.basename(buildstock_path))
                 # Copy the arbitrarily named buildstock file into the housing_characteristics directory

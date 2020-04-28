@@ -44,3 +44,5 @@ timeseries_csv_export:
 
 reporting_measures:
   - ReportingMeasure2
+
+schema_version: 0.2

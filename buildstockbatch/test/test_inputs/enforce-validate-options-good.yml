@@ -22,3 +22,4 @@ upgrades:
 downselect:
   resample: False
   logic: Vintage|2000s
+schema_version: 0.2

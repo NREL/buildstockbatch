@@ -47,8 +47,16 @@ class DockerBatchBase(BuildStockBatchBase):
             except:  # noqa: E722 (allow bare except in this case because error is weird non-class Windows API error)
                 logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
                 raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
-
-        if self.stock_type == 'residential':
+        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
+        if sampling_algorithm == 'precomputed':
+            logger.info('calling precomputed sampler')
+            self.sampler = PrecomputedDockerSampler(
+                self.output_dir,
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'residential':
             self.sampler = ResidentialDockerSampler(
                 self.docker_image,
                 self.cfg,
@@ -60,14 +68,6 @@ class DockerBatchBase(BuildStockBatchBase):
             if sampling_algorithm == 'sobol':
                 self.sampler = CommercialSobolDockerSampler(
                     self.project_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            elif sampling_algorithm == 'precomputed':
-                logger.info('calling precomputed sampler')
-                self.sampler = PrecomputedDockerSampler(
-                    self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
                     self.project_dir
@@ -100,7 +100,7 @@ class LocalDockerBatch(DockerBatchBase):
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
-            os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'))
+            os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
 
     @staticmethod
     def validate_project(project_file):

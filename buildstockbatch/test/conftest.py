@@ -23,6 +23,7 @@ def basic_residential_project_file():
             os.path.join(output_directory, 'simulation_output')
         )
         os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
+        os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
 
         def _basic_residential_project_file(update_args={}):
             cfg = {
@@ -47,7 +48,8 @@ def basic_residential_project_file():
                         'time': 20
                     },
                     'account': 'testaccount',
-                }
+                },
+                'schema_version': 0.2
             }
             cfg.update(update_args)
             project_filename = os.path.join(test_directory, 'project.yml')
