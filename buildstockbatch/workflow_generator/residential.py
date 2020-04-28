@@ -75,6 +75,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': False,
+            'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': False,
             'include_timeseries_component_loads': False
         }
