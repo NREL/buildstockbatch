@@ -779,3 +779,5 @@ class BuildStockBatchBase(object):
             s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
+
+        postprocessing.remove_intermediate_files(fs, self.results_dir)
