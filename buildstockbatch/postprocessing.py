@@ -122,7 +122,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     :type sim_dir: str
     :param upgrade_id: id for upgrade, 0 for baseline, 1, 2...
     :type upgrade_id: int
-    :param building_unit_id: building id
+    :param building_unit_id: building unit id
     :type building_unit_id: int
     :return: dpout [dict]
     """

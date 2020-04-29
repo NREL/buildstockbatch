@@ -15,7 +15,7 @@ def basic_residential_project_file():
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
             buildstock_directory
         )
-        project_directory = 'project_multifamily_beta'
+        project_directory = 'project_resstock_national'
         os.makedirs(os.path.join(buildstock_directory, project_directory))
         output_directory = os.path.join(test_directory, OUTPUT_FOLDER_NAME)
         shutil.copytree(
@@ -38,7 +38,7 @@ def basic_residential_project_file():
                     'timeseries_frequency': 'hourly',
                     'include_timeseries_zone_temperatures': False,
                     'include_timeseries_fuel_consumptions': False,
-                    'include_timeseries_end_use_consumptions': False,
+                    'include_timeseries_end_use_consumptions': True,
                     'include_timeseries_hot_water_uses': False,
                     'include_timeseries_total_loads': False,
                     'include_timeseries_component_loads': False

@@ -204,6 +204,7 @@ class LocalDockerBatch(DockerBatchBase):
         sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
 
         results_job_json_filename = os.path.join(sim_out_dir, 'results_job0.json.gz')
+        logger.info(f'Writing results to {results_job_json_filename}')
         with gzip.open(results_job_json_filename, 'wt', encoding='utf-8') as f:
             json.dump(dpouts, f)
         del dpouts
