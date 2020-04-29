@@ -277,9 +277,9 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'])
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'], skiprows=[1])
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
@@ -446,7 +446,8 @@ class BuildStockBatchBase(object):
                     for actual_argument_key in cfg[measure_names[measure_dir][measure_name]].keys():
                         if actual_argument_key not in expected_arguments.keys():
                             error_msgs += f"* Found unexpected argument key {actual_argument_key} for "\
-                                          f"{measure_names[measure_dir][measure_name]} in yaml file. The available keys are: " \
+                                          f"{measure_names[measure_dir][measure_name]} in yaml file. "\
+                                          f"The available keys are: "\
                                           f"{list(expected_arguments.keys())}\n"
                             continue
 
@@ -463,8 +464,10 @@ class BuildStockBatchBase(object):
 
                                 for val in actual_argument_value:
                                     if not isinstance(val, type_map[expected_argument_type]):
-                                        error_msgs += f"* Wrong argument value type for {actual_argument_key} for measure "\
-                                                      f"{measure_names[measure_dir][measure_name]} in yaml file. Expected type:" \
+                                        error_msgs += f"* Wrong argument value type for {actual_argument_key} "\
+                                                      f"for measure "\
+                                                      f"{measure_names[measure_dir][measure_name]} in yaml file. "\
+                                                      f"Expected type:" \
                                                       f" {type_map[expected_argument_type]}, got: {val}" \
                                                       f" of type: {type(val)} \n"
                             except KeyError:
@@ -473,15 +476,15 @@ class BuildStockBatchBase(object):
                         else:  # Choice
                             if actual_argument_value not in expected_argument_type:
                                 error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
-                                              f"{measure_names[measure_dir][measure_name]} in yaml file. Valid values are " \
-                                               f"{expected_argument_type}.\n"
+                                              f"{measure_names[measure_dir][measure_name]} in yaml file. Valid values "\
+                                              f"are {expected_argument_type}.\n"
 
                     for arg, default in required_args_no_default.items():
-                        error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
+                        error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
                                         f"There is no default for this argument.\n"
 
                     for arg, default in required_args_with_default.items():
-                        warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
+                        warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
                                         f"Using default value: {default}. \n"
 
                 elif measure_name in ['ApplyUpgrade']:
@@ -773,7 +776,18 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
+        do_timeseries = False
+        if 'simulation_output' in self.cfg.keys():
+            for arg in ['include_timeseries_zone_temperatures',
+                        'include_timeseries_fuel_consumptions',
+                        'include_timeseries_end_use_consumptions',
+                        'include_timeseries_hot_water_uses',
+                        'include_timeseries_total_loads',
+                        'include_timeseries_component_loads']:
+                if do_timeseries:
+                    continue
+                if arg in self.cfg['simulation_output'].keys():
+                    do_timeseries = self.cfg['simulation_output'][arg]
 
         fs = LocalFileSystem()
         if not skip_combine:

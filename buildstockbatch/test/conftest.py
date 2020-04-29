@@ -15,7 +15,7 @@ def basic_residential_project_file():
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
             buildstock_directory
         )
-        project_directory = 'project_resstock_national'
+        project_directory = 'project_multifamily_beta'
         os.makedirs(os.path.join(buildstock_directory, project_directory))
         output_directory = os.path.join(test_directory, OUTPUT_FOLDER_NAME)
         shutil.copytree(
@@ -35,11 +35,13 @@ def basic_residential_project_file():
                     'n_buildings_represented': 80000000
                 },
                 'simulation_output': {
-                    'include_enduse_subcategories': True
-                },
-                'timeseries_csv_export': {
-                    'reporting_frequency': 'Hourly',
-                    'include_enduse_subcategories': True
+                    'timeseries_frequency': 'hourly',
+                    'include_timeseries_zone_temperatures': False,
+                    'include_timeseries_fuel_consumptions': False,
+                    'include_timeseries_end_use_consumptions': False,
+                    'include_timeseries_hot_water_uses': False,
+                    'include_timeseries_total_loads': False,
+                    'include_timeseries_component_loads': False
                 },
                 'eagle': {
                     'sampling': {

@@ -110,38 +110,6 @@ def test_residential_simulation_controls_config():
         assert(args[argname] == default_args[argname])
 
 
-def test_timeseries_csv_export():
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_datapoints': 10,
-            'n_buildings_represented': 100
-        },
-        'timeseries_csv_export': {
-            'reporting_frequency': 'Timestep',
-            'output_variables': 'Zone Mean Air Temperature'
-        }
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    timeseries_step = osw['steps'][-2]
-    assert(timeseries_step['measure_dir_name'] == 'TimeseriesCSVExport')
-    default_args = {
-        'reporting_frequency': 'Hourly',
-        'include_enduse_subcategories': False,
-        'output_variables': ''
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    args = osw['steps'][-2]['arguments']
-    assert(args['reporting_frequency'] == 'Timestep')
-    assert(args['output_variables'] == 'Zone Mean Air Temperature')
-    for argname in ('include_enduse_subcategories',):
-        assert(args[argname] == default_args[argname])
-
-
 def test_additional_reporting_measures():
     sim_id = 'bldb1up1'
     building_id = 1
@@ -234,7 +202,13 @@ def test_simulation_output():
             'n_buildings_represented': 100
         },
         'simulation_output': {
-            'include_enduse_subcategories': True
+            'timeseries_frequency': 'timestep',
+            'include_timeseries_zone_temperatures': True,
+            'include_timeseries_fuel_consumptions': True,
+            'include_timeseries_end_use_consumptions': True,
+            'include_timeseries_hot_water_uses': True,
+            'include_timeseries_total_loads': True,
+            'include_timeseries_component_loads': True
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
@@ -242,10 +216,22 @@ def test_simulation_output():
     simulation_output_step = osw['steps'][-2]
     assert(simulation_output_step['measure_dir_name'] == 'SimulationOutputReport')
     default_args = {
-        'include_enduse_subcategories': False
+        'timeseries_frequency': 'hourly',
+        'include_timeseries_zone_temperatures': False,
+        'include_timeseries_fuel_consumptions': False,
+        'include_timeseries_end_use_consumptions': False,
+        'include_timeseries_hot_water_uses': False,
+        'include_timeseries_total_loads': False,
+        'include_timeseries_component_loads': False
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     args = osw['steps'][-2]['arguments']
-    for argname in ('include_enduse_subcategories',):
+    for argname in ('timeseries_frequency',
+                    'include_timeseries_zone_temperatures',
+                    'include_timeseries_fuel_consumptions',
+                    'include_timeseries_end_use_consumptions',
+                    'include_timeseries_hot_water_uses',
+                    'include_timeseries_total_loads',
+                    'include_timeseries_component_loads',):
         assert(args[argname] != default_args[argname])

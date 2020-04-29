@@ -190,17 +190,17 @@ def test_downselect_integer_options(basic_residential_project_file):
             cf_out = csv.writer(f_out)
             for i, row in enumerate(cf_in):
                 if i == 0:
-                    col_idx = row.index('Days Shifted')
+                    col_idx = row.index('Bathroom Spot Vent Hour')
                 else:
-                    # Convert values from "Day1" to "1.10" so we hit the bug
-                    row[col_idx] = '{0}.{0}0'.format(re.search(r'Day(\d+)', row[col_idx]).group(1))
+                    # Convert values from "Hour1" to "1.10" so we hit the bug
+                    row[col_idx] = '{0}.{0}0'.format(re.search(r'Hour(\d+)', row[col_idx]).group(1))
                     valid_option_values.add(row[col_idx])
                 cf_out.writerow(row)
 
         project_filename, results_dir = basic_residential_project_file({
             'downselect': {
                 'resample': False,
-                'logic': 'Geometry House Size|1500-2499'
+                'logic': 'Geometry Floor Area Bin|1500-2499'
             }
         })
         run_sampling_mock = MagicMock(return_value=buildstock_csv)
@@ -213,7 +213,7 @@ def test_downselect_integer_options(basic_residential_project_file):
             with open(buildstock_csv, 'r', newline='') as f:
                 cf = csv.DictReader(f)
                 for row in cf:
-                    assert(row['Days Shifted'] in valid_option_values)
+                    assert(row['Bathroom Spot Vent Hour'] in valid_option_values)
 
 
 def test_combine_files(basic_residential_project_file):
@@ -236,16 +236,16 @@ def test_combine_files(basic_residential_project_file):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
     test_path = os.path.join(results_dir, 'results_csvs')
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).sort_values('building_unit_id').reset_index()\
-        .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).sort_values('building_unit_id')\
-        .reset_index().drop(columns=['index'])
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz'))\
+        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz'))\
+        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).sort_values('building_unit_id').reset_index()\
-        .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).sort_values('building_unit_id')\
-        .reset_index().drop(columns=['index'])
+    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))\
+        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz'))\
+        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
     # test parquet files
@@ -253,8 +253,8 @@ def test_combine_files(basic_residential_project_file):
     test_path = os.path.join(results_dir, 'parquet')
 
     # results parquet
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).sort_values('building_unit_id')\
-        .reset_index().drop(columns=['index'])
+    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet'))\
+        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
         .sort_values('building_unit_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
