@@ -268,13 +268,13 @@ def test_combine_files(basic_residential_project_file):
     # timeseries parquet
     test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
+    reference_pq = dd.read_parquet(os.path.join(reference_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
+    reference_pq = dd.read_parquet(os.path.join(reference_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
