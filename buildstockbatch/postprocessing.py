@@ -248,10 +248,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     if do_timeseries:
         dirs.append(ts_dir)
 
-    # clear and create the postprocessing results directories
+    # create the postprocessing results directories
     for dr in dirs:
-        if fs.exists(dr):
-            fs.rm(dr, recursive=True)
         fs.makedirs(dr)
 
     # Results "CSV"
@@ -327,7 +325,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             total_mem = mean_mem * len(ts_filenames)
 
             # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / 300e6)  # 300 MB per partition
+            npartitions = math.ceil(total_mem / 1e9)  # 1 GB per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
             # Read the timeseries into a dask dataframe
@@ -350,7 +348,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 flavor='spark'
             )
 
+
+def remove_intermediate_files(fs, results_dir):
     # Remove aggregated files to save space
+    sim_output_dir = f'{results_dir}/simulation_output'
+    ts_in_dir = f'{sim_output_dir}/timeseries'
+    results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     logger.info('Removing temporary files')
     fs.rm(ts_in_dir, recursive=True)
     for filename in fs.glob(results_job_json_glob):
