@@ -51,8 +51,9 @@ Custom Weather Files
 
 To use your own custom weather files for a specific location, this can be done in **one** of two ways:
 
-- Update the weather file path in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in `OpenStudio-BuildStock`_ to ensure that your custom weather file is tagged to the correct location, or 
-- Rename your custom weather files using the ``Location + .epw`` weather file format 
+- Update the weather file name in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
+
+- Lookup the location matching your new weather file name and rename your custom .epw file using the ``Location + .epw`` weather file format 
 
 
 Baseline simulations
