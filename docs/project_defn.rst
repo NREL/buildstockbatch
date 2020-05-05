@@ -36,7 +36,7 @@ following keys:
 -  ``weather_files_path``: Where on this machine to find the zipped
    weather files. This can be absolute or relative (to this file)
 
-All zipped weather files are contained in the `Box <https://nrel.app.box.com/folder/108861105291>`_ folder. This folder contains ResStock TMY3, AMY 2012 through AMY 2017 weather data for each of 
+All zipped weather files are contained in the `Box <https://nrel.app.box.com/folder/108861105291>`_ folder. This folder contains ResStock TMY3, AMYs 2012, 2016, 2017, and 2018 weather data for each of 
 the 215 weather locations specified in ResStock. 
 
 Weather Files Naming Convention
