@@ -57,7 +57,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
-            'seed_file': 'seeds/empty.osm',
             'weather_file': 'weather/empty.epw'
         }
 
