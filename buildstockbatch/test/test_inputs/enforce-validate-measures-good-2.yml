@@ -5,6 +5,7 @@ weather_files_url: https://fake-url
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: cool upgrade
     options:

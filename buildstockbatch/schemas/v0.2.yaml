@@ -61,7 +61,7 @@ sim-spec:
   precomputed_sample: str(required=False)
   skip_sims: bool(required=False)
   measures_to_ignore: list(str(), required=False)
-  sampling_algorithm: str(required=False)
+  sampling_algorithm: enum('precomputed', 'quota', 'sobol', required=True)
   osw_template: str(required=False)
   include_qaqc: bool(required=False)
   custom_gems: bool(required=False)

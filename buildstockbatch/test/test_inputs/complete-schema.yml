@@ -11,6 +11,7 @@ baseline:
     - ResidentialConstructionsSlab
   osw_template: default
   include_qaqc: False
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
     options:

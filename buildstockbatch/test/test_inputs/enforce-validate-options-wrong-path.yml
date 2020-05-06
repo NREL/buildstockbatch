@@ -3,6 +3,7 @@ project_directory: project_singlefamilydetached
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: good upgrade
     options:

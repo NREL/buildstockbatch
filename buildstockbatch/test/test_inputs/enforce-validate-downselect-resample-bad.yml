@@ -7,6 +7,6 @@ schema_version: 0.2
 baseline:
   n_buildings_represented: 30000
   precomputed_sample: mybuildstock.csv
-
+  sampling_algorithm: precomputed
 downselect:
   logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE

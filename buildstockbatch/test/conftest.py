@@ -34,7 +34,8 @@ def basic_residential_project_file():
                 'weather_files_url': 'https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip',
                 'baseline': {
                     'n_datapoints': 8,
-                    'n_buildings_represented': 80000000
+                    'n_buildings_represented': 80000000,
+                    'sampling_algorithm': 'quota'
                 },
                 'simulation_output': {
                     'include_enduse_subcategories': True
