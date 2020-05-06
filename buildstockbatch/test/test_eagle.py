@@ -52,7 +52,6 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
             '-B', '/tmp/scratch/buildstock/resources:/lib/resources',
             '-B', '/tmp/scratch/housing_characteristics:/lib/housing_characteristics',
             '-B', '/tmp/scratch/buildstock/measures:/measures:ro',
-            '-B', '/tmp/scratch/project/seeds:/seeds:ro',
             '-B', '/tmp/scratch/weather:/weather:ro',
             '/tmp/scratch/openstudio.simg',
             'bash', '-x'
