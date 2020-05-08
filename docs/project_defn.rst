@@ -17,10 +17,11 @@ Reference the project
 
 First we tell it what project we're running with the following keys:
 
--  ``buildstock_directory``: The absolute (or relative to this YAML
-   file) path of the `OpenStudio-BuildStock`_ repository.
--  ``project_directory``: The relative (to the ``buildstock_directory``)
-   path of the project.
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `OpenStudio-BuildStock`_
+  repository.
+- ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
+- ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is
+  ``0.2``.
 
 .. _OpenStudio-BuildStock: https://github.com/NREL/OpenStudio-BuildStock
 
@@ -31,24 +32,49 @@ Each batch of simulations depends on a number of weather files. These
 are provided in a zip file. This can be done with **one** of the
 following keys:
 
--  ``weather_files_url``: Where the zip file of weather files can be
-   downloaded from
--  ``weather_files_path``: Where on this machine to find the zipped
-   weather files. This can be absolute or relative (to this file)
+- ``weather_files_url``: Where the zip file of weather files can be downloaded from.
+- ``weather_files_path``: Where on this machine to find the zipped weather files. This can be absolute or relative
+  (to this file).
 
-Baseline simulations
-~~~~~~~~~~~~~~~~~~~~
+Baseline simulations incl. sampling algorithm
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Information about baseline simulations are listed under the
-``baseline`` key.
+Information about baseline simulations are listed under the ``baseline`` key.
 
--  ``n_datapoints``: The number of buildings to sample and run for the
-   baseline case.
--  ``n_buildings_represented``: The number of buildings that this sample
-   is meant to represent.
--  ``buildstock_csv``: Filepath of csv containing pre-defined building options to use in place of the sampling routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative (to this file).
--  ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics will be provided when the baseline simulations are skipped.
-- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped during model creation. The measures are referenced by their directory name. This feature is currently only implemented for residential models constructed with the BuildExistingModel measure.
+- ``sampling_algorithm``: The sampling algorithm to use for this project - the default residential option is ``quota``,
+  the default commercial option is ``sobol`` (this is not supported for residential projects), or if using a previously
+  computed buildstock.csv file use the ``precomputed`` sampler.
+- ``n_datapoints``: The number of buildings to sample and run for the baseline case if using the ``sobol`` or ``quota``
+  sampling algorithms.
+- ``n_buildings_represented``: The number of buildings that this sample is meant to represent.
+- ``precomputed_sample``: Filepath of csv containing pre-defined building options to use in the precomputed sampling
+  routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative
+  (to this file).
+- ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
+  this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
+  will be provided when the baseline simulations are skipped.
+- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally
+  not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped
+  during model creation. The measures are referenced by their directory name. This feature is currently only implemented
+  for residential models constructed with the BuildExistingModel measure.
+- ``custom_gems``: **VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE** This
+  activates the ``bundle`` and ``bundle_path`` interfaces in the OpenStudio CLI to allow for custom gem packages (needed
+  to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
+  image is properly configured but that's easier said than done. The la100 branch on the nrel/docker-openstudio repo
+  is a starting place if this is required.
+- ``osw_template``: An optional key allowing for switching of which workflow generator to use within the commercial or
+  residential classes.
+- ``include_qaqc``: An optional flag - only configured for commercial at the moment - which when set to ``True`` runs
+  some additional measures that check a number of key (and often incorrectly configured) part of the simulation inputs
+  as well as providing additional model QAQC data streams on the output side. Recommended for test runs but not
+  production analyses.
+
+OpenStudio Version Overrides
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
+details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.2``
+schema: ``os_version`` and ``os_sha``.
 
 Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
