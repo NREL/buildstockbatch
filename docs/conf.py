@@ -49,7 +49,39 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.mathjax',
     'sphinxcontrib.programoutput',
+    'changelog',
+    'sphinx_paramlinks'
 ]
+
+changelog_sections = [
+    "general",
+    "schema",
+    "comstock",
+    "sampler",
+    "workflow",
+    "resstock",
+    "eagle",
+    "local",
+    "aws",
+    "postprocessing",
+    "documentation"
+]
+# tags to sort on inside of sections
+changelog_inner_tag_sort = [
+    "feature",
+    "changed",
+    "removed",
+    "bug",
+    "moved"
+]
+
+
+# how to render changelog links
+changelog_render_ticket = "http://www.github.com/nrel/buildstockbatch/issues/%s"
+
+changelog_render_pullreq = {
+    "default": "https://www.github.com/nrel/buildstockbatch/pull/%s"
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

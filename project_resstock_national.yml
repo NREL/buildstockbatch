@@ -1,3 +1,4 @@
+schema_version: 0.2
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_multifamily_beta  # Relative to buildstock_directory
@@ -8,6 +9,7 @@ baseline:
   #buildstock_csv: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
   n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 80000000
+  sampling_algorithm: quota # The default resstock sampling algorithm
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:

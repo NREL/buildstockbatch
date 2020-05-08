@@ -80,6 +80,8 @@ setuptools.setup(
             'sphinx_rtd_theme',
             'sphinx-autobuild',
             'sphinxcontrib-programoutput',
+            'sphinx_paramlinks',
+            'changelog',
             'flake8',
             'coverage',
             'rope',
