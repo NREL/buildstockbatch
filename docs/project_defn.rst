@@ -36,14 +36,7 @@ following keys:
 -  ``weather_files_path``: Where on this machine to find the zipped
    weather files. This can be absolute or relative (to this file)
 
-All zipped weather files are contained in the `Box <https://nrel.app.box.com/folder/108861105291>`_ folder. This folder contains ResStock TMY3, AMYs 2012, 2016, 2017, and 2018 weather data for each of 
-the 215 weather locations specified in ResStock. 
-
-Weather Files Naming Convention
-...............................
-
-To allow for the ease of switching between one weather year and the next, a new naming convention has been developed. An evaluation of the contents in each zipped file in the Box folder shows that each of the file in the weather folders have the same name e.g. the name ``USA_AL_Birmingham.Muni.AP.722280.epw`` is present in each of the TMY3, and AMY 2012 through AMY 2017 zipped weather files. While the names in each of these weather files are similar, the contents of each folder are different. Therefore, the ``USA_AL_Birmingham.Muni.AP.722280.epw`` file present in the 2012 folder is not the same as that in 2017 folder. It is important that the correct zipped weather file year is downloaded as the naming conventions are similar. Each weather filename is presently specified as ``Location + .epw`` for that year.
-
+Weather data can be obtained from the `NREL data catalog <https://data.nrel.gov/submissions/128>`_ 
 
 
 Custom Weather Files
