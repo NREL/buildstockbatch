@@ -266,8 +266,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     del dpouts
 
     if results_df.empty:
-        logger.error("No simulation results found to post-process")
-        raise ValueError
+        raise ValueError("No simulation results found to post-process")
 
     results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
