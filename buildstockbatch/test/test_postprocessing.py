@@ -58,14 +58,15 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
         assert (df['reporting_measure2.column_3'] == 3).all()
         assert (df['reporting_measure2.column_4'] == 4).all()
 
+
 def test_empty_results_assertion(basic_residential_project_file, capsys):
     project_filename, results_dir = basic_residential_project_file({})
 
     fs = LocalFileSystem()
     results_dir = pathlib.Path(results_dir)
     sim_out_dir = results_dir / 'simulation_output'
-    shutil.rmtree(sim_out_dir) #no results
-    cfg = BuildStockBatchBase.get_project_configuration(project_filename)    
+    shutil.rmtree(sim_out_dir)  # no results
+    cfg = BuildStockBatchBase.get_project_configuration(project_filename)
 
     with pytest.raises(ValueError) as except_info:
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
