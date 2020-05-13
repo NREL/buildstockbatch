@@ -262,7 +262,7 @@ class EagleBatch(BuildStockBatchBase):
                 return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
             except Exception:
                 _, sim_dir = self.make_sim_dir(i, upgrade_idx, self.results_dir, overwrite_existing=True)
-                with open(os.path.join(sim_dir, f'traceback.out'), 'w') as f:
+                with open(os.path.join(sim_dir, 'traceback.out'), 'w') as f:
                     traceback.print_exc(file=f)
 
         # Run the simulations, get the data_point_out.json info from each
