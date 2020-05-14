@@ -810,10 +810,10 @@ class AwsBatchEnv(AwsJobBase):
 
         '''
 
-        batch_policy = f'''{{
+        batch_policy = '''{
     "Version": "2012-10-17",
     "Statement": [
-        {{
+        {
             "Effect": "Allow",
             "Action": [
                 "batch:SubmitJob",
@@ -821,8 +821,8 @@ class AwsBatchEnv(AwsJobBase):
                 "batch:TerminateJob"
             ],
             "Resource": "*"
-        }},
-        {{
+        },
+        {
             "Effect": "Allow",
             "Action": [
                 "events:PutTargets",
@@ -832,9 +832,9 @@ class AwsBatchEnv(AwsJobBase):
             "Resource": [
                "arn:aws:events:*:*:rule/StepFunctionsGetEventsForBatchJobsRule"
             ]
-        }}
+        }
     ]
-}}
+}
 
         '''
 
@@ -1585,7 +1585,7 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
             f.seek(0)
             self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
 
-        function_script = f'''
+        function_script = '''
 
 import os
 import io

@@ -297,7 +297,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f'Writing {csv_filename}')
         with fs.open(csv_filename, 'wb') as f:
             with gzip.open(f, 'wt', encoding='utf-8') as gf:
-                df.to_csv(gf, index=True)
+                df.to_csv(gf, index=True, line_terminator='\n')
 
         # Write Parquet
         if upgrade_id == 0:
