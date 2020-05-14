@@ -68,16 +68,21 @@ def test_missing_required_key_fails(project_file):
             BuildStockBatchBase.validate_project_schema(project_file)
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'),
-    os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'),
-    os.path.join(example_yml_dir, 'enforce-schema-xor.yml')
+@pytest.mark.parametrize("project_file,expected", [
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-and.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
 ])
-def test_xor_violations_fail(project_file):
+def test_xor_violations_fail(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
-        with pytest.raises(ValidationError):
-            BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
+        if expected is not True:
+            with pytest.raises(expected):
+                BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
+        else:
+            assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
 
 
 @pytest.mark.parametrize("project_file,expected", [

@@ -1,0 +1,11 @@
+stock_type: residential
+buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
+project_directory: project_singlefamilydetached
+output_directory: /scratch/epresent/YAML1s
+weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
+baseline:
+  sampling_algorithm: precomputed
+  precomputed_sample: ../../buildstock.csv
+downselect:
+  logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+schema_version: 0.2
