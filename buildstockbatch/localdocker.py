@@ -30,6 +30,7 @@ import tempfile
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
 from buildstockbatch import postprocessing
+from .utils import log_error_details
 
 logger = logging.getLogger(__name__)
 
@@ -231,6 +232,7 @@ class LocalDockerBatch(DockerBatchBase):
         return results_dir
 
 
+@log_error_details
 def main():
     logging.config.dictConfig({
         'version': 1,
