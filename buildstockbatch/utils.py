@@ -54,12 +54,15 @@ def _get_error_details():
     return text
 
 
-def log_error_details(func):
-    def run_with_error_capture(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception:
-            with open("buildstockbatch_crash_details.log", "w") as f:
-                f.write(_get_error_details())
-            raise
-    return run_with_error_capture
+def log_error_details(output_file="buildstockbatch_crash_details.log"):
+    def log_error_decorator(func):
+        def run_with_error_capture(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except Exception:
+                with open(output_file, "w") as f:
+                    f.write(_get_error_details())
+                raise
+        return run_with_error_capture
+
+    return log_error_decorator

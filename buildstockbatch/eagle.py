@@ -651,7 +651,7 @@ def user_cli(argv=sys.argv[1:]):
     # eagle.sh calls main()
 
 
-@log_error_details
+@log_error_details()
 def main():
     """
     Determines which piece of work is to be run right now, on this process, on

@@ -2113,7 +2113,7 @@ class AwsBatch(DockerBatchBase):
                 os.remove(item)
 
 
-@log_error_details
+@log_error_details()
 def main():
     logging.config.dictConfig({
         'version': 1,

@@ -232,7 +232,7 @@ class LocalDockerBatch(DockerBatchBase):
         return results_dir
 
 
-@log_error_details
+@log_error_details()
 def main():
     logging.config.dictConfig({
         'version': 1,
