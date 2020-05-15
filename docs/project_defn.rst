@@ -36,7 +36,9 @@ following keys:
 -  ``weather_files_path``: Where on this machine to find the zipped
    weather files. This can be absolute or relative (to this file)
 
-Weather data can be obtained from the `NREL data catalog <https://data.nrel.gov/submissions/128>`_ 
+Weather files for Typical Meteorological Years (TMYs) can be obtained from the `NREL data catalog <https://data.nrel.gov/submissions/128>`_.
+
+Historical weather data for Actual Meteorological Years (AMYs) can be purchased in EPW format from various private companies. NREL users of buildstock batch can use NREL-owned AMY datasets by setting ``weather_files_url`` to a zip file located on `Box <https://nrel.app.box.com/folder/104550428327>`_.
 
 
 Custom Weather Files
@@ -44,9 +46,9 @@ Custom Weather Files
 
 To use your own custom weather files for a specific location, this can be done in **one** of two ways:
 
-- Update the weather file name in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
+- Rename the filename references in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder to match your custom weather file names. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
 
-- Lookup the location matching your new weather file name and rename your custom .epw file using the ``Location + .epw`` weather file format 
+- Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
 
 
 Baseline simulations
