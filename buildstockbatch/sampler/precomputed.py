@@ -46,7 +46,7 @@ class PrecomputedBaseSampler(BuildStockSampler):
         if buildstock_df.shape[0] != n_datapoints:
             raise RuntimeError(
                 f'`n_datapoints` does not match the number of rows in {self.buildstock_csv}. '
-                f'Please set `n_datapoints` to {n_datapoints}'
+                f'Please set `n_datapoints` to {buildstock_df.shape[0]}'
             )
         if self.csv_path != self.buildstock_csv:
             shutil.copy(self.buildstock_csv, self.csv_path)

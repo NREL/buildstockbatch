@@ -338,6 +338,13 @@ class BuildStockBatchBase(object):
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
                     raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
+
+                # No precomputed sample key unless using precomputed sampling
+                if cfg['baseline']['sampling_algorithm'] != 'precomputed' and 'precomputed_sample' in cfg['baseline']:
+                    raise ValidationError(
+                        'baseline.precomputed_sample is not allowed unless '
+                        'baseline.sampling_algorithm = "precomputed".'
+                    )
         return True
 
     @staticmethod

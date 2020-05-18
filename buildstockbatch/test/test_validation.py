@@ -71,6 +71,7 @@ def test_missing_required_key_fails(project_file):
 @pytest.mark.parametrize("project_file,expected", [
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
+    (os.path.join(example_yml_dir, 'enforce-validate-no-precomputed-quota.yml'), ValidationError)
 ])
 def test_xor_violations_fail(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
