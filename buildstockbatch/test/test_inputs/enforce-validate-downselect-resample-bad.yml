@@ -5,6 +5,7 @@ output_directory: /scratch/epresent/YAML1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
 schema_version: 0.2
 baseline:
+  n_datapoints: 100
   n_buildings_represented: 30000
   precomputed_sample: mybuildstock.csv
   sampling_algorithm: precomputed

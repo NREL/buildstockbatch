@@ -39,15 +39,15 @@ class PrecomputedBaseSampler(BuildStockSampler):
 
         :param n_datapoints: Number of datapoints to sample from the distributions.
         """
+        if not os.path.exists(self.buildstock_csv):
+            raise FileNotFoundError(self.buildstock_csv)
         buildstock_df = pd.read_csv(self.buildstock_csv)
         # TODO: remove this requirement or make it part of validation.
         if buildstock_df.shape[0] != n_datapoints:
             raise RuntimeError(
-                f'`n_datapoints` does not match the number of rows in {self.buildstock_csv}.'
-                f'Please set `n_datapoints to {n_datapoints}'
+                f'`n_datapoints` does not match the number of rows in {self.buildstock_csv}. '
+                f'Please set `n_datapoints` to {n_datapoints}'
             )
-        if not os.path.exists(self.buildstock_csv):
-            raise FileNotFoundError(f'The precomputed sample file {self.buildstock_csv} does not exist.')
         if self.csv_path != self.buildstock_csv:
             shutil.copy(self.buildstock_csv, self.csv_path)
         return self.csv_path

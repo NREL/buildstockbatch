@@ -69,9 +69,6 @@ def test_missing_required_key_fails(project_file):
 
 
 @pytest.mark.parametrize("project_file,expected", [
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-and.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
 ])
@@ -88,8 +85,6 @@ def test_xor_violations_fail(project_file, expected):
 @pytest.mark.parametrize("project_file,expected", [
     (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-missing.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-nested.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-bad.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-good.yml'), True),
