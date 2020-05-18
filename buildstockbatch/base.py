@@ -290,7 +290,7 @@ class BuildStockBatchBase(object):
             with open(project_file) as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
         except FileNotFoundError as err:
-            logger.error(f'Failed to load input yaml for validation')
+            logger.error('Failed to load input yaml for validation')
             raise err
         return cfg
 
@@ -531,7 +531,7 @@ class BuildStockBatchBase(object):
                 errors = ''
                 broken_options = option_str.split(splitter)
                 if broken_options[-1] == '':
-                    invalid_option_spec_counter[(option_str, f"has trailing 'splitter'")] += 1
+                    invalid_option_spec_counter[(option_str, "has trailing 'splitter'")] += 1
                     return ""
                 for broken_option_str in broken_options:
                     new_source_str = source_str + f" in composite option '{option_str}'"
@@ -603,7 +603,7 @@ class BuildStockBatchBase(object):
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
         if 'downselect' in cfg:
-            source_str = f"In downselect"
+            source_str = "In downselect"
             source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
 
         # Gather all the errors in the option_str, if any
@@ -689,7 +689,7 @@ class BuildStockBatchBase(object):
         source_measures_str_list = []
 
         if 'measures_to_ignore' in cfg['baseline']:
-            source_str = f"In baseline 'measures_to_ignore'"
+            source_str = "In baseline 'measures_to_ignore'"
             for measure_str in cfg['baseline']['measures_to_ignore']:
                 source_measures_str_list.append((source_str, measure_str))
 
