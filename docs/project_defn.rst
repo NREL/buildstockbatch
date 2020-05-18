@@ -38,7 +38,7 @@ following keys:
 
 Weather files for Typical Meteorological Years (TMYs) can be obtained from the `NREL data catalog <https://data.nrel.gov/submissions/128>`_.
 
-Historical weather data for Actual Meteorological Years (AMYs) can be purchased in EPW format from various private companies. NREL users of buildstock batch can use NREL-owned AMY datasets by setting ``weather_files_url`` to a zip file located on `Box <https://nrel.app.box.com/folder/104550428327>`_.
+Historical weather data for Actual Meteorological Years (AMYs) can be purchased in EPW format from various private companies. NREL users of buildstock batch can use NREL-owned AMY datasets by setting ``weather_files_url`` to a zip file located on `Box <https://app.box.com/s/atyl2q9v74kssjx5n14lbyhs1j6rt8ry>`_.
 
 
 Custom Weather Files
