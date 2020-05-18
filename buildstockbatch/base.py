@@ -63,14 +63,28 @@ class BuildStockBatchBase(object):
 
     def __init__(self, project_filename):
         self.project_filename = os.path.abspath(project_filename)
+
+        # Load project file to self.cfg
         with open(self.project_filename, 'r') as f:
             self.cfg = yaml.load(f, Loader=yaml.SafeLoader)
-        if 'stock_type' not in self.cfg.keys():
-            raise KeyError('Key `stock_type` not specified in project file `{}`'.format(project_filename))
-        elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
-            raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
-                                                                                           project_filename))
+
+        # Set absolute paths
+        self.cfg['buildstock_directory'] = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
+        self.buildstock_dir = self.cfg['buildstock_directory']
+        if not os.path.isdir(self.buildstock_dir):
+            raise FileNotFoundError(f'buildstock_directory = {self.buildstock_dir} is not a directory.')
+        self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
+        if not os.path.isdir(self.project_dir):
+            raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
+        if 'precomputed_sample' in self.cfg['baseline']:
+            self.cfg['baseline']['precomputed_sample'] = \
+                self.path_rel_to_projectfile(self.cfg['baseline']['precomputed_sample'])
+        if 'weather_files_path' in self.cfg:
+            self.cfg['weather_files_path'] = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
+
+        # To be set in subclasses
         self.sampler = None
+
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
@@ -86,7 +100,7 @@ class BuildStockBatchBase(object):
     def _get_weather_files(self):
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
-            weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
+            weather_file_path = self.cfg['weather_files_path']
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
                 logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
@@ -111,22 +125,6 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     @property
-    def buildstock_dir(self):
-        d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
-        # logger.debug('buildstock_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
-
-    @property
-    def project_dir(self):
-        d = os.path.abspath(
-            os.path.join(self.buildstock_dir, self.cfg['project_directory'])
-        )
-        # logger.debug('project_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
-
-    @property
     def results_dir(self):
         raise NotImplementedError
 
@@ -140,6 +138,8 @@ class BuildStockBatchBase(object):
         return baseline_skip
 
     def run_sampling(self, n_datapoints=None):
+        if n_datapoints is None:
+            n_datapoints = self.cfg['baseline']['n_datapoints']
         return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
@@ -338,14 +338,6 @@ class BuildStockBatchBase(object):
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
                     raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
-                # and - but I'm not renaming this function
-                if (cfg.get('downselect', {'resample': False}).get('resample', True)) and \
-                   ('n_datapoints' not in cfg['baseline'].keys()):
-                    raise ValidationError('If resampling via downselection the `n_datapoints` key is required.')
-                # nor
-                if ('n_datapoints' not in cfg['baseline'].keys()) and \
-                   ('precomputed_sample' not in cfg['baseline'].keys()):
-                    raise ValidationError('Neither n_datapoints nor precomputed_sample found in yaml baseline key')
         return True
 
     @staticmethod

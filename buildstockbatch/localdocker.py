@@ -51,7 +51,6 @@ class DockerBatchBase(BuildStockBatchBase):
         if sampling_algorithm == 'precomputed':
             logger.info('calling precomputed sampler')
             self.sampler = PrecomputedDockerSampler(
-                self.output_dir,
                 self.cfg,
                 self.buildstock_dir,
                 self.project_dir

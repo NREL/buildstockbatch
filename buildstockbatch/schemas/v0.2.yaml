@@ -55,7 +55,7 @@ sampling-spec:
   time: int(required=True)
 
 sim-spec:
-  n_datapoints: int(required=False)
+  n_datapoints: int(required=True)
   n_buildings_represented: int(required=False)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)

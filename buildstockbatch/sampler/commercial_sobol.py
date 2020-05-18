@@ -43,7 +43,7 @@ class CommercialBaseSobolSampler(BuildStockSampler):
     def csv_path(self):
         return os.path.join(self.project_dir, 'buildstock.csv')
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, n_datapoints):
         """
         Execute the sampling generating the specified number of datapoints.
 
@@ -199,7 +199,7 @@ class CommercialSobolSingularitySampler(CommercialBaseSobolSampler):
         self.output_dir = output_dir
         super().__init__(*args, **kwargs)
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, n_datapoints):
         """
         Execute the sampling for use in Peregrine Singularity deployments
 
@@ -218,7 +218,7 @@ class CommercialSobolDockerSampler(CommercialBaseSobolSampler):
         """
         super().__init__(*args, **kwargs)
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, n_datapoints):
         """
         Execute the sampling for use in local Docker deployments
 

@@ -34,7 +34,7 @@ class BuildStockSampler(object):
         self.buildstock_dir = buildstock_dir
         self.project_dir = project_dir
 
-    def run_sampling(self, n_datapoints=None):
+    def run_sampling(self, n_datapoints):
         """
         Execute the sampling generating the specified number of datapoints.
 
