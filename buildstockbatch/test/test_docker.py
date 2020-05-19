@@ -69,7 +69,7 @@ def test_provide_buildstock_csv(basic_residential_project_file):
     with patch.object(LocalDockerBatch, 'weather_dir', None), \
             patch.object(LocalDockerBatch, 'results_dir', results_dir):
         with pytest.raises(RuntimeError, match=r'does not match the number of rows in'):
-            LocalDockerBatch(project_filename).run_sampling()
+            LocalDockerBatch.validate_precomputed_sample(project_filename)
 
     # Test file missing
     with open(project_filename, 'r') as f:

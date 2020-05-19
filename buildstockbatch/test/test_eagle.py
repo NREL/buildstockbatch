@@ -87,7 +87,7 @@ def test_singularity_image_download_url(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file()
     with patch.object(EagleBatch, 'weather_dir', None):
         url = EagleBatch(project_filename).singularity_image_url
-        r = requests.head(url)
+        r = requests.head(url, timeout=30)
         assert r.status_code == requests.codes.ok
 
 
@@ -119,7 +119,7 @@ def test_provide_buildstock_csv(basic_residential_project_file):
     with patch.object(EagleBatch, 'weather_dir', None), \
             patch.object(EagleBatch, 'results_dir', results_dir):
         with pytest.raises(RuntimeError, match=r'does not match the number of rows in'):
-            EagleBatch(project_filename).run_sampling()
+            EagleBatch.validate_precomputed_sample(project_filename)
 
     # Test file missing
     with open(project_filename, 'r') as f:

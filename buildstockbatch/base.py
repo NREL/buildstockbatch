@@ -292,7 +292,7 @@ class BuildStockBatchBase(object):
 
         # Set absolute paths
         cfg['buildstock_directory'] = cls.path_rel_to_file(project_file, cfg['buildstock_directory'])
-        if 'precomputed_sample' in cfg['baseline']:
+        if 'precomputed_sample' in cfg.get('baseline', {}):
             cfg['baseline']['precomputed_sample'] = \
                 cls.path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
         if 'weather_files_path' in cfg:
