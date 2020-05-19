@@ -65,22 +65,14 @@ class BuildStockBatchBase(object):
         self.project_filename = os.path.abspath(project_filename)
 
         # Load project file to self.cfg
-        with open(self.project_filename, 'r') as f:
-            self.cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        self.cfg = self.get_project_configuration(project_filename)
 
-        # Set absolute paths
-        self.cfg['buildstock_directory'] = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
         self.buildstock_dir = self.cfg['buildstock_directory']
         if not os.path.isdir(self.buildstock_dir):
             raise FileNotFoundError(f'buildstock_directory = {self.buildstock_dir} is not a directory.')
         self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
-        if 'precomputed_sample' in self.cfg['baseline']:
-            self.cfg['baseline']['precomputed_sample'] = \
-                self.path_rel_to_projectfile(self.cfg['baseline']['precomputed_sample'])
-        if 'weather_files_path' in self.cfg:
-            self.cfg['weather_files_path'] = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
 
         # To be set in subclasses
         self.sampler = None
@@ -91,11 +83,15 @@ class BuildStockBatchBase(object):
         self.os_sha = self.cfg.get('os_sha', self.DEFAULT_OS_SHA)
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
-    def path_rel_to_projectfile(self, x):
+    @staticmethod
+    def path_rel_to_file(startfile, x):
         if os.path.isabs(x):
             return os.path.abspath(x)
         else:
-            return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
+            return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
+
+    def path_rel_to_projectfile(self, x):
+        return self.path_rel_to_file(self.project_filename, x)
 
     def _get_weather_files(self):
         if 'weather_files_path' in self.cfg:
@@ -276,6 +272,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_misc_constraints(project_file))
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_precomputed_sample(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
@@ -284,14 +281,23 @@ class BuildStockBatchBase(object):
         logger.info('Base Validation Successful')
         return True
 
-    @staticmethod
-    def get_project_configuration(project_file):
+    @classmethod
+    def get_project_configuration(cls, project_file):
         try:
             with open(project_file) as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
         except FileNotFoundError as err:
             logger.error('Failed to load input yaml for validation')
             raise err
+
+        # Set absolute paths
+        cfg['buildstock_directory'] = cls.path_rel_to_file(project_file, cfg['buildstock_directory'])
+        if 'precomputed_sample' in cfg['baseline']:
+            cfg['baseline']['precomputed_sample'] = \
+                cls.path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+        if 'weather_files_path' in cfg:
+            cfg['weather_files_path'] = cls.path_rel_to_file(project_file, cfg['weather_files_path'])
+
         return cfg
 
     @staticmethod
@@ -345,6 +351,21 @@ class BuildStockBatchBase(object):
                         'baseline.precomputed_sample is not allowed unless '
                         'baseline.sampling_algorithm = "precomputed".'
                     )
+        return True
+
+    @staticmethod
+    def validate_precomputed_sample(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if 'precomputed_sample' in cfg['baseline']:
+            buildstock_csv = cfg['baseline']['precomputed_sample']
+            if not os.path.exists(buildstock_csv):
+                raise FileNotFoundError(buildstock_csv)
+            buildstock_df = pd.read_csv(buildstock_csv)
+            if buildstock_df.shape[0] != cfg['baseline']['n_datapoints']:
+                raise RuntimeError(
+                    f'`n_datapoints` does not match the number of rows in {buildstock_csv}. '
+                    f'Please set `n_datapoints` to {buildstock_df.shape[0]}'
+                )
         return True
 
     @staticmethod
