@@ -12,7 +12,6 @@ This object contains the code required for ingesting an already existing buildst
 
 import logging
 import os
-import pandas as pd
 import shutil
 
 from .base import BuildStockSampler
