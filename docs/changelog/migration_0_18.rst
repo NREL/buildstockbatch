@@ -76,7 +76,6 @@ The relevant *before* section should look something like:
 .. sourcecode:: yaml
 
     baseline:
-      sampling_algorithm: precomputed
       buildstock_csv: /path/to/buildstock.csv
 
 
@@ -99,6 +98,7 @@ The relevant *before* section should look something like:
 .. sourcecode:: yaml
 
     baseline:
+      sampling_algorithm: precomputed
       precomputed_sample: /path/to/buildstock.csv
 
 
