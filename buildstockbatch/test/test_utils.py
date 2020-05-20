@@ -1,7 +1,7 @@
 import tempfile
 from buildstockbatch.utils import log_error_details, _str_repr
 import pytest
-
+import os
 
 def test_str_repr():
     test_obj = [{1, 2, 3, 4, 5, 6}, {"List1": ["Item1", ('a', 'b', 'c', 'd'), "item3"],
@@ -18,7 +18,7 @@ def test_str_repr():
 
 
 def test_get_error_details():
-    tf = tempfile.NamedTemporaryFile('w+')
+    tf = tempfile.NamedTemporaryFile('w+', delete=False)
     tf.close()
 
     @log_error_details(tf.name)
@@ -47,4 +47,4 @@ def test_get_error_details():
     assert "'arg2':'my_arg2'" in error_log
     assert "'level_2_string':'string2_my_arg2'" in error_log
     assert "'level_2_list':['level_2_str1','level_2_str2']" in error_log
-    tf.close()
+    os.remove(tf.name)
