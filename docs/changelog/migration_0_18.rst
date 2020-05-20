@@ -76,6 +76,7 @@ The relevant *before* section should look something like:
 .. sourcecode:: yaml
 
     baseline:
+      sampling_algorithm: precomputed
       buildstock_csv: /path/to/buildstock.csv
 
 
@@ -101,8 +102,8 @@ The relevant *before* section should look something like:
       precomputed_sample: /path/to/buildstock.csv
 
 
-This needs to be updated to include the ``schema_version`` key, the ``sampling_algorithm`` key, the ``n_datapoints``
-key, and ``buildstock_csv`` needs to be changed to ``precomputed_sample``. The new schema would now look like:
+This needs to be updated to include the ``schema_version`` key and the ``n_datapoints`` key. The new schema would now
+look like:
 
 .. sourcecode:: yaml
 
