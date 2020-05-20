@@ -34,6 +34,8 @@ import time
 
 logger = logging.getLogger(__name__)
 
+MAX_PARQUET_MEMORY = 1e9  # maximum size of the parquet file in memory when combining multiple parquets
+
 
 def read_data_point_out_json(fs, reporting_measures, filename):
     try:
@@ -325,7 +327,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             total_mem = mean_mem * len(ts_filenames)
 
             # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / 1e9)  # 1 GB per partition
+            npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
+            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
             # Read the timeseries into a dask dataframe
