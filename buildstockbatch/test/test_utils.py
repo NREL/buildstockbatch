@@ -3,6 +3,7 @@ from buildstockbatch.utils import log_error_details, _str_repr
 import pytest
 import os
 
+
 def test_str_repr():
     test_obj = [{1, 2, 3, 4, 5, 6}, {"List1": ["Item1", ('a', 'b', 'c', 'd'), "item3"],
                 "long_name_list": ["long_name_one_two_three", "long_name"],
