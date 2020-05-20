@@ -65,12 +65,38 @@
 
 
     .. change::
+        :tags: change, schema
+        :pullreq: 65
+
+        Added a new validator function ``validate_precomputed_sample`` to allow for enforcing the existence of
+        the ``precomputed_sample`` file and ensuring that the file has ``n_datapoints`` number of enteries. The function
+        is :func:`~.BuildStockBatchBase.validate_precomputed_sample`.
+
+
+    .. change::
         :tags: change, schema, sampler
         :pullreq: 65
 
-        Added nor in the schema validator function ``validate_xor_schema_keys`` to allow for enforcing the existence of
-        either the ``precomputed_sample`` or ``n_datapoints`` keys in the configuration sample. The function is now
-        called :func:`~.BuildStockBatchBase.validate_xor_nor_schema_keys`.
+        Added nor in the schema validator function ``validate_xor_schema_keys`` to allow for enforcing dual existence of
+        the ``precomputed_sample`` and ``sampling_algotithm: precomputed`` keys in the configuration sample. The
+        function is now called :func:`~.BuildStockBatchBase.validate_xor_nor_schema_keys`.
+
+
+    .. change::
+        :tags: change, schema, sampler
+        :pullreq: 65
+
+        Updated the schema validator function ``validate_misc_constraints`` to ensure that resampling will not be
+        allowed when using the ``downselect`` functionality if the precomputed sampler is being used.
+
+
+    .. change::
+        :tags: change, schema
+        :pullreq: 65
+
+        Added a new validator function ``validate_precomputed_sample`` to allow for enforcing the existence of
+        the ``precomputed_sample`` file and ensuring that the file has ``n_datapoints`` number of enteries. The function
+        is :func:`~.BuildStockBatchBase.validate_precomputed_sample`.
 
 
     .. change::

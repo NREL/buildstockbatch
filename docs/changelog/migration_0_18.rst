@@ -37,14 +37,15 @@ were made?
 
 - The ``schema_version`` key, previously not required, is now required. This is important since we now have more than a
   single schema version to keep track of.
+- The ``n_datapoints`` key in the ``baseline`` section, previously not required, is now required.
 - The minimum version for the ``schema_version`` key for this release (0.18) has been updated to ``0.2`` which will
   force all project yamls to be updated.
 - The precomputed sampling interface has been overhauled and the desired sampler now must be specified. When trying to
   use a precomputed buildstock.csv file use the ``precomputed`` sampler; for the default residential quota sampler use
-  ``quota``; for commercial dynamic sampling (please don't do this btw ~Ry) use ``sobol``.
+  ``quota``; for commercial dynamic sampling (please don't do this here btw ~Ry) use ``sobol``.
 
 All users should fall into one of two camps at this point: running the residential quota sampler or specifying the
-buildstock.csv file to be executed. Two before and afters are presented:
+buildstock.csv file to be executed. Three before and afters are presented:
 
 Using the quota sampler
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -67,8 +68,8 @@ now look like:
       n_datapoints: 1234
     schema_version: 0.2
 
-Using a precomputed sample
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Using a precomputed sample - Residential
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The relevant *before* section should look something like:
 
@@ -78,14 +79,37 @@ The relevant *before* section should look something like:
       buildstock_csv: /path/to/buildstock.csv
 
 
-This needs to be updated to include the ``schema_version`` key, the ``sampling_algorithm`` key, and ``buildstock_csv``
-needs to be changed to ``precomputed_sample``. The new schema would now look like:
+This needs to be updated to include the ``schema_version`` key, the ``sampling_algorithm`` key, the ``n_datapoints``
+key, and ``buildstock_csv`` needs to be changed to ``precomputed_sample``. The new schema would now look like:
 
 .. sourcecode:: yaml
 
     baseline:
       sampling_algorithm: precomputed
       precomputed_sample: /path/to/buildstock.csv
+      n_datapoints: 1234
+    schema_version: 0.2
+
+Using a precomputed sample - Commercial
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The relevant *before* section should look something like:
+
+.. sourcecode:: yaml
+
+    baseline:
+      precomputed_sample: /path/to/buildstock.csv
+
+
+This needs to be updated to include the ``schema_version`` key, the ``sampling_algorithm`` key, the ``n_datapoints``
+key, and ``buildstock_csv`` needs to be changed to ``precomputed_sample``. The new schema would now look like:
+
+.. sourcecode:: yaml
+
+    baseline:
+      sampling_algorithm: precomputed
+      precomputed_sample: /path/to/buildstock.csv
+      n_datapoints: 1234
     schema_version: 0.2
 
 Samplers - Precomputed and Quota
