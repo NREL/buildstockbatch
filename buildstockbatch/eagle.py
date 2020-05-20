@@ -36,6 +36,7 @@ import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
 from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
+from .utils import log_error_details
 from . import postprocessing
 
 logger = logging.getLogger(__name__)
@@ -691,6 +692,7 @@ def user_cli(argv=sys.argv[1:]):
     # eagle.sh calls main()
 
 
+@log_error_details()
 def main():
     """
     Determines which piece of work is to be run right now, on this process, on

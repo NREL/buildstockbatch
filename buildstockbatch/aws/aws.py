@@ -40,6 +40,7 @@ from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
+from ..utils import log_error_details
 
 logger = logging.getLogger(__name__)
 
@@ -2112,6 +2113,7 @@ class AwsBatch(DockerBatchBase):
                 os.remove(item)
 
 
+@log_error_details()
 def main():
     logging.config.dictConfig({
         'version': 1,
