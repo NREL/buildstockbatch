@@ -19,6 +19,7 @@ def test_str_repr():
 
 def test_get_error_details():
     tf = tempfile.NamedTemporaryFile('w+')
+    tf.close()
 
     @log_error_details(tf.name)
     def failing_function1(arg1):
@@ -38,8 +39,8 @@ def test_get_error_details():
         failing_function1("my_arg1")
 
     assert "actual dummy exception" in str(ex_info.value)
-    error_log = tf.read()
-    print(error_log)
+    with open(tf.name, 'r') as f:
+        error_log = f.read()
     assert "'arg1':'my_arg1'" in error_log
     assert "'level_1_string':'string1_my_arg1'" in error_log
     assert "'level_1_dict':{'key1': 'value1'}" in error_log
