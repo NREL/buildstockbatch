@@ -4,9 +4,11 @@ project_directory: project_singlefamilydetached
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
   measures_to_ignore:
     - ResidentialConstructionsUnfinishedBasement
     - ResidentialConstructionsFinishedBasement
 downselect:
   resample: False
   logic: Vintage|2000s
+schema_version: 0.2

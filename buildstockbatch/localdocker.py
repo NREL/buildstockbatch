@@ -28,7 +28,7 @@ import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolSampler
+from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler, PrecomputedDockerSampler
 from buildstockbatch import postprocessing
 from .utils import log_error_details
 
@@ -40,25 +40,44 @@ class DockerBatchBase(BuildStockBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         self.docker_client = docker.DockerClient.from_env()
-
-        if self.stock_type == 'residential':
-            self.sampler = ResidentialDockerSampler(
-                self.docker_image(),
+        try:
+            self.docker_client.ping()
+        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
+            logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
+            raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
+        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
+        if sampling_algorithm is None:
+            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
+                           'configuration yaml. This key is required.')
+        if sampling_algorithm == 'precomputed':
+            logger.info('calling precomputed sampler')
+            self.sampler = PrecomputedDockerSampler(
                 self.cfg,
                 self.buildstock_dir,
                 self.project_dir
             )
+        elif self.stock_type == 'residential':
+            if sampling_algorithm == 'quota':
+                self.sampler = ResidentialDockerSampler(
+                    self.docker_image,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithm "{}" is not implemented for residential projects.'.
+                                          format(sampling_algorithm))
         elif self.stock_type == 'commercial':
-            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
             if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSampler(
+                self.sampler = CommercialSobolDockerSampler(
                     self.project_dir,
                     self.cfg,
                     self.buildstock_dir,
                     self.project_dir
                 )
             else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented.'.format(sampling_algorithm))
+                raise NotImplementedError('Sampling algorithm "{}" is not implemented for commercial projects.'.
+                                          format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
@@ -69,23 +88,23 @@ class DockerBatchBase(BuildStockBatchBase):
         super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
         # LocalDocker specific code goes here
 
-    @classmethod
-    def docker_image(cls):
-        return 'nrel/openstudio:{}'.format(cls.OS_VERSION)
+    @property
+    def docker_image(self):
+        return 'nrel/openstudio:{}'.format(self.os_version)
 
 
 class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        logger.debug(f'Pulling docker image: {self.docker_image()}')
-        self.docker_client.images.pull(self.docker_image())
+        logger.debug(f'Pulling docker image: {self.docker_image}')
+        self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
-            os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'))
+            os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
 
     @staticmethod
     def validate_project(project_file):
@@ -100,7 +119,7 @@ class LocalDockerBatch(DockerBatchBase):
         return self._weather_dir.name
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, results_dir, measures_only,
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
                      cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -140,7 +159,7 @@ class LocalDockerBatch(DockerBatchBase):
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
-            cls.docker_image(),
+            docker_image,
             args,
             remove=True,
             volumes=docker_volume_mounts,
@@ -184,6 +203,7 @@ class LocalDockerBatch(DockerBatchBase):
             self.project_dir,
             self.buildstock_dir,
             self.weather_dir,
+            self.docker_image,
             self.results_dir,
             measures_only,
             self.cfg

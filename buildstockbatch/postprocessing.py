@@ -75,6 +75,7 @@ def flatten_datapoint_json(reporting_measures, d):
         new_d[f'{col1}.{k}'] = v
 
     # if there is no units_represented key, default to 1
+    # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
     col2 = 'SimulationOutputReport'

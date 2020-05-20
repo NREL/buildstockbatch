@@ -3,6 +3,7 @@ project_directory: project_singlefamilydetached
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: bad upgrade
     options:
@@ -36,3 +37,4 @@ upgrades:
 downselect:
   resample: False
   logic: Invalid Parameter|2000s
+schema_version: 0.2

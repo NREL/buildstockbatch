@@ -4,6 +4,7 @@ jobs:
     docker:
       - image: continuumio/miniconda3
     steps:
+      - setup_remote_docker
       - checkout
       - run:
           name: Install buildstock

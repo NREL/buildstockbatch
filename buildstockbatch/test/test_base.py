@@ -8,12 +8,10 @@ import numpy as np
 import os
 import pandas as pd
 from pyarrow import parquet
-import pytest
 import re
 import shutil
 import tempfile
 from unittest.mock import patch, MagicMock
-import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
@@ -125,59 +123,6 @@ def test_combine_files_flexible(basic_residential_project_file):
         .compute().reset_index()
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
-
-
-def test_provide_buildstock_csv(basic_residential_project_file):
-    with tempfile.TemporaryDirectory() as buildstock_csv_dir:
-        buildstock_csv = os.path.join(buildstock_csv_dir, 'buildstock.csv')
-        df = pd.read_csv(os.path.join(here, 'buildstock.csv'))
-        df2 = df[df['Vintage'] == '<1950']
-        df2.to_csv(buildstock_csv, index=False)
-
-        project_filename, results_dir = basic_residential_project_file({
-            'baseline': {
-                'n_buildings_represented': 80000000,
-                'buildstock_csv': buildstock_csv
-            }
-        })
-        sampler = MagicMock()
-        copied_csv = os.path.join(buildstock_csv_dir, 'buildstock_out.csv')
-        sampler.csv_path = copied_csv
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            bsb = BuildStockBatchBase(project_filename)
-            bsb.sampler = sampler
-            sampling_output_csv = bsb.run_sampling()
-            assert(sampling_output_csv == copied_csv)
-            df3 = pd.read_csv(sampling_output_csv)
-            assert(df3.shape == df2.shape)
-            assert((df3['Vintage'] == '<1950').all())
-
-        # Test n_datapoints do not match
-        with open(project_filename, 'r') as f:
-            cfg = yaml.safe_load(f)
-        cfg['baseline']['n_datapoints'] = 100
-        with open(project_filename, 'w') as f:
-            yaml.dump(cfg, f)
-
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            with pytest.raises(RuntimeError) as ex:
-                bsb = BuildStockBatchBase(project_filename)
-            assert('n_datapoints for sampling should not be provided' in str(ex.value))
-
-        # Test file missing
-        with open(project_filename, 'r') as f:
-            cfg = yaml.safe_load(f)
-        del cfg['baseline']['n_datapoints']
-        cfg['baseline']['buildstock_csv'] = os.path.join(buildstock_csv_dir, 'non_existant_file.csv')
-        with open(project_filename, 'w') as f:
-            yaml.dump(cfg, f)
-
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-            with pytest.raises(FileNotFoundError) as ex:
-                bsb = BuildStockBatchBase(project_filename)
 
 
 def test_downselect_integer_options(basic_residential_project_file):

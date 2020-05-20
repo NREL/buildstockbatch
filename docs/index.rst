@@ -22,6 +22,16 @@ supercomputer, Eagle.
    run_sims
 
 
+Updates & Changelog
+===================
+
+:doc:`Migration from 0.17 to 0.18 <changelog/migration_0_18>`
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Changes & Migration
+
+   changelog/index
 
 Indices and tables
 ==================
