@@ -47,7 +47,7 @@ jobs:
       - store_artifacts:
           path: /tmp/docs
           destination: docs
-  docs-deploly:
+  docs-deploy:
     docker:
       - image: node
     steps:
