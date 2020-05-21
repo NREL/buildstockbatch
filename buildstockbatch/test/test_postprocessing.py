@@ -72,8 +72,6 @@ def test_empty_results_assertion(basic_residential_project_file, capsys):
     with pytest.raises(ValueError, match=r'No simulation results found to post-process'):
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
-    assert str(except_info.value) == 'No simulation results found to post-process'
-
 
 def test_large_parquet_combine(basic_residential_project_file):
     # Test a simulated scenario where the individual timeseries parquet are larger than the max memory per partition
