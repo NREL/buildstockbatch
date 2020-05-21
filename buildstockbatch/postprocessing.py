@@ -267,6 +267,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
 
     del dpouts
+
+    if results_df.empty:
+        raise ValueError("No simulation results found to post-process")
+
     results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
     if do_timeseries:
