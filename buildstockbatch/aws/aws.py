@@ -40,6 +40,7 @@ from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
+from ..utils import log_error_details
 
 logger = logging.getLogger(__name__)
 
@@ -1744,8 +1745,8 @@ class AwsBatch(DockerBatchBase):
         super(AwsBatch, AwsBatch).validate_project(project_file)
         AwsBatch.validate_instance_types(project_file)
 
-    @classmethod
-    def docker_image(cls):
+    @property
+    def docker_image(self):
         return 'nrel/buildstockbatch'
 
     @property
@@ -1754,7 +1755,7 @@ class AwsBatch(DockerBatchBase):
 
     @property
     def container_repo(self):
-        repo_name = self.docker_image()
+        repo_name = self.docker_image
         repos = self.ecr.describe_repositories()
         repo = None
         for repo in repos['repositories']:
@@ -1775,7 +1776,7 @@ class AwsBatch(DockerBatchBase):
         logger.debug('Building docker image')
         self.docker_client.images.build(
             path=str(root_path),
-            tag=self.docker_image(),
+            tag=self.docker_image,
             rm=True
         )
 
@@ -1794,7 +1795,7 @@ class AwsBatch(DockerBatchBase):
             registry=registry_url
         )
         logger.debug(resp)
-        image = self.docker_client.images.get(self.docker_image())
+        image = self.docker_client.images.get(self.docker_image)
         image.tag(repo_url, tag=self.job_identifier)
         last_status = None
         for x in self.docker_client.images.push(repo_url, tag=self.job_identifier, stream=True):
@@ -2112,6 +2113,7 @@ class AwsBatch(DockerBatchBase):
                 os.remove(item)
 
 
+@log_error_details()
 def main():
     logging.config.dictConfig({
         'version': 1,

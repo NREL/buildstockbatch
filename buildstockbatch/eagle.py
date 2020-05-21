@@ -35,7 +35,8 @@ import traceback
 import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSampler
+from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
+from .utils import log_error_details
 from . import postprocessing
 
 logger = logging.getLogger(__name__)
@@ -66,26 +67,41 @@ class EagleBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
-
-        if self.stock_type == 'residential':
-            self.sampler = ResidentialSingularitySampler(
-                self.singularity_image,
+        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
+        if sampling_algorithm is None:
+            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
+                           'configuration yaml. This key is required.')
+        if sampling_algorithm == 'precomputed':
+            logger.info('calling precomputed sampler')
+            self.sampler = PrecomputedSingularitySampler(
                 self.output_dir,
                 self.cfg,
                 self.buildstock_dir,
                 self.project_dir
             )
-        elif self.stock_type == 'commercial':
-            sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', 'sobol')
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSampler(
+        elif self.stock_type == 'residential':
+            if sampling_algorithm == 'quota':
+                self.sampler = ResidentialSingularitySampler(
+                    self.singularity_image,
                     self.output_dir,
                     self.cfg,
                     self.buildstock_dir,
                     self.project_dir
                 )
             else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented.'.format(sampling_algorithm))
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented for residential projects.'.
+                                          format(sampling_algorithm))
+        elif self.stock_type == 'commercial':
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSingularitySampler(
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented for commercial projects.'.
+                                          format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
@@ -114,26 +130,42 @@ class EagleBatch(BuildStockBatchBase):
             shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
 
-    @classmethod
-    def singularity_image_url(cls):
+    @property
+    def singularity_image_url(self):
         return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=cls.OS_VERSION,
-                    sha=cls.OS_SHA
+                    ver=self.os_version,
+                    sha=self.os_sha
                 )
 
     @property
     def singularity_image(self):
+        # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
+        if 'sys_image_dir' in self.cfg.keys():
+            sys_image_dir = self.cfg['sys_image_dir']
+            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                ver=self.os_version,
+                sha=self.os_sha
+            ))
+            if os.path.isfile(sys_image):
+                return sys_image
+            else:
+                raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
+        # Use the expected HPC environment default if not explicitly defined in the YAML
         sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-            ver=self.OS_VERSION,
-            sha=self.OS_SHA
+            ver=self.os_version,
+            sha=self.os_sha
         ))
         if os.path.isfile(sys_image):
             return sys_image
+        # Otherwise attempt retrieval from AWS for the appropriate os_version and os_sha
         else:
             singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
             if not os.path.isfile(singularity_image_path):
-                logger.debug(f'Downloading singularity image: {self.singularity_image_url()}')
-                r = requests.get(self.singularity_image_url(), stream=True)
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url}')
+                r = requests.get(self.singularity_image_url, stream=True)
+                if r.status_code != requests.codes.ok:
+                    logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
+                    r.raise_for_status()
                 with open(singularity_image_path, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:
@@ -181,10 +213,14 @@ class EagleBatch(BuildStockBatchBase):
             # otherwise just the plain sampling process needs to be run
             buildstock_csv_filename = self.run_sampling()
 
+        # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the array
+        # jobs - this is rare but happens quasi-repeatably when lustre is really lagging
+        _ = self.weather_dir
+
         if sampling_only:
             return
 
-        # read the results
+        # Determine the number of simulations expected to be executed
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
 
         # find out how many buildings there are to simulate
@@ -316,7 +352,7 @@ class EagleBatch(BuildStockBatchBase):
                 cls.local_weather_dir,
             ]
 
-            # Call singularity to run the simulation
+            # Build the command to instantiate and configure the singularity container the simulation is run inside
             local_resources_dir = cls.local_buildstock_dir / 'resources'
             args = [
                 'singularity', 'exec',
@@ -335,14 +371,20 @@ class EagleBatch(BuildStockBatchBase):
                 args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
                 container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
                 runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
-            runscript.append('openstudio run -w in.osw')
+
+            # Build the openstudio command that will be issued within the singularity container
+            # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
+            cli_cmd = 'openstudio run -w in.osw'
+            if cfg.get('baseline', dict()).get('custom_gems', False):
+                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
             if get_bool_env_var('MEASURESONLY'):
-                runscript[-1] += ' --measures_only'
+                cli_cmd += ' --measures_only'
+            runscript.append(cli_cmd)
             args.extend([
                 str(cls.local_singularity_img),
                 'bash', '-x'
             ])
-            logger.debug(' '.join(map(str, args)))
+            logger.debug('\n'.join(map(str, args)))
             with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
                 try:
                     subprocess.run(
@@ -614,7 +656,7 @@ def user_cli(argv=sys.argv[1:]):
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return
+        return True
 
     # otherwise, queue up the whole eagle buildstockbatch process
     # the main work of the first Eagle job is to run the sampling script ...
@@ -650,6 +692,7 @@ def user_cli(argv=sys.argv[1:]):
     # eagle.sh calls main()
 
 
+@log_error_details()
 def main():
     """
     Determines which piece of work is to be run right now, on this process, on

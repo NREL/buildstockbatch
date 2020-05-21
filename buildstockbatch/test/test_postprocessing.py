@@ -10,6 +10,7 @@ import shutil
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
+from unittest.mock import patch
 
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):
@@ -72,3 +73,22 @@ def test_empty_results_assertion(basic_residential_project_file, capsys):
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
     assert str(except_info.value) == 'No simulation results found to post-process'
+
+
+def test_large_parquet_combine(basic_residential_project_file):
+    # Test a simulated scenario where the individual timeseries parquet are larger than the max memory per partition
+    # allocated for the parquet file combining.
+
+    post_process_config = {
+        'postprocessing': {
+            'aggregate_timeseries': True
+        }
+    }
+    project_filename, results_dir = basic_residential_project_file(post_process_config)
+
+    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
+            patch.object(BuildStockBatchBase, 'get_dask_client'), \
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir),\
+            patch.object(postprocessing, 'MAX_PARQUET_MEMORY', 1e6):  # set the max memory to just 1MB
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.process_results()  # this would raise exception if the postprocessing could not handle the situation
