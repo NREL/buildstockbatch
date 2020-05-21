@@ -69,7 +69,7 @@ def test_empty_results_assertion(basic_residential_project_file, capsys):
     shutil.rmtree(sim_out_dir)  # no results
     cfg = BuildStockBatchBase.get_project_configuration(project_filename)
 
-    with pytest.raises(ValueError) as except_info:
+    with pytest.raises(ValueError, match=r'No simulation results found to post-process'):
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
     assert str(except_info.value) == 'No simulation results found to post-process'
