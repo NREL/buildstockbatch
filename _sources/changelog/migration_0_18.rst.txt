@@ -10,7 +10,7 @@ Introduction
 ============
 
 This guide introduces what's new in buildstockbatch version 0.18 and also documents changes which affect users migrating
-there analyses from 0.17.
+their analyses from 0.17.
 
 Please carefully review the section on schema changes as the minimum schema version has been updated to the new version,
 0.2, and there are non-backwards-compatible changes in the schema update.
