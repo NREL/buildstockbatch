@@ -48,7 +48,6 @@
       <type>Boolean</type>
       <required>true</required>
       <model_dependent>false</model_dependent>
-      <default_value>false</default_value>
       <choices>
         <choice>
           <value>true</value>

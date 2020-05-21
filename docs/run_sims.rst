@@ -5,7 +5,7 @@ Local (Docker)
 ~~~~~~~~~~~~~~
 
 Running the simulations locally uses Docker. Docker needs to be configured to use all
-(or most) of the CPUs on your machine. To do so, click on the Docker icon up by the clock. It
+(or most) of the CPUs on your machine. To do so, click on the Docker icon by the clock. It
 looks like a little whale with boxes on its back. Select "Preferences..." and "Advanced".
 Slide the CPUs available to Docker to the number of concurrent simulations you want to run
 (probably all of them).
@@ -17,6 +17,7 @@ Running a project file is straightforward. Call the ``buildstock_docker`` comman
 
 .. warning::
 
+    In general, you should omit the ``-j`` argument, which will use all the cpus you made available to docker.
     Setting the ``-j`` flag for a number greater than the number of CPUs you made available in Docker
     will cause the simulations to run *slower* as the concurrent simulations will compete for CPUs.
 
@@ -64,3 +65,43 @@ Next, you will need to add an ``eagle`` top level key to the project file, which
 In general, be conservative on the time estimates. It can be helpful to run a small batch with
 pretty conservative estimates and then look at the output logs to see how long things really took
 before submitting a full batch simulation. 
+
+
+Amazon Web Services
+~~~~~~~~~~~~~~~~~~~
+
+Running a batch on AWS is done by calling the ``buildstock_aws`` command line
+tool.
+
+.. command-output:: buildstock_aws --help
+   :ellipsis: 0,8
+
+AWS Specific Project configuration
+..................................
+
+For the project to run on AWS, you will need to add a section to your config
+file, something like this:
+
+.. code-block:: yaml
+
+    aws:
+      # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
+      job_identifier: national01
+      s3:
+        bucket: myorg-resstock
+        prefix: national01_run01
+      region: us-west-2
+      use_spot: true
+      batch_array_size: 10000
+      # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
+      notifications_email: your_email@somewhere.com
+
+See :ref:`aws-config` for details.
+
+Cleaning up after yourself
+..........................
+
+When the simulation and postprocessing is all complete, run ``buildstock_aws
+--clean your_project_file.yml``. This will clean up all the AWS resources that
+were created on your behalf to run the simulations. Your results will still be
+on S3 and queryable in Athena.

@@ -11,24 +11,42 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client
+from dask.distributed import Client, LocalCluster
+import datetime as dt
+from fsspec.implementations.local import LocalFileSystem
+import gzip
+import itertools
+from joblib import delayed, Parallel
 import json
-import os
 import logging
 import math
+import os
+import pandas as pd
 import pathlib
+import random
 import re
+import requests
+import shlex
 import shutil
 import subprocess
 import sys
+import time
+import traceback
 import yaml
 
-from .hpc import HPCBatchBase, SimulationExists, get_bool_env_var
+from .base import BuildStockBatchBase, SimulationExists
+from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
+from .utils import log_error_details
+from . import postprocessing
 
 logger = logging.getLogger(__name__)
 
 
-class EagleBatch(HPCBatchBase):
+def get_bool_env_var(varname):
+    return os.environ.get(varname, '0').lower() in ('true', 't', '1', 'y', 'yes')
+
+
+class EagleBatch(BuildStockBatchBase):
 
     sys_image_dir = '/shared-projects/buildstock/singularity_images'
     hpc_name = 'eagle'
@@ -38,8 +56,54 @@ class EagleBatch(HPCBatchBase):
     local_project_dir = local_scratch / 'project'
     local_buildstock_dir = local_scratch / 'buildstock'
     local_weather_dir = local_scratch / 'weather'
-    local_output_dir = local_scratch
+    local_output_dir = local_scratch / 'output'
     local_singularity_img = local_scratch / 'openstudio.simg'
+    local_housing_characteristics_dir = local_scratch / 'housing_characteristics'
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+        output_dir = pathlib.Path(self.output_dir)
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        logger.debug('Output directory = {}'.format(output_dir))
+        weather_dir = self.weather_dir  # noqa E841
+        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
+        if sampling_algorithm is None:
+            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
+                           'configuration yaml. This key is required.')
+        if sampling_algorithm == 'precomputed':
+            logger.info('calling precomputed sampler')
+            self.sampler = PrecomputedSingularitySampler(
+                self.output_dir,
+                self.cfg,
+                self.buildstock_dir,
+                self.project_dir
+            )
+        elif self.stock_type == 'residential':
+            if sampling_algorithm == 'quota':
+                self.sampler = ResidentialSingularitySampler(
+                    self.singularity_image,
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented for residential projects.'.
+                                          format(sampling_algorithm))
+        elif self.stock_type == 'commercial':
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSingularitySampler(
+                    self.output_dir,
+                    self.cfg,
+                    self.buildstock_dir,
+                    self.project_dir
+                )
+            else:
+                raise NotImplementedError('Sampling algorithem "{}" is not implemented for commercial projects.'.
+                                          format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @staticmethod
     def validate_project(project_file):
@@ -54,19 +118,155 @@ class EagleBatch(HPCBatchBase):
         )
         return output_dir
 
+    @property
+    def results_dir(self):
+        results_dir = os.path.join(self.output_dir, 'results')
+        assert(os.path.isdir(results_dir))
+        return results_dir
+
     @staticmethod
     def clear_and_copy_dir(src, dst):
         if os.path.exists(dst):
             shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
 
+    @property
+    def singularity_image_url(self):
+        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                    ver=self.os_version,
+                    sha=self.os_sha
+                )
+
+    @property
+    def singularity_image(self):
+        # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
+        if 'sys_image_dir' in self.cfg.keys():
+            sys_image_dir = self.cfg['sys_image_dir']
+            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                ver=self.os_version,
+                sha=self.os_sha
+            ))
+            if os.path.isfile(sys_image):
+                return sys_image
+            else:
+                raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
+        # Use the expected HPC environment default if not explicitly defined in the YAML
+        sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+            ver=self.os_version,
+            sha=self.os_sha
+        ))
+        if os.path.isfile(sys_image):
+            return sys_image
+        # Otherwise attempt retrieval from AWS for the appropriate os_version and os_sha
+        else:
+            singularity_image_path = os.path.join(self.output_dir, 'openstudio.simg')
+            if not os.path.isfile(singularity_image_path):
+                logger.debug(f'Downloading singularity image: {self.singularity_image_url}')
+                r = requests.get(self.singularity_image_url, stream=True)
+                if r.status_code != requests.codes.ok:
+                    logger.error('Unable to download simg file from OpenStudio releases S3 bucket.')
+                    r.raise_for_status()
+                with open(singularity_image_path, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=1024):
+                        if chunk:
+                            f.write(chunk)
+                logger.debug('Downloaded singularity image to {}'.format(singularity_image_path))
+            return singularity_image_path
+
+    @property
+    def weather_dir(self):
+        weather_dir = os.path.join(self.output_dir, 'weather')
+        if not os.path.exists(weather_dir):
+            os.makedirs(weather_dir)
+            self._get_weather_files()
+        return weather_dir
+
+    def run_batch(self, sampling_only=False):
+
+        # Create simulation_output dir
+        sim_out_ts_dir = pathlib.Path(self.output_dir) / 'results' / 'simulation_output' / 'timeseries'
+        os.makedirs(sim_out_ts_dir, exist_ok=True)
+        for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
+            os.makedirs(sim_out_ts_dir / f'up{i:02d}')
+
+        # create destination_dir and copy housing_characteristics into it
+        logger.debug("Copying housing characteristics")
+        destination_dir = os.path.dirname(self.sampler.csv_path)
+        if os.path.exists(destination_dir):
+            shutil.rmtree(destination_dir)
+        shutil.copytree(
+            os.path.join(self.project_dir, 'housing_characteristics'),
+            destination_dir
+        )
+        logger.debug("Housing characteristics copied.")
+        # run sampling
+        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
+        #   constructor ensures that 'downselect' not in self.cfg and
+        #   run_sampling simply copies that .csv to the correct location if
+        #   necessary and returns the path
+        if 'downselect' in self.cfg:
+            # if there is a downselect section in the yml,
+            # BuildStockBatchBase.downselect calls run_sampling and does
+            # additional processing before and after
+            buildstock_csv_filename = self.downselect()
+        else:
+            # otherwise just the plain sampling process needs to be run
+            buildstock_csv_filename = self.run_sampling()
+
+        # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the array
+        # jobs - this is rare but happens quasi-repeatably when lustre is really lagging
+        _ = self.weather_dir
+
+        if sampling_only:
+            return
+
+        # Determine the number of simulations expected to be executed
+        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+
+        # find out how many buildings there are to simulate
+        building_ids = df.index.tolist()
+        n_datapoints = len(building_ids)
+        # number of simulations is number of buildings * number of upgrades
+        n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
+
+        # this is the number of simulations defined for this run as a "full job"
+        #     number of simulations per job if we believe the .yml file n_jobs
+        n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]['n_jobs'])
+        #     use more appropriate batch size in the case of n_jobs being much
+        #     larger than we need, now that we know n_sims
+        n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
+
+        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
+        if not self.skip_baseline_sims:
+            # create batches of simulations
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        else:
+            all_sims = list(itertools.chain(upgrade_sims))
+        random.shuffle(all_sims)
+        all_sims_iter = iter(all_sims)
+
+        for i in itertools.count(1):
+            batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
+            if not batch:
+                break
+            logger.info('Queueing job {} ({} simulations)'.format(i, len(batch)))
+            job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(i))
+            with open(job_json_filename, 'w') as f:
+                json.dump({
+                    'job_num': i,
+                    'batch': batch,
+                }, f, indent=4)
+
+        # now queue them
+        jobids = self.queue_jobs()
+
+        # queue up post-processing to run after all the simulation jobs are complete
+        if not get_bool_env_var('MEASURESONLY'):
+            self.queue_post_processing(jobids)
+
     def run_job_batch(self, job_array_number):
 
-        # Move resources to the local scratch directory
-        self.clear_and_copy_dir(
-            pathlib.Path(self.project_dir) / 'seeds',
-            self.local_project_dir / 'seeds'
-        )
         self.clear_and_copy_dir(
             pathlib.Path(self.buildstock_dir) / 'resources',
             self.local_buildstock_dir / 'resources'
@@ -81,44 +281,142 @@ class EagleBatch(HPCBatchBase):
         )
         self.clear_and_copy_dir(
             pathlib.Path(self.output_dir) / 'housing_characteristics',
-            self.local_output_dir / 'housing_characteristics'
+            self.local_housing_characteristics_dir
         )
         if os.path.exists(self.local_singularity_img):
             os.remove(self.local_singularity_img)
         shutil.copy2(self.singularity_image, self.local_singularity_img)
 
         # Run the job batch as normal
-        super(EagleBatch, self).run_job_batch(job_array_number)
+        job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
+        with open(job_json_filename, 'r') as f:
+            args = json.load(f)
 
-    @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, output_dir, singularity_image, cfg, i,
-                     upgrade_idx=None):
+        @delayed
+        def run_building_d(i, upgrade_idx):
+            try:
+                return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
+            except Exception:
+                _, sim_dir = self.make_sim_dir(i, upgrade_idx, self.results_dir, overwrite_existing=True)
+                with open(os.path.join(sim_dir, 'traceback.out'), 'w') as f:
+                    traceback.print_exc(file=f)
 
-        # Check for an existing results directory
-        try:
-            sim_id, remote_sim_dir = cls.make_sim_dir(
-                i,
-                upgrade_idx,
-                os.path.join(output_dir, 'results', 'simulation_output')
-            )
-        except SimulationExists:
-            return
+        # Run the simulations, get the data_point_out.json info from each
+        tick = time.time()
+        with Parallel(n_jobs=-1, verbose=9) as parallel:
+            dpouts = parallel(itertools.starmap(run_building_d, args['batch']))
+        tick = time.time() - tick
+        logger.info('Simulation time: {:.2f} minutes'.format(tick / 60.))
 
-        # Run the building using the local copies of the resources
-        local_sim_dir = HPCBatchBase.run_building(
-            str(cls.local_project_dir),
-            str(cls.local_buildstock_dir),
-            str(cls.local_weather_dir),
-            str(cls.local_output_dir),
-            str(cls.local_singularity_img),
-            cfg,
-            i,
-            upgrade_idx
+        # Save the aggregated dpouts as a json file
+        lustre_sim_out_dir = pathlib.Path(self.results_dir) / 'simulation_output'
+        results_json = lustre_sim_out_dir / f'results_job{job_array_number}.json.gz'
+        logger.info(f'Writing results to {results_json}')
+        with gzip.open(results_json, 'wt', encoding='utf-8') as f:
+            json.dump(dpouts, f)
+
+        # Compress simulation results
+        simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
+        logger.info(f'Compressing simulation outputs to {simout_filename}')
+        local_sim_out_dir = self.local_output_dir / 'simulation_output'
+        subprocess.run(
+            [
+                'tar',
+                'cf', str(simout_filename),
+                '-I', 'pigz',
+                '-C', str(local_sim_out_dir),
+                '.'
+            ],
+            check=True
         )
 
-        # Copy the results to the remote directory
-        cls.clear_and_copy_dir(local_sim_dir, remote_sim_dir)
-        shutil.rmtree(local_sim_dir, ignore_errors=True)
+    @classmethod
+    def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
+
+        fs = LocalFileSystem()
+        upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+
+        try:
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(cls.local_output_dir, 'simulation_output'))
+        except SimulationExists as ex:
+            sim_dir = ex.sim_dir
+        else:
+            # Generate the osw for this simulation
+            osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+            with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
+                json.dump(osw, f, indent=4)
+
+            # Copy other necessary stuff into the simulation directory
+            dirs_to_mount = [
+                os.path.join(cls.local_buildstock_dir, 'measures'),
+                cls.local_weather_dir,
+            ]
+
+            # Build the command to instantiate and configure the singularity container the simulation is run inside
+            local_resources_dir = cls.local_buildstock_dir / 'resources'
+            args = [
+                'singularity', 'exec',
+                '--contain',
+                '-e',
+                '--pwd', '/var/simdata/openstudio',
+                '-B', f'{sim_dir}:/var/simdata/openstudio',
+                '-B', f'{local_resources_dir}:/lib/resources',
+                '-B', f'{cls.local_housing_characteristics_dir}:/lib/housing_characteristics'
+            ]
+            runscript = [
+                'ln -s /lib /var/simdata/openstudio/lib'
+            ]
+            for src in dirs_to_mount:
+                container_mount = '/' + os.path.basename(src)
+                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
+                runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+
+            # Build the openstudio command that will be issued within the singularity container
+            # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
+            cli_cmd = 'openstudio run -w in.osw'
+            if cfg.get('baseline', dict()).get('custom_gems', False):
+                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+            if get_bool_env_var('MEASURESONLY'):
+                cli_cmd += ' --measures_only'
+            runscript.append(cli_cmd)
+            args.extend([
+                str(cls.local_singularity_img),
+                'bash', '-x'
+            ])
+            logger.debug('\n'.join(map(str, args)))
+            with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                try:
+                    subprocess.run(
+                        args,
+                        check=True,
+                        input='\n'.join(runscript).encode('utf-8'),
+                        stdout=f_out,
+                        stderr=subprocess.STDOUT,
+                        cwd=cls.local_output_dir
+                    )
+                except subprocess.CalledProcessError:
+                    pass
+                finally:
+                    # Clean up the symbolic links we created in the container
+                    for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                        try:
+                            os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
+                        except FileNotFoundError:
+                            pass
+
+                    # Clean up simulation directory
+                    cls.cleanup_sim_dir(
+                        sim_dir,
+                        fs,
+                        f'{output_dir}/results/simulation_output/timeseries',
+                        upgrade_id,
+                        i
+                    )
+        finally:
+            reporting_measures = cfg.get('reporting_measures', [])
+            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
+            return dpout
 
     def queue_jobs(self, array_ids=None):
         eagle_cfg = self.cfg['eagle']
@@ -191,18 +489,22 @@ class EagleBatch(HPCBatchBase):
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
 
-        # Clear out some files that cause problems if we're rerunning this.
-
+        # Throw an error if the files already exist.
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
                 subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
                 if subdirpath.exists():
-                    shutil.rmtree(subdirpath)
+                    raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')  # noqa E501
 
+        # Move old output logs and config to make way for new ones
         for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
             filepath = pathlib.Path(self.output_dir, filename)
             if filepath.exists():
-                os.remove(filepath)
+                last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
+                shutil.move(
+                    filepath,
+                    filepath.parent / f'{filepath.stem}_{last_mod_date:%Y%m%d%H%M}{filepath.suffix}'
+                )
 
         env = {}
         env.update(os.environ)
@@ -248,7 +550,11 @@ class EagleBatch(HPCBatchBase):
             logger.debug('sbatch: {}'.format(line))
 
     def get_dask_client(self):
-        return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
+        if get_bool_env_var('DASKLOCALCLUSTER'):
+            cluster = LocalCluster(local_directory='/data/dask-tmp')
+            return Client(cluster)
+        else:
+            return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
 
 logging_config = {
@@ -292,7 +598,7 @@ def user_cli(argv=sys.argv[1:]):
     logging.config.dictConfig(logging_config)
 
     # print BuildStockBatch logo
-    print(HPCBatchBase.LOGO)
+    print(BuildStockBatchBase.LOGO)
 
     # CLI arguments
     parser = argparse.ArgumentParser()
@@ -350,7 +656,7 @@ def user_cli(argv=sys.argv[1:]):
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return
+        return True
 
     # otherwise, queue up the whole eagle buildstockbatch process
     # the main work of the first Eagle job is to run the sampling script ...
@@ -386,6 +692,7 @@ def user_cli(argv=sys.argv[1:]):
     # eagle.sh calls main()
 
 
+@log_error_details()
 def main():
     """
     Determines which piece of work is to be run right now, on this process, on
@@ -423,6 +730,7 @@ def main():
         assert(not sampling_only)
         batch.run_job_batch(job_array_number)
     elif post_process:
+        logger.debug("Starting postprocessing")
         # else, we might be in a post-processing step
         # Postprocessing should not have been scheduled if measures only or sampling only are run
         assert(not measures_only)
@@ -432,6 +740,7 @@ def main():
         else:
             batch.process_results()
     else:
+        logger.debug("Kicking off batch")
         # default job_array_number == 0 task is to kick the whole BuildStock
         # process off, that is, to create samples and then create batch jobs
         # to run them

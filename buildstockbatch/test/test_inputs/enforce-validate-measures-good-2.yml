@@ -1,10 +1,15 @@
 stock_type: residential
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
+weather_files_url: https://fake-url
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 upgrades:
+  - upgrade_name: cool upgrade
+    options:
+      - option: Vintage<1940
   - upgrade_name: good upgrade
     options:
       - option: Vintage|<1940
@@ -16,10 +21,16 @@ upgrades:
           - and:
               - Vintage|1960s||Vintage|1960s
               - Vintage|1980s
+        costs:
+          - value: 0.9
+            multiplier: Fixed (1)
       - option: Insulation Finished Basement|Good Option
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
+    reference_scenario: cool upgrade
+simulation_output:
+  include_enduse_subcategories: true
 timeseries_csv_export:
   reporting_frequency: Timestep
   include_enduse_subcategories: true
@@ -27,3 +38,4 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
 reporting_measures:
   - ReportingMeasure1
+schema_version: 0.2

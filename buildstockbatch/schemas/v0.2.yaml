@@ -1,0 +1,131 @@
+buildstock_directory: str()
+project_directory: str(required=True)
+weather_files_path: str(required=False)
+weather_files_url: str(required=False)
+stock_type: enum('residential', 'commercial', required=True)
+eagle: include('hpc-spec', required=False)
+aws: include('aws-spec', required=False)
+output_directory: str(required=False)
+sys_image_dir: str(required=False)
+baseline: include('sim-spec', required=True)
+os_version: str(required=False)
+os_sha: str(required=False)
+simulation_output: map(required=False)
+timeseries_csv_export: map(required=False)
+upgrades: list(include('upgrade-spec'), required=False)
+downselect: include('downselect-spec',required=False)
+postprocessing: include('postprocessing-spec', required=False)
+residential_simulation_controls: map(required=False)
+reporting_measures: list(str(), required=False)
+schema_version: num(required=True)
+---
+aws-spec:
+  job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
+  s3: include('s3-aws-postprocessing-spec', required=True)
+  region: str(required=True)
+  use_spot: bool(required=False)
+  spot_bid_percent: num(min=1, max=100, required=False)
+  batch_array_size: num(min=1, max=10000, required=True)
+  notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', required=True)
+  emr: include('aws-emr-spec', required=False)
+  job_environment: include('aws-job-environment', required=False)
+
+aws-job-environment:
+  vcpus: int(min=1, max=36, required=False)
+  memory: int(min=1024, required=False)
+
+aws-emr-spec:
+  master_instance_type: str(required=False)
+  slave_instance_type: str(required=False)
+  slave_instance_count: int(min=1, required=False)
+  dask_worker_vcores: int(min=1, required=False)
+
+hpc-spec:
+  account: str(required=True)
+  minutes_per_sim: int(max=120, required=False)
+  n_jobs: int(required=False)
+  postprocessing: include('hpc-postprocessing-spec', required=False)
+  sampling: include('sampling-spec', required=False)
+
+hpc-postprocessing-spec:
+  time: int(required=True)
+  n_workers: int(required=False)
+
+sampling-spec:
+  time: int(required=True)
+
+sim-spec:
+  n_datapoints: int(required=True)
+  n_buildings_represented: int(required=False)
+  measures: list(include('measure-spec'), required=False)
+  precomputed_sample: str(required=False)
+  skip_sims: bool(required=False)
+  measures_to_ignore: list(str(), required=False)
+  sampling_algorithm: enum('precomputed', 'quota', 'sobol', required=True)
+  osw_template: str(required=False)
+  include_qaqc: bool(required=False)
+  custom_gems: bool(required=False)
+
+measure-spec:
+  measure_dir_name: str(required=True)
+  arguments: map(required=False)
+
+upgrade-spec:
+  upgrade_name: str(required=True)
+  options: list(include('option-spec'), required=True)
+  package_apply_logic: include('apply-logic-spec', required=False)
+  reference_scenario: str(required=False)
+
+option-spec:
+  option: include('param_option-spec', required=True)
+  apply_logic: include('apply-logic-spec', required=False)
+  costs: list(include('cost-spec'), required=False)
+  lifetime: num(required=False)
+
+param_option-spec: str(exclude=':(){}[]')
+
+apply-logic-spec: >
+  any(
+    list(
+      include('and-spec'),
+      include('or-spec'),
+      include('not-spec'),
+      include('param_option-spec'),
+    ),
+    include('and-spec'),
+    include('or-spec'),
+    include('not-spec'),
+    include('param_option-spec')
+  )
+or-spec:
+  or: list(include('apply-logic-spec'))
+and-spec:
+  and: list(include('apply-logic-spec'))
+not-spec:
+  not: any(include('apply-logic-spec'), list(include('apply-logic-spec')))
+
+cost-spec:
+  value: num(required=True)
+  multiplier: str(required=True)
+
+downselect-spec:
+  resample: bool(required=False)
+  logic: include('apply-logic-spec', required=False)
+
+postprocessing-spec:
+  aws: include('aws-postprocessing-spec', required=False)
+  aggregate_timeseries: bool(required=False)
+
+aws-postprocessing-spec:
+  region_name: str(required=False)
+  s3: include('s3-aws-postprocessing-spec', required=True)
+  athena: include('athena-aws-postprocessing-spec', required=False)
+
+s3-aws-postprocessing-spec:
+  bucket: str(required=True)
+  prefix: str(required=True)
+
+athena-aws-postprocessing-spec:
+  glue_service_role: str(required=False)
+  database_name: str(required=True)
+  max_crawling_time: num(requried=False)

@@ -4,6 +4,9 @@ __pycache__
 .vscode
 docs/_build
 dask-worker-space
+venv/*
+*.DS_Store
+*.zip
 .pytest_cache
 *.pyc
-
+.python-version
