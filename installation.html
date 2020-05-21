@@ -1,0 +1,322 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Installation &mdash; buildstock-batch 0.18 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/changelog.css" type="text/css" />
+  <link rel="stylesheet" href="_static/sphinx_paramlinks.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Project Definition" href="project_defn.html" />
+    <link rel="prev" title="BuildStock Batch" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> buildstock-batch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#local">Local</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aws-user-configuration">AWS User Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#eagle">Eagle</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aws-user-config-eagle">AWS User Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#developer-installation">Developer installation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#amazon-web-services-beta">Amazon Web Services (Beta)</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="project_defn.html">Project Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="run_sims.html">Running a Project</a></li>
+</ul>
+<p class="caption"><span class="caption-text">Changes &amp; Migration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="changelog/index.html">Changes and Migration</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">buildstock-batch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Installation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/installation.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="installation">
+<h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<p>Both the local and Peregrine installations depend on the
+<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">OpenStudio-BuildStock</a>
+repository. Either <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> it or download a copy of it or your
+fork or branch of it with your projects.</p>
+<div class="section" id="local">
+<span id="local-install"></span><h2>Local<a class="headerlink" href="#local" title="Permalink to this headline">¶</a></h2>
+<p>This method works for running the simulations locally through Docker.</p>
+<p><a class="reference external" href="http://docker.io">Download</a> and install Docker for your platform.</p>
+<p>Install Python 3.6 or greater for your platform. Either the official
+distribution from python.org or the <a class="reference external" href="https://www.anaconda.com/distribution/">Anaconda distribution</a> (recommended).</p>
+<p>Get a copy of this code either by downloading the zip file from GitHub or
+cloning the repository.</p>
+<p>Optional, but highly recommended, is to create a new <a class="reference external" href="https://docs.python.org/3/library/venv.html">python virtual
+environment</a> if you’re using python from python.org, or to create a new <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">conda
+environment</a> if you’re using Anaconda. Then activate your environment.</p>
+<p>Install the library by doing the following:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="o">/</span><span class="n">path</span><span class="o">/</span><span class="n">to</span><span class="o">/</span><span class="n">buildstockbatch</span>
+<span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">e</span> <span class="o">.</span>
+</pre></div>
+</div>
+<div class="section" id="aws-user-configuration">
+<span id="aws-user-config-local"></span><h3>AWS User Configuration<a class="headerlink" href="#aws-user-configuration" title="Permalink to this headline">¶</a></h3>
+<p>To use the automatic upload of processed results to AWS Athena, you’ll need to
+configure your user account with your AWS credentials. This setup only needs to
+be done once.</p>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html">Install the AWS CLI</a> into a <em>separate</em> <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">conda environment</a> or <a class="reference external" href="https://docs.python.org/3/library/venv.html">python
+virtual environment</a> from your buildstock conda environment.</p></li>
+<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration">Configure the AWS CLI</a> from that environment. (Don’t type the <code class="docutils literal notranslate"><span class="pre">$</span></code> in the example.)</p></li>
+</ol>
+</div>
+</div>
+<div class="section" id="eagle">
+<span id="eagle-install"></span><h2>Eagle<a class="headerlink" href="#eagle" title="Permalink to this headline">¶</a></h2>
+<p>BuildStock Batch is preinstalled on Eagle. To use it, <a class="reference external" href="https://www.nrel.gov/hpc/eagle-user-basics.html">ssh into Eagle</a>,
+activate the appropriate conda environment:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">load</span> <span class="n">conda</span>
+<span class="n">source</span> <span class="n">activate</span> <span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">/</span><span class="n">buildstock</span><span class="o">/</span><span class="n">envs</span><span class="o">/</span><span class="n">buildstock</span><span class="o">-</span><span class="n">X</span><span class="o">.</span><span class="n">X</span>
+</pre></div>
+</div>
+<p>You can get a list of installed environments by looking in the envs directory</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ls</span> <span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">/</span><span class="n">buildstock</span><span class="o">/</span><span class="n">envs</span>
+</pre></div>
+</div>
+<div class="section" id="aws-user-config-eagle">
+<span id="id1"></span><h3>AWS User Configuration<a class="headerlink" href="#aws-user-config-eagle" title="Permalink to this headline">¶</a></h3>
+<p>To use the automatic upload of processed results to AWS Athena, you’ll need to
+configure your user account with your AWS credentials. This setup only needs to
+be done once.</p>
+<p>First, <a class="reference external" href="https://www.nrel.gov/hpc/eagle-user-basics.html">ssh into Eagle</a>, then
+issue the following commands</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">module</span> <span class="n">load</span> <span class="n">conda</span>
+<span class="n">source</span> <span class="n">activate</span> <span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">/</span><span class="n">buildstock</span><span class="o">/</span><span class="n">envs</span><span class="o">/</span><span class="n">awscli</span>
+<span class="n">aws</span> <span class="n">configure</span>
+</pre></div>
+</div>
+<p>Follow the on screen instructions to enter your AWS credentials. When you are
+done:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">source</span> <span class="n">deactivate</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="developer-installation">
+<h3>Developer installation<a class="headerlink" href="#developer-installation" title="Permalink to this headline">¶</a></h3>
+<p>For those doing development work on BuildStock Batch (not most users), a new
+conda environment is that includes buildstock batch is created with the bash
+script <cite>create_eagle_env.sh</cite> in the git repo that will need to be cloned onto
+Eagle. The script is called as follows:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">create_eagle_env</span><span class="o">.</span><span class="n">sh</span> <span class="n">envname</span>
+</pre></div>
+</div>
+<p>This will create a directory <code class="docutils literal notranslate"><span class="pre">/shared-projects/buildstock/envs/env-name</span></code> that
+contains the conda environment with BuildStock Batch installed. This environment
+can then be used by any user.</p>
+<p>If you pass the <code class="docutils literal notranslate"><span class="pre">-d</span></code> flag to that script, it will install the buildstock-batch
+package in development mode meaning that any changes you make in your cloned
+repo will immediately be available to that environment. However, it means that
+only the user who installed the environment can use it.</p>
+<p>If you pass the flag <code class="docutils literal notranslate"><span class="pre">-e</span> <span class="pre">/projects/someproject/envs</span></code>, it will install the
+environment there instead of the default location. This is useful if you need a
+specific installation for a particular project.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">-d</span></code> and <code class="docutils literal notranslate"><span class="pre">-e</span></code> flags can also be combined if desired</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">create_eagle_env</span><span class="o">.</span><span class="n">sh</span> <span class="o">-</span><span class="n">d</span> <span class="o">-</span><span class="n">e</span> <span class="o">/</span><span class="n">projects</span><span class="o">/</span><span class="n">enduse</span><span class="o">/</span><span class="n">envs</span> <span class="n">mydevenv</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="amazon-web-services-beta">
+<h2>Amazon Web Services (Beta)<a class="headerlink" href="#amazon-web-services-beta" title="Permalink to this headline">¶</a></h2>
+<p>The installation instructions are the same as the <a class="reference internal" href="#local-install"><span class="std std-ref">Local</span></a>
+installation. You will need to use an AWS account with appropriate permissions.</p>
+<p>The first time you run <code class="docutils literal notranslate"><span class="pre">buildstock_aws</span></code> it may take several minutes,
+especially over a slower internet connection as it is downloading and building a docker image If you
+make changes to buildstockbatch, run this again before submitting another job.</p>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="project_defn.html" class="btn btn-neutral float-right" title="Project Definition" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="BuildStock Batch" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright Copyright 2018 The Alliance for Sustainable Energy
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

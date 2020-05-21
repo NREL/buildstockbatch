@@ -1,0 +1,373 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Running a Project &mdash; buildstock-batch 0.18 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/changelog.css" type="text/css" />
+  <link rel="stylesheet" href="_static/sphinx_paramlinks.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Changes and Migration" href="changelog/index.html" />
+    <link rel="prev" title="Project Definition" href="project_defn.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> buildstock-batch
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project_defn.html">Project Definition</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Running a Project</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#local-docker">Local (Docker)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eagle">Eagle</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#eagle-specific-project-configuration">Eagle specific project configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#amazon-web-services">Amazon Web Services</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#aws-specific-project-configuration">AWS Specific Project configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cleaning-up-after-yourself">Cleaning up after yourself</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption"><span class="caption-text">Changes &amp; Migration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="changelog/index.html">Changes and Migration</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">buildstock-batch</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Running a Project</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/run_sims.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="running-a-project">
+<h1>Running a Project<a class="headerlink" href="#running-a-project" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="local-docker">
+<h2>Local (Docker)<a class="headerlink" href="#local-docker" title="Permalink to this headline">¶</a></h2>
+<p>Running the simulations locally uses Docker. Docker needs to be configured to use all
+(or most) of the CPUs on your machine. To do so, click on the Docker icon by the clock. It
+looks like a little whale with boxes on its back. Select “Preferences…” and “Advanced”.
+Slide the CPUs available to Docker to the number of concurrent simulations you want to run
+(probably all of them).</p>
+<p>Running a project file is straightforward. Call the <code class="docutils literal notranslate"><span class="pre">buildstock_docker</span></code> command line tool as follows:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ buildstock_docker --help
+...
+usage: buildstock_docker [-h] [-j J] [-m]
+                         [--postprocessonly | --uploadonly | --validateonly | --samplingonly]
+                         project_filename
+
+positional arguments:
+  project_filename
+
+optional arguments:
+  -h, --help           show this help message and exit
+  -j J                 Number of parallel simulations. Default: all cores
+                       available to docker.
+  -m, --measures_only  Only apply the measures, but don&#39;t run simulations.
+                       Useful for debugging.
+  --postprocessonly    Only do postprocessing, useful for when the simulations
+                       are already done
+  --uploadonly         Only upload to S3, useful when postprocessing is
+                       already done. Ignores the upload flag in yaml
+  --validateonly       Only validate the project YAML file and references.
+                       Nothing is executed
+  --samplingonly       Run the sampling only.
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>In general, you should omit the <code class="docutils literal notranslate"><span class="pre">-j</span></code> argument, which will use all the cpus you made available to docker.
+Setting the <code class="docutils literal notranslate"><span class="pre">-j</span></code> flag for a number greater than the number of CPUs you made available in Docker
+will cause the simulations to run <em>slower</em> as the concurrent simulations will compete for CPUs.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Running the simulation with <code class="docutils literal notranslate"><span class="pre">postprocessonly</span></code> when there is already postprocessed results from previous run will
+overwrite those results.</p>
+</div>
+</div>
+<div class="section" id="eagle">
+<h2>Eagle<a class="headerlink" href="#eagle" title="Permalink to this headline">¶</a></h2>
+<p>After you have <a class="reference internal" href="installation.html#eagle-install"><span class="std std-ref">activated the appropriate conda environment on Eagle</span></a>,
+you can submit a project file to be simulated by passing it to the <code class="docutils literal notranslate"><span class="pre">buildstock_eagle</span></code> command.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ buildstock_eagle --help
+...
+usage: buildstock_eagle [-h] [--hipri] [-m]
+                        [--postprocessonly | --uploadonly | --validateonly | --samplingonly]
+                        project_filename
+
+positional arguments:
+  project_filename
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --hipri              Submit this job to the high priority queue. Uses 2x
+                       node hours.
+  -m, --measures_only  Only apply the measures, but don&#39;t run simulations.
+                       Useful for debugging.
+  --postprocessonly    Only do postprocessing, useful for when the simulations
+                       are already done
+  --uploadonly         Only upload to S3, useful when postprocessing is
+                       already done. Ignores the upload flag in yaml
+  --validateonly       Only validate the project YAML file and references.
+                       Nothing is executed
+  --samplingonly       Run the sampling only.
+</pre></div>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Running the simulation with <code class="docutils literal notranslate"><span class="pre">postprocessonly</span></code> when there is already postprocessed results from previous run will
+overwrite those results.</p>
+</div>
+<div class="section" id="eagle-specific-project-configuration">
+<h3>Eagle specific project configuration<a class="headerlink" href="#eagle-specific-project-configuration" title="Permalink to this headline">¶</a></h3>
+<p>To get a project to run on Eagle, you will need to make a few changes to your <a class="reference internal" href="project_defn.html"><span class="doc">Project Definition</span></a>.
+First, the <code class="docutils literal notranslate"><span class="pre">output_directory</span></code> should be in <code class="docutils literal notranslate"><span class="pre">/scratch/your_username/some_directory</span></code> or in <code class="docutils literal notranslate"><span class="pre">/projects</span></code> somewhere.
+Building stock simulations generate a lot of output quickly and the <code class="docutils literal notranslate"><span class="pre">/scratch</span></code> or <code class="docutils literal notranslate"><span class="pre">/projects</span></code> filesystem are
+equipped to handle that kind of I/O throughput where your <code class="docutils literal notranslate"><span class="pre">/home</span></code> directory is not and may cause
+stability issues across the whole system.</p>
+<p>Next, you will need to add an <code class="docutils literal notranslate"><span class="pre">eagle</span></code> top level key to the project file, which will look something like this</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">eagle</span><span class="p">:</span>
+  <span class="nt">account</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">your_hpc_allocation</span>
+  <span class="nt">n_jobs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100</span>  <span class="c1"># the number of concurrent nodes to use on Eagle, typically 100-500</span>
+  <span class="nt">minutes_per_sim</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2</span>
+  <span class="nt">sampling</span><span class="p">:</span>
+    <span class="nt">time</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">60</span>  <span class="c1"># the number of minutes you expect sampling to take</span>
+  <span class="nt">postprocessing</span><span class="p">:</span>
+    <span class="nt">time</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">180</span>  <span class="c1"># the number of minutes you expect post processing to take</span>
+</pre></div>
+</div>
+<p>In general, be conservative on the time estimates. It can be helpful to run a small batch with
+pretty conservative estimates and then look at the output logs to see how long things really took
+before submitting a full batch simulation.</p>
+</div>
+</div>
+<div class="section" id="amazon-web-services">
+<h2>Amazon Web Services<a class="headerlink" href="#amazon-web-services" title="Permalink to this headline">¶</a></h2>
+<p>Running a batch on AWS is done by calling the <code class="docutils literal notranslate"><span class="pre">buildstock_aws</span></code> command line
+tool.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>$ buildstock_aws --help
+...
+usage: buildstock_aws [-h] [-c] [--validateonly] project_filename
+
+positional arguments:
+  project_filename
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -c, --clean       After the simulation is done, run with --clean to clean up
+                    AWS environment
+  --validateonly    Only validate the project YAML file and references.
+                    Nothing is executed
+</pre></div>
+</div>
+<div class="section" id="aws-specific-project-configuration">
+<h3>AWS Specific Project configuration<a class="headerlink" href="#aws-specific-project-configuration" title="Permalink to this headline">¶</a></h3>
+<p>For the project to run on AWS, you will need to add a section to your config
+file, something like this:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">aws</span><span class="p">:</span>
+  <span class="c1"># The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur</span>
+  <span class="nt">job_identifier</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">national01</span>
+  <span class="nt">s3</span><span class="p">:</span>
+    <span class="nt">bucket</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">myorg-resstock</span>
+    <span class="nt">prefix</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">national01_run01</span>
+  <span class="nt">region</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">us-west-2</span>
+  <span class="nt">use_spot</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
+  <span class="nt">batch_array_size</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10000</span>
+  <span class="c1"># To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
+  <span class="nt">notifications_email</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">your_email@somewhere.com</span>
+</pre></div>
+</div>
+<p>See <a class="reference internal" href="project_defn.html#aws-config"><span class="std std-ref">AWS Configuration</span></a> for details.</p>
+</div>
+<div class="section" id="cleaning-up-after-yourself">
+<h3>Cleaning up after yourself<a class="headerlink" href="#cleaning-up-after-yourself" title="Permalink to this headline">¶</a></h3>
+<p>When the simulation and postprocessing is all complete, run <code class="docutils literal notranslate"><span class="pre">buildstock_aws</span>
+<span class="pre">--clean</span> <span class="pre">your_project_file.yml</span></code>. This will clean up all the AWS resources that
+were created on your behalf to run the simulations. Your results will still be
+on S3 and queryable in Athena.</p>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="changelog/index.html" class="btn btn-neutral float-right" title="Changes and Migration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="project_defn.html" class="btn btn-neutral float-left" title="Project Definition" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright Copyright 2018 The Alliance for Sustainable Energy
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
