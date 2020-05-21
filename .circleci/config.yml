@@ -40,13 +40,45 @@ jobs:
             make html
             mkdir /tmp/docs
             cp -r _build/html/* /tmp/docs
-            if [ "$CIRCLE_BRANCH" = "master" ]
-            then
-            pip install awscli
-            cd _build/html
-            aws s3 rm s3://buildstock-batch --recursive
-            aws s3 sync . s3://buildstock-batch
-            fi
+      - persist_to_workspace:
+          root: /tmp
+          paths:
+            - docs
       - store_artifacts:
           path: /tmp/docs
           destination: docs
+  docs-deploly:
+    docker:
+      - image: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /tmp
+      - run: 
+          name: Disable jekyll builds
+          command: touch /tmp/docs/.nojekyll
+      - run:
+          name: Install and configure dependencies
+          command: |
+            npm install -g --silent gh-pages
+            git config user.email "noel.merket@nrel.gov"
+            git config user.name "Noel Merket CI Bot"
+      - add_ssh_keys:
+          fingerprints:
+            - "78:38:f3:2e:94:a6:20:46:3e:40:ee:31:3d:1e:95:09"
+      - run:
+          name: Deploy docs to gh-pages branch
+          command: gh-pages --dotfiles --message "[skip ci] update api docs" --dist /tmp/docs
+
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build
+      - docs-deploy:
+          requires:
+            - build
+          filters:
+            branches:
+              only: github-pages
+
