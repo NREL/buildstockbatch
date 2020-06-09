@@ -15,6 +15,12 @@ This method works for running the simulations locally through Docker.
 
 `Download <http://docker.io>`_ and install Docker for your platform.
 
+.. note::
+
+   Users using a Windows operating system should install 
+   `Docker Desktop Community 2.1.0.5 <https://docs.docker.com/docker-for-windows/release-notes/#docker-desktop-community-2105>`_
+   or below.
+
 Install Python 3.6 or greater for your platform. Either the official
 distribution from python.org or the `Anaconda distribution
 <https://www.anaconda.com/distribution/>`_ (recommended).
