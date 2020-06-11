@@ -1,7 +1,7 @@
 Installation
 ------------
 
-Both the local and Peregrine installations depend on the
+BuildStock-Batch installations depend on the
 `OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
 repository. Either ``git clone`` it or download a copy of it or your
 fork or branch of it with your projects.
@@ -11,7 +11,8 @@ fork or branch of it with your projects.
 Local
 ~~~~~
 
-This method works for running the simulations locally through Docker.
+This method works for running the simulations locally through Docker. BuildStock-Batch simulations are
+computationally intensive. Local use is only recommended for very small testing runs.
 
 `Download <http://docker.io>`_ and install Docker for your platform.
 
@@ -137,5 +138,5 @@ The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
 
 The first time you run ``buildstock_aws`` it may take several minutes,
-especially over a slower internet connection as it is downloading and building a docker image If you
+especially over a slower internet connection as it is downloading and building a docker image. If you
 make changes to buildstockbatch, run this again before submitting another job.
