@@ -1563,34 +1563,9 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
             f.seek(0)
             self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
 
-        function_script = '''
-
-import os
-import io
-import json
-import boto3
-from pprint import pprint
-
-def lambda_handler(event, context):
-
-    # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
-    # was launched from the console - also prepare a bucket for logs
-
-    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
-
-    session = boto3.Session(region_name=os.environ['REGION'])
-
-    s3 = session.client('s3')
-    with io.BytesIO() as f:
-        s3.download_fileobj(os.environ['BUCKET'], os.environ['EMR_CONFIG_JSON_KEY'], f)
-        args = json.loads(f.getvalue())
-
-    emr = session.client("emr")
-
-    response = emr.run_job_flow(**args)
-    pprint(response)
-
-'''
+        lambda_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), 's3_assets', 'lambda_fucntion.py')
+        with open(lambda_filename, 'r') as f:
+            function_script = f.read()
         with io.BytesIO() as f:
             with zipfile.ZipFile(f, mode='w', compression=zipfile.ZIP_STORED) as zf:
                 zi = zipfile.ZipInfo('emr_function.py')
