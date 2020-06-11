@@ -1458,7 +1458,7 @@ from dask.distributed import Client
 import json
 from s3fs import S3FileSystem
 
-from postprocessing import combine_results, create_athena_tables
+from postprocessing import combine_results, create_athena_tables, remove_intermediate_files
 
 cluster = YarnCluster(
     deploy_mode='local',
@@ -1481,7 +1481,7 @@ aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
 if 'athena' in aws_conf:
     create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
 
-postprocessing.remove_intermediate_files(fs, results_s3_loc)
+remove_intermediate_files(fs, results_s3_loc)
 '''
 
         bsb_post_bash = f'''#!/bin/bash
