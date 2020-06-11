@@ -1452,55 +1452,33 @@ class AwsBatchEnv(AwsJobBase):
         n_dask_workers = self.emr_slave_instance_count * instance_ncpus // self.emr_dask_worker_vcores
         worker_memory = round(instance_memory / instance_ncpus * self.emr_dask_worker_vcores * 0.95)
 
-        bsb_post_script = f'''
-from dask_yarn import YarnCluster
-from dask.distributed import Client
-import json
-from s3fs import S3FileSystem
-
-from postprocessing import combine_results, create_athena_tables, remove_intermediate_files
-
-cluster = YarnCluster(
-    deploy_mode='local',
-    worker_vcores={self.emr_dask_worker_vcores},
-    worker_memory='{worker_memory} MiB',
-    n_workers={n_dask_workers}
-)
-
-client = Client(cluster)
-
-results_s3_loc = '{self.s3_bucket}/{self.s3_bucket_prefix}/results'
-
-fs = S3FileSystem()
-with fs.open('{self.s3_bucket}/{self.s3_bucket_prefix}/config.json', 'r') as f:
-    cfg = json.load(f)
-
-combine_results(fs, results_s3_loc, cfg)
-
-aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
-if 'athena' in aws_conf:
-    create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
-
-remove_intermediate_files(fs, results_s3_loc)
-'''
+        bsb_post_config = {
+            'emr_dask_worker_vcores': self.emr_dask_worker_vcores,
+            'worker_memory': worker_memory,
+            'n_dask_workers': n_dask_workers,
+            's3_bucket': self.s3_bucket,
+            's3_bucket_prefix': self.s3_bucket_prefix,
+            'tbl_prefix': tbl_prefix
+        }
 
         bsb_post_bash = f'''#!/bin/bash
 
-aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post.py
-/home/hadoop/miniconda/bin/python bsb_post.py
+aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_post.py
+/home/hadoop/miniconda/bin/python bsb_post.py "{self.s3_bucket}" "{self.s3_bucket_prefix}"
 
         '''
 
         logger.info('Uploading EMR support assets...')
         fs = S3FileSystem()
+        here = os.path.dirname(os.path.abspath(__file__))
         emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
         fs.makedirs(emr_folder)
-        with fs.open(f'{emr_folder}/bsb_post.py', 'w', encoding='utf-8') as f:
-            f.write(bsb_post_script)
+        fs.put(os.path.join(here, 's3_assets', 'bsb_post.py'), f'{emr_folder}/bsb_post.py')
+        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
         with fs.open(f'{emr_folder}/bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
-        here = os.path.dirname(os.path.abspath(__file__))
-        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
+        with fs.open(f'{emr_folder}/bsb_post_config.json', 'w', encoding='utf-8') as f:
+            json.dump(bsb_post_config, f)
         with fs.open(f'{emr_folder}/postprocessing.tar.gz', 'wb') as f:
             with tarfile.open(fileobj=f, mode='w:gz') as tarf:
                 tarf.add(os.path.join(here, '..', 'postprocessing.py'), arcname='postprocessing.py')
