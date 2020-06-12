@@ -18,7 +18,7 @@ def do_postprocessing(s3_bucket, s3_bucket_prefix):
     cluster = YarnCluster(
         deploy_mode='local',
         worker_vcores=bsb_post_cfg['emr_dask_worker_vcores'],
-        worker_memory=bsb_post_cfg['worker_memory'] + ' MiB',
+        worker_memory='{} MiB'.format(bsb_post_cfg['worker_memory']),
         n_workers=bsb_post_cfg['n_dask_workers']
     )
 
