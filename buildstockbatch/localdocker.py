@@ -95,29 +95,27 @@ class DockerBatchBase(BuildStockBatchBase):
 
             docker_client = docker.client.from_env()
 
-            # Install custom gems to be used in the docker container
+            # Define the paths for the Gemfile and openstudio-gems.gemspec files
             local_gemfile_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'Gemfile')
             mnt_gemfile_path = f"{mnt_custom_gem_dir}/Gemfile"
+            local_gemspec_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'openstudio-gems.gemspec')
+            mnt_gemspec_path = f"{mnt_custom_gem_dir}/openstudio-gems.gemspec"
 
-            # Check that the Gemfile exists
+            # Check that the Gemfile and openstudio-gems.gemspec exists
             if not os.path.exists(local_gemfile_path):
                 print(f'local_gemfile_path = {local_gemfile_path}')
                 raise AttributeError(
                     'baseline:custom_gems = True, but did not find Gemfile in /resources directory')
-            
-            # Install custom gemspec to be used in the docker container
-            local_gemspec_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'openstudio-gems.gemspec')
-            mnt_gemspec_path = f"{mnt_custom_gem_dir}/openstudio-gems.gemspec"
-
-            # Check that the .gemspec file exists
             if not os.path.exists(local_gemspec_path):
                 print(f'local_gemspec_path = {local_gemspec_path}')
                 raise AttributeError(
                     'baseline:custom_gems = True, but did not find openstudio-gems.gemspec in /resources directory')
 
-            # Make the .custom_gems dir if it doesn't already exist and copy in Gemfile from /resources
+            # Make the .custom_gems dir if it doesn't already exist and copy in Gemfile & openstudio-gems.gemspec from /resources
             if not os.path.exists(os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec')):
-                shutil.copyfile(local_gemspec_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec'))
+                os.makedirs('/mnt/dc-comstock/repos/comstock/.custom_gems')
+            shutil.copyfile(local_gemfile_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'Gemfile'))
+            shutil.copyfile(local_gemspec_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec'))
 
             # Install the custom gems
             bundle_install_args = [
