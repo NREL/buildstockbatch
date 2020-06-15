@@ -80,9 +80,84 @@ class DockerBatchBase(BuildStockBatchBase):
                                           format(sampling_algorithm))
         else:
             raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
+        
+        # Install custom gems to a location that will be used by all workers
+        if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            logger.info('Installing custom gems')
 
+            # Define directories to be mounted in the container
+            local_custom_gem_dir = os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems')
+            mnt_custom_gem_dir = '/var/simdata/openstudio/.custom_gems'
+            bind_mounts = [
+                (local_custom_gem_dir, mnt_custom_gem_dir, 'rw')
+            ]
+            docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
+
+            docker_client = docker.client.from_env()
+
+            # Install custom gems to be used in the docker container
+            local_gemfile_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'Gemfile')
+            mnt_gemfile_path = f"{mnt_custom_gem_dir}/Gemfile"
+
+            # Check that the Gemfile exists
+            if not os.path.exists(local_gemfile_path):
+                print(f'local_gemfile_path = {local_gemfile_path}')
+                raise AttributeError(
+                    'baseline:custom_gems = True, but did not find Gemfile in /resources directory')
+            
+            # Install custom gemspec to be used in the docker container
+            local_gemspec_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'openstudio-gems.gemspec')
+            mnt_gemspec_path = f"{mnt_custom_gem_dir}/openstudio-gems.gemspec"
+
+            # Check that the .gemspec file exists
+            if not os.path.exists(local_gemspec_path):
+                print(f'local_gemspec_path = {local_gemspec_path}')
+                raise AttributeError(
+                    'baseline:custom_gems = True, but did not find openstudio-gems.gemspec in /resources directory')
+
+            # Make the .custom_gems dir if it doesn't already exist and copy in Gemfile from /resources
+            if not os.path.exists(os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec')):
+                shutil.copyfile(local_gemspec_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec'))
+
+            # Install the custom gems
+            bundle_install_args = [
+                'bundle',
+                'install',
+                '--gemfile', mnt_gemfile_path,
+                '--path', mnt_custom_gem_dir,
+                '--without', 'test development'
+            ]
+            container_output = docker_client.containers.run(
+                self.docker_image,
+                bundle_install_args,
+                remove=True,
+                volumes=docker_volume_mounts,
+                name='install_custom_gems',
+                stderr=True
+            )
+            with open(os.path.join(local_custom_gem_dir, 'bundle_install_output.log'), 'wb') as f_out:
+                f_out.write(container_output)
+
+            # Report out custom gems loaded by OpenStudio CLI
+            check_active_gems_args = [
+                'openstudio',
+                '--bundle', mnt_gemfile_path,
+                '--bundle_path', mnt_custom_gem_dir,
+                # '--bundle_without', 'test development'  # TODO for some reason CLI won't accept this flag
+                'gem_list'
+            ]
+            container_output = docker_client.containers.run(
+                self.docker_image,
+                check_active_gems_args,
+                remove=True,
+                volumes=docker_volume_mounts,
+                name='list_custom_gems'
+            )
+            with open(os.path.join(local_custom_gem_dir, 'openstudio_gem_list_output.log'), 'wb') as f_out:
+                f_out.write(container_output)
+        
         self._weather_dir = None
-
+    
     @staticmethod
     def validate_project(project_file):
         super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
@@ -97,8 +172,8 @@ class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        logger.debug(f'Pulling docker image: {self.docker_image}')
-        self.docker_client.images.pull(self.docker_image)
+        # logger.debug(f'Pulling docker image: {self.docker_image}')
+        # self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
@@ -133,6 +208,7 @@ class LocalDockerBatch(DockerBatchBase):
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
+            (os.path.join(buildstock_dir, '.custom_gems'), '/mnt/dc-comstock/repos/comstock', 'rw'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
@@ -154,17 +230,18 @@ class LocalDockerBatch(DockerBatchBase):
             '-w', 'in.osw'
         ]
         if cfg.get('baseline', dict()).get('custom_gems', False):
-            args.insert(2, '--bundle')
-            args.insert(3, '/var/oscli/Gemfile')
-            args.insert(4, '--bundle_path')
-            args.insert(5, '/var/oscli/gems')
-            args.insert(6, '--debug')
+            args.insert(1, '--bundle')
+            args.insert(2, 'mnt_gemfile_path')
+            args.insert(3, '--bundle_path')
+            args.insert(4, 'mnt_custom_gem_dir')
+            args.append('--debug')
         if measures_only:
             args.insert(2, '--measures_only')
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
             extra_kws['stderr'] = True
+        breakpoint()
         container_output = docker_client.containers.run(
             docker_image,
             args,
