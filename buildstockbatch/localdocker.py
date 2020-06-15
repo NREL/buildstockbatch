@@ -151,13 +151,20 @@ class LocalDockerBatch(DockerBatchBase):
         args = [
             'openstudio',
             'run',
-            '-w', 'in.osw',
+            '-w', 'in.osw'
         ]
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            args.insert(2, '--bundle')
+            args.insert(3, '/var/oscli/Gemfile')
+            args.insert(4, '--bundle_path')
+            args.insert(5, '/var/oscli/gems')
+            args.insert(6, '--debug')
         if measures_only:
             args.insert(2, '--measures_only')
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
+            extra_kws['stderr'] = True
         container_output = docker_client.containers.run(
             docker_image,
             args,
