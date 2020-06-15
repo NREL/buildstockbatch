@@ -229,9 +229,9 @@ class LocalDockerBatch(DockerBatchBase):
         ]
         if cfg.get('baseline', dict()).get('custom_gems', False):
             args.insert(1, '--bundle')
-            args.insert(2, 'mnt_gemfile_path')
+            args.insert(2, '/var/simdata/openstudio/.custom_gems/Gemfile')
             args.insert(3, '--bundle_path')
-            args.insert(4, 'mnt_custom_gem_dir')
+            args.insert(4, '/var/simdata/openstudio/.custom_gems/')
             args.append('--debug')
         if measures_only:
             args.insert(2, '--measures_only')
