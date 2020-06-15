@@ -239,7 +239,6 @@ class LocalDockerBatch(DockerBatchBase):
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
             extra_kws['stderr'] = True
-        breakpoint()
         container_output = docker_client.containers.run(
             docker_image,
             args,
