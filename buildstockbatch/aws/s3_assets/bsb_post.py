@@ -1,4 +1,5 @@
 import argparse
+import boto3
 from dask_yarn import YarnCluster
 from dask.distributed import Client
 import json
@@ -12,14 +13,30 @@ def do_postprocessing(s3_bucket, s3_bucket_prefix):
     fs = S3FileSystem()
     with fs.open(f'{s3_bucket}/{s3_bucket_prefix}/config.json', 'r') as f:
         cfg = json.load(f)
-    with fs.open(f'{s3_bucket}/{s3_bucket_prefix}/emr/bsb_post_config.json', 'r') as f:
-        bsb_post_cfg = json.load(f)
+
+    ec2 = boto3.client('ec2')
+
+    with open('/mnt/var/lib/info/job-flow.json', 'r') as f:
+        job_flow_info = json.load(f)
+
+    for instance_group in job_flow_info['instanceGroups']:
+        if instance_group['instanceRole'].lower() == 'core':
+            instance_type = instance_group['instanceType']
+            instance_count = instance_group['requestedInstanceCount']
+
+    instance_info = ec2.describe_instance_types(InstanceTypes=[instance_type])
+
+    dask_worker_vcores = cfg['aws'].get('emr', {}).get('dask_worker_vcores', 2)
+    instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
+    instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
+    n_dask_workers = instance_count * instance_ncpus // dask_worker_vcores
+    worker_memory = round(instance_memory / instance_ncpus * dask_worker_vcores * 0.95)
 
     cluster = YarnCluster(
         deploy_mode='local',
-        worker_vcores=bsb_post_cfg['emr_dask_worker_vcores'],
-        worker_memory='{} MiB'.format(bsb_post_cfg['worker_memory']),
-        n_workers=bsb_post_cfg['n_dask_workers']
+        worker_vcores=dask_worker_vcores,
+        worker_memory='{} MiB'.format(worker_memory),
+        n_workers=n_dask_workers
     )
 
     client = Client(cluster)  # noqa E841
@@ -30,9 +47,12 @@ def do_postprocessing(s3_bucket, s3_bucket_prefix):
 
     aws_conf = cfg.get('postprocessing', {}).get('aws', {})
     if 'athena' in aws_conf:
+        tbl_prefix = s3_bucket_prefix.split('/')[-1]
+        if not tbl_prefix:
+            tbl_prefix = cfg['aws']['job_identifier']
         create_athena_tables(
             aws_conf,
-            bsb_post_cfg['tbl_prefix'],
+            tbl_prefix,
             s3_bucket,
             f'{s3_bucket_prefix}/results/parquet'
         )

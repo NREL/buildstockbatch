@@ -1442,47 +1442,34 @@ class AwsBatchEnv(AwsJobBase):
 
     def upload_assets(self):
 
-        tbl_prefix = self.s3_bucket_prefix.split('/')[-1]
-        if not tbl_prefix:
-            tbl_prefix = self.job_identifier
+        logger.info('Uploading EMR support assets...')
+        fs = S3FileSystem()
+        here = os.path.dirname(os.path.abspath(__file__))
+        emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
+        fs.makedirs(emr_folder)
 
-        instance_info = self.ec2.describe_instance_types(InstanceTypes=[self.emr_slave_instance_type])
-        instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
-        instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
-        n_dask_workers = self.emr_slave_instance_count * instance_ncpus // self.emr_dask_worker_vcores
-        worker_memory = round(instance_memory / instance_ncpus * self.emr_dask_worker_vcores * 0.95)
-
-        bsb_post_config = {
-            'emr_dask_worker_vcores': self.emr_dask_worker_vcores,
-            'worker_memory': worker_memory,
-            'n_dask_workers': n_dask_workers,
-            's3_bucket': self.s3_bucket,
-            's3_bucket_prefix': self.s3_bucket_prefix,
-            'tbl_prefix': tbl_prefix
-        }
-
+        # bsb_post.sh
         bsb_post_bash = f'''#!/bin/bash
 
 aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_post.py
 /home/hadoop/miniconda/bin/python bsb_post.py "{self.s3_bucket}" "{self.s3_bucket_prefix}"
 
         '''
-
-        logger.info('Uploading EMR support assets...')
-        fs = S3FileSystem()
-        here = os.path.dirname(os.path.abspath(__file__))
-        emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
-        fs.makedirs(emr_folder)
-        fs.put(os.path.join(here, 's3_assets', 'bsb_post.py'), f'{emr_folder}/bsb_post.py')
-        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
         with fs.open(f'{emr_folder}/bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
-        with fs.open(f'{emr_folder}/bsb_post_config.json', 'w', encoding='utf-8') as f:
-            json.dump(bsb_post_config, f)
+
+        # bsb_post.py
+        fs.put(os.path.join(here, 's3_assets', 'bsb_post.py'), f'{emr_folder}/bsb_post.py')
+
+        # bootstrap-dask-custom
+        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
+
+        # postprocessing.py
         with fs.open(f'{emr_folder}/postprocessing.tar.gz', 'wb') as f:
             with tarfile.open(fileobj=f, mode='w:gz') as tarf:
                 tarf.add(os.path.join(here, '..', 'postprocessing.py'), arcname='postprocessing.py')
                 tarf.add(os.path.join(here, 's3_assets', 'setup_postprocessing.py'), arcname='setup.py')
+
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
