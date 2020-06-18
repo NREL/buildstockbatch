@@ -141,7 +141,5 @@ Amazon Web Services (Beta)
 
 The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
-
 The first time you run ``buildstock_aws`` it may take several minutes,
-especially over a slower internet connection as it is downloading and building a docker image If you
-make changes to buildstockbatch, run this again before submitting another job.
+especially over a slower internet connection as it is downloading and building a docker image.
