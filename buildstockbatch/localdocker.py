@@ -86,7 +86,7 @@ class DockerBatchBase(BuildStockBatchBase):
             logger.info('Installing custom gems')
 
             # Define directories to be mounted in the container
-            local_custom_gem_dir = os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems')
+            local_custom_gem_dir = os.path.join(self.buildstock_dir, '.custom_gems')
             mnt_custom_gem_dir = '/var/simdata/openstudio/.custom_gems'
             bind_mounts = [
                 (local_custom_gem_dir, mnt_custom_gem_dir, 'rw')
@@ -96,10 +96,10 @@ class DockerBatchBase(BuildStockBatchBase):
             docker_client = docker.client.from_env()
 
             # Define the paths for the Gemfile and openstudio-gems.gemspec files
-            local_gemfile_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'Gemfile')
+            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
             mnt_gemfile_path = f"{mnt_custom_gem_dir}/Gemfile"
-            local_gemspec_path = os.path.join('/mnt/dc-comstock/repos/comstock', 'resources', 'openstudio-gems.gemspec')
-            mnt_gemspec_path = f"{mnt_custom_gem_dir}/openstudio-gems.gemspec"
+            local_gemspec_path = os.path.join(self.buildstock_dir, 'resources', 'openstudio-gems.gemspec')
+            # mnt_gemspec_path = f"{mnt_custom_gem_dir}/openstudio-gems.gemspec"
 
             # Check that the Gemfile and openstudio-gems.gemspec exists
             if not os.path.exists(local_gemfile_path):
@@ -112,10 +112,10 @@ class DockerBatchBase(BuildStockBatchBase):
                     'baseline:custom_gems = True, but did not find openstudio-gems.gemspec in /resources directory')
 
             # Make the .custom_gems dir if it doesn't already exist and copy in Gemfile & openstudio-gems.gemspec from /resources
-            if not os.path.exists(os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec')):
-                os.makedirs('/mnt/dc-comstock/repos/comstock/.custom_gems')
-            shutil.copyfile(local_gemfile_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'Gemfile'))
-            shutil.copyfile(local_gemspec_path, os.path.join('/mnt/dc-comstock/repos/comstock', '.custom_gems', 'openstudio-gems.gemspec'))
+            if not os.path.exists(os.path.join(self.buildstock_dir, '.custom_gems', 'openstudio-gems.gemspec')):
+                os.makedirs(os.path.join(self.buildstock_dir, '.custom_gems'))
+            shutil.copyfile(local_gemfile_path, os.path.join(self.buildstock_dir, '.custom_gems', 'Gemfile'))
+            shutil.copyfile(local_gemspec_path, os.path.join(self.buildstock_dir, '.custom_gems', 'openstudio-gems.gemspec'))
 
             # Install the custom gems
             bundle_install_args = [
@@ -206,7 +206,7 @@ class LocalDockerBatch(DockerBatchBase):
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
-            (os.path.join(buildstock_dir, '.custom_gems'), '/mnt/dc-comstock/repos/comstock', 'rw'),
+            (os.path.join(buildstock_dir, '.custom_gems'), '.custom_gems', 'rw'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
