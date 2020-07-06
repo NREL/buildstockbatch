@@ -16,6 +16,12 @@ computationally intensive. Local use is only recommended for very small testing 
 
 `Download <http://docker.io>`_ and install Docker for your platform.
 
+.. note::
+
+   Users using a Windows operating system should install 
+   `Docker Desktop Community 2.1.0.5 <https://docs.docker.com/docker-for-windows/release-notes/#docker-desktop-community-2105>`_
+   or below.
+
 Install Python 3.6 or greater for your platform. Either the official
 distribution from python.org or the `Anaconda distribution
 <https://www.anaconda.com/distribution/>`_ (recommended).
@@ -136,7 +142,5 @@ Amazon Web Services (Beta)
 
 The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
-
 The first time you run ``buildstock_aws`` it may take several minutes,
-especially over a slower internet connection as it is downloading and building a docker image. If you
-make changes to buildstockbatch, run this again before submitting another job.
+especially over a slower internet connection as it is downloading and building a docker image.
