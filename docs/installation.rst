@@ -48,7 +48,7 @@ Install the library by doing the following:
 AWS User Configuration
 ......................
 
-To use BuildStock Batch on AWS, or enable automatic upload of processed Eagle results to AWS Athena, you'll need to
+To use BuildStock Batch on AWS, or enable automatic upload of processed results to AWS Athena, you'll need to
 configure your user account with your AWS credentials. This setup only needs to be done once.
 
 1. `Install the AWS CLI`_ version 2.
