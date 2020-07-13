@@ -1,7 +1,7 @@
 Installation
 ------------
 
-Both the local and Peregrine installations depend on the
+BuildStock-Batch installations depend on the
 `OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
 repository. Either ``git clone`` it or download a copy of it or your
 fork or branch of it with your projects.
@@ -11,9 +11,10 @@ fork or branch of it with your projects.
 Local
 ~~~~~
 
-This method works for running the simulations locally through Docker.
+This method works for running the simulations locally through Docker. BuildStock-Batch simulations are
+computationally intensive. Local use is only recommended for very small testing runs.
 
-`Download <http://docker.io>`_ and install Docker for your platform.
+`Download <http://docker.io>`_ and install Docker Desktop for your platform.
 
 .. note::
 
@@ -26,7 +27,7 @@ distribution from python.org or the `Anaconda distribution
 <https://www.anaconda.com/distribution/>`_ (recommended).
 
 Get a copy of this code either by downloading the zip file from GitHub or
-cloning the repository.
+`cloning the repository <https://github.com/NREL/buildstockbatch>`_.
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
@@ -47,13 +48,11 @@ Install the library by doing the following:
 AWS User Configuration
 ......................
 
-To use the automatic upload of processed results to AWS Athena, you'll need to
-configure your user account with your AWS credentials. This setup only needs to
-be done once.
+To use BuildStock Batch on AWS, or enable automatic upload of processed results to AWS Athena, you'll need to
+configure your user account with your AWS credentials. This setup only needs to be done once.
 
-1. `Install the AWS CLI`_ into a *separate* `conda environment`_ or `python
-   virtual environment`_ from your buildstock conda environment.
-2. `Configure the AWS CLI`_ from that environment. (Don't type the ``$`` in the example.)
+1. `Install the AWS CLI`_ version 2.
+2. `Configure the AWS CLI`_. (Don't type the ``$`` in the example.)
 
 .. _Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
 .. _Configure the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration
@@ -108,7 +107,7 @@ Developer installation
 ......................
 
 For those doing development work on BuildStock Batch (not most users), a new
-conda environment is that includes buildstock batch is created with the bash
+conda environment that includes buildstock batch is created with the bash
 script `create_eagle_env.sh` in the git repo that will need to be cloned onto
 Eagle. The script is called as follows:
 

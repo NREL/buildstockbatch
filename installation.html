@@ -176,14 +176,15 @@
             
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p>Both the local and Peregrine installations depend on the
+<p>BuildStock-Batch installations depend on the
 <a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">OpenStudio-BuildStock</a>
 repository. Either <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span></code> it or download a copy of it or your
 fork or branch of it with your projects.</p>
 <div class="section" id="local">
 <span id="local-install"></span><h2>Local<a class="headerlink" href="#local" title="Permalink to this headline">¶</a></h2>
-<p>This method works for running the simulations locally through Docker.</p>
-<p><a class="reference external" href="http://docker.io">Download</a> and install Docker for your platform.</p>
+<p>This method works for running the simulations locally through Docker. BuildStock-Batch simulations are
+computationally intensive. Local use is only recommended for very small testing runs.</p>
+<p><a class="reference external" href="http://docker.io">Download</a> and install Docker Desktop for your platform.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>Users using a Windows operating system should install
@@ -193,7 +194,7 @@ or below.</p>
 <p>Install Python 3.6 or greater for your platform. Either the official
 distribution from python.org or the <a class="reference external" href="https://www.anaconda.com/distribution/">Anaconda distribution</a> (recommended).</p>
 <p>Get a copy of this code either by downloading the zip file from GitHub or
-cloning the repository.</p>
+<a class="reference external" href="https://github.com/NREL/buildstockbatch">cloning the repository</a>.</p>
 <p>Optional, but highly recommended, is to create a new <a class="reference external" href="https://docs.python.org/3/library/venv.html">python virtual
 environment</a> if you’re using python from python.org, or to create a new <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">conda
 environment</a> if you’re using Anaconda. Then activate your environment.</p>
@@ -204,13 +205,11 @@ environment</a> if you’re using Anaconda. Then activate your environment.</p>
 </div>
 <div class="section" id="aws-user-configuration">
 <span id="aws-user-config-local"></span><h3>AWS User Configuration<a class="headerlink" href="#aws-user-configuration" title="Permalink to this headline">¶</a></h3>
-<p>To use the automatic upload of processed results to AWS Athena, you’ll need to
-configure your user account with your AWS credentials. This setup only needs to
-be done once.</p>
+<p>To use BuildStock Batch on AWS, or enable automatic upload of processed results to AWS Athena, you’ll need to
+configure your user account with your AWS credentials. This setup only needs to be done once.</p>
 <ol class="arabic simple">
-<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html">Install the AWS CLI</a> into a <em>separate</em> <a class="reference external" href="https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html">conda environment</a> or <a class="reference external" href="https://docs.python.org/3/library/venv.html">python
-virtual environment</a> from your buildstock conda environment.</p></li>
-<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration">Configure the AWS CLI</a> from that environment. (Don’t type the <code class="docutils literal notranslate"><span class="pre">$</span></code> in the example.)</p></li>
+<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html">Install the AWS CLI</a> version 2.</p></li>
+<li><p><a class="reference external" href="https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration">Configure the AWS CLI</a>. (Don’t type the <code class="docutils literal notranslate"><span class="pre">$</span></code> in the example.)</p></li>
 </ol>
 </div>
 </div>
@@ -247,7 +246,7 @@ done:</p>
 <div class="section" id="developer-installation">
 <h3>Developer installation<a class="headerlink" href="#developer-installation" title="Permalink to this headline">¶</a></h3>
 <p>For those doing development work on BuildStock Batch (not most users), a new
-conda environment is that includes buildstock batch is created with the bash
+conda environment that includes buildstock batch is created with the bash
 script <cite>create_eagle_env.sh</cite> in the git repo that will need to be cloned onto
 Eagle. The script is called as follows:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">bash</span> <span class="n">create_eagle_env</span><span class="o">.</span><span class="n">sh</span> <span class="n">envname</span>

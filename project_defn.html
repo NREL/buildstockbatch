@@ -238,18 +238,18 @@ batch run. An example file is in this repo as
     <span class="n">time</span><span class="p">:</span> <span class="mi">60</span>
     <span class="n">n_workers</span><span class="p">:</span> <span class="mi">3</span>
 <span class="n">aws</span><span class="p">:</span>
-  <span class="c1"># The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur</span>
-  <span class="n">job_identifier</span><span class="p">:</span> <span class="n">noeltest32</span>
+  <span class="c1"># The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur</span>
+  <span class="n">job_identifier</span><span class="p">:</span> <span class="n">test_proj</span>
   <span class="n">s3</span><span class="p">:</span>
     <span class="n">bucket</span><span class="p">:</span> <span class="n">resbldg</span><span class="o">-</span><span class="n">datasets</span>
-    <span class="n">prefix</span><span class="p">:</span> <span class="n">testing</span><span class="o">/</span><span class="n">noeltest32a</span>
+    <span class="n">prefix</span><span class="p">:</span> <span class="n">testing</span><span class="o">/</span><span class="n">user_test</span>
   <span class="n">emr</span><span class="p">:</span>
     <span class="n">slave_instance_count</span><span class="p">:</span> <span class="mi">1</span>
   <span class="n">region</span><span class="p">:</span> <span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span>
   <span class="n">use_spot</span><span class="p">:</span> <span class="n">true</span>
   <span class="n">batch_array_size</span><span class="p">:</span> <span class="mi">10</span>
   <span class="c1"># To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
-  <span class="n">notifications_email</span><span class="p">:</span> <span class="n">noel</span><span class="o">.</span><span class="n">merket</span><span class="nd">@nrel</span><span class="o">.</span><span class="n">gov</span>
+  <span class="n">notifications_email</span><span class="p">:</span> <span class="n">user</span><span class="nd">@nrel</span><span class="o">.</span><span class="n">gov</span>
 
 <span class="n">postprocessing</span><span class="p">:</span>
   <span class="n">aggregate_timeseries</span><span class="p">:</span> <span class="n">true</span>
