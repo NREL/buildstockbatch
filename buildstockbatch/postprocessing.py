@@ -262,8 +262,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
     for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
         for dpout in dpouts_for_this_job:
-            dpout['job_id'] = job_id
-    dpouts = itertools.chain.from_iterable(dpouts_by_job)
+            try:
+                dpout['job_id'] = job_id
+            except TypeError:
+                pass
+    dpouts = filter(lambda x: x is not None, itertools.chain.from_iterable(dpouts_by_job))
     results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
 
     del dpouts
