@@ -524,7 +524,7 @@ class EagleBatch(BuildStockBatchBase):
             '--output=postprocessing.out',
             '--nodes=1',
             ':',
-            '--mem=180000',
+            '--mem=700000',
             '--output=dask_workers.out',
             '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
             eagle_post_sh
