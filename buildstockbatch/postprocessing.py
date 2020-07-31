@@ -363,6 +363,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
 
 def remove_intermediate_files(fs, results_dir):
+    return
     # Remove aggregated files to save space
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
