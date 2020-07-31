@@ -289,6 +289,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith(']')))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
+        # Remove unwanted columns
+        all_ts_cols_sorted = list(filter(lambda x: not x.startswith('ZONE_MEAN_AIR_TEMPERATURE'), all_ts_cols_sorted))
 
     for upgrade_id, df in results_df.groupby('upgrade'):
         if upgrade_id > 0:
