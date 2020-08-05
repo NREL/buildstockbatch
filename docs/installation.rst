@@ -70,7 +70,7 @@ activate the appropriate conda environment:
 ::
 
    module load conda
-   source activate /shared-projects/buildstock/envs/buildstock-X.X
+   conda activate /shared-projects/buildstock/envs/buildstock-X.X
 
 You can get a list of installed environments by looking in the envs directory
 
@@ -93,7 +93,7 @@ issue the following commands
 ::
 
    module load conda
-   source activate /shared-projects/buildstock/envs/awscli
+   conda activate /shared-projects/buildstock/envs/awscli
    aws configure
 
 Follow the on screen instructions to enter your AWS credentials. When you are
@@ -101,7 +101,7 @@ done:
 
 ::
 
-   source deactivate
+   conda deactivate
 
 Developer installation
 ......................

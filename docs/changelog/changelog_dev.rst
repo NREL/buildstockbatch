@@ -21,3 +21,10 @@ Development Changelog
         :tickets: 168
 
         Minor updates to documentation.
+
+    .. change::
+        :tags: eagle
+        :pullreq: 173
+
+        Updates to the modules on eagle removed ``source activate`` and now requires ``conda activate`` instead. This
+        updates both the ``create_eagle_env.sh`` script as well as the associated documentation.

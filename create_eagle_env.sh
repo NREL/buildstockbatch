@@ -27,7 +27,7 @@ echo "Creating $MY_CONDA_PREFIX"
 module load conda
 conda remove -y --prefix "$MY_CONDA_PREFIX" --all
 conda create -y --prefix "$MY_CONDA_PREFIX" -c conda-forge "pyarrow>=0.14" python=3.7 "pandas>=1.0.0,!=1.0.4" dask distributed ruby
-source activate "$MY_CONDA_PREFIX"
+conda activate "$MY_CONDA_PREFIX"
 pip install --upgrade pip
 if [ $DEV -eq 1 ]
 then
