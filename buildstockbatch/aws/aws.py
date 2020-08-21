@@ -1442,69 +1442,34 @@ class AwsBatchEnv(AwsJobBase):
 
     def upload_assets(self):
 
-        tbl_prefix = self.s3_bucket_prefix.split('/')[-1]
-        if not tbl_prefix:
-            tbl_prefix = self.job_identifier
-
-        instance_info = self.ec2.describe_instance_types(InstanceTypes=[self.emr_slave_instance_type])
-        instance_memory = instance_info['InstanceTypes'][0]['MemoryInfo']['SizeInMiB']
-        instance_ncpus = instance_info['InstanceTypes'][0]['VCpuInfo']['DefaultVCpus']
-        n_dask_workers = self.emr_slave_instance_count * instance_ncpus // self.emr_dask_worker_vcores
-        worker_memory = round(instance_memory / instance_ncpus * self.emr_dask_worker_vcores * 0.95)
-
-        bsb_post_script = f'''
-from dask_yarn import YarnCluster
-from dask.distributed import Client
-import json
-from s3fs import S3FileSystem
-
-from postprocessing import combine_results, create_athena_tables
-
-cluster = YarnCluster(
-    deploy_mode='local',
-    worker_vcores={self.emr_dask_worker_vcores},
-    worker_memory='{worker_memory} MiB',
-    n_workers={n_dask_workers}
-)
-
-client = Client(cluster)
-
-results_s3_loc = '{self.s3_bucket}/{self.s3_bucket_prefix}/results'
-
-fs = S3FileSystem()
-with fs.open('{self.s3_bucket}/{self.s3_bucket_prefix}/config.json', 'r') as f:
-    cfg = json.load(f)
-
-combine_results(fs, results_s3_loc, cfg)
-
-aws_conf = cfg.get('postprocessing', {{}}).get('aws', {{}})
-if 'athena' in aws_conf:
-    create_athena_tables(aws_conf, '{tbl_prefix}', '{self.s3_bucket}', '{self.s3_bucket_prefix}/results/parquet')
-
-postprocessing.remove_intermediate_files(fs, results_s3_loc)
-'''
-
-        bsb_post_bash = f'''#!/bin/bash
-
-aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post.py
-/home/hadoop/miniconda/bin/python bsb_post.py
-
-        '''
-
         logger.info('Uploading EMR support assets...')
         fs = S3FileSystem()
+        here = os.path.dirname(os.path.abspath(__file__))
         emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
         fs.makedirs(emr_folder)
-        with fs.open(f'{emr_folder}/bsb_post.py', 'w', encoding='utf-8') as f:
-            f.write(bsb_post_script)
+
+        # bsb_post.sh
+        bsb_post_bash = f'''#!/bin/bash
+
+aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_post.py
+/home/hadoop/miniconda/bin/python bsb_post.py "{self.s3_bucket}" "{self.s3_bucket_prefix}"
+
+        '''
         with fs.open(f'{emr_folder}/bsb_post.sh', 'w', encoding='utf-8') as f:
             f.write(bsb_post_bash)
-        here = os.path.dirname(os.path.abspath(__file__))
+
+        # bsb_post.py
+        fs.put(os.path.join(here, 's3_assets', 'bsb_post.py'), f'{emr_folder}/bsb_post.py')
+
+        # bootstrap-dask-custom
         fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
+
+        # postprocessing.py
         with fs.open(f'{emr_folder}/postprocessing.tar.gz', 'wb') as f:
             with tarfile.open(fileobj=f, mode='w:gz') as tarf:
                 tarf.add(os.path.join(here, '..', 'postprocessing.py'), arcname='postprocessing.py')
                 tarf.add(os.path.join(here, 's3_assets', 'setup_postprocessing.py'), arcname='setup.py')
+
         logger.info('EMR support assets uploaded.')
 
     def create_emr_cluster_function(self):
@@ -1585,34 +1550,9 @@ aws s3 cp s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py bsb_post
             f.seek(0)
             self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
 
-        function_script = '''
-
-import os
-import io
-import json
-import boto3
-from pprint import pprint
-
-def lambda_handler(event, context):
-
-    # some prep work needed for this - check your security groups - there may default groups if any EMR cluster
-    # was launched from the console - also prepare a bucket for logs
-
-    # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/emr.html
-
-    session = boto3.Session(region_name=os.environ['REGION'])
-
-    s3 = session.client('s3')
-    with io.BytesIO() as f:
-        s3.download_fileobj(os.environ['BUCKET'], os.environ['EMR_CONFIG_JSON_KEY'], f)
-        args = json.loads(f.getvalue())
-
-    emr = session.client("emr")
-
-    response = emr.run_job_flow(**args)
-    pprint(response)
-
-'''
+        lambda_filename = os.path.join(os.path.dirname(os.path.abspath(__file__)), 's3_assets', 'lambda_function.py')
+        with open(lambda_filename, 'r') as f:
+            function_script = f.read()
         with io.BytesIO() as f:
             with zipfile.ZipFile(f, mode='w', compression=zipfile.ZIP_STORED) as zf:
                 zi = zipfile.ZipInfo('emr_function.py')

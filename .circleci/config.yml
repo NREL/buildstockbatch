@@ -9,7 +9,7 @@ jobs:
       - run:
           name: Install buildstock
           command: |
-            conda install -c conda-forge -y -q scipy numpy pandas "pyarrow>=0.14.1" dask joblib pyyaml
+            conda install -c conda-forge -y -q scipy numpy "pandas>=1.0.0,!=1.0.4" "pyarrow>=0.14.1" dask joblib pyyaml
             pip install .[dev] --progress-bar off
       - run:
           name: Run PyTest
@@ -60,7 +60,7 @@ jobs:
       - run:
           name: Install and configure dependencies
           command: |
-            npm install -g --silent gh-pages
+            npm install -g --silent gh-pages@3.0.0
             git config user.email "noel.merket@nrel.gov"
             git config user.name "Noel Merket CI Bot"
       - add_ssh_keys:
