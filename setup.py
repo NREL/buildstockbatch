@@ -68,7 +68,7 @@ setuptools.setup(
         'fsspec>=0.6.0',
         'docutils<0.15,>=0.10',
         'yamale>=2.0',
-        'ruamel.yaml>=0.16.5',
+        'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
     ],
