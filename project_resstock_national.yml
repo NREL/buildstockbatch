@@ -7,7 +7,7 @@ output_directory: ../national_test_outputs
 weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #precomputed_sample: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
+  n_datapoints: 4 
   n_buildings_represented: 80000000
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
 upgrades:
