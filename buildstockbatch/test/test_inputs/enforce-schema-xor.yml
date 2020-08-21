@@ -6,5 +6,6 @@ weather_files_path: /shared-projects/buildstock/weather/project_resstock_nationa
 weather_files_url: s3://my-bucket/weather.zip
 baseline:
   n_datapoints: 30
+  n_buildings_represented: 30
   sampling_algorithm: quota
 schema_version: 0.2
