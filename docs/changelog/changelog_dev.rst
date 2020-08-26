@@ -23,9 +23,17 @@ Development Changelog
         Minor updates to documentation.
 
     .. change::
+<<<<<<< HEAD
         :tags: schema, change
         :pullreq: 177
         :tickets: 158
 
         Updated the yml schema to require the ``n_buildings_represented`` in schema version 0.2.
 
+=======
+        :tags: bugfix, eagle
+        :pullreq: 179
+        :tickets: 178
+
+        Fixing dependency conflict in installation. 
+>>>>>>> origin/develop
