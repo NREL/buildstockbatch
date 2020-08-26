@@ -66,7 +66,6 @@ now look like:
     baseline:
       sampling_algorithm: quota
       n_datapoints: 1234
-      n_buildings_represented: 12340
     schema_version: 0.2
 
 Using a precomputed sample - Residential
@@ -81,7 +80,7 @@ The relevant *before* section should look something like:
 
 
 This needs to be updated to include the ``schema_version`` key, the ``sampling_algorithm`` key, the ``n_datapoints``
-key, the ``n_buildings_represented`` key, and ``buildstock_csv`` needs to be changed to ``precomputed_sample``. The new schema would now look like:
+key, and ``buildstock_csv`` needs to be changed to ``precomputed_sample``. The new schema would now look like:
 
 .. sourcecode:: yaml
 
@@ -89,7 +88,6 @@ key, the ``n_buildings_represented`` key, and ``buildstock_csv`` needs to be cha
       sampling_algorithm: precomputed
       precomputed_sample: /path/to/buildstock.csv
       n_datapoints: 1234
-      n_buildings_represented: 12340
     schema_version: 0.2
 
 Using a precomputed sample - Commercial
