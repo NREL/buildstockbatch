@@ -21,3 +21,11 @@ Development Changelog
         :tickets: 168
 
         Minor updates to documentation.
+
+    .. change::
+        :tags: schema, change
+        :pullreq: 177
+        :tickets: 158
+
+        Updated the yml schema to require the ``n_buildings_represented`` in schema version 0.2.
+
