@@ -21,3 +21,10 @@ Development Changelog
         :tickets: 168
 
         Minor updates to documentation.
+
+    .. change::
+        :tags: bugfix, eagle
+        :pullreq: 179
+        :tickets: 178
+
+        Fixing dependency conflict in installation. 

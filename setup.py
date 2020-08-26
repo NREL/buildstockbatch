@@ -64,7 +64,7 @@ setuptools.setup(
         'dask[complete]>=2.1.0',
         'docker',
         'boto3>=1.10.44',
-        's3fs>=0.4.0',
+        's3fs>=0.4.0,<0.5.0',
         'fsspec>=0.6.0',
         'docutils<0.15,>=0.10',
         'yamale>=2.0',
