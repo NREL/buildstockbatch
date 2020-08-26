@@ -50,8 +50,8 @@ class ValidationError(Exception):
 
 class BuildStockBatchBase(object):
 
-    OS_VERSION = '3.0.0'
-    # OS_SHA = '1c9617fa4e' # FIXME: not included in singularity image filename anymore?
+    DEFAULT_OS_VERSION = '3.0.0'
+    # DEFAULT_OS_SHA = '1c9617fa4e' # FIXME: not included in singularity image filename anymore?
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -63,39 +63,40 @@ class BuildStockBatchBase(object):
 
     def __init__(self, project_filename):
         self.project_filename = os.path.abspath(project_filename)
-        with open(self.project_filename, 'r') as f:
-            self.cfg = yaml.load(f, Loader=yaml.SafeLoader)
-        if 'stock_type' not in self.cfg.keys():
-            raise KeyError('Key `stock_type` not specified in project file `{}`'.format(project_filename))
-        elif (self.stock_type != 'residential') & (self.stock_type != 'commercial'):
-            raise KeyError('Key `{}` for value `stock_type` not recognized in `{}`'.format(self.cfg['stock_type'],
-                                                                                           project_filename))
-        if 'buildstock_csv' in self.cfg['baseline']:
-            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
-            if not os.path.exists(buildstock_csv):
-                raise FileNotFoundError('The buildstock.csv file does not exist at {}'.format(buildstock_csv))
-            df = pd.read_csv(buildstock_csv)
-            n_datapoints = self.cfg['baseline'].get('n_datapoints', df.shape[0])
-            self.cfg['baseline']['n_datapoints'] = n_datapoints
-            if n_datapoints != df.shape[0]:
-                raise RuntimeError(
-                    'A buildstock_csv was provided, so n_datapoints for sampling should not be provided or should be '
-                    'equal to the number of rows in the buildstock.csv file. Remove or comment out '
-                    'baseline->n_datapoints from your project file.'
-                )
 
+        # Load project file to self.cfg
+        self.cfg = self.get_project_configuration(project_filename)
+
+        self.buildstock_dir = self.cfg['buildstock_directory']
+        if not os.path.isdir(self.buildstock_dir):
+            raise FileNotFoundError(f'buildstock_directory = {self.buildstock_dir} is not a directory.')
+        self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
+        if not os.path.isdir(self.project_dir):
+            raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
+
+        # To be set in subclasses
         self.sampler = None
 
-    def path_rel_to_projectfile(self, x):
+        # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
+        # otherwise use defaults specified here.
+        self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
+        self.os_sha = self.cfg.get('os_sha', self.DEFAULT_OS_SHA)
+        logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
+
+    @staticmethod
+    def path_rel_to_file(startfile, x):
         if os.path.isabs(x):
             return os.path.abspath(x)
         else:
-            return os.path.abspath(os.path.join(os.path.dirname(self.project_filename), x))
+            return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
+
+    def path_rel_to_projectfile(self, x):
+        return self.path_rel_to_file(self.project_filename, x)
 
     def _get_weather_files(self):
         if 'weather_files_path' in self.cfg:
             logger.debug('Copying weather files')
-            weather_file_path = self.path_rel_to_projectfile(self.cfg['weather_files_path'])
+            weather_file_path = self.cfg['weather_files_path']
             with zipfile.ZipFile(weather_file_path, 'r') as zf:
                 logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
@@ -120,22 +121,6 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     @property
-    def buildstock_dir(self):
-        d = self.path_rel_to_projectfile(self.cfg['buildstock_directory'])
-        # logger.debug('buildstock_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
-
-    @property
-    def project_dir(self):
-        d = os.path.abspath(
-            os.path.join(self.buildstock_dir, self.cfg['project_directory'])
-        )
-        # logger.debug('project_dir = {}'.format(d))
-        assert(os.path.isdir(d))
-        return d
-
-    @property
     def results_dir(self):
         raise NotImplementedError
 
@@ -151,25 +136,7 @@ class BuildStockBatchBase(object):
     def run_sampling(self, n_datapoints=None):
         if n_datapoints is None:
             n_datapoints = self.cfg['baseline']['n_datapoints']
-        if 'buildstock_csv' in self.cfg['baseline']:
-            logger.debug("Reusing the buildstock_csv")
-            buildstock_csv = self.path_rel_to_projectfile(self.cfg['baseline']['buildstock_csv'])
-            destination_filename = self.sampler.csv_path
-            if destination_filename != buildstock_csv:
-                if os.path.exists(destination_filename):
-                    logger.info("Removing {!r} before copying {!r} to that location."
-                                .format(destination_filename, buildstock_csv))
-                    os.remove(destination_filename)
-                shutil.copy(
-                    buildstock_csv,
-                    destination_filename
-                )
-            return destination_filename
-        else:
-            logger.debug("Running fresh sampling")
-            buildstock_csv_filename = self.sampler.run_sampling(n_datapoints)
-            logger.debug("Sampling completed")
-            return buildstock_csv_filename
+        return self.sampler.run_sampling(n_datapoints)
 
     def run_batch(self):
         raise NotImplementedError
@@ -304,22 +271,33 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_misc_constraints(project_file))
-        assert(BuildStockBatchBase.validate_xor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
+        assert(BuildStockBatchBase.validate_precomputed_sample(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
+        assert(BuildStockBatchBase.validate_options_lookup(project_file))
         logger.info('Base Validation Successful')
         return True
 
-    @staticmethod
-    def get_project_configuration(project_file):
+    @classmethod
+    def get_project_configuration(cls, project_file):
         try:
             with open(project_file) as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
         except FileNotFoundError as err:
-            logger.error(f'Failed to load input yaml for validation')
+            logger.error('Failed to load input yaml for validation')
             raise err
+
+        # Set absolute paths
+        cfg['buildstock_directory'] = cls.path_rel_to_file(project_file, cfg['buildstock_directory'])
+        if 'precomputed_sample' in cfg.get('baseline', {}):
+            cfg['baseline']['precomputed_sample'] = \
+                cls.path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+        if 'weather_files_path' in cfg:
+            cfg['weather_files_path'] = cls.path_rel_to_file(project_file, cfg['weather_files_path'])
+
         return cfg
 
     @staticmethod
@@ -346,10 +324,10 @@ class BuildStockBatchBase(object):
     def validate_misc_constraints(project_file):
         # validate other miscellaneous constraints
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        if 'buildstock_csv' in cfg['baseline']:
+        if 'precomputed_sample' in cfg['baseline']:
             if cfg.get('downselect', {'resample': False}).get('resample', True):
-                raise ValidationError("Downselect with resampling cannot be used when using buildstock_csv. \n"
-                                      "Please set resample: False in downselect, or do not use buildstock_csv.")
+                raise ValidationError("Downselect with resampling cannot be used when using precomputed buildstock_csv."
+                                      "\nPlease set resample: False in downselect or use a different sampler.")
 
         if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
             logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
@@ -357,17 +335,37 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
-    def validate_xor_schema_keys(project_file):
+    def validate_xor_nor_schema_keys(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
         if int(major) >= 0:
             if int(minor) >= 0:
+                # xor
                 if ('weather_files_url' in cfg.keys()) is \
                    ('weather_files_path' in cfg.keys()):
                     raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
-                if ('n_datapoints' in cfg['baseline'].keys()) is \
-                   ('buildstock_csv' in cfg['baseline'].keys()):
-                    raise ValidationError('Both/neither n_datapoints and buildstock_csv found in yaml baseline key')
+
+                # No precomputed sample key unless using precomputed sampling
+                if cfg['baseline']['sampling_algorithm'] != 'precomputed' and 'precomputed_sample' in cfg['baseline']:
+                    raise ValidationError(
+                        'baseline.precomputed_sample is not allowed unless '
+                        'baseline.sampling_algorithm = "precomputed".'
+                    )
+        return True
+
+    @staticmethod
+    def validate_precomputed_sample(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if 'precomputed_sample' in cfg['baseline']:
+            buildstock_csv = cfg['baseline']['precomputed_sample']
+            if not os.path.exists(buildstock_csv):
+                raise FileNotFoundError(buildstock_csv)
+            buildstock_df = pd.read_csv(buildstock_csv)
+            if buildstock_df.shape[0] != cfg['baseline']['n_datapoints']:
+                raise RuntimeError(
+                    f'`n_datapoints` does not match the number of rows in {buildstock_csv}. '
+                    f'Please set `n_datapoints` to {buildstock_df.shape[0]}'
+                )
         return True
 
     @staticmethod
@@ -569,7 +567,7 @@ class BuildStockBatchBase(object):
                 errors = ''
                 broken_options = option_str.split(splitter)
                 if broken_options[-1] == '':
-                    invalid_option_spec_counter[(option_str, f"has trailing 'splitter'")] += 1
+                    invalid_option_spec_counter[(option_str, "has trailing 'splitter'")] += 1
                     return ""
                 for broken_option_str in broken_options:
                     new_source_str = source_str + f" in composite option '{option_str}'"
@@ -641,7 +639,7 @@ class BuildStockBatchBase(object):
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
         if 'downselect' in cfg:
-            source_str = f"In downselect"
+            source_str = "In downselect"
             source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
 
         # Gather all the errors in the option_str, if any
@@ -727,7 +725,7 @@ class BuildStockBatchBase(object):
         source_measures_str_list = []
 
         if 'measures_to_ignore' in cfg['baseline']:
-            source_str = f"In baseline 'measures_to_ignore'"
+            source_str = "In baseline 'measures_to_ignore'"
             for measure_str in cfg['baseline']['measures_to_ignore']:
                 source_measures_str_list.append((source_str, measure_str))
 

@@ -5,6 +5,7 @@ weather_files_url: https://fake-url
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: cool upgrade
     options:
@@ -38,3 +39,4 @@ simulation_output:
   include_timeseries_component_loads: false
 reporting_measures:
   - ReportingMeasure1
+schema_version: 0.2

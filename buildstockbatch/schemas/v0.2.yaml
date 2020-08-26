@@ -8,13 +8,15 @@ aws: include('aws-spec', required=False)
 output_directory: str(required=False)
 sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
+os_version: str(required=False)
+os_sha: str(required=False)
 simulation_output: map(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 downselect: include('downselect-spec',required=False)
 postprocessing: include('postprocessing-spec', required=False)
 residential_simulation_controls: map(required=False)
 reporting_measures: list(str(), required=False)
-schema_version: num(required=False)
+schema_version: num(required=True)
 ---
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
@@ -52,14 +54,16 @@ sampling-spec:
   time: int(required=True)
 
 sim-spec:
-  n_datapoints: int(required=False)
+  n_datapoints: int(required=True)
   n_buildings_represented: int(required=False)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
-  buildstock_csv: str(required=False)
   skip_sims: bool(required=False)
   measures_to_ignore: list(str(), required=False)
-  sampling_algorithm: enum('sobol', required=False)
+  sampling_algorithm: enum('precomputed', 'quota', 'sobol', required=True)
+  osw_template: str(required=False)
+  include_qaqc: bool(required=False)
+  custom_gems: bool(required=False)
 
 measure-spec:
   measure_dir_name: str(required=True)

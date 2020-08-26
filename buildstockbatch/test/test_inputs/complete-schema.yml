@@ -3,12 +3,15 @@ buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/YAML1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
-schema_version: 0.1
+schema_version: 0.2
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
   measures_to_ignore:
     - ResidentialConstructionsSlab
+  osw_template: default
+  include_qaqc: False
+  sampling_algorithm: quota
 upgrades:
   - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
     options:

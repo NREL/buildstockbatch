@@ -5,6 +5,7 @@ weather_files_url: https://fake-url
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 residential_simulation_controls:
   timesteps_per_hr: 4
   begin_month: 1
@@ -44,3 +45,5 @@ simulation_output:
 
 reporting_measures:
   - ReportingMeasure2
+
+schema_version: 0.2

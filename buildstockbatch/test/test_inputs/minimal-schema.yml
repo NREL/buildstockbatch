@@ -4,3 +4,5 @@ project_directory: there
 weather_files_path: over-yonder
 baseline:
   n_datapoints: 12345
+  sampling_algorithm: quota
+schema_version: 0.2

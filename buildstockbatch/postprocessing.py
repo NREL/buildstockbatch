@@ -34,6 +34,8 @@ import time
 
 logger = logging.getLogger(__name__)
 
+MAX_PARQUET_MEMORY = 1e9  # maximum size of the parquet file in memory when combining multiple parquets
+
 
 def read_data_point_out_json(fs, reporting_measures, filename):
     try:
@@ -73,6 +75,7 @@ def flatten_datapoint_json(reporting_measures, d):
         new_d[f'{col1}.{k}'] = v
 
     # if there is no units_represented key, default to 1
+    # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
     col2 = 'SimulationOutputReport'
@@ -264,6 +267,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
 
     del dpouts
+
+    if results_df.empty:
+        raise ValueError("No simulation results found to post-process")
+
     results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
     if do_timeseries:
@@ -325,7 +332,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             total_mem = mean_mem * len(ts_filenames)
 
             # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / 1e9)  # 1 GB per partition
+            npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
+            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
             # Read the timeseries into a dask dataframe

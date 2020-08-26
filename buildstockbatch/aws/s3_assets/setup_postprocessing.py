@@ -9,7 +9,7 @@ setup(
         'dask[complete]',
         's3fs>=0.4.0',
         'boto3',
-        'pandas',
+        'pandas>=1.0.0,!=1.0.4',
         'pyarrow>=0.14.1',
     ]
 )

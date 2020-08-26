@@ -42,6 +42,7 @@ class ResidentialDockerSampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         """
         logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
+
         docker_client = docker.DockerClient.from_env()
         tick = time.time()
         extra_kws = {}

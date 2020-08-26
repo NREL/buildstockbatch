@@ -1,3 +1,4 @@
+schema_version: 0.2
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_heterogeneity  # Relative to buildstock_directory
 output_directory: /scratch/nmerket/heterogeneity4
@@ -6,6 +7,7 @@ weather_files_path: /home/nmerket/buildstock/assets/project_resstock_national_we
 baseline:
   n_datapoints: 350000
   n_buildings_represented: 81221016
+  sampling_algorithm: quota
 
 upgrades:
 

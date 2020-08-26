@@ -22,6 +22,8 @@ def basic_residential_project_file():
             os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'simulation_output'),
             os.path.join(output_directory, 'simulation_output')
         )
+        os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
+        os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
 
         def _basic_residential_project_file(update_args={}):
             cfg = {
@@ -32,7 +34,8 @@ def basic_residential_project_file():
                 'weather_files_url': 'https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip',
                 'baseline': {
                     'n_datapoints': 8,
-                    'n_buildings_represented': 80000000
+                    'n_buildings_represented': 80000000,
+                    'sampling_algorithm': 'quota'
                 },
                 'simulation_output': {
                     'timeseries_frequency': 'hourly',
@@ -48,7 +51,8 @@ def basic_residential_project_file():
                         'time': 20
                     },
                     'account': 'testaccount',
-                }
+                },
+                'schema_version': 0.2
             }
             cfg.update(update_args)
             project_filename = os.path.join(test_directory, 'project.yml')
