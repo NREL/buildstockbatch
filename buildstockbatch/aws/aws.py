@@ -1865,8 +1865,8 @@ class AwsBatch(DockerBatchBase):
 
             # Collect simulations to queue
             df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            building_unit_ids = df.index.tolist()
-            n_datapoints = len(building_unit_ids)
+            building_ids = df.index.tolist()
+            n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
             logger.debug('Total number of simulations = {}'.format(n_sims))
 
@@ -1879,8 +1879,8 @@ class AwsBatch(DockerBatchBase):
             n_sims_per_job = max(n_sims_per_job, 2)
             logger.debug('Number of simulations per array job = {}'.format(n_sims_per_job))
 
-            baseline_sims = zip(building_unit_ids, itertools.repeat(None))
-            upgrade_sims = itertools.product(building_unit_ids, range(len(self.cfg.get('upgrades', []))))
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
             random.shuffle(all_sims)
             all_sims_iter = iter(all_sims)
@@ -2008,7 +2008,7 @@ class AwsBatch(DockerBatchBase):
         logger.debug('Getting weather files')
         weather_dir = sim_dir / 'weather'
         os.makedirs(weather_dir)
-        building_unit_ids = [x[0] for x in jobs_d['batch']]
+        building_ids = [x[0] for x in jobs_d['batch']]
         epws_to_download = set()
         with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
             csv_reader = csv.DictReader(f)
@@ -2016,7 +2016,7 @@ class AwsBatch(DockerBatchBase):
             if loc_col not in csv_reader.fieldnames:
                 loc_col = 'Location'
             for row in csv_reader:
-                if int(row['Building']) in building_unit_ids:
+                if int(row['Building']) in building_ids:
                     epws_to_download.add(row[loc_col])
         if loc_col == 'Location':
             epws_to_download = map('USA_{}.epw'.format, epws_to_download)
@@ -2035,12 +2035,12 @@ class AwsBatch(DockerBatchBase):
         dpouts = []
         simulation_output_tar_filename = sim_dir.parent / 'simulation_outputs.tar.gz'
         with tarfile.open(str(simulation_output_tar_filename), 'w:gz') as simout_tar:
-            for building_unit_id, upgrade_idx in jobs_d['batch']:
+            for building_id, upgrade_idx in jobs_d['batch']:
                 upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
-                sim_id = f'bldg{building_unit_id:07d}up{upgrade_id:02d}'
+                sim_id = f'bldg{building_id:07d}up{upgrade_id:02d}'
 
                 # Create OSW
-                osw = cls.create_osw(cfg, sim_id, building_unit_id, upgrade_idx)
+                osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
                 with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                     json.dump(osw, f, indent=4)
 
@@ -2064,12 +2064,12 @@ class AwsBatch(DockerBatchBase):
                     fs,
                     f"{bucket}/{prefix}/results/simulation_output/timeseries",
                     upgrade_id,
-                    building_unit_id
+                    building_id
                 )
 
                 # Read data_point_out.json
                 dpout = postprocessing.read_simulation_outputs(
-                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_unit_id
+                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
                 )
                 dpouts.append(dpout)
 

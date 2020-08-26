@@ -20,12 +20,12 @@ logger = logging.getLogger(__name__)
 
 class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
-    def create_osw(self, sim_id, building_unit_id, upgrade_idx):
+    def create_osw(self, sim_id, building_id, upgrade_idx):
         """
         Generate and return the osw as a python dict
 
         :param sim_id: simulation id, looks like 'bldg0000001up01'
-        :param building_unit_id: integer building unit id to use from the sampled buildstock.csv
+        :param building_id: integer building id to use from the sampled buildstock.csv
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
@@ -42,7 +42,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
             self.cfg['baseline']['n_datapoints']
         bld_exist_model_args = {
-            'building_unit_id': building_unit_id,
+            'building_id': building_id,
             'workflow_json': 'measure-info.json',
             'sample_weight': sample_weight,
         }

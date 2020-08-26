@@ -84,8 +84,8 @@ def flatten_datapoint_json(reporting_measures, d):
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
 
-    new_d['building_unit_id'] = new_d['BuildExistingModel.building_unit_id']
-    del new_d['BuildExistingModel.building_unit_id']
+    new_d['building_id'] = new_d['BuildExistingModel.building_unit_id']
+    del new_d['BuildExistingModel.building_id']
 
     return new_d
 
@@ -107,11 +107,11 @@ def read_out_osw(fs, filename):
             out_d[key] = d.get(key, None)
         for step in d.get('steps', []):
             if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_unit_id'] = step['arguments']['building_unit_id']
+                out_d['building_id'] = step['arguments']['building_unit_id']
         return out_d
 
 
-def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_unit_id):
+def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
     """Read the simulation outputs and return as a dict
 
     :param fs: filesystem to read from
@@ -122,8 +122,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     :type sim_dir: str
     :param upgrade_id: id for upgrade, 0 for baseline, 1, 2...
     :type upgrade_id: int
-    :param building_unit_id: building unit id
-    :type building_unit_id: int
+    :param building_id: building id
+    :type building_id: int
     :return: dpout [dict]
     """
 
@@ -138,7 +138,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     if out_osw:
         dpout.update(out_osw)
     dpout['upgrade'] = upgrade_id
-    dpout['building_unit_id'] = building_unit_id
+    dpout['building_id'] = building_id
     return dpout
 
 
@@ -169,7 +169,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     # standardize the column orders
     first_few_cols = [
-        'building_unit_id',
+        'building_id',
         'started_at',
         'completed_at',
         'completed_status',
@@ -216,8 +216,8 @@ def read_results_json(fs, filename):
 def read_enduse_timeseries_parquet(fs, filename, all_cols):
     with fs.open(filename, 'rb') as f:
         df = pd.read_parquet(f, engine='pyarrow')
-    building_unit_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
-    df['building_unit_id'] = building_unit_id
+    building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
+    df['building_id'] = building_id
     for col in set(all_cols).difference(df.columns.values):
         df[col] = np.nan
     return df[all_cols]
@@ -274,7 +274,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             fold(lambda x, y: set(x).union(y)).compute()
 
         # Sort the columns
-        all_ts_cols_sorted = ['building_unit_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
+        all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith(']')))
         all_ts_cols.difference_update(all_ts_cols_sorted)
@@ -289,7 +289,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             df = df[cols_to_keep]
         df = df.copy()
         del df['upgrade']
-        df.set_index('building_unit_id', inplace=True)
+        df.set_index('building_id', inplace=True)
         df.sort_index(inplace=True)
 
         # Write CSV
@@ -333,7 +333,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             )
             ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
-            ts_df = ts_df.set_index('building_unit_id', sorted=True)
+            ts_df = ts_df.set_index('building_id', sorted=True)
 
             # Write out new dask timeseries dataframe.
             if isinstance(fs, LocalFileSystem):

@@ -37,9 +37,9 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
 
         sim_dir = str(filename.parent.parent)
         upgrade_id = int(re.search(r'up(\d+)', sim_dir).group(1))
-        building_unit_id = int(re.search(r'bldg(\d+)', sim_dir).group(1))
+        building_id = int(re.search(r'bldg(\d+)', sim_dir).group(1))
         dpouts2.append(
-            postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_unit_id)
+            postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id)
         )
 
     with gzip.open(sim_out_dir / 'results_job0.json.gz', 'wt', encoding='utf-8') as f:

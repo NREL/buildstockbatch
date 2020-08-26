@@ -240,12 +240,12 @@ class BuildStockBatchBase(object):
         return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod
-    def make_sim_dir(building_unit_id, upgrade_idx, base_dir, overwrite_existing=False):
+    def make_sim_dir(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
-        sim_id = 'bldg{:07d}up{:02d}'.format(building_unit_id, real_upgrade_idx)
+        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, real_upgrade_idx)
 
         # Check to see if the simulation is done already and skip it if so.
-        sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_unit_id))
+        sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
         if os.path.exists(sim_dir) and not overwrite_existing:
             if os.path.exists(os.path.join(sim_dir, 'run', 'finished.job')):
                 raise SimulationExists('{} exists and finished successfully'.format(sim_id), sim_id, sim_dir)
@@ -260,7 +260,7 @@ class BuildStockBatchBase(object):
         return sim_id, sim_dir
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_unit_id):
+    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
         """Clean up the output directory for a single simulation.
 
         :param sim_dir: simulation directory
@@ -271,8 +271,8 @@ class BuildStockBatchBase(object):
         :type simout_ts_dir: str
         :param upgrade_id: upgrade number for the simulation 0 for baseline, etc.
         :type upgrade_id: int
-        :param building_unit_id: building id from buildstock.csv
-        :type building_unit_id: int
+        :param building_id: building id from buildstock.csv
+        :type building_id: int
         """
 
         # Convert the timeseries data to parquet
@@ -283,7 +283,7 @@ class BuildStockBatchBase(object):
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
-                f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_unit_id:07d}.parquet'
+                f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
             )
 
         # Remove files already in data_point.zip
