@@ -61,8 +61,7 @@ Information about baseline simulations are listed under the ``baseline`` key.
   sampling algorithms.
 - ``n_buildings_represented``: The number of buildings that this sample is meant to represent.
 - ``precomputed_sample``: Filepath of csv containing pre-defined building options to use in the precomputed sampling
-  routine. The ``n_datapoints`` line must be commented out if applying this option. This can be absolute or relative
-  (to this file).
+  routine. This can be absolute or relative (to this file).
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.

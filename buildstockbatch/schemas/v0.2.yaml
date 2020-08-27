@@ -55,7 +55,7 @@ sampling-spec:
 
 sim-spec:
   n_datapoints: int(required=True)
-  n_buildings_represented: int(required=False)
+  n_buildings_represented: int(required=True)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
   skip_sims: bool(required=False)
