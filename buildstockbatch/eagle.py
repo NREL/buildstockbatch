@@ -130,10 +130,11 @@ class EagleBatch(BuildStockBatchBase):
             shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst)
 
-    @classmethod
-    def singularity_image_url(cls):
-        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}-Singularity.simg'.format(
-                    ver=cls.os_version
+    @property
+    def singularity_image_url(self):
+        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                    ver=self.os_version,
+                    sha=self.os_sha
                 )
 
     @property
@@ -141,16 +142,18 @@ class EagleBatch(BuildStockBatchBase):
         # Check the project yaml specification - if the file does not exist do not silently allow for non-specified simg
         if 'sys_image_dir' in self.cfg.keys():
             sys_image_dir = self.cfg['sys_image_dir']
-            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}-Singularity.simg'.format(
-                ver=self.os_version
+            sys_image = os.path.join(sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                ver=self.os_version,
+                sha=self.os_sha
             ))
             if os.path.isfile(sys_image):
                 return sys_image
             else:
                 raise RuntimeError('Unable to find singularity image specified in project file: `{}`'.format(sys_image))
         # Use the expected HPC environment default if not explicitly defined in the YAML
-        sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}-Singularity.simg'.format(
-            ver=self.os_version
+        sys_image = os.path.join(self.sys_image_dir, 'OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+            ver=self.os_version,
+            sha=self.os_sha
         ))
         if os.path.isfile(sys_image):
             return sys_image

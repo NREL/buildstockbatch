@@ -51,7 +51,7 @@ class ValidationError(Exception):
 class BuildStockBatchBase(object):
 
     DEFAULT_OS_VERSION = '3.0.0'
-    # DEFAULT_OS_SHA = '1c9617fa4e' # FIXME: not included in singularity image filename anymore?
+    DEFAULT_OS_SHA = '1c9617fa4e'  # FIXME: Get correct sha
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /

@@ -182,15 +182,15 @@ def test_combine_files(basic_residential_project_file):
     test_path = os.path.join(results_dir, 'results_csvs')
 
     test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz'))\
-        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz'))\
-        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
     test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz'))\
-        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz'))\
-        .sort_values('building_unit_id').reset_index().drop(columns=['index'])
+        .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
     # test parquet files

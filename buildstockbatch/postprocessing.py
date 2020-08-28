@@ -88,7 +88,7 @@ def flatten_datapoint_json(reporting_measures, d):
             new_d[f'{col}.{k}'] = v
 
     new_d['building_id'] = new_d['BuildExistingModel.building_unit_id']
-    del new_d['BuildExistingModel.building_id']
+    del new_d['BuildExistingModel.building_unit_id']
 
     return new_d
 
