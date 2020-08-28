@@ -335,7 +335,7 @@ class EagleBatch(BuildStockBatchBase):
 
         # copy the tracebacks if it exists
         if os.path.exists(traceback_file_path):
-            shutil.copy(traceback_file_path, lustre_sim_out_dir)
+            shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
     @classmethod
     def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
