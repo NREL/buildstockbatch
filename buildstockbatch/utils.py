@@ -61,7 +61,7 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
                 return func(*args, **kwargs)
             except Exception:
                 with open(output_file, "a") as f:
-                    text = "\n" + "#"*20 + "\n"
+                    text = "\n" + "#" * 20 + "\n"
                     text += get_error_details()
                     f.write(text)
                 raise

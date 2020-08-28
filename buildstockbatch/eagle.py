@@ -31,7 +31,6 @@ import shutil
 import subprocess
 import sys
 import time
-import traceback
 import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
@@ -301,7 +300,7 @@ class EagleBatch(BuildStockBatchBase):
             except Exception:
                 with open(traceback_file_path, 'a') as f:
                     txt = get_error_details()
-                    txt = "\n"+ "#"*20 + "\n" + f"Traceback for building{i}\n" + txt
+                    txt = "\n" + "#" * 20 + "\n" + f"Traceback for building{i}\n" + txt
                     f.write(txt)
                     del txt
 
@@ -337,7 +336,6 @@ class EagleBatch(BuildStockBatchBase):
         # copy the tracebacks if it exists
         if os.path.exists(traceback_file_path):
             shutil.copy(traceback_file_path, lustre_sim_out_dir)
-
 
     @classmethod
     def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
