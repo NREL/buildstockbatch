@@ -41,7 +41,7 @@ def _str_repr(obj, list_max=20, dict_max=20, string_max=100):
         return str(obj)
 
 
-def _get_error_details():
+def get_error_details():
     text = ""
     text += traceback.format_exc()
     frames = inspect.trace()
@@ -60,8 +60,10 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
             try:
                 return func(*args, **kwargs)
             except Exception:
-                with open(output_file, "w") as f:
-                    f.write(_get_error_details())
+                with open(output_file, "a") as f:
+                    text = "\n" + "#"*20 + "\n"
+                    text += get_error_details()
+                    f.write(text)
                 raise
         return run_with_error_capture
 
