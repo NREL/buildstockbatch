@@ -75,6 +75,7 @@ setuptools.setup(
     extras_require={
         'dev': [
             'pytest>=2.8.0',
+            'pytest-mock',
             'codecov',
             'Sphinx',
             'sphinx_rtd_theme',
