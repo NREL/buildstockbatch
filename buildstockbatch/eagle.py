@@ -182,11 +182,17 @@ class EagleBatch(BuildStockBatchBase):
 
     def run_batch(self, sampling_only=False):
 
-        # Create simulation_output dir
+        # Create simulation_output timeseries dir
         sim_out_ts_dir = pathlib.Path(self.output_dir) / 'results' / 'simulation_output' / 'timeseries'
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
             os.makedirs(sim_out_ts_dir / f'up{i:02d}')
+        
+        # Create simulation_output schedules dir
+        sim_out_sch_dir = pathlib.Path(self.output_dir) / 'results' / 'simulation_output' / 'schedules'
+        os.makedirs(sim_out_sch_dir, exist_ok=True)
+        for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
+            os.makedirs(sim_out_sch_dir / f'up{i:02d}')
 
         # create destination_dir and copy housing_characteristics into it
         logger.debug("Copying housing characteristics")
@@ -416,7 +422,7 @@ class EagleBatch(BuildStockBatchBase):
                     cls.cleanup_sim_dir(
                         sim_dir,
                         fs,
-                        f'{output_dir}/results/simulation_output/timeseries',
+                        f'{output_dir}/results/simulation_output',
                         upgrade_id,
                         i
                     )

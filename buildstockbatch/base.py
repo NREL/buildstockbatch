@@ -227,15 +227,15 @@ class BuildStockBatchBase(object):
         return sim_id, sim_dir
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
+    def cleanup_sim_dir(sim_dir, dest_fs, simout_dir, upgrade_id, building_id):
         """Clean up the output directory for a single simulation.
 
         :param sim_dir: simulation directory
         :type sim_dir: str
         :param dest_fs: filesystem destination of timeseries parquet file
         :type dest_fs: fsspec filesystem
-        :param simout_ts_dir: simulation_output/timeseries directory to deposit timeseries parquet file
-        :type simout_ts_dir: str
+        :param simout_dir: simulation_output directory to deposit timeseries and schedule parquet file
+        :type simout_dir: str
         :param upgrade_id: upgrade number for the simulation 0 for baseline, etc.
         :type upgrade_id: int
         :param building_id: building id from buildstock.csv
@@ -250,7 +250,19 @@ class BuildStockBatchBase(object):
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
-                f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
+                f'{simout_dir}/timeseries/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
+            )
+        
+        # Convert the schedule data to parquet
+        # and copy it to the results directory
+        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
+        if os.path.isfile(schedules_filepath):
+            tsdf = pd.read_csv(schedules_filepath)
+            tsdf = tsdf.reset_index()
+            postprocessing.write_dataframe_as_parquet(
+                tsdf,
+                dest_fs,
+                f'{simout_dir}/schedules/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
             )
 
         # Remove files already in data_point.zip

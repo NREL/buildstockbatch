@@ -245,12 +245,15 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
+    sch_in_dir = f'{sim_output_dir}/schedules'
     results_csvs_dir = f'{results_dir}/results_csvs'
     parquet_dir = f'{results_dir}/parquet'
     ts_dir = f'{results_dir}/parquet/timeseries'
+    sch_dir = f'{results_dir}/parquet/schedules'
     dirs = [results_csvs_dir, parquet_dir]
     if do_timeseries:
         dirs.append(ts_dir)
+        dirs.append(sch_dir)
 
     # create the postprocessing results directories
     for dr in dirs:
@@ -280,6 +283,13 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
         all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
             fold(lambda x, y: set(x).union(y)).compute()
+        
+        # Look at all the parquet files to see what columns are in all of them.
+        sche_filenames = fs.glob(f'{sch_in_dir}/up*/bldg*.parquet')
+        all_sch_cols = db.from_sequence(sche_filenames, partition_size=100).map(partial(get_cols, fs)).\
+            fold(lambda x, y: set(x).union(y)).compute()
+        all_sch_cols = list(all_sch_cols)
+        all_sch_cols.insert(0, "building_id")
 
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
@@ -321,50 +331,64 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         )
 
         if do_timeseries:
+            
+            # Do similar kind of combination for both enduse_timeseries and schedule files.
+            for filetype in ['enduse', 'schedule']:
 
-            # Get the names of the timseries file for each simulation in this upgrade
-            ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
+                if filetype == 'enduse':
+                    parquet_dir = ts_in_dir
+                    all_cols = all_ts_cols_sorted
+                    output_dir = ts_dir
+                else:
+                    parquet_dir = sch_in_dir
+                    all_cols = all_sch_cols
+                    output_dir = sch_dir
+                
+                # Get the names of the timseries file for each simulation in this upgrade
+                ts_filenames = fs.glob(f'{parquet_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
-            # Calculate the mean and estimate the total memory usage
-            read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
-            get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
-            sample_size = min(len(ts_filenames), 36 * 3)
-            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames)
+                # Calculate the mean and estimate the total memory usage
+                read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_cols)
+                get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
+                sample_size = min(len(ts_filenames), 36 * 3)
+                mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
+                total_mem = mean_mem * len(ts_filenames)
 
-            # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
-            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
-            ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
+                # Determine how many files should be in each partition and group the files
+                npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
+                npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
+                ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
-            # Read the timeseries into a dask dataframe
-            read_and_concat_ts_pq_d = dask.delayed(
-                partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
-            )
-            ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
-            ts_df = ts_df.set_index('building_id', sorted=True)
+                # Read the timeseries into a dask dataframe
+                read_and_concat_ts_pq_d = dask.delayed(
+                    partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_cols)
+                )
+                ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
+                ts_df = ts_df.set_index('building_id', sorted=True)
 
-            # Write out new dask timeseries dataframe.
-            if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
-            else:
-                assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
-            logger.info(f'Writing {ts_out_loc}')
-            ts_df.to_parquet(
-                ts_out_loc,
-                engine='pyarrow',
-                flavor='spark'
-            )
+                # Write out new dask timeseries dataframe.
+                if isinstance(fs, LocalFileSystem):
+                    ts_out_loc = f"{output_dir}/upgrade={upgrade_id}"
+                else:
+                    assert isinstance(fs, S3FileSystem)
+                    ts_out_loc = f"s3://{output_dir}/upgrade={upgrade_id}"
+                logger.info(f'Writing {ts_out_loc}')
+                ts_df.to_parquet(
+                    ts_out_loc,
+                    engine='pyarrow',
+                    flavor='spark'
+                )
 
 
 def remove_intermediate_files(fs, results_dir):
     # Remove aggregated files to save space
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
+    sch_in_dir = f'{sim_output_dir}/schedules'
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     logger.info('Removing temporary files')
     fs.rm(ts_in_dir, recursive=True)
+    fs.rm(sch_in_dir, recursive=True)
     for filename in fs.glob(results_job_json_glob):
         fs.rm(filename)
 
