@@ -164,4 +164,12 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
+        # Delete extraneous simulation output from run directory to reduce on-disk size
+        osw['steps'].extend([
+            {
+                "measure_dir_name": "run_directory_cleanup",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
+            }])
+
         return osw
