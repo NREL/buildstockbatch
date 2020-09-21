@@ -252,7 +252,7 @@ class BuildStockBatchBase(object):
                 dest_fs,
                 f'{simout_dir}/timeseries/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
             )
-        
+
         # Convert the schedule data to parquet
         # and copy it to the results directory
         schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')

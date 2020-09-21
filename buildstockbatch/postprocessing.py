@@ -31,6 +31,7 @@ import random
 import re
 from s3fs import S3FileSystem
 import time
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -283,13 +284,14 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
         all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
             fold(lambda x, y: set(x).union(y)).compute()
-        
+
         # Look at all the parquet files to see what columns are in all of them.
         sche_filenames = fs.glob(f'{sch_in_dir}/up*/bldg*.parquet')
-        all_sch_cols = db.from_sequence(sche_filenames, partition_size=100).map(partial(get_cols, fs)).\
-            fold(lambda x, y: set(x).union(y)).compute()
-        all_sch_cols = list(all_sch_cols)
-        all_sch_cols.insert(0, "building_id")
+        if sche_filenames:
+            all_sch_cols = db.from_sequence(sche_filenames, partition_size=100).map(partial(get_cols, fs)).\
+                fold(lambda x, y: set(x).union(y)).compute()
+            all_sch_cols = list(all_sch_cols)
+            all_sch_cols.insert(0, "building_id")
 
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
@@ -331,21 +333,22 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         )
 
         if do_timeseries:
-            
             # Do similar kind of combination for both enduse_timeseries and schedule files.
             for filetype in ['enduse', 'schedule']:
 
                 if filetype == 'enduse':
-                    parquet_dir = ts_in_dir
+                    filetype_parquet_dir = ts_in_dir
                     all_cols = all_ts_cols_sorted
                     output_dir = ts_dir
                 else:
-                    parquet_dir = sch_in_dir
+                    if not sche_filenames:
+                        continue
+                    filetype_parquet_dir = sch_in_dir
                     all_cols = all_sch_cols
                     output_dir = sch_dir
-                
+
                 # Get the names of the timseries file for each simulation in this upgrade
-                ts_filenames = fs.glob(f'{parquet_dir}/up{upgrade_id:02d}/bldg*.parquet')
+                ts_filenames = fs.glob(f'{filetype_parquet_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
                 # Calculate the mean and estimate the total memory usage
                 read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_cols)
@@ -388,7 +391,8 @@ def remove_intermediate_files(fs, results_dir):
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     logger.info('Removing temporary files')
     fs.rm(ts_in_dir, recursive=True)
-    fs.rm(sch_in_dir, recursive=True)
+    if os.path.exists(sch_in_dir):
+        fs.rm(sch_in_dir, recursive=True)
     for filename in fs.glob(results_job_json_glob):
         fs.rm(filename)
 

@@ -187,7 +187,7 @@ class EagleBatch(BuildStockBatchBase):
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
             os.makedirs(sim_out_ts_dir / f'up{i:02d}')
-        
+
         # Create simulation_output schedules dir
         sim_out_sch_dir = pathlib.Path(self.output_dir) / 'results' / 'simulation_output' / 'schedules'
         os.makedirs(sim_out_sch_dir, exist_ok=True)
