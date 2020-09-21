@@ -50,8 +50,8 @@ class ValidationError(Exception):
 
 class BuildStockBatchBase(object):
 
-    DEFAULT_OS_VERSION = '3.0.0'
-    DEFAULT_OS_SHA = '1c9617fa4e'  # FIXME: Get correct sha
+    DEFAULT_OS_VERSION = '3.0.1'
+    DEFAULT_OS_SHA = '09b7c8a554'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
