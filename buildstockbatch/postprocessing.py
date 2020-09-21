@@ -255,7 +255,14 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     for dr in dirs:
         fs.makedirs(dr)
 
+    # Report out start time and estimated time limit based on 
+    start_time = dt.datetime.now()
+    walltime = cfg['eagle'].get('postprocessing', {}).get('time', 90)  # Default walltime from eagle.py
+    end_time = start_time + dt.timedelta(minutes=walltime)
+    logger.info(f"Based on the requested postprocessing time of {walltime} min, postprocessing will be killed around {end_time} whether complete or not")
+
     # Results "CSV"
+    logger.info(f'Aggregating results.csv information')
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     results_jsons = fs.glob(results_job_json_glob)
     results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
@@ -286,6 +293,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith(']')))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
+        logger.info(f'Timeseries data includes {len(all_ts_cols_sorted)} columns: {", ".join(all_ts_cols_sorted)}')
 
     for upgrade_id, df in results_df.groupby('upgrade'):
         if upgrade_id > 0:
@@ -301,7 +309,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
         # Write CSV
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
-        logger.info(f'Writing {csv_filename}')
+        logger.info(f'Upgrade {upgrade_id}: Writing {csv_filename}')
         with fs.open(csv_filename, 'wb') as f:
             with gzip.open(f, 'wt', encoding='utf-8') as gf:
                 df.to_csv(gf, index=True, line_terminator='\n')
@@ -320,6 +328,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         )
 
         if do_timeseries:
+            logger.info(f'Upgrade {upgrade_id}: aggregating timeseries parquet files')
 
             # Get the names of the timseries file for each simulation in this upgrade
             ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
@@ -327,13 +336,19 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             # Calculate the mean and estimate the total memory usage
             read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
-            sample_size = min(len(ts_filenames), 36 * 3)
+            n_files_tot = len(ts_filenames)
+            sample_size = min(n_files_tot, 36 * 3)
+            logger.info(f'Upgrade {upgrade_id}: sampled {sample_size} of {n_files_tot} parquet files')
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames)
+            logger.info(f'Upgrade {upgrade_id}: sample mean memory per file = {mean_mem} bytes')
+            mem_safety_factor = 1.2  # Safety factor between sample mean and true mean
+            total_mem = mean_mem * n_files_tot * mem_safety_factor  
+            logger.info(f'Upgrade {upgrade_id}: total memory estimate = {total_mem/1e+9} GB = {mean_mem} bytes/file * {n_files_tot} files * {mem_safety_factor} safety factor')
 
             # Determine how many files should be in each partition and group the files
             npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
-            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
+            npartitions = min(n_files_tot, npartitions)  # cannot have less than one file per partition
+            logger.info(f'Upgrade {upgrade_id}: number of partitions = {npartitions} = ceil({total_mem} bytes total memory / {MAX_PARQUET_MEMORY} max bytes per partition)')
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
             # Read the timeseries into a dask dataframe
@@ -349,7 +364,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             else:
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
-            logger.info(f'Writing {ts_out_loc}')
+            logger.info(f'Upgrade {upgrade_id}: Writing {ts_out_loc}')
             ts_df.to_parquet(
                 ts_out_loc,
                 engine='pyarrow',
