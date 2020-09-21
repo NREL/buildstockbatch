@@ -377,10 +377,10 @@ def remove_intermediate_files(fs, results_dir):
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
-    logger.info('Removing temporary files')
-    fs.rm(ts_in_dir, recursive=True)
-    for filename in fs.glob(results_job_json_glob):
-        fs.rm(filename)
+    # logger.info('Removing temporary files')
+    # fs.rm(ts_in_dir, recursive=True)
+    # for filename in fs.glob(results_job_json_glob):
+    #     fs.rm(filename)
 
 
 def upload_results(aws_conf, output_dir, results_dir):
