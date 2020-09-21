@@ -1,3 +1,4 @@
+import joblib
 import json
 import os
 import pandas as pd
@@ -231,3 +232,41 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
+
+
+def test_run_building_error_caught(mocker,  basic_residential_project_file):
+
+    project_filename, results_dir = basic_residential_project_file()
+    results_dir = pathlib.Path(results_dir)
+
+    job_json = {'job_num': 1, 'batch': [(1, 0)]}
+    with open(results_dir / 'job001.json', 'w') as f:
+        json.dump(job_json, f)
+
+    def raise_error(*args, **kwargs):
+        raise RuntimeError('A problem happened')
+
+    def sequential_parallel(**kwargs):
+        kw2 = kwargs.copy()
+        kw2['n_jobs'] = 1
+        return joblib.Parallel(**kw2)
+
+    mocker.patch('buildstockbatch.eagle.shutil.copy2')
+    mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
+    mocker.patch('buildstockbatch.eagle.subprocess')
+
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
+    mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
+    mocker.patch.object(EagleBatch, 'run_building', raise_error)
+    mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+
+    b = EagleBatch(project_filename)
+    b.run_job_batch(1)
+
+    traceback_file = results_dir / 'simulation_output' / 'traceback1.out'
+    assert traceback_file.exists()
+
+    with open(traceback_file, 'r') as f:
+        assert f.read().find('RuntimeError') > -1
