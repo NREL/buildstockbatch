@@ -1,6 +1,6 @@
 '''
 This is just a utility script to regenerate the results_job0.json.gz
-from the simulation outputs in simulations_job0.tar.gz so you don't 
+from the simulation outputs in simulations_job0.tar.gz so you don't
 have to resimulate everything.
 '''
 
