@@ -22,6 +22,17 @@ here = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_FOLDER_NAME = 'output'
 
 
+def read_parquet(filename):
+    try:
+        df = pd.read_parquet(filename, engine='pyarrow', partitioning=None)
+    except TypeError as ex:
+        if str(ex).find("read_table() got an unexpected keyword argument 'partitioning'") > -1:
+            df = pd.read_parquet(filename, engine='pyarrow')
+        else:
+            raise
+    return df
+
+
 def test_reference_scenario(basic_residential_project_file):
     # verify that the reference_scenario get's added to the upgrade file
 
@@ -95,16 +106,16 @@ def test_combine_files_flexible(basic_residential_project_file):
     test_path = os.path.join(results_dir, 'parquet')
 
     # results parquet
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
+    test_pq = read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
+    reference_pq = read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
+    test_pq = read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet')).\
+    reference_pq = read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
@@ -198,15 +209,15 @@ def test_combine_files(basic_residential_project_file):
     test_path = os.path.join(results_dir, 'parquet')
 
     # results parquet
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet'))\
+    test_pq = read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
+    reference_pq = read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))\
+    test_pq = read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet'))\
+    reference_pq = read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
