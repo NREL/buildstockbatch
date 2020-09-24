@@ -7,8 +7,8 @@ output_directory: ../national_test_outputs
 weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   #precomputed_sample: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
-  n_datapoints: 4 
-  n_buildings_represented: 80000000
+  n_datapoints: 4
+  n_buildings_represented: 133172057  # Total number of residential dwelling units in CONUS. Downselected later as desired.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -23,10 +23,11 @@ upgrades:
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
-# downselect:
-#   resample: true
-#   logic:
-#     - Geometry Building Type ACS|Single-Family Detached
+downselect:
+  resample: false
+  logic:
+    - Geometry Building Type RECS|Single-Family Detached
+    - Vacancy Status|Occupied
 eagle:
   n_jobs: 200
   minutes_per_sim: 2
