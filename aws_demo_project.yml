@@ -5,7 +5,6 @@ project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
 weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
 baseline:
-  #precomputed_sample: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
   n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 133172057  # Total number of residential dwelling units in CONUS. Downselected later as desired.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option

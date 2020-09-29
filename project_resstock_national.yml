@@ -3,10 +3,9 @@ stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_multifamily_beta  # Relative to buildstock_directory
 output_directory: ../national_test_outputs
-#weather_files_url: https://data.nrel.gov/files/128/ResStock_TMY3.zip
-weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_url: https://data.nrel.gov/files/128/ResStock_TMY3.zip
+# weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
-  #precomputed_sample: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv
   n_datapoints: 4
   n_buildings_represented: 133172057  # Total number of residential dwelling units in CONUS. Downselected later as desired.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
@@ -26,7 +25,6 @@ timeseries_csv_export:
 downselect:
   resample: false
   logic:
-    - Geometry Building Type RECS|Single-Family Detached
     - Vacancy Status|Occupied
 eagle:
   n_jobs: 200
