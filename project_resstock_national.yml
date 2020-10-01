@@ -1,14 +1,17 @@
 schema_version: 0.2
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
-project_directory: project_multifamily_beta  # Relative to buildstock_directory
+project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../national_test_outputs
 weather_files_url: https://data.nrel.gov/files/128/ResStock_TMY3.zip
 # weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
+
 baseline:
   n_datapoints: 4
-  n_buildings_represented: 133172057  # Total number of residential dwelling units in CONUS. Downselected later as desired.
+  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States as defined by
+  # 2016 American Community Survey by census region. Data available at data.census.gov.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
+
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:
@@ -18,45 +21,17 @@ upgrades:
           - value: 45.77
             multiplier: Window Area (ft^2)
         lifetime: 30
-#    package_apply_logic:
+
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
-downselect:
-  resample: false
-  logic:
-    - Vacancy Status|Occupied
+
 eagle:
-  n_jobs: 200
-  minutes_per_sim: 2
+  n_jobs: 4
+  minutes_per_sim: 30
   account: enduse
   sampling:
     time: 20
   postprocessing:
     time: 60
     n_workers: 3
-aws:
-  # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur
-  job_identifier: test_proj
-  s3:
-    bucket: resbldg-datasets
-    prefix: testing/user_test
-  emr:
-    slave_instance_count: 1
-  region: us-west-2
-  use_spot: true
-  batch_array_size: 10
-  # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-  notifications_email: user@nrel.gov
-
-postprocessing:
-  aggregate_timeseries: true
-  # aws:
-  #   region_name: 'us-west-2'
-  #   s3:
-  #     bucket: resbldg-datasets
-  #     prefix: resstock-athena/calibration_runs_new
-  #   athena:
-  #     glue_service_role: service-role/AWSGlueServiceRole-default
-  #     database_name: testing
-  #     max_crawling_time: 300 #time to wait for the crawler to complete before aborting it

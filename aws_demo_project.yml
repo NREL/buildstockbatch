@@ -4,10 +4,13 @@ buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absol
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
 weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
+
 baseline:
   n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
-  n_buildings_represented: 133172057  # Total number of residential dwelling units in CONUS. Downselected later as desired.
+  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States as defined by
+  # 2016 American Community Survey by census region. Data available at data.census.gov.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
+
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:
@@ -20,11 +23,10 @@ upgrades:
 timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
+
 downselect:
-  resample: false
   logic:
     - Geometry Building Type RECS|Single-Family Detached
-    - Vacancy Status|Occupied
 
 aws:
   # The job_identifier must be unique, start with alpha, not include dashes, and limited to 10 chars
@@ -38,7 +40,7 @@ aws:
   use_spot: true
   batch_array_size: 4
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-  notifications_email: nathan.moore@nrel.gov
+  notifications_email: user@example.com
 
 postprocessing:
   aws:
