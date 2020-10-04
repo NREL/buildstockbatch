@@ -245,10 +245,15 @@ class BuildStockBatchBase(object):
         # Convert the timeseries data to parquet
         # and copy it to the results directory
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
         if os.path.isfile(timeseries_filepath):
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=[0])
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time', 'TimeDST', 'TimeUTC'])
+            schedules = pd.read_csv(schedules_filepath)
+            schedules.rename(lambda x: f'schedules_{x}', axis=1, inplace=True)
+            schedules['TimeDST'] = tsdf['Time']
+            ts_and_schedule = tsdf.merge(schedules, how='left', on='TimeDST')
             postprocessing.write_dataframe_as_parquet(
-                tsdf,
+                ts_and_schedule,
                 dest_fs,
                 f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
             )
