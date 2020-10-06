@@ -245,6 +245,9 @@ class BuildStockBatchBase(object):
         # Convert the timeseries data to parquet
         # and copy it to the results directory
         timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
+        # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
+        if not os.path.isfile(timeseries_filepath):
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'], skiprows=[1])
             postprocessing.write_dataframe_as_parquet(
@@ -274,7 +277,8 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_precomputed_sample(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
-        assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
+        # FIXME: Move measure validation into workflow generator class
+        # assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))

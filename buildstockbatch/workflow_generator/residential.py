@@ -30,6 +30,14 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         """
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
+        sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
+            self.cfg['baseline']['n_datapoints']
+        bld_exist_model_args = {
+            'building_unit_id': building_id,
+            'workflow_json': 'measure-info.json',
+            'sample_weight': sample_weight,
+        }
+
         res_sim_ctl_args = {
             'timesteps_per_hr': 6,
             'begin_month': 1,
@@ -38,24 +46,16 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'end_day_of_month': 31
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
+        bld_exist_model_args['simulation_control_timestep'] = 60 // res_sim_ctl_args['timesteps_per_hr']
+        for k in ('begin_month', 'begin_day_of_month', 'end_month', 'end_day_of_month'):
+            bld_exist_model_args[f'simulation_control_run_period_{k}'] = res_sim_ctl_args[k]
 
-        sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
-            self.cfg['baseline']['n_datapoints']
-        bld_exist_model_args = {
-            'building_id': building_id,
-            'workflow_json': 'measure-info.json',
-            'sample_weight': sample_weight,
-        }
         if 'measures_to_ignore' in self.cfg['baseline']:
             bld_exist_model_args['measures_to_ignore'] = '|'.join(self.cfg['baseline']['measures_to_ignore'])
 
         osw = {
             'id': sim_id,
             'steps': [
-                {
-                    'measure_dir_name': 'ResidentialSimulationControls',
-                    'arguments': res_sim_ctl_args,
-                },
                 {
                     'measure_dir_name': 'BuildExistingModel',
                     'arguments': bld_exist_model_args
@@ -120,7 +120,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     self.make_apply_logic_arg(measure_d['package_apply_logic'])
 
             build_existing_model_idx = \
-                list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+                [x['measure_dir_name'] == 'BuildExistingModel' for x in osw['steps']].index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'reporting_measures' in self.cfg:
