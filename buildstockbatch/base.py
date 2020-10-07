@@ -249,7 +249,7 @@ class BuildStockBatchBase(object):
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time', 'TimeDST', 'TimeUTC'])
             schedules = pd.read_csv(schedules_filepath)
-            schedules.rename(lambda x: f'schedules_{x}', axis=1, inplace=True)
+            schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
             schedules['TimeDST'] = tsdf['Time']
             ts_and_schedule = tsdf.merge(schedules, how='left', on='TimeDST')
             postprocessing.write_dataframe_as_parquet(
