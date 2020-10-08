@@ -1,19 +1,17 @@
-# -*- coding: utf-8 -*-
-
 """
-buildstockbatch.sampler.residential_docker
+buildstockbatch.sampler.residential_quota
 ~~~~~~~~~~~~~~~
 This object contains the code required for generating the set of simulations to execute
 
 :author: Noel Merket, Ry Horsey
-:copyright: (c) 2018 by The Alliance for Sustainable Energy
+:copyright: (c) 2020 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-
 import docker
 import logging
 import os
 import shutil
+import subprocess
 import sys
 import time
 
@@ -22,34 +20,16 @@ from .base import BuildStockSampler
 logger = logging.getLogger(__name__)
 
 
-class ResidentialDockerSampler(BuildStockSampler):
+class ResidentialQuotaSampler(BuildStockSampler):
 
-    def __init__(self, docker_image, *args, **kwargs):
-        """
-        Initialize the sampler.
-
-        :param docker_image: the docker image to use (i.e. nrel/openstudio:2.7.0)
-        :return: Absolute path to the output buildstock.csv file
-        """
-        super().__init__(*args, **kwargs)
-        self.docker_image = docker_image
-        self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-
-    def run_sampling(self, n_datapoints):
-        """
-        Run the residential sampling in a docker container.
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        """
-        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
-
+    def _run_sampling_docker(self, n_datapoints):
         docker_client = docker.DockerClient.from_env()
         tick = time.time()
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
-            self.docker_image,
+            self.parent().docker_image,
             [
                 'ruby',
                 'resources/run_sampling.rb',
@@ -76,3 +56,22 @@ class ResidentialDockerSampler(BuildStockSampler):
             destination_filename
         )
         return destination_filename
+
+    def _run_sampling_singularity(self, n_datapoints):
+        args = [
+            'singularity',
+            'exec',
+            '--contain',
+            '--home', '{}:/buildstock'.format(self.buildstock_dir),
+            '--bind', '{}:/outbind'.format(os.path.dirname(self.csv_path)),
+            self.parent().singularity_image,
+            'ruby',
+            'resources/run_sampling.rb',
+            '-p', self.cfg['project_directory'],
+            '-n', str(n_datapoints),
+            '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
+        ]
+        logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
+        subprocess.run(args, check=True, env=os.environ, cwd=self.parent().output_dir)
+        logger.debug("Singularity sampling completed.")
+        return self.csv_path

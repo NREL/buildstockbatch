@@ -332,7 +332,8 @@ def test_write_parquet_no_index():
 def test_skipping_baseline(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file({
         'baseline': {
-            'skip_sims': True
+            'skip_sims': True,
+            'sampling_algorithm': 'quota'
         }
     })
 

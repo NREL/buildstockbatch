@@ -33,10 +33,9 @@ import sys
 import time
 import yaml
 
-from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
-from .utils import log_error_details, get_error_details
-from . import postprocessing
+from buildstockbatch.base import BuildStockBatchBase, SimulationExists
+from buildstockbatch.utils import log_error_details, get_error_details
+from buildstockbatch import postprocessing, ContainerRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +45,8 @@ def get_bool_env_var(varname):
 
 
 class EagleBatch(BuildStockBatchBase):
+
+    CONTAINER_RUNTIME = ContainerRuntime.SINGULARITY
 
     sys_image_dir = '/shared-projects/buildstock/singularity_images'
     hpc_name = 'eagle'
@@ -66,43 +67,6 @@ class EagleBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
-        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
-        if sampling_algorithm is None:
-            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
-                           'configuration yaml. This key is required.')
-        if sampling_algorithm == 'precomputed':
-            logger.info('calling precomputed sampler')
-            self.sampler = PrecomputedSingularitySampler(
-                self.output_dir,
-                self.cfg,
-                self.buildstock_dir,
-                self.project_dir
-            )
-        elif self.stock_type == 'residential':
-            if sampling_algorithm == 'quota':
-                self.sampler = ResidentialSingularitySampler(
-                    self.singularity_image,
-                    self.output_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented for residential projects.'.
-                                          format(sampling_algorithm))
-        elif self.stock_type == 'commercial':
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSingularitySampler(
-                    self.output_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented for commercial projects.'.
-                                          format(sampling_algorithm))
-        else:
-            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @staticmethod
     def validate_project(project_file):

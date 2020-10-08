@@ -28,8 +28,7 @@ import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler, PrecomputedDockerSampler
-from buildstockbatch import postprocessing
+from buildstockbatch import postprocessing, ContainerRuntime
 from .utils import log_error_details
 
 logger = logging.getLogger(__name__)
@@ -37,49 +36,17 @@ logger = logging.getLogger(__name__)
 
 class DockerBatchBase(BuildStockBatchBase):
 
+    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
+
     def __init__(self, project_filename):
         super().__init__(project_filename)
+
         self.docker_client = docker.DockerClient.from_env()
         try:
             self.docker_client.ping()
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
             logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
             raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
-        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
-        if sampling_algorithm is None:
-            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
-                           'configuration yaml. This key is required.')
-        if sampling_algorithm == 'precomputed':
-            logger.info('calling precomputed sampler')
-            self.sampler = PrecomputedDockerSampler(
-                self.cfg,
-                self.buildstock_dir,
-                self.project_dir
-            )
-        elif self.stock_type == 'residential':
-            if sampling_algorithm == 'quota':
-                self.sampler = ResidentialDockerSampler(
-                    self.docker_image,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for residential projects.'.
-                                          format(sampling_algorithm))
-        elif self.stock_type == 'commercial':
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolDockerSampler(
-                    self.project_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for commercial projects.'.
-                                          format(sampling_algorithm))
-        else:
-            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
         self._weather_dir = None
 

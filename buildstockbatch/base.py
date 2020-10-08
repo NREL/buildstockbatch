@@ -30,6 +30,7 @@ from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
+from .sampler import ResidentialQuotaSampler, CommercialSobolSampler, PrecomputedSampler
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 from buildstockbatch import postprocessing
 
@@ -52,6 +53,7 @@ class BuildStockBatchBase(object):
 
     DEFAULT_OS_VERSION = '2.9.1'
     DEFAULT_OS_SHA = '3472e8b799'
+    CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -82,6 +84,25 @@ class BuildStockBatchBase(object):
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
         self.os_sha = self.cfg.get('os_sha', self.DEFAULT_OS_SHA)
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
+
+        # Select a sampler
+        sampling_algorithm = self.cfg['baseline']['sampling_algorithm']
+        if sampling_algorithm == 'precomputed':
+            self.sampler = PrecomputedSampler(self)
+        elif self.stock_type == 'residential':
+            if sampling_algorithm == 'quota':
+                self.sampler = ResidentialQuotaSampler(self)
+            else:
+                raise NotImplementedError('Sampling algorithm "{}" is not implemented for residential projects.'.
+                                          format(sampling_algorithm))
+        elif self.stock_type == 'commercial':
+            if sampling_algorithm == 'sobol':
+                self.sampler = CommercialSobolSampler(self)
+            else:
+                raise NotImplementedError('Sampling algorithm "{}" is not implemented for commercial projects.'.
+                                          format(sampling_algorithm))
+        else:
+            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @staticmethod
     def path_rel_to_file(startfile, x):
