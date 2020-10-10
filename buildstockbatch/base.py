@@ -248,12 +248,13 @@ class BuildStockBatchBase(object):
         schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time', 'TimeDST', 'TimeUTC'])
-            schedules = pd.read_csv(schedules_filepath)
-            schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
-            schedules['TimeDST'] = tsdf['Time']
-            ts_and_schedule = tsdf.merge(schedules, how='left', on='TimeDST')
+            if os.path.isfile(schedules_filepath):
+                schedules = pd.read_csv(schedules_filepath)
+                schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
+                schedules['TimeDST'] = tsdf['Time']
+                tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
             postprocessing.write_dataframe_as_parquet(
-                ts_and_schedule,
+                tsdf,
                 dest_fs,
                 f'{simout_ts_dir}/up{upgrade_id:02d}/bldg{building_id:07d}.parquet'
             )
@@ -270,7 +271,7 @@ class BuildStockBatchBase(object):
         # Remove reports dir
         reports_dir = os.path.join(sim_dir, 'reports')
         if os.path.isdir(reports_dir):
-            shutil.rmtree(reports_dir)
+            shutil.rmtree(reports_dir, ignore_errors=True)
 
     @staticmethod
     def validate_project(project_file):

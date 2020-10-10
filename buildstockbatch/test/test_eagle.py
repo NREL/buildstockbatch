@@ -9,6 +9,8 @@ import shutil
 import tarfile
 from unittest.mock import patch
 import yaml
+import gzip
+import subprocess
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 
@@ -232,6 +234,72 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
+
+
+def test_run_building_process(mocker,  basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file(raw=True)
+    results_dir = pathlib.Path(results_dir)
+
+    job_json = {'job_num': 1, 'batch': [(1, 0), (2, 0), (3, 0), (4, 0),
+                                        (1, None), (2, None), (3, None), (4, None)]}
+    with open(results_dir / 'job001.json', 'w') as f:
+        json.dump(job_json, f)
+
+    def sequential_parallel(**kwargs):
+        kw2 = kwargs.copy()
+        kw2['n_jobs'] = 1
+        return joblib.Parallel(**kw2)
+
+    mocker.patch('buildstockbatch.eagle.shutil.copy2')
+    mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
+    mocker.patch('buildstockbatch.eagle.subprocess')
+    mocker.patch('buildstockbatch.eagle.os.unlink')
+
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
+    mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
+    mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+
+    def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
+        real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
+        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, real_upgrade_idx)
+
+        # Check to see if the simulation is done already and skip it if so.
+        sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
+        return sim_id, sim_dir
+
+    mocker.patch.object(EagleBatch, 'make_sim_dir', make_sim_dir_mock)
+
+    b = EagleBatch(project_filename)
+    b.run_job_batch(1)
+
+    # check results job-json
+    refrence_path = pathlib.Path(__file__).resolve().parent / 'test_results' / 'reference_files'
+
+    refrence_list = json.loads(gzip.open(refrence_path / 'results_job1.json.gz', 'r').read())
+
+    output_list = json.loads(gzip.open(results_dir / 'simulation_output' / 'results_job1.json.gz', 'r').read())
+
+    refrence_list = [json.dumps(d) for d in refrence_list]
+    output_list = [json.dumps(d) for d in output_list]
+
+    assert sorted(refrence_list) == sorted(output_list)
+
+    ts_files = list(refrence_path.glob('**/*.parquet'))
+
+    def compare_ts_parquets(source, dst):
+        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index'])
+        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index'])
+        pd.testing.assert_frame_equal(test_pq, reference_pq)
+
+    for file in ts_files:
+        results_file = results_dir / 'results' / 'simulation_output' / 'timeseries' / file.parent.name / file.name
+        compare_ts_parquets(file, results_file)
+
+    # Hack to clear the temporary directory.
+    subprocess.run(['rm', '-r', results_dir.parent.as_posix()])
+    os.makedirs(results_dir.parent)
 
 
 def test_run_building_error_caught(mocker,  basic_residential_project_file):
