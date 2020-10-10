@@ -1,0 +1,1640 @@
+
+ Meters for 12,RES LIGHTING EXTERIOR:Exterior Lights Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=ExteriorLights:Electricity [J]
+  OnMeter=res lighting exterior:ExteriorLights:Electricity [J]
+  OnCustomMeter=CENTRAL:ELECTRICITYEXTERIORLIGHTING [J]
+
+ Meters for 51,RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res lighting interior living space:InteriorLights:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIORLIGHTING [J]
+
+ Meters for 112,RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorLights:Electricity [J]
+  OnMeter=InteriorLights:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res lighting interior|unit 2 living space|unit 2:InteriorLights:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIORLIGHTING [J]
+
+ Meters for 149,RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res ceil fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYCEILINGFAN [J]
+
+ Meters for 186,RES INFIL_1 BATH FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res mv_1 bath fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYBATHFAN [J]
+
+ Meters for 199,RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res mv_1 house fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYHOUSEFAN [J]
+
+ Meters for 212,RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res mv_1 range fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYRANGEFAN [J]
+
+ Meters for 225,RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res misc plug loads:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYPLUGLOADS [J]
+
+ Meters for 238,RES RANGE ELECTRIC:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res range electric:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYCOOKINGRANGE [J]
+
+ Meters for 251,RES REFRIG:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J]
+  OnMeter=res refrig:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYREFRIGERATOR [J]
+
+ Meters for 264,RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res ceil fan|unit 2:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYCEILINGFAN [J]
+
+ Meters for 289,RES INFIL_2 BATH FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res mv_2 bath fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYBATHFAN [J]
+
+ Meters for 302,RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res mv_2 house fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYHOUSEFAN [J]
+
+ Meters for 315,RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res mv_2 range fan:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYRANGEFAN [J]
+
+ Meters for 328,RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res misc plug loads|unit 2:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYPLUGLOADS [J]
+
+ Meters for 341,RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res range electric|unit 2:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYCOOKINGRANGE [J]
+
+ Meters for 354,RES REFRIG|UNIT 2:Electric Equipment Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Building [J]
+  OnMeter=Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Electricity [J]
+  OnMeter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res refrig|unit 2:InteriorEquipment:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYREFRIGERATOR [J]
+
+ Meters for 367,RES RANGE GAS:Other Equipment Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:Building [J]
+  OnMeter=Gas:Zone:LIVING ZONE [J]
+  OnMeter=InteriorEquipment:Gas [J]
+  OnMeter=InteriorEquipment:Gas:Zone:LIVING ZONE [J]
+  OnMeter=res range gas:InteriorEquipment:Gas [J]
+  OnCustomMeter=UNIT 1:NATURALGASINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 1:NATURALGASCOOKINGRANGE [J]
+
+ Meters for 440,RES RANGE GAS|UNIT 2:Other Equipment Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:Building [J]
+  OnMeter=Gas:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=InteriorEquipment:Gas [J]
+  OnMeter=InteriorEquipment:Gas:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=res range gas|unit 2:InteriorEquipment:Gas [J]
+  OnCustomMeter=UNIT 2:NATURALGASINTERIOREQUIPMENT [J]
+  OnCustomMeter=UNIT 2:NATURALGASCOOKINGRANGE [J]
+
+ Meters for 482,CORRIDOR ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:CORRIDOR ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:CORRIDOR ZONE [J]
+
+ Meters for 543,CORRIDOR ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:CORRIDOR ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:CORRIDOR ZONE [J]
+
+ Meters for 570,LIVING ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:LIVING ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:LIVING ZONE [J]
+
+ Meters for 595,LIVING ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:LIVING ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:LIVING ZONE [J]
+
+ Meters for 610,LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J]
+
+ Meters for 635,LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J]
+
+ Meters for 650,RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J]
+
+ Meters for 675,RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J]
+
+ Meters for 690,RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J]
+
+ Meters for 715,RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J]
+
+ Meters for 730,RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J]
+
+ Meters for 755,RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J]
+
+ Meters for 770,RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J]
+
+ Meters for 795,RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J]
+
+ Meters for 810,UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J]
+  OnMeter=Heating:EnergyTransfer [J]
+  OnMeter=Heating:EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J]
+
+ Meters for 835,UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Building [J]
+  OnMeter=EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J]
+  OnMeter=Cooling:EnergyTransfer [J]
+  OnMeter=Cooling:EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J]
+
+ Meters for 850,RES AC CLG SUPPLY FAN:Fan Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=res ac clg supply fan:Fans:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYFANSCOOLING [J]
+
+ Meters for 887,RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=res ac|unit 2 clg supply fan:Fans:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYFANSCOOLING [J]
+
+ Meters for 900,RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=res fur gas htg supply fan:Fans:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYFANSHEATING [J]
+
+ Meters for 913,RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Fans:Electricity [J]
+  OnMeter=res fur gas|unit 2 htg supply fan:Fans:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYFANSHEATING [J]
+
+ Meters for 930,RES AC COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 955,RES AC COOLING COIL:Cooling Coil Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYCOOLING [J]
+
+ Meters for 968,RES AC|UNIT 2 COOLING COIL:Cooling Coil Total Cooling Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=CoolingCoils:EnergyTransfer [J]
+
+ Meters for 969,RES AC|UNIT 2 COOLING COIL:Cooling Coil Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Cooling:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYCOOLING [J]
+
+ Meters for 970,RES FUR GAS HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 983,RES FUR GAS HEATING COIL:Heating Coil Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:HVAC [J]
+  OnMeter=Heating:Gas [J]
+  OnCustomMeter=UNIT 1:NATURALGASHEATING [J]
+
+ Meters for 1008,RES FUR GAS HEATING COIL:Heating Coil Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYHEATING [J]
+
+ Meters for 1021,RES FUR GAS HEATING COIL:Heating Coil Ancillary Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:HVAC [J]
+  OnMeter=Heating:Gas [J]
+  OnCustomMeter=UNIT 1:NATURALGASHEATING [J]
+
+ Meters for 1022,RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:HVAC [J]
+  OnMeter=HeatingCoils:EnergyTransfer [J]
+
+ Meters for 1023,RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:HVAC [J]
+  OnMeter=Heating:Gas [J]
+  OnCustomMeter=UNIT 2:NATURALGASHEATING [J]
+
+ Meters for 1024,RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYHEATING [J]
+
+ Meters for 1025,RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Ancillary Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:HVAC [J]
+  OnMeter=Heating:Gas [J]
+  OnCustomMeter=UNIT 2:NATURALGASHEATING [J]
+
+ Meters for 1026,RES FUR GAS UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYHEATING [J]
+
+ Meters for 1027,RES FUR GAS|UNIT 2 UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:HVAC [J]
+  OnMeter=Heating:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYHEATING [J]
+
+ Meters for 1028,RES SHOWER:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res shower:WaterSystems:Water [m3]
+
+ Meters for 1077,RES SHOWER:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res shower:WaterSystems:MainsWater [m3]
+
+ Meters for 1126,RES SHOWER:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res shower:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1163,RES SINK:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res sink:WaterSystems:Water [m3]
+
+ Meters for 1176,RES SINK:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res sink:WaterSystems:MainsWater [m3]
+
+ Meters for 1189,RES SINK:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res sink:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1202,RES BATH:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res bath:WaterSystems:Water [m3]
+
+ Meters for 1215,RES BATH:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res bath:WaterSystems:MainsWater [m3]
+
+ Meters for 1228,RES BATH:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res bath:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1241,RES SHOWER DIST:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1254,RES SHOWER DIST:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1267,RES SHOWER DIST:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1280,RES SINK DIST:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1281,RES SINK DIST:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1282,RES SINK DIST:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1283,RES BATH DIST:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1284,RES BATH DIST:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1285,RES BATH DIST:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1286,RES SHOWER|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res shower|unit 2:WaterSystems:Water [m3]
+
+ Meters for 1299,RES SHOWER|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res shower|unit 2:WaterSystems:MainsWater [m3]
+
+ Meters for 1312,RES SHOWER|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res shower|unit 2:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1325,RES SINK|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res sink|unit 2:WaterSystems:Water [m3]
+
+ Meters for 1338,RES SINK|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res sink|unit 2:WaterSystems:MainsWater [m3]
+
+ Meters for 1351,RES SINK|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res sink|unit 2:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1364,RES BATH|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res bath|unit 2:WaterSystems:Water [m3]
+
+ Meters for 1377,RES BATH|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res bath|unit 2:WaterSystems:MainsWater [m3]
+
+ Meters for 1390,RES BATH|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=res bath|unit 2:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1403,RES SHOWER DIST|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1404,RES SHOWER DIST|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1405,RES SHOWER DIST|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1406,RES SINK DIST|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1407,RES SINK DIST|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1408,RES SINK DIST|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1409,RES BATH DIST|UNIT 2:Water Use Equipment Total Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=General:WaterSystems:Water [m3]
+
+ Meters for 1410,RES BATH DIST|UNIT 2:Water Use Equipment Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=General:WaterSystems:MainsWater [m3]
+
+ Meters for 1411,RES BATH DIST|UNIT 2:Water Use Equipment Heating Energy [J]
+  OnMeter=EnergyTransfer:Facility [J]
+  OnMeter=EnergyTransfer:Plant [J]
+  OnMeter=WaterSystems:EnergyTransfer [J]
+  OnMeter=General:WaterSystems:EnergyTransfer [J]
+
+ Meters for 1412,WATER USE CONNECTIONS 1:Water Use Connections Plant Hot Water Energy [J]
+  OnMeter=PlantLoopHeatingDemand:Facility [J]
+  OnMeter=PlantLoopHeatingDemand:Plant [J]
+  OnMeter=WaterSystems:PlantLoopHeatingDemand [J]
+
+ Meters for 1449,WATER USE CONNECTIONS 2:Water Use Connections Plant Hot Water Energy [J]
+  OnMeter=PlantLoopHeatingDemand:Facility [J]
+  OnMeter=PlantLoopHeatingDemand:Plant [J]
+  OnMeter=WaterSystems:PlantLoopHeatingDemand [J]
+
+ Meters for 1450,RES WH:Water Heater Source Side Heat Transfer Energy [J]
+  OnMeter=PlantLoopHeatingDemand:Facility [J]
+  OnMeter=PlantLoopHeatingDemand:Plant [J]
+  OnMeter=WaterSystems:PlantLoopHeatingDemand [J]
+  OnMeter=res wh:WaterSystems:PlantLoopHeatingDemand [J]
+
+ Meters for 1463,RES WH:Water Heater Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:Plant [J]
+  OnMeter=WaterSystems:Gas [J]
+  OnMeter=res wh:WaterSystems:Gas [J]
+  OnCustomMeter=UNIT 1:NATURALGASWATERSYSTEMS [J]
+
+ Meters for 1500,RES WH:Water Heater Off Cycle Parasitic Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=WaterSystems:Electricity [J]
+  OnMeter=res wh:WaterSystems:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYWATERSYSTEMS [J]
+
+ Meters for 1537,RES WH:Water Heater On Cycle Parasitic Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=WaterSystems:Electricity [J]
+  OnMeter=res wh:WaterSystems:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYWATERSYSTEMS [J]
+
+ Meters for 1538,RES WH:Water Heater Water Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res wh:WaterSystems:Water [m3]
+
+ Meters for 1551,RES WH:Water Heater Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res wh:WaterSystems:MainsWater [m3]
+
+ Meters for 1564,RES WH|UNIT 2:Water Heater Source Side Heat Transfer Energy [J]
+  OnMeter=PlantLoopHeatingDemand:Facility [J]
+  OnMeter=PlantLoopHeatingDemand:Plant [J]
+  OnMeter=WaterSystems:PlantLoopHeatingDemand [J]
+  OnMeter=res wh|unit 2:WaterSystems:PlantLoopHeatingDemand [J]
+
+ Meters for 1577,RES WH|UNIT 2:Water Heater Gas Energy [J]
+  OnMeter=Gas:Facility [J]
+  OnMeter=Gas:Plant [J]
+  OnMeter=WaterSystems:Gas [J]
+  OnMeter=res wh|unit 2:WaterSystems:Gas [J]
+  OnCustomMeter=UNIT 2:NATURALGASWATERSYSTEMS [J]
+
+ Meters for 1590,RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=WaterSystems:Electricity [J]
+  OnMeter=res wh|unit 2:WaterSystems:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYWATERSYSTEMS [J]
+
+ Meters for 1603,RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=WaterSystems:Electricity [J]
+  OnMeter=res wh|unit 2:WaterSystems:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYWATERSYSTEMS [J]
+
+ Meters for 1604,RES WH|UNIT 2:Water Heater Water Volume [m3]
+  OnMeter=Water:Facility [m3]
+  OnMeter=Water:Plant [m3]
+  OnMeter=WaterSystems:Water [m3]
+  OnMeter=res wh|unit 2:WaterSystems:Water [m3]
+
+ Meters for 1617,RES WH|UNIT 2:Water Heater Mains Water Volume [m3]
+  OnMeter=MainsWater:Facility [m3]
+  OnMeter=MainsWater:Plant [m3]
+  OnMeter=WaterSystems:MainsWater [m3]
+  OnMeter=res wh|unit 2:WaterSystems:MainsWater [m3]
+
+ Meters for 1630,Whole Building:Facility Total Purchased Electric Energy [J]
+  OnMeter=ElectricityPurchased:Facility [J]
+  OnMeter=ElectricityPurchased:Plant [J]
+  OnMeter=Cogeneration:ElectricityPurchased [J]
+
+ Meters for 1667,Whole Building:Facility Total Surplus Electric Energy [J]
+  OnMeter=ElectricitySurplusSold:Facility [J]
+  OnMeter=ElectricitySurplusSold:Plant [J]
+  OnMeter=Cogeneration:ElectricitySurplusSold [J]
+
+ Meters for 1704,Whole Building:Facility Net Purchased Electric Energy [J]
+  OnMeter=ElectricityNet:Facility [J]
+  OnMeter=ElectricityNet:Plant [J]
+  OnMeter=Cogeneration:ElectricityNet [J]
+
+ Meters for 1741,PUMP VARIABLE SPEED 1:Pump Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=Pumps:Electricity [J]
+  OnMeter=General:Pumps:Electricity [J]
+
+ Meters for 1766,PUMP VARIABLE SPEED 2:Pump Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=Pumps:Electricity [J]
+  OnMeter=General:Pumps:Electricity [J]
+
+ Meters for 1767,RES AC COOLING COIL:Cooling Coil Crankcase Heater Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=Cooling:Electricity [J]
+  OnCustomMeter=UNIT 1:ELECTRICITYCOOLING [J]
+
+ Meters for 1768,RES AC|UNIT 2 COOLING COIL:Cooling Coil Crankcase Heater Electric Energy [J]
+  OnMeter=Electricity:Facility [J]
+  OnMeter=Electricity:Plant [J]
+  OnMeter=Cooling:Electricity [J]
+  OnCustomMeter=UNIT 2:ELECTRICITYCOOLING [J]
+
+ Meters for 1804,Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ Meters for 1829,Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ Meters for 1830,Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass [kg]
+  OnMeter=Carbon Equivalent:Facility [kg]
+  OnMeter=CarbonEquivalentEmissions:Carbon Equivalent [kg]
+
+ For Meter=Electricity:Facility [J], ResourceType=Electricity, contents are:
+  RES LIGHTING EXTERIOR:Exterior Lights Electric Energy
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+  RES AC CLG SUPPLY FAN:Fan Electric Energy
+  RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy
+  RES AC COOLING COIL:Cooling Coil Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Electric Energy
+  RES FUR GAS HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+  RES FUR GAS|UNIT 2 UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+  RES WH:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH:Water Heater On Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy
+  PUMP VARIABLE SPEED 1:Pump Electric Energy
+  PUMP VARIABLE SPEED 2:Pump Electric Energy
+  RES AC COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+
+ For Meter=ExteriorLights:Electricity [J], ResourceType=Electricity, EndUse=ExteriorLights, contents are:
+  RES LIGHTING EXTERIOR:Exterior Lights Electric Energy
+
+ For Meter=res lighting exterior:ExteriorLights:Electricity [J], ResourceType=Electricity, EndUse=ExteriorLights, contents are:
+  RES LIGHTING EXTERIOR:Exterior Lights Electric Energy
+
+ For Meter=Electricity:Building [J], ResourceType=Electricity, Group=Building, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=Electricity:Zone:LIVING ZONE [J], ResourceType=Electricity, Group=Zone, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+
+ For Meter=InteriorLights:Electricity [J], ResourceType=Electricity, EndUse=InteriorLights, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+
+ For Meter=InteriorLights:Electricity:Zone:LIVING ZONE [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+
+ For Meter=res lighting interior living space:InteriorLights:Electricity [J], ResourceType=Electricity, EndUse=InteriorLights, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+
+ For Meter=Electricity:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=Electricity, Group=Zone, contents are:
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=InteriorLights:Electricity:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=Electricity, EndUse=InteriorLights, Group=Zone, contents are:
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+
+ For Meter=res lighting interior|unit 2 living space|unit 2:InteriorLights:Electricity [J], ResourceType=Electricity, EndUse=InteriorLights, contents are:
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+
+ For Meter=InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:LIVING ZONE [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+
+ For Meter=res ceil fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+
+ For Meter=res mv_1 bath fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+
+ For Meter=res mv_1 house fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+
+ For Meter=res mv_1 range fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+
+ For Meter=res misc plug loads:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+
+ For Meter=res range electric:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+
+ For Meter=res refrig:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES REFRIG:Electric Equipment Electric Energy
+
+ For Meter=InteriorEquipment:Electricity:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=Electricity, EndUse=InteriorEquipment, Group=Zone, contents are:
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=res ceil fan|unit 2:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+
+ For Meter=res mv_2 bath fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+
+ For Meter=res mv_2 house fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+
+ For Meter=res mv_2 range fan:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+
+ For Meter=res misc plug loads|unit 2:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=res range electric|unit 2:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=res refrig|unit 2:InteriorEquipment:Electricity [J], ResourceType=Electricity, EndUse=InteriorEquipment, contents are:
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=Gas:Facility [J], ResourceType=Gas, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+  RES FUR GAS HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS HEATING COIL:Heating Coil Ancillary Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Ancillary Gas Energy
+  RES WH:Water Heater Gas Energy
+  RES WH|UNIT 2:Water Heater Gas Energy
+
+ For Meter=Gas:Building [J], ResourceType=Gas, Group=Building, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=Gas:Zone:LIVING ZONE [J], ResourceType=Gas, Group=Zone, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+
+ For Meter=InteriorEquipment:Gas [J], ResourceType=Gas, EndUse=InteriorEquipment, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=InteriorEquipment:Gas:Zone:LIVING ZONE [J], ResourceType=Gas, EndUse=InteriorEquipment, Group=Zone, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+
+ For Meter=res range gas:InteriorEquipment:Gas [J], ResourceType=Gas, EndUse=InteriorEquipment, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+
+ For Meter=Gas:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=Gas, Group=Zone, contents are:
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=InteriorEquipment:Gas:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=Gas, EndUse=InteriorEquipment, Group=Zone, contents are:
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=res range gas|unit 2:InteriorEquipment:Gas [J], ResourceType=Gas, EndUse=InteriorEquipment, contents are:
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=EnergyTransfer:Facility [J], ResourceType=EnergyTransfer, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Heating Energy
+  CORRIDOR ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE:Zone Air System Sensible Heating Energy
+  LIVING ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy
+  RES AC COOLING COIL:Cooling Coil Total Cooling Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Total Cooling Energy
+  RES FUR GAS HEATING COIL:Heating Coil Heating Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Heating Energy
+  RES SHOWER:Water Use Equipment Heating Energy
+  RES SINK:Water Use Equipment Heating Energy
+  RES BATH:Water Use Equipment Heating Energy
+  RES SHOWER DIST:Water Use Equipment Heating Energy
+  RES SINK DIST:Water Use Equipment Heating Energy
+  RES BATH DIST:Water Use Equipment Heating Energy
+  RES SHOWER|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH|UNIT 2:Water Use Equipment Heating Energy
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH DIST|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=EnergyTransfer:Building [J], ResourceType=EnergyTransfer, Group=Building, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Heating Energy
+  CORRIDOR ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE:Zone Air System Sensible Heating Energy
+  LIVING ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:CORRIDOR ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Heating Energy
+  CORRIDOR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Heating, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Heating Energy
+  LIVING ZONE:Zone Air System Sensible Heating Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:CORRIDOR ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=Cooling, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE:Zone Air System Sensible Cooling Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:CORRIDOR ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  CORRIDOR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:LIVING ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  LIVING ZONE:Zone Air System Sensible Heating Energy
+  LIVING ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:LIVING ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  LIVING ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:LIVING ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  LIVING ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:LIVING ZONE|UNIT 2 [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  LIVING ZONE|UNIT 2:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:RES DS RES AC ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  RES DS RES AC ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:RES DS RES AC_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  RES DS RES AC_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:RES DS RES FUR GAS ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  RES DS RES FUR GAS ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  RES DS RES FUR GAS_UNIT 2 ASYS RET AIR ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J], ResourceType=EnergyTransfer, Group=Zone, contents are:
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Heating:EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J], ResourceType=EnergyTransfer, EndUse=Heating, Group=Zone, contents are:
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Heating Energy
+
+ For Meter=Cooling:EnergyTransfer:Zone:UNFINISHED BASEMENT ZONE [J], ResourceType=EnergyTransfer, EndUse=Cooling, Group=Zone, contents are:
+  UNFINISHED BASEMENT ZONE:Zone Air System Sensible Cooling Energy
+
+ For Meter=Electricity:HVAC [J], ResourceType=Electricity, Group=HVAC, contents are:
+  RES AC CLG SUPPLY FAN:Fan Electric Energy
+  RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy
+  RES AC COOLING COIL:Cooling Coil Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Electric Energy
+  RES FUR GAS HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+  RES FUR GAS|UNIT 2 UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+
+ For Meter=Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  RES AC CLG SUPPLY FAN:Fan Electric Energy
+  RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy
+  RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=res ac clg supply fan:Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  RES AC CLG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=res ac|unit 2 clg supply fan:Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=res fur gas htg supply fan:Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=res fur gas|unit 2 htg supply fan:Fans:Electricity [J], ResourceType=Electricity, EndUse=Fans, contents are:
+  RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=EnergyTransfer:HVAC [J], ResourceType=EnergyTransfer, Group=HVAC, contents are:
+  RES AC COOLING COIL:Cooling Coil Total Cooling Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Total Cooling Energy
+  RES FUR GAS HEATING COIL:Heating Coil Heating Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Heating Energy
+
+ For Meter=CoolingCoils:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=CoolingCoils, contents are:
+  RES AC COOLING COIL:Cooling Coil Total Cooling Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Total Cooling Energy
+
+ For Meter=Cooling:Electricity [J], ResourceType=Electricity, EndUse=Cooling, contents are:
+  RES AC COOLING COIL:Cooling Coil Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Electric Energy
+  RES AC COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+
+ For Meter=HeatingCoils:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=HeatingCoils, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Heating Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Heating Energy
+
+ For Meter=Gas:HVAC [J], ResourceType=Gas, Group=HVAC, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS HEATING COIL:Heating Coil Ancillary Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Ancillary Gas Energy
+
+ For Meter=Heating:Gas [J], ResourceType=Gas, EndUse=Heating, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS HEATING COIL:Heating Coil Ancillary Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Ancillary Gas Energy
+
+ For Meter=Heating:Electricity [J], ResourceType=Electricity, EndUse=Heating, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+  RES FUR GAS|UNIT 2 UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+
+ For Meter=Water:Facility [m3], ResourceType=Water, contents are:
+  RES SHOWER:Water Use Equipment Total Volume
+  RES SINK:Water Use Equipment Total Volume
+  RES BATH:Water Use Equipment Total Volume
+  RES SHOWER DIST:Water Use Equipment Total Volume
+  RES SINK DIST:Water Use Equipment Total Volume
+  RES BATH DIST:Water Use Equipment Total Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Total Volume
+  RES SINK|UNIT 2:Water Use Equipment Total Volume
+  RES BATH|UNIT 2:Water Use Equipment Total Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Total Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Total Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Total Volume
+  RES WH:Water Heater Water Volume
+  RES WH|UNIT 2:Water Heater Water Volume
+
+ For Meter=Water:Plant [m3], ResourceType=Water, Group=Plant, contents are:
+  RES SHOWER:Water Use Equipment Total Volume
+  RES SINK:Water Use Equipment Total Volume
+  RES BATH:Water Use Equipment Total Volume
+  RES SHOWER DIST:Water Use Equipment Total Volume
+  RES SINK DIST:Water Use Equipment Total Volume
+  RES BATH DIST:Water Use Equipment Total Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Total Volume
+  RES SINK|UNIT 2:Water Use Equipment Total Volume
+  RES BATH|UNIT 2:Water Use Equipment Total Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Total Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Total Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Total Volume
+  RES WH:Water Heater Water Volume
+  RES WH|UNIT 2:Water Heater Water Volume
+
+ For Meter=WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Total Volume
+  RES SINK:Water Use Equipment Total Volume
+  RES BATH:Water Use Equipment Total Volume
+  RES SHOWER DIST:Water Use Equipment Total Volume
+  RES SINK DIST:Water Use Equipment Total Volume
+  RES BATH DIST:Water Use Equipment Total Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Total Volume
+  RES SINK|UNIT 2:Water Use Equipment Total Volume
+  RES BATH|UNIT 2:Water Use Equipment Total Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Total Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Total Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Total Volume
+  RES WH:Water Heater Water Volume
+  RES WH|UNIT 2:Water Heater Water Volume
+
+ For Meter=res shower:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Total Volume
+
+ For Meter=MainsWater:Facility [m3], ResourceType=MainsWater, contents are:
+  RES SHOWER:Water Use Equipment Mains Water Volume
+  RES SINK:Water Use Equipment Mains Water Volume
+  RES BATH:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST:Water Use Equipment Mains Water Volume
+  RES SINK DIST:Water Use Equipment Mains Water Volume
+  RES BATH DIST:Water Use Equipment Mains Water Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES WH:Water Heater Mains Water Volume
+  RES WH|UNIT 2:Water Heater Mains Water Volume
+
+ For Meter=MainsWater:Plant [m3], ResourceType=MainsWater, Group=Plant, contents are:
+  RES SHOWER:Water Use Equipment Mains Water Volume
+  RES SINK:Water Use Equipment Mains Water Volume
+  RES BATH:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST:Water Use Equipment Mains Water Volume
+  RES SINK DIST:Water Use Equipment Mains Water Volume
+  RES BATH DIST:Water Use Equipment Mains Water Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES WH:Water Heater Mains Water Volume
+  RES WH|UNIT 2:Water Heater Mains Water Volume
+
+ For Meter=WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Mains Water Volume
+  RES SINK:Water Use Equipment Mains Water Volume
+  RES BATH:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST:Water Use Equipment Mains Water Volume
+  RES SINK DIST:Water Use Equipment Mains Water Volume
+  RES BATH DIST:Water Use Equipment Mains Water Volume
+  RES SHOWER|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES WH:Water Heater Mains Water Volume
+  RES WH|UNIT 2:Water Heater Mains Water Volume
+
+ For Meter=res shower:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Mains Water Volume
+
+ For Meter=EnergyTransfer:Plant [J], ResourceType=EnergyTransfer, Group=Plant, contents are:
+  RES SHOWER:Water Use Equipment Heating Energy
+  RES SINK:Water Use Equipment Heating Energy
+  RES BATH:Water Use Equipment Heating Energy
+  RES SHOWER DIST:Water Use Equipment Heating Energy
+  RES SINK DIST:Water Use Equipment Heating Energy
+  RES BATH DIST:Water Use Equipment Heating Energy
+  RES SHOWER|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH|UNIT 2:Water Use Equipment Heating Energy
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH DIST|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Heating Energy
+  RES SINK:Water Use Equipment Heating Energy
+  RES BATH:Water Use Equipment Heating Energy
+  RES SHOWER DIST:Water Use Equipment Heating Energy
+  RES SINK DIST:Water Use Equipment Heating Energy
+  RES BATH DIST:Water Use Equipment Heating Energy
+  RES SHOWER|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH|UNIT 2:Water Use Equipment Heating Energy
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH DIST|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=res shower:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SHOWER:Water Use Equipment Heating Energy
+
+ For Meter=res sink:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SINK:Water Use Equipment Total Volume
+
+ For Meter=res sink:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SINK:Water Use Equipment Mains Water Volume
+
+ For Meter=res sink:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SINK:Water Use Equipment Heating Energy
+
+ For Meter=res bath:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES BATH:Water Use Equipment Total Volume
+
+ For Meter=res bath:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES BATH:Water Use Equipment Mains Water Volume
+
+ For Meter=res bath:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES BATH:Water Use Equipment Heating Energy
+
+ For Meter=General:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SHOWER DIST:Water Use Equipment Total Volume
+  RES SINK DIST:Water Use Equipment Total Volume
+  RES BATH DIST:Water Use Equipment Total Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Total Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Total Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Total Volume
+
+ For Meter=General:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SHOWER DIST:Water Use Equipment Mains Water Volume
+  RES SINK DIST:Water Use Equipment Mains Water Volume
+  RES BATH DIST:Water Use Equipment Mains Water Volume
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES SINK DIST|UNIT 2:Water Use Equipment Mains Water Volume
+  RES BATH DIST|UNIT 2:Water Use Equipment Mains Water Volume
+
+ For Meter=General:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SHOWER DIST:Water Use Equipment Heating Energy
+  RES SINK DIST:Water Use Equipment Heating Energy
+  RES BATH DIST:Water Use Equipment Heating Energy
+  RES SHOWER DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES SINK DIST|UNIT 2:Water Use Equipment Heating Energy
+  RES BATH DIST|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=res shower|unit 2:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SHOWER|UNIT 2:Water Use Equipment Total Volume
+
+ For Meter=res shower|unit 2:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SHOWER|UNIT 2:Water Use Equipment Mains Water Volume
+
+ For Meter=res shower|unit 2:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SHOWER|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=res sink|unit 2:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES SINK|UNIT 2:Water Use Equipment Total Volume
+
+ For Meter=res sink|unit 2:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES SINK|UNIT 2:Water Use Equipment Mains Water Volume
+
+ For Meter=res sink|unit 2:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES SINK|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=res bath|unit 2:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES BATH|UNIT 2:Water Use Equipment Total Volume
+
+ For Meter=res bath|unit 2:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES BATH|UNIT 2:Water Use Equipment Mains Water Volume
+
+ For Meter=res bath|unit 2:WaterSystems:EnergyTransfer [J], ResourceType=EnergyTransfer, EndUse=WaterSystems, contents are:
+  RES BATH|UNIT 2:Water Use Equipment Heating Energy
+
+ For Meter=PlantLoopHeatingDemand:Facility [J], ResourceType=PlantLoopHeatingDemand, contents are:
+  WATER USE CONNECTIONS 1:Water Use Connections Plant Hot Water Energy
+  WATER USE CONNECTIONS 2:Water Use Connections Plant Hot Water Energy
+  RES WH:Water Heater Source Side Heat Transfer Energy
+  RES WH|UNIT 2:Water Heater Source Side Heat Transfer Energy
+
+ For Meter=PlantLoopHeatingDemand:Plant [J], ResourceType=PlantLoopHeatingDemand, Group=Plant, contents are:
+  WATER USE CONNECTIONS 1:Water Use Connections Plant Hot Water Energy
+  WATER USE CONNECTIONS 2:Water Use Connections Plant Hot Water Energy
+  RES WH:Water Heater Source Side Heat Transfer Energy
+  RES WH|UNIT 2:Water Heater Source Side Heat Transfer Energy
+
+ For Meter=WaterSystems:PlantLoopHeatingDemand [J], ResourceType=PlantLoopHeatingDemand, EndUse=WaterSystems, contents are:
+  WATER USE CONNECTIONS 1:Water Use Connections Plant Hot Water Energy
+  WATER USE CONNECTIONS 2:Water Use Connections Plant Hot Water Energy
+  RES WH:Water Heater Source Side Heat Transfer Energy
+  RES WH|UNIT 2:Water Heater Source Side Heat Transfer Energy
+
+ For Meter=res wh:WaterSystems:PlantLoopHeatingDemand [J], ResourceType=PlantLoopHeatingDemand, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Source Side Heat Transfer Energy
+
+ For Meter=Gas:Plant [J], ResourceType=Gas, Group=Plant, contents are:
+  RES WH:Water Heater Gas Energy
+  RES WH|UNIT 2:Water Heater Gas Energy
+
+ For Meter=WaterSystems:Gas [J], ResourceType=Gas, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Gas Energy
+  RES WH|UNIT 2:Water Heater Gas Energy
+
+ For Meter=res wh:WaterSystems:Gas [J], ResourceType=Gas, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Gas Energy
+
+ For Meter=Electricity:Plant [J], ResourceType=Electricity, Group=Plant, contents are:
+  RES WH:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH:Water Heater On Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy
+  PUMP VARIABLE SPEED 1:Pump Electric Energy
+  PUMP VARIABLE SPEED 2:Pump Electric Energy
+  RES AC COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+
+ For Meter=WaterSystems:Electricity [J], ResourceType=Electricity, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH:Water Heater On Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy
+
+ For Meter=res wh:WaterSystems:Electricity [J], ResourceType=Electricity, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH:Water Heater On Cycle Parasitic Electric Energy
+
+ For Meter=res wh:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Water Volume
+
+ For Meter=res wh:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES WH:Water Heater Mains Water Volume
+
+ For Meter=res wh|unit 2:WaterSystems:PlantLoopHeatingDemand [J], ResourceType=PlantLoopHeatingDemand, EndUse=WaterSystems, contents are:
+  RES WH|UNIT 2:Water Heater Source Side Heat Transfer Energy
+
+ For Meter=res wh|unit 2:WaterSystems:Gas [J], ResourceType=Gas, EndUse=WaterSystems, contents are:
+  RES WH|UNIT 2:Water Heater Gas Energy
+
+ For Meter=res wh|unit 2:WaterSystems:Electricity [J], ResourceType=Electricity, EndUse=WaterSystems, contents are:
+  RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy
+
+ For Meter=res wh|unit 2:WaterSystems:Water [m3], ResourceType=Water, EndUse=WaterSystems, contents are:
+  RES WH|UNIT 2:Water Heater Water Volume
+
+ For Meter=res wh|unit 2:WaterSystems:MainsWater [m3], ResourceType=MainsWater, EndUse=WaterSystems, contents are:
+  RES WH|UNIT 2:Water Heater Mains Water Volume
+
+ For Meter=ElectricityPurchased:Facility [J], ResourceType=ElectricityPurchased, contents are:
+  Whole Building:Facility Total Purchased Electric Energy
+
+ For Meter=ElectricityPurchased:Plant [J], ResourceType=ElectricityPurchased, Group=Plant, contents are:
+  Whole Building:Facility Total Purchased Electric Energy
+
+ For Meter=Cogeneration:ElectricityPurchased [J], ResourceType=ElectricityPurchased, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Purchased Electric Energy
+
+ For Meter=ElectricitySurplusSold:Facility [J], ResourceType=ElectricitySurplusSold, contents are:
+  Whole Building:Facility Total Surplus Electric Energy
+
+ For Meter=ElectricitySurplusSold:Plant [J], ResourceType=ElectricitySurplusSold, Group=Plant, contents are:
+  Whole Building:Facility Total Surplus Electric Energy
+
+ For Meter=Cogeneration:ElectricitySurplusSold [J], ResourceType=ElectricitySurplusSold, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Total Surplus Electric Energy
+
+ For Meter=ElectricityNet:Facility [J], ResourceType=ElectricityNet, contents are:
+  Whole Building:Facility Net Purchased Electric Energy
+
+ For Meter=ElectricityNet:Plant [J], ResourceType=ElectricityNet, Group=Plant, contents are:
+  Whole Building:Facility Net Purchased Electric Energy
+
+ For Meter=Cogeneration:ElectricityNet [J], ResourceType=ElectricityNet, EndUse=Cogeneration, contents are:
+  Whole Building:Facility Net Purchased Electric Energy
+
+ For Meter=Pumps:Electricity [J], ResourceType=Electricity, EndUse=Pumps, contents are:
+  PUMP VARIABLE SPEED 1:Pump Electric Energy
+  PUMP VARIABLE SPEED 2:Pump Electric Energy
+
+ For Meter=General:Pumps:Electricity [J], ResourceType=Electricity, EndUse=Pumps, contents are:
+  PUMP VARIABLE SPEED 1:Pump Electric Energy
+  PUMP VARIABLE SPEED 2:Pump Electric Energy
+
+ For Meter=Carbon Equivalent:Facility [kg], ResourceType=Carbon Equivalent, contents are:
+  Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass
+
+ For Meter=CarbonEquivalentEmissions:Carbon Equivalent [kg], ResourceType=Carbon Equivalent, EndUse=CarbonEquivalentEmissions, contents are:
+  Site:Environmental Impact Total N2O Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CH4 Emissions Carbon Equivalent Mass
+  Site:Environmental Impact Total CO2 Emissions Carbon Equivalent Mass
+
+ For Meter=UNIT 1:ELECTRICITYHEATING [J], ResourceType=Electricity, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYCOOLING [J], ResourceType=Electricity, contents are:
+  RES AC COOLING COIL:Cooling Coil Electric Energy
+  RES AC COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYINTERIORLIGHTING [J], ResourceType=Electricity, contents are:
+  RES LIGHTING INTERIOR LIVING SPACE:Lights Electric Energy
+
+ For Meter=CENTRAL:ELECTRICITYEXTERIORLIGHTING [J], ResourceType=Electricity, contents are:
+  RES LIGHTING EXTERIOR:Exterior Lights Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYINTERIOREQUIPMENT [J], ResourceType=Electricity, contents are:
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+  RES REFRIG:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYFANSHEATING [J], ResourceType=Electricity, contents are:
+  RES FUR GAS HTG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYFANSCOOLING [J], ResourceType=Electricity, contents are:
+  RES AC CLG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYWATERSYSTEMS [J], ResourceType=Electricity, contents are:
+  RES WH:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH:Water Heater On Cycle Parasitic Electric Energy
+
+ For Meter=UNIT 1:NATURALGASHEATING [J], ResourceType=Gas, contents are:
+  RES FUR GAS HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS HEATING COIL:Heating Coil Ancillary Gas Energy
+
+ For Meter=UNIT 1:NATURALGASINTERIOREQUIPMENT [J], ResourceType=Gas, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+
+ For Meter=UNIT 1:NATURALGASWATERSYSTEMS [J], ResourceType=Gas, contents are:
+  RES WH:Water Heater Gas Energy
+
+ For Meter=UNIT 1:ELECTRICITYREFRIGERATOR [J], ResourceType=Electricity, contents are:
+  RES REFRIG:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYCOOKINGRANGE [J], ResourceType=Electricity, contents are:
+  RES RANGE ELECTRIC:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:NATURALGASCOOKINGRANGE [J], ResourceType=Gas, contents are:
+  RES RANGE GAS:Other Equipment Gas Energy
+
+ For Meter=UNIT 1:ELECTRICITYPLUGLOADS [J], ResourceType=Electricity, contents are:
+  RES MISC PLUG LOADS|LIVING SPACE:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYHOUSEFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_1 HOUSE FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYRANGEFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_1 RANGE FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYBATHFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_1 BATH FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 1:ELECTRICITYCEILINGFAN [J], ResourceType=Electricity, contents are:
+  RES CEIL FAN NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYHEATING [J], ResourceType=Electricity, contents are:
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Electric Energy
+  RES FUR GAS|UNIT 2 UNITARY SYSTEM:Unitary System Heating Ancillary Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYCOOLING [J], ResourceType=Electricity, contents are:
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Electric Energy
+  RES AC|UNIT 2 COOLING COIL:Cooling Coil Crankcase Heater Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYINTERIORLIGHTING [J], ResourceType=Electricity, contents are:
+  RES LIGHTING INTERIOR|UNIT 2 LIVING SPACE|UNIT 2:Lights Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYINTERIOREQUIPMENT [J], ResourceType=Electricity, contents are:
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYFANSHEATING [J], ResourceType=Electricity, contents are:
+  RES FUR GAS|UNIT 2 HTG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYFANSCOOLING [J], ResourceType=Electricity, contents are:
+  RES AC|UNIT 2 CLG SUPPLY FAN:Fan Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYWATERSYSTEMS [J], ResourceType=Electricity, contents are:
+  RES WH|UNIT 2:Water Heater Off Cycle Parasitic Electric Energy
+  RES WH|UNIT 2:Water Heater On Cycle Parasitic Electric Energy
+
+ For Meter=UNIT 2:NATURALGASHEATING [J], ResourceType=Gas, contents are:
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Gas Energy
+  RES FUR GAS|UNIT 2 HEATING COIL:Heating Coil Ancillary Gas Energy
+
+ For Meter=UNIT 2:NATURALGASINTERIOREQUIPMENT [J], ResourceType=Gas, contents are:
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=UNIT 2:NATURALGASWATERSYSTEMS [J], ResourceType=Gas, contents are:
+  RES WH|UNIT 2:Water Heater Gas Energy
+
+ For Meter=UNIT 2:ELECTRICITYREFRIGERATOR [J], ResourceType=Electricity, contents are:
+  RES REFRIG|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYCOOKINGRANGE [J], ResourceType=Electricity, contents are:
+  RES RANGE ELECTRIC|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:NATURALGASCOOKINGRANGE [J], ResourceType=Gas, contents are:
+  RES RANGE GAS|UNIT 2:Other Equipment Gas Energy
+
+ For Meter=UNIT 2:ELECTRICITYPLUGLOADS [J], ResourceType=Electricity, contents are:
+  RES MISC PLUG LOADS|UNIT 2|LIVING SPACE|UNIT 2:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYHOUSEFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_2 HOUSE FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYRANGEFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_2 RANGE FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYBATHFAN [J], ResourceType=Electricity, contents are:
+  RES INFIL_2 BATH FAN:Electric Equipment Electric Energy
+
+ For Meter=UNIT 2:ELECTRICITYCEILINGFAN [J], ResourceType=Electricity, contents are:
+  RES CEIL FAN|UNIT 2 NON BENCHMARK EQUIP:Electric Equipment Electric Energy
