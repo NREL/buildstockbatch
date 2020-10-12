@@ -9,7 +9,8 @@ weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
 baseline:
   n_datapoints: 4
   n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States as defined by
-  # census tract level query of ACS 5-yr 2016 (i.e. 2012-2016). Data available at data.census.gov.
+  # census tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
+  # Data available at data.census.gov.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
 
 upgrades:
