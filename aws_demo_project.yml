@@ -25,9 +25,11 @@ timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
 
-downselect:
-  logic:
-    - Geometry Building Type RECS|Single-Family Detached
+# downselect:
+#   resample: true
+#   logic:
+#     - Geometry Building Type RECS|Single-Family Detached
+#     - Vacancy Status|Occupied
 
 aws:
   # The job_identifier must be unique, start with alpha, not include dashes, and limited to 10 chars
