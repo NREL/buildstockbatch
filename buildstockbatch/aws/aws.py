@@ -1772,10 +1772,7 @@ class AwsBatch(DockerBatchBase):
         """
 
         # Generate buildstock.csv
-        if 'downselect' in self.cfg:
-            buildstock_csv_filename = self.downselect()
-        else:
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.run_sampling()
 
         # Compress and upload assets to S3
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as tmp_weather_dir:

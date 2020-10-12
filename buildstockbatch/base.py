@@ -13,10 +13,7 @@ This is the base class mixed into the deployment specific classes (i.e. eagle, l
 from dask.distributed import Client
 import difflib
 from fsspec.implementations.local import LocalFileSystem
-import gzip
 import logging
-import math
-import numpy as np
 import os
 import pandas as pd
 import requests
@@ -30,23 +27,13 @@ from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
-from .sampler import ResidentialQuotaSampler, CommercialSobolSampler, PrecomputedSampler
+from buildstockbatch import sampler
 from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
 from buildstockbatch import postprocessing
+from buildstockbatch.exc import SimulationExists, ValidationError
+from buildstockbatch.utils import path_rel_to_file
 
 logger = logging.getLogger(__name__)
-
-
-class SimulationExists(Exception):
-
-    def __init__(self, msg, sim_id, sim_dir):
-        super().__init__(msg)
-        self.sim_id = sim_id
-        self.sim_dir = sim_dir
-
-
-class ValidationError(Exception):
-    pass
 
 
 class BuildStockBatchBase(object):
@@ -86,33 +73,16 @@ class BuildStockBatchBase(object):
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
         # Select a sampler
-        sampling_algorithm = self.cfg['baseline']['sampling_algorithm']
-        if sampling_algorithm == 'precomputed':
-            self.sampler = PrecomputedSampler(self)
-        elif self.stock_type == 'residential':
-            if sampling_algorithm == 'quota':
-                self.sampler = ResidentialQuotaSampler(self)
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for residential projects.'.
-                                          format(sampling_algorithm))
-        elif self.stock_type == 'commercial':
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSampler(self)
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for commercial projects.'.
-                                          format(sampling_algorithm))
-        else:
-            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
+        Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
+        self.sampler = Sampler(self, **self.cfg['sampler'].get('args', {}))
 
     @staticmethod
-    def path_rel_to_file(startfile, x):
-        if os.path.isabs(x):
-            return os.path.abspath(x)
-        else:
-            return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
+    def get_sampler_class(sampler_name):
+        sampler_class_name = ''.join(x.capitalize() for x in sampler_name.strip().split('_')) + 'Sampler'
+        return getattr(sampler, sampler_class_name)
 
     def path_rel_to_projectfile(self, x):
-        return self.path_rel_to_file(self.project_filename, x)
+        return path_rel_to_file(self.project_filename, x)
 
     def _get_weather_files(self):
         if 'weather_files_path' in self.cfg:
@@ -154,69 +124,8 @@ class BuildStockBatchBase(object):
         baseline_skip = self.cfg['baseline'].get('skip_sims', False)
         return baseline_skip
 
-    def run_sampling(self, n_datapoints=None):
-        if n_datapoints is None:
-            n_datapoints = self.cfg['baseline']['n_datapoints']
-        return self.sampler.run_sampling(n_datapoints)
-
     def run_batch(self):
         raise NotImplementedError
-
-    @classmethod
-    def downselect_logic(cls, df, logic):
-        if isinstance(logic, dict):
-            assert (len(logic) == 1)
-            key = list(logic.keys())[0]
-            values = logic[key]
-            if key == 'and':
-                retval = cls.downselect_logic(df, values[0])
-                for value in values[1:]:
-                    retval &= cls.downselect_logic(df, value)
-                return retval
-            elif key == 'or':
-                retval = cls.downselect_logic(df, values[0])
-                for value in values[1:]:
-                    retval |= cls.downselect_logic(df, value)
-                return retval
-            elif key == 'not':
-                return ~cls.downselect_logic(df, values)
-        elif isinstance(logic, list):
-            retval = cls.downselect_logic(df, logic[0])
-            for value in logic[1:]:
-                retval &= cls.downselect_logic(df, value)
-            return retval
-        elif isinstance(logic, str):
-            key, value = logic.split('|')
-            return df[key] == value
-
-    def downselect(self):
-        downselect_resample = self.cfg['downselect'].get('resample', True)
-        logger.debug("Starting downselect sampling")
-        if downselect_resample:
-            logger.debug('Performing initial sampling to figure out number of samples for downselect')
-            n_samples_init = 350000
-            buildstock_csv_filename = self.run_sampling(n_samples_init)
-            df = pd.read_csv(buildstock_csv_filename, index_col=0)
-            df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
-            downselected_n_samples_init = df_new.shape[0]
-            n_samples = math.ceil(self.cfg['baseline']['n_datapoints'] * n_samples_init / downselected_n_samples_init)
-            os.remove(buildstock_csv_filename)
-        else:
-            n_samples = self.cfg['baseline']['n_datapoints']
-        buildstock_csv_filename = self.run_sampling(n_samples)
-        with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
-            with open(buildstock_csv_filename, 'rb') as f_in:
-                shutil.copyfileobj(f_in, f_out)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0, dtype='str')
-        df_new = df[self.downselect_logic(df, self.cfg['downselect']['logic'])]
-        if len(df_new.index) == 0:
-            raise RuntimeError('There are no buildings left after the down select!')
-        if downselect_resample:
-            old_index_name = df_new.index.name
-            df_new.index = np.arange(len(df_new)) + 1
-            df_new.index.name = old_index_name
-        df_new.to_csv(buildstock_csv_filename)
-        return buildstock_csv_filename
 
     @staticmethod
     def create_osw(cfg, *args, **kwargs):
@@ -291,9 +200,9 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
+        assert(BuildStockBatchBase.validate_sampler(project_file))
         assert(BuildStockBatchBase.validate_misc_constraints(project_file))
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
-        assert(BuildStockBatchBase.validate_precomputed_sample(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_measures_and_arguments(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
@@ -312,12 +221,12 @@ class BuildStockBatchBase(object):
             raise err
 
         # Set absolute paths
-        cfg['buildstock_directory'] = cls.path_rel_to_file(project_file, cfg['buildstock_directory'])
+        cfg['buildstock_directory'] = path_rel_to_file(project_file, cfg['buildstock_directory'])
         if 'precomputed_sample' in cfg.get('baseline', {}):
             cfg['baseline']['precomputed_sample'] = \
-                cls.path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+                path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
         if 'weather_files_path' in cfg:
-            cfg['weather_files_path'] = cls.path_rel_to_file(project_file, cfg['weather_files_path'])
+            cfg['weather_files_path'] = path_rel_to_file(project_file, cfg['weather_files_path'])
 
         return cfg
 
@@ -328,6 +237,17 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+
+    @staticmethod
+    def validate_sampler(project_file):
+        cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        sampler_name = cfg['sampler']['type']
+        try:
+            Sampler = BuildStockBatchBase.get_sampler_class(sampler_name)
+        except AttributeError:
+            raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
+        args = cfg['sampler']['args']
+        return Sampler.validate_args(project_file, **args)
 
     @staticmethod
     def validate_project_schema(project_file):
@@ -345,10 +265,6 @@ class BuildStockBatchBase(object):
     def validate_misc_constraints(project_file):
         # validate other miscellaneous constraints
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        if 'precomputed_sample' in cfg['baseline']:
-            if cfg.get('downselect', {'resample': False}).get('resample', True):
-                raise ValidationError("Downselect with resampling cannot be used when using precomputed buildstock_csv."
-                                      "\nPlease set resample: False in downselect or use a different sampler.")
 
         if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
             logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
@@ -366,27 +282,6 @@ class BuildStockBatchBase(object):
                    ('weather_files_path' in cfg.keys()):
                     raise ValidationError('Both/neither weather_files_url and weather_files_path found in yaml root')
 
-                # No precomputed sample key unless using precomputed sampling
-                if cfg['baseline']['sampling_algorithm'] != 'precomputed' and 'precomputed_sample' in cfg['baseline']:
-                    raise ValidationError(
-                        'baseline.precomputed_sample is not allowed unless '
-                        'baseline.sampling_algorithm = "precomputed".'
-                    )
-        return True
-
-    @staticmethod
-    def validate_precomputed_sample(project_file):
-        cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        if 'precomputed_sample' in cfg['baseline']:
-            buildstock_csv = cfg['baseline']['precomputed_sample']
-            if not os.path.exists(buildstock_csv):
-                raise FileNotFoundError(buildstock_csv)
-            buildstock_df = pd.read_csv(buildstock_csv)
-            if buildstock_df.shape[0] != cfg['baseline']['n_datapoints']:
-                raise RuntimeError(
-                    f'`n_datapoints` does not match the number of rows in {buildstock_csv}. '
-                    f'Please set `n_datapoints` to {buildstock_df.shape[0]}'
-                )
         return True
 
     @staticmethod
@@ -651,9 +546,10 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
-        if 'downselect' in cfg:
-            source_str = "In downselect"
-            source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
+        # FIXME: Get this working in new downselect sampler validation.
+        # if 'downselect' in cfg:
+        #     source_str = "In downselect"
+        #     source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
 
         # Gather all the errors in the option_str, if any
         error_message = ''

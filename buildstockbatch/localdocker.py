@@ -155,10 +155,7 @@ class LocalDockerBatch(DockerBatchBase):
         return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
-        if 'downselect' in self.cfg:
-            buildstock_csv_filename = self.downselect()
-        else:
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.run_sampling()
 
         if sampling_only:
             return

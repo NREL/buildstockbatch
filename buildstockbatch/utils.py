@@ -1,5 +1,13 @@
-import traceback
 import inspect
+import os
+import traceback
+
+
+def path_rel_to_file(startfile, x):
+    if os.path.isabs(x):
+        return os.path.abspath(x)
+    else:
+        return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
 
 
 def _str_repr(obj, list_max=20, dict_max=20, string_max=100):

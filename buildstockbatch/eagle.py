@@ -162,19 +162,9 @@ class EagleBatch(BuildStockBatchBase):
             destination_dir
         )
         logger.debug("Housing characteristics copied.")
+
         # run sampling
-        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
-        #   constructor ensures that 'downselect' not in self.cfg and
-        #   run_sampling simply copies that .csv to the correct location if
-        #   necessary and returns the path
-        if 'downselect' in self.cfg:
-            # if there is a downselect section in the yml,
-            # BuildStockBatchBase.downselect calls run_sampling and does
-            # additional processing before and after
-            buildstock_csv_filename = self.downselect()
-        else:
-            # otherwise just the plain sampling process needs to be run
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.run_sampling()
 
         # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the array
         # jobs - this is rare but happens quasi-repeatably when lustre is really lagging

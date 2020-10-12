@@ -22,13 +22,14 @@ from warnings import warn
 from .sobol_lib import i4_sobol_generate
 from .base import BuildStockSampler
 from buildstockbatch import ContainerRuntime
+from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
 class CommercialSobolSampler(BuildStockSampler):
 
-    def __init__(self, parent):
+    def __init__(self, parent, n_datapoints):
         """
         Initialize the sampler.
 
@@ -38,13 +39,31 @@ class CommercialSobolSampler(BuildStockSampler):
         :param project_dir: The project directory within the OpenStudio-BuildStock repo
         """
         super().__init__(parent)
+        self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
         if self.container_runtime == ContainerRuntime.SINGULARITY:
             self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
         else:
             assert self.container_runtime == ContainerRuntime.DOCKER
             self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
+        self.n_datapoints = n_datapoints
 
-    def run_sampling(self, n_datapoints):
+    @classmethod
+    def validate_args(cls, project_filename, **kw):
+        expected_args = set(['n_datapoints'])
+        for k, v in kw.items():
+            expected_args.discard(k)
+            if k == 'n_datapoints':
+                if not isinstance(v, int):
+                    raise ValidationError('n_datapoints needs to be an integer')
+                if v <= 0:
+                    raise ValidationError('n_datapoints need to be >= 1')
+            else:
+                raise ValidationError(f'Unknown argument for sampler: {k}')
+        if len(expected_args) > 0:
+            raise ValidationError('The following sampler arguments are required: ' + ', '.join(expected_args))
+        return True
+
+    def run_sampling(self):
         """
         Run the commercial sampling.
 
@@ -56,8 +75,8 @@ class CommercialSobolSampler(BuildStockSampler):
         :return: Absolute path to the output buildstock.csv file
         """
         sample_number = self.cfg['baseline'].get('n_datapoints', 350000)
-        if isinstance(n_datapoints, int):
-            sample_number = n_datapoints
+        if isinstance(self.n_datapoints, int):
+            sample_number = self.n_datapoints
         logging.debug(f'Sampling, number of data points is {sample_number}')
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):

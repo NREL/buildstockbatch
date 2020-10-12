@@ -14,6 +14,7 @@ import os
 import weakref
 
 from buildstockbatch import ContainerRuntime
+from buildstockbatch.utils import path_rel_to_file
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,22 @@ logger = logging.getLogger(__name__)
 class BuildStockSampler(object):
 
     csv_path = None
+    ARGS_DEFAULTS = {}
+
+    @staticmethod
+    def validate_args(project_filename, **kw):
+        """Validation of args from config, passed as **kw
+
+        :param project_filename: The path to the project configuration file
+        :type project_filename: str
+        :param args: arguments to pass to the sampler from the config file
+        :type args: dict
+        :return: True if valid
+        :rtype: bool
+
+        This is a stub. Replace it in your subclass. No need to super() anything.
+        """
+        return True
 
     def __init__(self, parent):
         """
@@ -56,39 +73,29 @@ class BuildStockSampler(object):
     def container_runtime(self):
         return self.parent().CONTAINER_RUNTIME
 
-    def run_sampling(self, n_datapoints):
+    def run_sampling(self):
         """
         Execute the sampling generating the specified number of datapoints.
 
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :type n_datapoints: int
-
         Replace this in a subclass if your sampling doesn't depend on containerization.
         """
-        logger.debug('Sampling, n_datapoints={}'.format(n_datapoints))
         if self.container_runtime == ContainerRuntime.DOCKER:
-            return self._run_sampling_docker(n_datapoints)
+            return self._run_sampling_docker()
         else:
             assert self.container_runtime == ContainerRuntime.SINGULARITY
-            return self._run_sampling_singluarity(n_datapoints)
+            return self._run_sampling_singluarity()
 
-    def _run_sampling_docker(self, n_datapoints):
+    def _run_sampling_docker(self):
         """
         Execute the sampling in a docker container
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :type n_datapoints: int
 
         Replace this in a subclass if your sampling needs docker.
         """
         raise NotImplementedError
 
-    def _run_sampling_singluarity(self, n_datapoints):
+    def _run_sampling_singluarity(self):
         """
         Execute the sampling in a singularity container
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :type n_datapoints: int
 
         Replace this in a subclass if your sampling needs docker.
         """
