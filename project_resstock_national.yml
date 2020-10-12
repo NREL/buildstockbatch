@@ -58,12 +58,12 @@ eagle:
 
 # postprocessing:
 #   aggregate_timeseries: true
-  # aws:
-  #   region_name: 'us-west-2'
-  #   s3:
-  #     bucket: resbldg-datasets
-  #     prefix: resstock-athena/calibration_runs_new
-  #   athena:
-  #     glue_service_role: service-role/AWSGlueServiceRole-default
-  #     database_name: testing
-  #     max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+#   aws:
+#     region_name: 'us-west-2'
+#     s3:
+#       bucket: resbldg-datasets
+#       prefix: resstock-athena/calibration_runs_new
+#     athena:
+#       glue_service_role: service-role/AWSGlueServiceRole-default
+#       database_name: testing
+#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
