@@ -7,9 +7,7 @@ weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
 
 baseline:
   n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
-  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States as defined by
-  # census tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
-  # Data available at data.census.gov.
+  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
   sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
 
 upgrades:
@@ -25,7 +23,7 @@ timeseries_csv_export:
   reporting_frequency: Hourly
   include_enduse_subcategories: true
 
-# downselect:
+# downselect: # Uncomment and set specify logic you you want to downselect to a subset of the building stock
 #   resample: true
 #   logic:
 #     - Geometry Building Type RECS|Single-Family Detached
