@@ -10,7 +10,6 @@ import tarfile
 from unittest.mock import patch
 import yaml
 import gzip
-import subprocess
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 
