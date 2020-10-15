@@ -10,3 +10,4 @@ venv/*
 .pytest_cache
 *.pyc
 .python-version
+buildstockbatch_crash_details.log
