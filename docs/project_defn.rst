@@ -387,7 +387,8 @@ follows:
    For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
    are horizontally concatenated with the time series files before aggregation,
    making sure the schedule values are properly lined up with the timestamps in the
-   `same way that Energeyplus handles ScheduleFiles.<https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076>`_
+   `same way that Energeyplus handles ScheduleFiles <https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076>`_.
+   
 
 Uploading to AWS Athena
 .......................
