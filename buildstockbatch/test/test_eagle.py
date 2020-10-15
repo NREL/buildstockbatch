@@ -252,7 +252,6 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.shutil.copy2')
     mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
     mocker.patch('buildstockbatch.eagle.subprocess')
-    mocker.patch('buildstockbatch.eagle.os.unlink')
 
     mocker.patch.object(EagleBatch, 'weather_dir', None)
     mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
