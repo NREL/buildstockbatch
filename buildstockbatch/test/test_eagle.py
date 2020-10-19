@@ -10,7 +10,6 @@ import tarfile
 from unittest.mock import patch
 import yaml
 import gzip
-import subprocess
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 
@@ -253,13 +252,13 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.shutil.copy2')
     mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
     mocker.patch('buildstockbatch.eagle.subprocess')
-    mocker.patch('buildstockbatch.eagle.os.unlink')
 
     mocker.patch.object(EagleBatch, 'weather_dir', None)
     mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
     mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'run_sampling', lambda _: "buildstock.csv")
 
     def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -272,6 +271,7 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch.object(EagleBatch, 'make_sim_dir', make_sim_dir_mock)
 
     b = EagleBatch(project_filename)
+    b.run_batch(sampling_only=True)  # so the directories can be created
     b.run_job_batch(1)
 
     # check results job-json
@@ -296,10 +296,6 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     for file in ts_files:
         results_file = results_dir / 'results' / 'simulation_output' / 'timeseries' / file.parent.name / file.name
         compare_ts_parquets(file, results_file)
-
-    # Hack to clear the temporary directory.
-    subprocess.run(['rm', '-r', results_dir.parent.as_posix()])
-    os.makedirs(results_dir.parent)
 
 
 def test_run_building_error_caught(mocker,  basic_residential_project_file):
