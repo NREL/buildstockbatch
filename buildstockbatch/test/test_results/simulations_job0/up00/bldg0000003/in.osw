@@ -1,0 +1,44 @@
+{
+    "id": "bldg0000003up00",
+    "steps": [
+        {
+            "measure_dir_name": "ResidentialSimulationControls",
+            "arguments": {
+                "timesteps_per_hr": 4,
+                "begin_month": 1,
+                "begin_day_of_month": 1,
+                "end_month": 12,
+                "end_day_of_month": 31,
+                "calendar_year": 2007
+            }
+        },
+        {
+            "measure_dir_name": "BuildExistingModel",
+            "arguments": {
+                "building_id": 3,
+                "workflow_json": "measure-info.json",
+                "sample_weight": 1.0
+            }
+        },
+        {
+            "measure_dir_name": "SimulationOutputReport",
+            "arguments": {}
+        },
+        {
+            "measure_dir_name": "TimeseriesCSVExport",
+            "arguments": {
+                "reporting_frequency": "Timestep",
+                "include_enduse_subcategories": true,
+                "output_variables": ""
+            }
+        },
+        {
+            "measure_dir_name": "ServerDirectoryCleanup",
+            "arguments": {}
+        }
+    ],
+    "created_at": "2020-10-07T21:26:01.787543",
+    "measure_paths": [
+        "measures"
+    ]
+}
