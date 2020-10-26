@@ -34,8 +34,8 @@ import time
 import yaml
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.utils import log_error_details, get_error_details
-from buildstockbatch import postprocessing, ContainerRuntime
+from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
+from buildstockbatch import postprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ class EagleBatch(BuildStockBatchBase):
         logger.debug("Housing characteristics copied.")
 
         # run sampling
-        buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
         # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the array
         # jobs - this is rare but happens quasi-repeatably when lustre is really lagging

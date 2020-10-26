@@ -71,7 +71,6 @@ def test_missing_required_key_fails(project_file):
 @pytest.mark.parametrize("project_file,expected", [
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
-    (os.path.join(example_yml_dir, 'enforce-validate-no-precomputed-quota.yml'), ValidationError)
 ])
 def test_xor_violations_fail(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
@@ -87,8 +86,6 @@ def test_xor_violations_fail(project_file, expected):
     (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-bad.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-good.yml'), True),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
@@ -199,7 +196,6 @@ def test_bad_options_validation(project_file):
         assert "Insulation Slat" in er
         assert "Vintage|1960s|Vintage|1960s" in er
         assert "Vintage|1960s||Vintage|1940s&&Vintage|1980s" in er
-        assert "Invalid Parameter" in er
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")

@@ -21,7 +21,7 @@ from warnings import warn
 
 from .sobol_lib import i4_sobol_generate
 from .base import BuildStockSampler
-from buildstockbatch import ContainerRuntime
+from buildstockbatch.utils import ContainerRuntime
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)

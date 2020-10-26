@@ -28,8 +28,8 @@ import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch import postprocessing, ContainerRuntime
-from .utils import log_error_details
+from buildstockbatch import postprocessing
+from .utils import log_error_details, ContainerRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ class LocalDockerBatch(DockerBatchBase):
         return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
-        buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
         if sampling_only:
             return

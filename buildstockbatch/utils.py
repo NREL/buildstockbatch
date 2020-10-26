@@ -1,6 +1,12 @@
+import enum
 import inspect
 import os
 import traceback
+
+
+class ContainerRuntime(enum.Enum):
+    DOCKER = 1
+    SINGULARITY = 2
 
 
 def path_rel_to_file(startfile, x):

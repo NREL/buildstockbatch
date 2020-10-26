@@ -13,8 +13,7 @@ import logging
 import os
 import weakref
 
-from buildstockbatch import ContainerRuntime
-from buildstockbatch.utils import path_rel_to_file
+from buildstockbatch.utils import ContainerRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 class BuildStockSampler(object):
 
     csv_path = None
-    ARGS_DEFAULTS = {}
 
     @staticmethod
     def validate_args(project_filename, **kw):

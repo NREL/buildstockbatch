@@ -26,9 +26,3 @@ details regarding these features, and configuration via the project yaml configu
 :copyright: (c) 2018 by The Alliance for Sustainable Energy.
 :license: BSD-3, see LICENSE for more details.
 """
-import enum
-
-
-class ContainerRuntime(enum.Enum):
-    DOCKER = 1
-    SINGULARITY = 2

@@ -63,9 +63,6 @@ class BuildStockBatchBase(object):
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
 
-        # To be set in subclasses
-        self.sampler = None
-
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
@@ -252,7 +249,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_project_schema(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
-        schema_version = cfg.get('schema_version', __schema_version__)
+        schema_version = cfg.get('schema_version')
         version_schema = os.path.join(os.path.dirname(__file__), 'schemas', f'v{schema_version}.yaml')
         if not os.path.isfile(version_schema):
             logger.error(f'Could not find validation schema for YAML version {schema_version}')

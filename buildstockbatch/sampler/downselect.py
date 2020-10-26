@@ -42,29 +42,31 @@ class DownselectSamplerBase(BuildStockSampler):
         :param **kw: args to pass through to sub sampler
         """
         super().__init__(parent)
-        self.validate_args(self.parent().project_filename, logic=logic, resample=resample)
+        self.validate_args(
+            self.parent().project_filename,
+            n_datapoints=n_datapoints,
+            logic=logic,
+            resample=resample,
+            **kw
+        )
         self.logic = logic
         self.resample = resample
-        self.n_datapoints
+        self.n_datapoints = n_datapoints
         self.sub_kw = kw
         sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_datapoints, **kw)
         self.csv_path = sampler.csv_path
 
     @classmethod
     def validate_args(cls, project_filename, **kw):
-        expected_args = set(['logic', 'n_datapoints'])
+        expected_args = set(['logic'])
         extra_kw = {}
         for k, v in kw.items():
             expected_args.discard(k)
             if k == 'logic':
                 # TODO: do some validation of the logic here.
                 pass
-            elif k == 'n_datapoints':
-                extra_kw[k] = v
-                if not isinstance(v, int):
-                    raise ValidationError('n_datapoints needs to be an integer')
-                if v <= 0:
-                    raise ValidationError('n_datapoints need to be >= 1')
+            elif k == 'resample':
+                pass
             else:
                 extra_kw[k] = v
         if len(expected_args) > 0:
