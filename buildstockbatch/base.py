@@ -50,8 +50,9 @@ class ValidationError(Exception):
 
 class BuildStockBatchBase(object):
 
-    DEFAULT_OS_VERSION = '3.0.1'
-    DEFAULT_OS_SHA = '09b7c8a554'
+    # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
+    DEFAULT_OS_VERSION = '3.1.0'
+    DEFAULT_OS_SHA = 'e165090621'
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
