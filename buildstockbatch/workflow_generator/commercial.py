@@ -112,6 +112,14 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 "measure_dir_name": "qoi_report",
                 "arguments": {},
                 "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "scout_loads_summary",
+                "arguments": {
+                    "report_timeseries_data": False,
+                    "enable_supply_side_reporting": False
+                },
+                "measure_type": "ReportingMeasure"
             }
         ])
 
