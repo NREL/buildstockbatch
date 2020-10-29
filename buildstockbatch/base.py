@@ -251,6 +251,18 @@ class BuildStockBatchBase(object):
             timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         if os.path.isfile(timeseries_filepath):
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'], skiprows=[1])
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
+        # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
+        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
+        if not os.path.isfile(timeseries_filepath):
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        if os.path.isfile(timeseries_filepath):
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time'], skiprows=[1])
+            if os.path.isfile(schedules_filepath):
+                schedules = pd.read_csv(schedules_filepath)
+                schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
+                schedules['TimeDST'] = tsdf['Time']
+                tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
@@ -269,7 +281,7 @@ class BuildStockBatchBase(object):
         # Remove reports dir
         reports_dir = os.path.join(sim_dir, 'reports')
         if os.path.isdir(reports_dir):
-            shutil.rmtree(reports_dir)
+            shutil.rmtree(reports_dir, ignore_errors=True)
 
     @staticmethod
     def validate_project(project_file):

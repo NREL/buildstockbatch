@@ -10,22 +10,22 @@ OUTPUT_FOLDER_NAME = 'output'
 @pytest.fixture
 def basic_residential_project_file():
     with tempfile.TemporaryDirectory() as test_directory:
-        buildstock_directory = os.path.join(test_directory, 'openstudio_buildstock')
-        shutil.copytree(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
-            buildstock_directory
-        )
-        project_directory = 'project_resstock_national'
-        os.makedirs(os.path.join(buildstock_directory, project_directory))
-        output_directory = os.path.join(test_directory, OUTPUT_FOLDER_NAME)
-        shutil.copytree(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'simulation_output'),
-            os.path.join(output_directory, 'simulation_output')
-        )
-        os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
-        os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
-
-        def _basic_residential_project_file(update_args={}):
+        def _basic_residential_project_file(update_args={}, raw=False):
+            output_dir = "simulations_job0" if raw else "simulation_output"
+            buildstock_directory = os.path.join(test_directory, 'openstudio_buildstock')
+            shutil.copytree(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_inputs', 'test_openstudio_buildstock'),
+                buildstock_directory
+            )
+            project_directory = 'project_resstock_national'
+            os.makedirs(os.path.join(buildstock_directory, project_directory))
+            output_directory = os.path.join(test_directory, OUTPUT_FOLDER_NAME)
+            shutil.copytree(
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', output_dir),
+                os.path.join(output_directory, 'simulation_output')
+            )
+            os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
+            os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
             cfg = {
                 'stock_type': 'residential',
                 'buildstock_directory': buildstock_directory,
@@ -48,6 +48,12 @@ def basic_residential_project_file():
                     'include_timeseries_airflows': False,
                     'include_timeseries_weather': False
                 },
+                'upgrades': [{
+                    'upgrade_name': 'Upgrade1',
+                    'options': [
+                        {'option': 'Infiltration|11.25 ACH50'}
+                    ]
+                            }],
                 'eagle': {
                     'sampling': {
                         'time': 20

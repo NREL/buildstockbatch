@@ -14,7 +14,14 @@ Development Changelog
         This is an example change. Please copy and paste it - for valid tags please refer to ``conf.py`` in the docs
         directory. ``pullreq`` should be set to the appropriate pull request number and ``tickets`` to any related
         github issues. These will be automatically linked in the documentation.
-    
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 186
+        :tickets:
+
+        Concatenate the schedules.csv (if they exists) to the enduse_timeseries.csv before converting them to parquet
+
     .. change::
         :tags: documentation
         :pullreq: 167
