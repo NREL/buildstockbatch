@@ -392,18 +392,17 @@ class BuildStockBatchBase(object):
         hpxml_measures_dir = f'{buildstock_dir}/resources/hpxml-measures'
         measure_names = {
                         measures_dir: {
-                                      'ResidentialSimulationControls': 'residential_simulation_controls',
-                                      'BuildExistingModel': 'baseline',
-                                      'ServerDirectoryCleanup': None,
-                                      'ApplyUpgrade': 'upgrades'
+                                      'BuildExistingModel': ['baseline', 'residential_simulation_controls'],
+                                      'ServerDirectoryCleanup': [None],
+                                      'ApplyUpgrade': ['upgrades']
                                       },
                         hpxml_measures_dir: {
-                                            'SimulationOutputReport': 'simulation_output'
+                                            'SimulationOutputReport': ['simulation_output']
                                             }
                         }
         if 'reporting_measures' in cfg.keys():
             for reporting_measure in cfg['reporting_measures']:
-                measure_names[measures_dir][reporting_measure] = 'reporting_measures'
+                measure_names[measures_dir][reporting_measure] = ['reporting_measures']
 
         error_msgs = ''
         warning_msgs = ''
@@ -411,108 +410,112 @@ class BuildStockBatchBase(object):
             for measure_name in measure_names[measure_dir].keys():
                 measure_path = os.path.join(measure_dir, measure_name)
 
-                if measure_names[measure_dir][measure_name] in cfg.keys() or \
-                        measure_names[measure_dir][measure_name] == 'residential_simulation_controls':
-                    # if they exist in the cfg, make sure they exist in the buildstock checkout
-                    if not os.path.exists(measure_path):
-                        error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
+                for yaml_block in measure_names[measure_dir][measure_name]:
 
-                # check the rest only if that measure exists in cfg
-                if measure_names[measure_dir][measure_name] not in cfg.keys():
-                    continue
+                    if yaml_block in cfg.keys() or yaml_block == 'residential_simulation_controls':
+                        # if they exist in the cfg, make sure they exist in the buildstock checkout
+                        if not os.path.exists(measure_path):
+                            error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
 
-                # check argument value types for residential simulation controls and simulation output report measures
-                if measure_name in ['ResidentialSimulationControls', 'SimulationOutputReport']:
-                    root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
-                    expected_arguments = {}
-                    required_args_with_default = {}
-                    required_args_no_default = {}
-                    for argument in root.findall('./arguments/argument'):
-                        name = argument.find('./name').text
-                        expected_arguments[name] = []
-                        required = argument.find('./required').text
-                        default = argument.find('./default_value')
-                        default = default.text if default is not None else None
+                    # check the rest only if that measure exists in cfg
+                    if yaml_block not in cfg.keys():
+                        continue
 
-                        if required == 'true' and not default:
-                            required_args_no_default[name] = None
-                        elif required == 'true':
-                            required_args_with_default[name] = default
+                    # check argument value types for residential simulation controls and simulation output report measures
+                    if yaml_block in ['residential_simulation_controls', 'simulation_output']:
+                        root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+                        expected_arguments = {}
+                        required_args_with_default = {}
+                        required_args_no_default = {}
 
-                        if argument.find('./type').text == 'Choice':
-                            for choice in argument.findall('./choices/choice'):
-                                for value in choice.findall('./value'):
-                                    expected_arguments[name].append(value.text)
-                        else:
-                            expected_arguments[name] = argument.find('./type').text
+                        for argument in root.findall('./arguments/argument'):
+                            name = argument.find('./name').text
+                            if name in ['building_unit_id']:
+                                continue
+                            expected_arguments[name] = []
+                            required = argument.find('./required').text
+                            default = argument.find('./default_value')
+                            default = default.text if default is not None else None
 
-                    for actual_argument_key in cfg[measure_names[measure_dir][measure_name]].keys():
-                        if actual_argument_key not in expected_arguments.keys():
-                            error_msgs += f"* Found unexpected argument key {actual_argument_key} for "\
-                                          f"{measure_names[measure_dir][measure_name]} in yaml file. "\
-                                          f"The available keys are: "\
-                                          f"{list(expected_arguments.keys())}\n"
-                            continue
+                            if required == 'true' and not default:
+                                required_args_no_default[name] = None
+                            elif required == 'true':
+                                required_args_with_default[name] = default
 
-                        required_args_no_default.pop(actual_argument_key, None)
-                        required_args_with_default.pop(actual_argument_key, None)
+                            if argument.find('./type').text == 'Choice':
+                                for choice in argument.findall('./choices/choice'):
+                                    for value in choice.findall('./value'):
+                                        expected_arguments[name].append(value.text)
+                            else:
+                                expected_arguments[name] = argument.find('./type').text
 
-                        actual_argument_value = cfg[measure_names[measure_dir][measure_name]][actual_argument_key]
-                        expected_argument_type = expected_arguments[actual_argument_key]
+                        for actual_argument_key in cfg[yaml_block].keys():
+                            if actual_argument_key not in expected_arguments.keys():
+                                error_msgs += f"* Found unexpected argument key {actual_argument_key} for "\
+                                              f"{yaml_block} in yaml file. "\
+                                              f"The available keys are: "\
+                                              f"{list(expected_arguments.keys())}\n"
+                                continue
 
-                        if type(expected_argument_type) is not list:
-                            try:
-                                if type(actual_argument_value) is not list:
-                                    actual_argument_value = [actual_argument_value]
+                            required_args_no_default.pop(actual_argument_key, None)
+                            required_args_with_default.pop(actual_argument_key, None)
 
-                                for val in actual_argument_value:
-                                    if not isinstance(val, type_map[expected_argument_type]):
-                                        error_msgs += f"* Wrong argument value type for {actual_argument_key} "\
-                                                      f"for measure "\
-                                                      f"{measure_names[measure_dir][measure_name]} in yaml file. "\
-                                                      f"Expected type:" \
-                                                      f" {type_map[expected_argument_type]}, got: {val}" \
-                                                      f" of type: {type(val)} \n"
-                            except KeyError:
-                                print(f"Found an unexpected argument value type: {expected_argument_type} for argument "
-                                      f" {actual_argument_key} in measure {measure_name}.\n")
-                        else:  # Choice
-                            if actual_argument_value not in expected_argument_type:
-                                error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
-                                              f"{measure_names[measure_dir][measure_name]} in yaml file. Valid values "\
-                                              f"are {expected_argument_type}.\n"
+                            actual_argument_value = cfg[yaml_block][actual_argument_key]
+                            expected_argument_type = expected_arguments[actual_argument_key]
 
-                    for arg, default in required_args_no_default.items():
-                        error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
-                                        f"There is no default for this argument.\n"
+                            if type(expected_argument_type) is not list:
+                                try:
+                                    if type(actual_argument_value) is not list:
+                                        actual_argument_value = [actual_argument_value]
 
-                    for arg, default in required_args_with_default.items():
-                        warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
-                                        f"Using default value: {default}. \n"
+                                    for val in actual_argument_value:
+                                        if not isinstance(val, type_map[expected_argument_type]):
+                                            error_msgs += f"* Wrong argument value type for {actual_argument_key} "\
+                                                          f"for measure "\
+                                                          f"{yaml_block} in yaml file. "\
+                                                          f"Expected type:" \
+                                                          f" {type_map[expected_argument_type]}, got: {val}" \
+                                                          f" of type: {type(val)} \n"
+                                except KeyError:
+                                    print(f"Found an unexpected argument value type: {expected_argument_type} for argument "
+                                          f" {actual_argument_key} in measure {measure_name}.\n")
+                            else:  # Choice
+                                if actual_argument_value not in expected_argument_type:
+                                    error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
+                                                  f"{yaml_block} in yaml file. Valid values "\
+                                                  f"are {expected_argument_type}.\n"
 
-                elif measure_name in ['ApplyUpgrade']:
-                    # For ApplyUpgrade measure, verify that all the cost_multipliers used are correct
-                    root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
-                    valid_multipliers = set()
-                    for argument in root.findall('./arguments/argument'):
-                        name = argument.find('./name')
-                        if name.text.endswith('_multiplier'):
-                            for choice in argument.findall('./choices/choice'):
-                                value = choice.find('./value')
-                                value = value.text if value is not None else ''
-                                valid_multipliers.add(value)
-                    invalid_multipliers = Counter()
-                    for upgrade_count, upgrade in enumerate(cfg['upgrades']):
-                        for option_count, option in enumerate(upgrade['options']):
-                            for cost_indx, cost_entry in enumerate(option.get('costs', [])):
-                                if cost_entry['multiplier'] not in valid_multipliers:
-                                    invalid_multipliers[cost_entry['multiplier']] += 1
+                        for arg, default in required_args_no_default.items():
+                            error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
+                                            f"There is no default for this argument.\n"
 
-                    if invalid_multipliers:
-                        error_msgs += "* The following multipliers values are invalid: \n"
-                        for multiplier, count in invalid_multipliers.items():
-                            error_msgs += f"    '{multiplier}' - Used {count} times \n"
-                        error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
+                        for arg, default in required_args_with_default.items():
+                            warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. "\
+                                            f"Using default value: {default}. \n"
+
+                    elif measure_name in ['ApplyUpgrade']:
+                        # For ApplyUpgrade measure, verify that all the cost_multipliers used are correct
+                        root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+                        valid_multipliers = set()
+                        for argument in root.findall('./arguments/argument'):
+                            name = argument.find('./name')
+                            if name.text.endswith('_multiplier'):
+                                for choice in argument.findall('./choices/choice'):
+                                    value = choice.find('./value')
+                                    value = value.text if value is not None else ''
+                                    valid_multipliers.add(value)
+                        invalid_multipliers = Counter()
+                        for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                            for option_count, option in enumerate(upgrade['options']):
+                                for cost_indx, cost_entry in enumerate(option.get('costs', [])):
+                                    if cost_entry['multiplier'] not in valid_multipliers:
+                                        invalid_multipliers[cost_entry['multiplier']] += 1
+
+                        if invalid_multipliers:
+                            error_msgs += "* The following multipliers values are invalid: \n"
+                            for multiplier, count in invalid_multipliers.items():
+                                error_msgs += f"    '{multiplier}' - Used {count} times \n"
+                            error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
 
         if warning_msgs:
             logger.warning(warning_msgs)

@@ -1,9 +1,11 @@
 buildstock_directory: test_openstudio_buildstock_wrong
 project_directory: project_singlefamilydetached
+
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
   sampling_algorithm: quota
+
 upgrades:
   - upgrade_name: good upgrade
     options:
@@ -20,7 +22,9 @@ upgrades:
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
+
 downselect:
   resample: False
   logic: Vintage|2000s
+
 schema_version: 0.2

@@ -44,7 +44,9 @@ def basic_residential_project_file():
                     'include_timeseries_end_use_consumptions': True,
                     'include_timeseries_hot_water_uses': False,
                     'include_timeseries_total_loads': False,
-                    'include_timeseries_component_loads': False
+                    'include_timeseries_component_loads': False,
+                    'include_timeseries_airflows': False,
+                    'include_timeseries_weather': False
                 },
                 'eagle': {
                     'sampling': {

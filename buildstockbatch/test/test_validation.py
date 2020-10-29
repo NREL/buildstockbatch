@@ -139,7 +139,7 @@ def test_bad_measures(project_file):
             er = str(er)
             warning_logs = filter_logs(logs, 'WARNING')
             assert "ReportingMeasure2 does not exist" in er
-            assert "Wrong argument value type for begin_day_of_month" in er
+            assert "Wrong argument value type for simulation_control_run_period_begin_day_of_month" in er
             assert "Found unexpected argument key include_end_use_consumptions" in er
             assert "Found unexpected argument value huorly" in er
             assert "Fixed(1)" in er
@@ -220,8 +220,6 @@ def test_bad_measures_validation(project_file):
         er = str(er)
         assert "Measure directory" in er
         assert "not found" in er
-        assert "ResidentialConstructionsUnfinishedBasement" in er
-        assert "ResidentialConstructionsFinishedBasement" in er
 
     else:
         raise Exception("validate_measure_references was supposed to raise ValueError for "

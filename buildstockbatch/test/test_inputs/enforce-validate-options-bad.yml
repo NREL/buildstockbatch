@@ -4,6 +4,7 @@ baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
   sampling_algorithm: quota
+
 upgrades:
   - upgrade_name: bad upgrade
     options:
@@ -34,7 +35,9 @@ upgrades:
           apply_logic:
             - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s&&Vintage|1980s
+
 downselect:
   resample: False
   logic: Invalid Parameter|2000s
+
 schema_version: 0.2

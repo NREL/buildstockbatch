@@ -2,10 +2,12 @@ stock_type: residential
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
 weather_files_url: https://fake-url
+
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
   sampling_algorithm: quota
+
 upgrades:
   - upgrade_name: cool upgrade
     options:
@@ -29,6 +31,7 @@ upgrades:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
     reference_scenario: cool upgrade
+
 simulation_output:
   timeseries_frequency: hourly
   include_timeseries_zone_temperatures: false
@@ -37,6 +40,10 @@ simulation_output:
   include_timeseries_hot_water_uses: false
   include_timeseries_total_loads: false
   include_timeseries_component_loads: false
+  include_timeseries_airflows: false
+  include_timeseries_weather: false
+
 reporting_measures:
   - ReportingMeasure1
+
 schema_version: 0.2

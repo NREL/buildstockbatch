@@ -2,16 +2,18 @@ stock_type: residential
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
 weather_files_url: https://fake-url
+
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
   sampling_algorithm: quota
+
 residential_simulation_controls:
-  timesteps_per_hr: 4
-  begin_month: 1
-  begin_day_of_month: 1.5
-  end_month: 12
-  end_day_of_month: 31
+  simulation_control_timestep: 15
+  simulation_control_run_period_begin_month: 1
+  simulation_control_run_period_begin_day_of_month: 1.5
+  simulation_control_run_period_end_month: 12
+  simulation_control_run_period_end_day_of_month: 31
 
 upgrades:
   - upgrade_name: good upgrade
@@ -42,6 +44,8 @@ simulation_output:
   include_timeseries_hot_water_uses: false
   # include_timeseries_total_loads: false
   include_timeseries_component_loads: false
+  include_timeseries_airflows: false
+  include_timeseries_weather: false
 
 reporting_measures:
   - ReportingMeasure2

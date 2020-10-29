@@ -4,14 +4,14 @@ project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/YAML1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
 schema_version: 0.2
+
 baseline:
   n_datapoints: 30
   n_buildings_represented: 81221016
-  measures_to_ignore:
-    - ResidentialConstructionsSlab
   osw_template: default
   include_qaqc: False
   sampling_algorithm: quota
+
 upgrades:
   - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
     options:
@@ -71,6 +71,7 @@ upgrades:
           - value: 0.40
             multiplier: Floor Area, Lighting (ft^2)
         lifetime: 78.28
+
 simulation_output:
   timeseries_frequency: hourly
   include_timeseries_zone_temperatures: false
@@ -79,9 +80,11 @@ simulation_output:
   include_timeseries_hot_water_uses: false
   include_timeseries_total_loads: false
   include_timeseries_component_loads: false
+
 downselect:
   resample: False
   logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+
 eagle:
   account: enduse
   n_jobs: 100
@@ -91,6 +94,7 @@ eagle:
   postprocessing:
     time: 60
     n_workers: 3
+
 postprocessing:
   aws:
     region_name: us-east-1

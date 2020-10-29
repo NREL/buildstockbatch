@@ -3,8 +3,8 @@
   <schema_version>3.0</schema_version>
   <name>build_existing_model</name>
   <uid>dedf59bb-3b88-4f16-8755-2c1ff5519cbf</uid>
-  <version_id>796fba52-32fb-47de-b967-0516e8e4e35c</version_id>
-  <version_modified>20201027T215812Z</version_modified>
+  <version_id>4234233f-365d-4842-9b0a-09da2069b203</version_id>
+  <version_modified>20201027T220510Z</version_modified>
   <xml_checksum>2C38F48B</xml_checksum>
   <class_name>BuildExistingModel</class_name>
   <display_name>Build Existing Model</display_name>
@@ -16,72 +16,48 @@
       <display_name>Building Unit ID</display_name>
       <description>The building unit number (between 1 and the number of samples).</description>
       <type>Integer</type>
-      <units></units>
       <required>true</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>workflow_json</name>
       <display_name>Workflow JSON</display_name>
       <description>The name of the JSON file (in the resources dir) that dictates the order in which measures are to be run. If not provided, the order specified in resources/options_lookup.tsv will be used.</description>
       <type>String</type>
-      <units></units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>number_of_buildings_represented</name>
       <display_name>Number of Buildings Represented</display_name>
       <description>The total number of buildings represented by the existing building models.</description>
       <type>Integer</type>
-      <units></units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>sample_weight</name>
       <display_name>Sample Weight of Simulation</display_name>
       <description>Number of buildings this simulation represents.</description>
       <type>Double</type>
-      <units></units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>downselect_logic</name>
       <display_name>Downselect Logic</display_name>
       <description>Logic that specifies the subset of the building stock to be considered in the analysis. Specify one or more parameter|option as found in resources\options_lookup.tsv. When multiple are included, they must be separated by '||' for OR and '&amp;&amp;' for AND, and using parentheses as appropriate. Prefix an option with '!' for not.</description>
       <type>String</type>
-      <units></units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>measures_to_ignore</name>
       <display_name>Measures to Ignore</display_name>
       <description>Measures to exclude from the OpenStudio Workflow specified by listing one or more measure directories separated by '|'. Core ResStock measures cannot be ignored (this measure will fail). INTENDED FOR ADVANCED USERS/WORKFLOW DEVELOPERS.</description>
       <type>String</type>
-      <units></units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>simulation_control_timestep</name>
@@ -91,9 +67,6 @@
       <units>min</units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>simulation_control_run_period_begin_month</name>
@@ -103,9 +76,6 @@
       <units>month</units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>simulation_control_run_period_begin_day_of_month</name>
@@ -115,9 +85,6 @@
       <units>day</units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>simulation_control_run_period_end_month</name>
@@ -127,9 +94,6 @@
       <units>month</units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
     </argument>
     <argument>
       <name>simulation_control_run_period_end_day_of_month</name>
@@ -139,9 +103,15 @@
       <units>day</units>
       <required>false</required>
       <model_dependent>false</model_dependent>
-      <default_value></default_value>
-      <min_value></min_value>
-      <max_value></max_value>
+    </argument>
+    <argument>
+      <name>simulation_control_run_period_calendar_year</name>
+      <display_name>Simulation Control: Run Period Calendar Year</display_name>
+      <description>This numeric field should contain the calendar year that determines the start day of week. If you are running simulations using AMY weather files, the value entered for calendar year will not be used; it will be overridden by the actual year found in the AMY weather file.</description>
+      <type>Integer</type>
+      <units>year</units>
+      <required>false</required>
+      <model_dependent>false</model_dependent>
     </argument>
   </arguments>
   <outputs />
@@ -166,13 +136,7 @@
       <filename>measure.rb</filename>
       <filetype>rb</filetype>
       <usage_type>script</usage_type>
-      <checksum>4A7E2D84</checksum>
+      <checksum>BEBDB67D</checksum>
     </file>
   </files>
 </measure>
-<error>C:/OpenStudio/OpenStudio-BuildStock/measures/BuildExistingModel/measure.rb:122: syntax error, unexpected ':', expecting keyword_end
-...ntrol_run_period_calendar_year: runner.getOptionalIntegerArg...
-...                              ^
-C:/OpenStudio/OpenStudio-BuildStock/measures/BuildExistingModel/measure.rb:122: syntax error, unexpected ',', expecting keyword_end
-...alendar_year', user_arguments),
-...                              ^</error>
