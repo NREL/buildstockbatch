@@ -9,11 +9,12 @@ baseline:
   sampling_algorithm: quota
 
 residential_simulation_controls:
-  simulation_control_timestep: 15
-  simulation_control_run_period_begin_month: 1
-  simulation_control_run_period_begin_day_of_month: 1.5
-  simulation_control_run_period_end_month: 12
-  simulation_control_run_period_end_day_of_month: 31
+  timesteps_per_hr: 4
+  begin_month: 1
+  begin_day_of_month: 1.5
+  end_month: 12
+  end_day_of_month: 31
+  calendar_year: 2007
 
 upgrades:
   - upgrade_name: good upgrade

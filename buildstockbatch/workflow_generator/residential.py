@@ -39,7 +39,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         }
 
         res_sim_ctl_args = {
-            'timesteps_per_hr': 6,
+            'timesteps_per_hr': 1,
             'begin_month': 1,
             'begin_day_of_month': 1,
             'end_month': 12,
@@ -48,7 +48,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         }
         res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
         bld_exist_model_args['simulation_control_timestep'] = 60 // res_sim_ctl_args['timesteps_per_hr']
-        for k in ('begin_month', 'begin_day_of_month', 'end_month', 'end_day_of_month'):
+        for k in ('begin_month', 'begin_day_of_month', 'end_month', 'end_day_of_month', 'calendar_year'):
             bld_exist_model_args[f'simulation_control_run_period_{k}'] = res_sim_ctl_args[k]
 
         if 'measures_to_ignore' in self.cfg['baseline']:
@@ -78,7 +78,9 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_end_use_consumptions': False,
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': False,
-            'include_timeseries_component_loads': False
+            'include_timeseries_component_loads': False,
+            'include_timeseries_airflows': False,
+            'include_timeseries_weather': False
         }
         sim_output_args.update(self.cfg.get('simulation_output', {}))
 

@@ -68,7 +68,7 @@ def test_residential_package_apply():
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    upg_step = osw['steps'][2]
+    upg_step = osw['steps'][1]
     assert(upg_step['measure_dir_name'] == 'ApplyUpgrade')
     assert(upg_step['arguments']['option_1'] == cfg['upgrades'][0]['options'][0]['option'])
     assert(upg_step['arguments']['package_apply_logic'] == WorkflowGeneratorBase.make_apply_logic_arg(cfg['upgrades'][0]['package_apply_logic']))  # noqa E501
@@ -87,13 +87,14 @@ def test_residential_simulation_controls_config():
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     step0 = osw['steps'][0]
-    assert(step0['measure_dir_name'] == 'ResidentialSimulationControls')
+    assert(step0['measure_dir_name'] == 'BuildExistingModel')
     default_args = {
-        'timesteps_per_hr': 6,
-        'begin_month': 1,
-        'begin_day_of_month': 1,
-        'end_month': 12,
-        'end_day_of_month': 31
+        'simulation_control_timestep': 60,
+        'simulation_control_run_period_begin_month': 1,
+        'simulation_control_run_period_begin_day_of_month': 1,
+        'simulation_control_run_period_end_month': 12,
+        'simulation_control_run_period_end_day_of_month': 31,
+        'simulation_control_run_period_calendar_year': 2007
     }
     for k, v in default_args.items():
         assert(step0['arguments'][k] == v)
@@ -104,9 +105,10 @@ def test_residential_simulation_controls_config():
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     args = osw['steps'][0]['arguments']
-    assert(args['timesteps_per_hr'] == 2)
-    assert(args['begin_month'] == 7)
-    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month'):
+    assert(args['simulation_control_timestep'] == 30)
+    assert(args['simulation_control_run_period_begin_month'] == 7)
+    for argname in ('simulation_control_run_period_begin_day_of_month', 'simulation_control_run_period_end_month',
+                    'simulation_control_run_period_end_day_of_month', 'simulation_control_run_period_calendar_year'):
         assert(args[argname] == default_args[argname])
 
 
@@ -208,7 +210,9 @@ def test_simulation_output():
             'include_timeseries_end_use_consumptions': True,
             'include_timeseries_hot_water_uses': True,
             'include_timeseries_total_loads': True,
-            'include_timeseries_component_loads': True
+            'include_timeseries_component_loads': True,
+            'include_timeseries_airflows': True,
+            'include_timeseries_weather': True
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
@@ -222,7 +226,9 @@ def test_simulation_output():
         'include_timeseries_end_use_consumptions': False,
         'include_timeseries_hot_water_uses': False,
         'include_timeseries_total_loads': False,
-        'include_timeseries_component_loads': False
+        'include_timeseries_component_loads': False,
+        'include_timeseries_airflows': False,
+        'include_timeseries_weather': False
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
@@ -233,5 +239,7 @@ def test_simulation_output():
                     'include_timeseries_end_use_consumptions',
                     'include_timeseries_hot_water_uses',
                     'include_timeseries_total_loads',
-                    'include_timeseries_component_loads',):
+                    'include_timeseries_component_loads',
+                    'include_timeseries_airflows',
+                    'include_timeseries_weather',):
         assert(args[argname] != default_args[argname])

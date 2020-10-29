@@ -421,7 +421,7 @@ class BuildStockBatchBase(object):
                     if yaml_block not in cfg.keys():
                         continue
 
-                    # check argument value types for residential simulation controls and simulation output report measures
+                    # check argument value types for residential sim controls and sim output report measures
                     if yaml_block in ['residential_simulation_controls', 'simulation_output']:
                         root = BuildStockBatchBase.get_measure_xml(os.path.join(measure_path, 'measure.xml'))
                         expected_arguments = {}
@@ -450,6 +450,13 @@ class BuildStockBatchBase(object):
                                 expected_arguments[name] = argument.find('./type').text
 
                         for actual_argument_key in cfg[yaml_block].keys():
+                            actual_argument_value = cfg[yaml_block][actual_argument_key]
+
+                            if yaml_block == 'residential_simulation_controls':
+                                if actual_argument_key == 'timesteps_per_hr':
+                                    actual_argument_key = 'simulation_control_timestep'
+                                else:
+                                    actual_argument_key = f'simulation_control_run_period_{actual_argument_key}'
                             if actual_argument_key not in expected_arguments.keys():
                                 error_msgs += f"* Found unexpected argument key {actual_argument_key} for "\
                                               f"{yaml_block} in yaml file. "\
@@ -460,7 +467,6 @@ class BuildStockBatchBase(object):
                             required_args_no_default.pop(actual_argument_key, None)
                             required_args_with_default.pop(actual_argument_key, None)
 
-                            actual_argument_value = cfg[yaml_block][actual_argument_key]
                             expected_argument_type = expected_arguments[actual_argument_key]
 
                             if type(expected_argument_type) is not list:
@@ -477,8 +483,8 @@ class BuildStockBatchBase(object):
                                                           f" {type_map[expected_argument_type]}, got: {val}" \
                                                           f" of type: {type(val)} \n"
                                 except KeyError:
-                                    print(f"Found an unexpected argument value type: {expected_argument_type} for argument "
-                                          f" {actual_argument_key} in measure {measure_name}.\n")
+                                    print(f"Found an unexpected argument value type: {expected_argument_type} for "
+                                          f" argument {actual_argument_key} in measure {measure_name}.\n")
                             else:  # Choice
                                 if actual_argument_value not in expected_argument_type:
                                     error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
