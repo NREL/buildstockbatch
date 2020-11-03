@@ -80,5 +80,5 @@ workflows:
             - build
           filters:
             branches:
-              only: master
+              only: docs_deploy_fix
 
