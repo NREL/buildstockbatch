@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Project Definition &mdash; buildstock-batch 0.18 documentation</title>
+  <title>Project Definition &mdash; buildstockbatch 0.19 documentation</title>
   
 
   
@@ -53,7 +53,7 @@
           
 
           
-            <a href="index.html" class="icon icon-home" alt="Documentation Home"> buildstock-batch
+            <a href="index.html" class="icon icon-home" alt="Documentation Home"> buildstockbatch
           
 
           
@@ -63,7 +63,7 @@
             
             
               <div class="version">
-                0.18
+                0.19
               </div>
             
           
@@ -142,7 +142,7 @@
       <nav class="wy-nav-top" aria-label="top navigation">
         
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="index.html">buildstock-batch</a>
+          <a href="index.html">buildstockbatch</a>
         
       </nav>
 
@@ -202,15 +202,16 @@ batch run. An example file is in this repo as
 <div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">schema_version</span><span class="p">:</span> <span class="mf">0.2</span>
 <span class="n">stock_type</span><span class="p">:</span> <span class="n">residential</span>
 <span class="n">buildstock_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">OpenStudio</span><span class="o">-</span><span class="n">BuildStock</span>  <span class="c1"># Relative to this file or absolute</span>
-<span class="n">project_directory</span><span class="p">:</span> <span class="n">project_multifamily_beta</span>  <span class="c1"># Relative to buildstock_directory</span>
+<span class="n">project_directory</span><span class="p">:</span> <span class="n">project_national</span>  <span class="c1"># Relative to buildstock_directory</span>
 <span class="n">output_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">national_test_outputs</span>
-<span class="c1">#weather_files_url: https://data.nrel.gov/files/128/ResStock_TMY3.zip</span>
-<span class="n">weather_files_path</span><span class="p">:</span> <span class="o">../</span><span class="n">ResStock_TMY3</span><span class="o">.</span><span class="n">zip</span>  <span class="c1"># Relative to this file or absolute path to zipped weather files</span>
+<span class="n">weather_files_url</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">data</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="o">/</span><span class="n">system</span><span class="o">/</span><span class="n">files</span><span class="o">/</span><span class="mi">128</span><span class="o">/</span><span class="n">ResStock_TMY3</span><span class="o">.</span><span class="n">zip</span>
+<span class="c1"># weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files</span>
+
 <span class="n">baseline</span><span class="p">:</span>
-  <span class="c1">#precomputed_sample: ../OpenStudio-BuildStock/project_singlefamilydetached/housing_characteristics/buildstock.csv</span>
-  <span class="n">n_datapoints</span><span class="p">:</span> <span class="mi">4</span>  <span class="c1"># Comment this line out if using a custom buildstock csv file</span>
-  <span class="n">n_buildings_represented</span><span class="p">:</span> <span class="mi">80000000</span>
+  <span class="n">n_datapoints</span><span class="p">:</span> <span class="mi">4</span>
+  <span class="n">n_buildings_represented</span><span class="p">:</span> <span class="mi">133172057</span>  <span class="c1"># Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.</span>
   <span class="n">sampling_algorithm</span><span class="p">:</span> <span class="n">quota</span> <span class="c1"># The default resstock sampling algorithm - use precomputed if using the precomputed_sample option</span>
+
 <span class="n">upgrades</span><span class="p">:</span>
   <span class="o">-</span> <span class="n">upgrade_name</span><span class="p">:</span> <span class="n">Triple</span><span class="o">-</span><span class="n">Pane</span> <span class="n">Windows</span>
     <span class="n">options</span><span class="p">:</span>
@@ -220,48 +221,52 @@ batch run. An example file is in this repo as
           <span class="o">-</span> <span class="n">value</span><span class="p">:</span> <span class="mf">45.77</span>
             <span class="n">multiplier</span><span class="p">:</span> <span class="n">Window</span> <span class="n">Area</span> <span class="p">(</span><span class="n">ft</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">lifetime</span><span class="p">:</span> <span class="mi">30</span>
-<span class="c1">#    package_apply_logic:</span>
+
 <span class="n">timeseries_csv_export</span><span class="p">:</span>
   <span class="n">reporting_frequency</span><span class="p">:</span> <span class="n">Hourly</span>
   <span class="n">include_enduse_subcategories</span><span class="p">:</span> <span class="n">true</span>
-<span class="c1"># downselect:</span>
+
+<span class="c1"># downselect: # Uncomment and set specify logic you you want to downselect to a subset of the building stock</span>
 <span class="c1">#   resample: true</span>
 <span class="c1">#   logic:</span>
-<span class="c1">#     - Geometry Building Type ACS|Single-Family Detached</span>
+<span class="c1">#     - Geometry Building Type RECS|Single-Family Detached</span>
+<span class="c1">#     - Vacancy Status|Occupied</span>
+
 <span class="n">eagle</span><span class="p">:</span>
-  <span class="n">n_jobs</span><span class="p">:</span> <span class="mi">200</span>
-  <span class="n">minutes_per_sim</span><span class="p">:</span> <span class="mi">2</span>
+  <span class="n">n_jobs</span><span class="p">:</span> <span class="mi">4</span>
+  <span class="n">minutes_per_sim</span><span class="p">:</span> <span class="mi">30</span>
   <span class="n">account</span><span class="p">:</span> <span class="n">enduse</span>
   <span class="n">sampling</span><span class="p">:</span>
     <span class="n">time</span><span class="p">:</span> <span class="mi">20</span>
   <span class="n">postprocessing</span><span class="p">:</span>
     <span class="n">time</span><span class="p">:</span> <span class="mi">60</span>
     <span class="n">n_workers</span><span class="p">:</span> <span class="mi">3</span>
-<span class="n">aws</span><span class="p">:</span>
-  <span class="c1"># The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur</span>
-  <span class="n">job_identifier</span><span class="p">:</span> <span class="n">test_proj</span>
-  <span class="n">s3</span><span class="p">:</span>
-    <span class="n">bucket</span><span class="p">:</span> <span class="n">resbldg</span><span class="o">-</span><span class="n">datasets</span>
-    <span class="n">prefix</span><span class="p">:</span> <span class="n">testing</span><span class="o">/</span><span class="n">user_test</span>
-  <span class="n">emr</span><span class="p">:</span>
-    <span class="n">slave_instance_count</span><span class="p">:</span> <span class="mi">1</span>
-  <span class="n">region</span><span class="p">:</span> <span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span>
-  <span class="n">use_spot</span><span class="p">:</span> <span class="n">true</span>
-  <span class="n">batch_array_size</span><span class="p">:</span> <span class="mi">10</span>
-  <span class="c1"># To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
-  <span class="n">notifications_email</span><span class="p">:</span> <span class="n">user</span><span class="nd">@nrel</span><span class="o">.</span><span class="n">gov</span>
 
-<span class="n">postprocessing</span><span class="p">:</span>
-  <span class="n">aggregate_timeseries</span><span class="p">:</span> <span class="n">true</span>
-  <span class="c1"># aws:</span>
-  <span class="c1">#   region_name: &#39;us-west-2&#39;</span>
-  <span class="c1">#   s3:</span>
-  <span class="c1">#     bucket: resbldg-datasets</span>
-  <span class="c1">#     prefix: resstock-athena/calibration_runs_new</span>
-  <span class="c1">#   athena:</span>
-  <span class="c1">#     glue_service_role: service-role/AWSGlueServiceRole-default</span>
-  <span class="c1">#     database_name: testing</span>
-  <span class="c1">#     max_crawling_time: 300 #time to wait for the crawler to complete before aborting it</span>
+<span class="c1"># aws:</span>
+<span class="c1">#   # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur</span>
+<span class="c1">#   job_identifier: test_proj</span>
+<span class="c1">#   s3:</span>
+<span class="c1">#     bucket: resbldg-datasets</span>
+<span class="c1">#     prefix: testing/user_test</span>
+<span class="c1">#   emr:</span>
+<span class="c1">#     slave_instance_count: 1</span>
+<span class="c1">#   region: us-west-2</span>
+<span class="c1">#   use_spot: true</span>
+<span class="c1">#   batch_array_size: 10</span>
+<span class="c1">#   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
+<span class="c1">#   notifications_email: user@nrel.gov</span>
+
+<span class="c1"># postprocessing:</span>
+<span class="c1">#   aggregate_timeseries: true</span>
+<span class="c1">#   aws:</span>
+<span class="c1">#     region_name: &#39;us-west-2&#39;</span>
+<span class="c1">#     s3:</span>
+<span class="c1">#       bucket: resbldg-datasets</span>
+<span class="c1">#       prefix: resstock-athena/calibration_runs_new</span>
+<span class="c1">#     athena:</span>
+<span class="c1">#       glue_service_role: service-role/AWSGlueServiceRole-default</span>
+<span class="c1">#       database_name: testing</span>
+<span class="c1">#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it</span>
 </pre></div>
 </div>
 <p>The next few paragraphs will describe each section of the file and what it does.</p>
@@ -308,8 +313,7 @@ computed buildstock.csv file use the <code class="docutils literal notranslate">
 sampling algorithms.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">n_buildings_represented</span></code>: The number of buildings that this sample is meant to represent.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">precomputed_sample</span></code>: Filepath of csv containing pre-defined building options to use in the precomputed sampling
-routine. The <code class="docutils literal notranslate"><span class="pre">n_datapoints</span></code> line must be commented out if applying this option. This can be absolute or relative
-(to this file).</p></li>
+routine. This can be absolute or relative (to this file).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">skip_sims</span></code>: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
 this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
 will be provided when the baseline simulations are skipped.</p></li>
@@ -605,14 +609,19 @@ this works better if set to 2048.</p></li>
 <p>After a batch of simulation completes, to analyze BuildStock results the
 individual simulation results are aggregated in a postprocessing step as
 follows:</p>
-<ol class="arabic simple">
+<ol class="arabic">
 <li><p>The inputs and annual outputs of each simulation are gathered together into
 one table for each upgrade scenario. In older versions that ran on PAT, this
 was known as the <code class="docutils literal notranslate"><span class="pre">results.csv</span></code>. This table is now made available in both
 csv and parquet format.</p></li>
 <li><p>Time series results for each simulation are gathered and concatenated into
 fewer larger parquet files that are better suited for querying using big data
-analysis tools.</p></li>
+analysis tools.</p>
+<p>For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
+are horizontally concatenated with the time series files before aggregation,
+making sure the schedule values are properly lined up with the timestamps in the
+<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076">same way that Energeyplus handles ScheduleFiles</a>.</p>
+</li>
 </ol>
 <div class="section" id="uploading-to-aws-athena">
 <h3>Uploading to AWS Athena<a class="headerlink" href="#uploading-to-aws-athena" title="Permalink to this headline">¶</a></h3>
@@ -699,7 +708,7 @@ before aborting it.</p></li>
   <div role="contentinfo">
     <p>
         
-        &copy; Copyright Copyright 2018 The Alliance for Sustainable Energy
+        &copy; Copyright Copyright 2020 The Alliance for Sustainable Energy
 
     </p>
   </div>
