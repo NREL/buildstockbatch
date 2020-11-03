@@ -4,9 +4,16 @@
 
 This set of tools provides an alternative means to PAT to run and manage the
 batch simulations for the
-[ResStock](https://github.com/NREL/OpenStudio-BuildStock) and ComStock building
-stock energy models. It can be used to run the simulations locally, on Amazon
-Web Services, or on NREL's supercomputers.
+[ResStock](https://github.com/NREL/OpenStudio-BuildStock) and
+[ComStock](https://github.com/NREL/comstock) building stock energy models. It
+can be used to run the simulations locally, on Amazon Web Services, or on NREL's
+supercomputers.
 
 For information how to install and run simulations please read the
 [documentation](https://nrel.github.io/buildstockbatch/).
+
+## Disclaimer
+
+This software is a pre-release beta and under active development. APIs and input
+schemas are subject to change without notice. While good faith efforts are made
+to document use of the software, technical support is unavailable at this time.
