@@ -213,19 +213,17 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
-    mocker.patch.object(EagleBatch, 'run_sampling', lambda _: "buildstock.csv")
 
     def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
-        sim_id = 'bldg{:07d}up{:02d}'.format(building_id, real_upgrade_idx)
-
-        # Check to see if the simulation is done already and skip it if so.
-        sim_dir = os.path.join(base_dir, 'up{:02d}'.format(real_upgrade_idx), 'bldg{:07d}'.format(building_id))
+        sim_id = f'bldg{building_id:07d}up{real_upgrade_idx:02d}'
+        sim_dir = os.path.join(base_dir, f'up{real_upgrade_idx:02d}', f'bldg{building_id:07d}')
         return sim_id, sim_dir
 
     mocker.patch.object(EagleBatch, 'make_sim_dir', make_sim_dir_mock)
 
     b = EagleBatch(project_filename)
+    mocker.patch.object(b.sampler, 'run_sampling', lambda: "buildstock.csv")
     b.run_batch(sampling_only=True)  # so the directories can be created
     b.run_job_batch(1)
 
