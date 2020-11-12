@@ -1,0 +1,52 @@
+{
+    "id": "bldg0000001up01",
+    "steps": [
+        {
+            "measure_dir_name": "ResidentialSimulationControls",
+            "arguments": {
+                "timesteps_per_hr": 4,
+                "begin_month": 1,
+                "begin_day_of_month": 1,
+                "end_month": 12,
+                "end_day_of_month": 31,
+                "calendar_year": 2007
+            }
+        },
+        {
+            "measure_dir_name": "BuildExistingModel",
+            "arguments": {
+                "building_id": 1,
+                "workflow_json": "measure-info.json",
+                "sample_weight": 1.0
+            }
+        },
+        {
+            "measure_dir_name": "ApplyUpgrade",
+            "arguments": {
+                "run_measure": 1,
+                "upgrade_name": "Upgrade1",
+                "option_1": "Infiltration|11.25 ACH50"
+            }
+        },
+        {
+            "measure_dir_name": "SimulationOutputReport",
+            "arguments": {}
+        },
+        {
+            "measure_dir_name": "TimeseriesCSVExport",
+            "arguments": {
+                "reporting_frequency": "Timestep",
+                "include_enduse_subcategories": true,
+                "output_variables": ""
+            }
+        },
+        {
+            "measure_dir_name": "ServerDirectoryCleanup",
+            "arguments": {}
+        }
+    ],
+    "created_at": "2020-10-07T21:28:27.998995",
+    "measure_paths": [
+        "measures"
+    ]
+}

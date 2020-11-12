@@ -1,0 +1,1675 @@
+{
+   "completed_at" : "20201008T033219Z",
+   "completed_status" : "Success",
+   "created_at" : "2020-10-07T21:28:49.570379",
+   "current_step" : 6,
+   "eplusout_err" : "Program Version,EnergyPlus, Version 9.2.0-921312fa1d, YMD=2020.10.08 03:31,\n   ** Warning ** For Schedule:File=\"CLOTHES_DRYER_EXHAUST\", Blank Schedule Type Limits Name input -- will not be validated.\n   ** Warning ** GetSurfaceData: Entered Zone Floor Areas differ from calculated Zone Floor Area(s).\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.\n   ************* Note that the following warning(s) may/will occur if you have not enclosed your zone completely.\n   ** Warning ** Entered Zone Volumes differ from calculated zone volume(s).\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual zones.\n   ** Warning ** CalculateZoneVolume: 2 zones are not fully enclosed. For more details use:  Output:Diagnostics,DisplayExtrawarnings; \n   ** Warning ** DetermineShadowingCombinations: There are 1 surfaces which are receiving surfaces and are non-convex.\n   **   ~~~   ** ...Shadowing values may be inaccurate. Check .shd report file for more surface shading details\n   **   ~~~   ** ...Add Output:Diagnostics,DisplayExtraWarnings; to see individual warnings for each surface.\n   ** Severe  ** DetermineShadowingCombinations: There are 1 surfaces which are casting surfaces and are non-convex.\n   **   ~~~   ** ...Shadowing values may be inaccurate. Check .shd report file for more surface shading details\n   **   ~~~   ** ...Add Output:Diagnostics,DisplayExtraWarnings; to see individual severes for each surface.\n   ** Warning ** The Standard Ratings is calculated for Coil:Cooling:DX:SingleSpeed = RES AC COOLING COIL but not at the AHRI test condition due to curve out of bound.\n   **   ~~~   **  Review the Standard Ratings calculations in the Engineering Reference for this coil type. Also, use Output:Diagnostics, DisplayExtraWarnings for further guidance.\n   ** Warning ** Check input. Pump nominal power or motor efficiency is set to 0, for pump=PUMP VARIABLE SPEED 1\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL DEFROST ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYHEATING\", invalid Output Variable or Meter Name=\"HEATING COIL CRANKCASE HEATER ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Meter:Custom=\"UNIT 1:ELECTRICITYCOOLING\", invalid Output Variable or Meter Name=\"UNITARY SYSTEM COOLING ANCILLARY ELECTRIC ENERGY\".\n   **   ~~~   ** ...will not be shown with the Meter results.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISTRICTCOOLING:FACILITY\" - not found.\n   ** Warning ** Output:Meter: invalid Key Name=\"DISTRICTHEATING:FACILITY\" - not found.\n   ** Warning ** Output:Meter:MeterFileOnly requested for \"Electricity:Facility\" (TimeStep), already on \"Output:Meter\". Will report to both eplusout.eso and eplusout.mtr\n   ************* Testing Individual Branch Integrity\n   ************* All Branches passed integrity testing\n   ************* Testing Individual Supply Air Path Integrity\n   ************* All Supply Air Paths passed integrity testing\n   ************* Testing Individual Return Air Path Integrity\n   ************* All Return Air Paths passed integrity testing\n   ************* No node connection errors were found.\n   ************* Beginning Simulation\n   ** Warning ** Processing Monthly Tabular Reports: Variable names not valid for this simulation\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on individual variables.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/01 12:26 - 12:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   **   ~~~   ** ...use Output:Diagnostics,DisplayExtraWarnings; to show more details on each max iteration exceeded.\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/03 07:30 - 07:45\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/07 10:00 - 10:15\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/07 10:00 - 10:08\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/10 14:30 - 14:45\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/10 19:15 - 19:30\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/10 19:15 - 19:22\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/14 13:00 - 13:15\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/14 13:00 - 13:05\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/14 18:00 - 18:15\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/14 22:45 - 23:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/15 08:30 - 08:45\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/23 15:45 - 16:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** SimHVAC: Maximum iterations (20) exceeded for all HVAC loops, at RUN PERIOD 1, 01/30 08:53 - 09:00\n   **   ~~~   ** The solution for one or more of the Air Loop HVAC systems did not appear to converge\n   ** Warning ** GetCurrentScheduleValue: Schedule=\"LIGHTING_EXTERIOR\" is a Schedule:File\n   **   ~~~   ** ...Use of Schedule:File when DaylightSavingTime is in effect is not recommended.\n   **   ~~~   ** ...1) Remove RunperiodControl:DaylightSavingTime object or remove DST period from Weather File.\n   **   ~~~   ** ...2) Configure other schedules and Schedule:File to account for occupant behavior during DST.\n   **   ~~~   ** ...   If you have already done this, you can ignore this message.\n   **   ~~~   ** ...When active, DaylightSavingTime will shift all scheduled items by one hour, retaining the same day type as the original.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-ELECTRICITY\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-DISTILLATE OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-RESIDUAL OIL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-NATURAL GAS\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ** Warning ** The resource referenced by LifeCycleCost:UsePriceEscalation= \"U.S. AVG  COMMERCIAL-COAL\" has no energy cost. \n   **   ~~~   ** ... It is likely that the wrong resource is used. The resource should match the meter used in Utility:Tariff.\n   ************* Simulation Error Summary *************\n   ************* There are 2 unused schedules in input.\n   ************* There are 44 unused week schedules in input.\n   ************* There are 26 unused day schedules in input.\n   ************* Use Output:Diagnostics,DisplayUnusedSchedules; to see them.\n   *************\n   ************* ===== Recurring Surface Error Summary =====\n   ************* The following surface error messages occurred.\n   *************\n   ************* Base Surface does not surround subsurface errors occuring...\n   ************* Check that the GlobalGeometryRules object is expressing the proper starting corner and direction [CounterClockwise/Clockwise]\n   *************\n   ** Warning ** Base surface does not surround subsurface (CHKSBS), Overlap Status=No-Overlap\n   **   ~~~   **   The base surround errors occurred 1 times.\n   **   ~~~   ** Surface \"SURFACE 28\" misses SubSurface \"UNIT 1 - SURFACE 13 - DOOR\"\n   *************\n   **   ~~~   **   The base surround errors occurred 1 times (total).\n   *************\n   *************\n   ************* ===== Recurring Error Summary =====\n   ************* The following recurring error messages occurred.\n   *************\n   *************  ** Warning ** SimHVAC: Exceeding Maximum iterations for all HVAC loops, during RUN PERIOD 1 continues\n   *************  **   ~~~   **   This error occurred 73 total times;\n   *************  **   ~~~   **   during Warmup 0 times;\n   *************  **   ~~~   **   during Sizing 0 times.\n   *************\n   ************* EnergyPlus Warmup Error Summary. During Warmup: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Sizing Error Summary. During Sizing: 0 Warning; 0 Severe Errors.\n   ************* EnergyPlus Completed Successfully-- 108 Warning; 1 Severe Errors; Elapsed Time=00hr 00min 39.85sec\n",
+   "file_paths" : [
+      "/var/simdata/openstudio/generated_files",
+      "./files",
+      "./weather",
+      "../../files",
+      "../../weather",
+      "./"
+   ],
+   "hash" : "E999168C",
+   "id" : "bldg0000002up01",
+   "measure_paths" : [ "measures" ],
+   "started_at" : "20201008T032853Z",
+   "steps" : [
+      {
+         "arguments" : {
+            "begin_day_of_month" : 1,
+            "begin_month" : 1,
+            "calendar_year" : 2007,
+            "end_day_of_month" : 31,
+            "end_month" : 12,
+            "timesteps_per_hr" : 4
+         },
+         "measure_dir_name" : "ResidentialSimulationControls",
+         "result" : {
+            "completed_at" : "20201008T032853Z",
+            "measure_class_name" : "ResidentialSimulationControls",
+            "measure_display_name" : "Set Residential Simulation Controls",
+            "measure_name" : "residential_simulation_controls",
+            "measure_taxonomy" : "Whole Building.Space Types",
+            "measure_type" : "ModelMeasure",
+            "measure_uid" : "874f921e-8f3c-458a-a82f-01b7d51a547e",
+            "measure_version_id" : "50490d3c-8385-4b7e-a525-df4147819d03",
+            "measure_version_modified" : "20200121T164352Z",
+            "measure_xml_checksum" : "2C38F48B",
+            "started_at" : "20201008T032853Z",
+            "stderr" : "",
+            "stdout" : "",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_info" : [
+               "Set the simulation timesteps per hour to 4.",
+               "Set the run period begin and end month/day to 1/1 and 12/31, respectively.",
+               "Set the calendar year to 2007 and the start day of week to Monday; if you are running with AMY, this will be overridden by the AMY year."
+            ],
+            "step_result" : "Success",
+            "step_values" : [
+               {
+                  "name" : "timesteps_per_hr",
+                  "value" : 4
+               },
+               {
+                  "name" : "begin_month",
+                  "value" : 1
+               },
+               {
+                  "name" : "begin_day_of_month",
+                  "value" : 1
+               },
+               {
+                  "name" : "end_month",
+                  "value" : 12
+               },
+               {
+                  "name" : "end_day_of_month",
+                  "value" : 31
+               },
+               {
+                  "name" : "calendar_year",
+                  "value" : 2007
+               }
+            ],
+            "step_warnings" : []
+         }
+      },
+      {
+         "arguments" : {
+            "building_id" : 2,
+            "sample_weight" : 1,
+            "workflow_json" : "measure-info.json"
+         },
+         "measure_dir_name" : "BuildExistingModel",
+         "result" : {
+            "completed_at" : "20201008T033005Z",
+            "measure_class_name" : "BuildExistingModel",
+            "measure_display_name" : "Build Existing Model",
+            "measure_name" : "build_existing_model",
+            "measure_taxonomy" : "Whole Building.Space Types",
+            "measure_type" : "ModelMeasure",
+            "measure_uid" : "dedf59bb-3b88-4f16-8755-2c1ff5519cbf",
+            "measure_version_id" : "b0abf044-37ee-4ac0-95a6-061bd32ce300",
+            "measure_version_modified" : "20200430T194531Z",
+            "measure_xml_checksum" : "2C38F48B",
+            "started_at" : "20201008T032853Z",
+            "stderr" : "",
+            "stdout" : "[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_final_condition" : "HVAC objects updated as appropriate.",
+            "step_info" : [
+               "Assigning option 'CR09' for parameter 'Location Region'.",
+               "Assigning option 'TX_Houston-Bush.Intercontinental.AP.722430' for parameter 'Location'.",
+               "Assigning option '2000s' for parameter 'Vintage'.",
+               "Assigning option '2000-09' for parameter 'Vintage ACS'.",
+               "Assigning option 'Natural Gas' for parameter 'Heating Fuel'.",
+               "Assigning option 'Medium' for parameter 'Usage Level'.",
+               "Assigning option 'Single-Family Detached' for parameter 'Geometry Building Type RECS'.",
+               "Assigning option 'Single-Family Detached' for parameter 'Geometry Building Type ACS'.",
+               "Assigning option 'None' for parameter 'Geometry Building Number Units MF'.",
+               "Assigning option 'None' for parameter 'Geometry Building Number Units SFA'.",
+               "Assigning option '<5' for parameter 'Geometry Building Number Units HL'.",
+               "Assigning option 'Slab' for parameter 'Geometry Foundation Type'.",
+               "Assigning option 'Masonry' for parameter 'Geometry Wall Type'.",
+               "Assigning option '1' for parameter 'Geometry Stories'.",
+               "Assigning option '2 Car' for parameter 'Geometry Garage'.",
+               "Assigning option '1500-2499' for parameter 'Geometry Floor Area Bin'.",
+               "Assigning option '1500-1999' for parameter 'Geometry Floor Area'.",
+               "Assigning option '3' for parameter 'Bedrooms'.",
+               "Assigning option 'Double-Loaded Interior' for parameter 'Corridor'.",
+               "Assigning option '2' for parameter 'Occupants'.",
+               "Assigning option 'Occupied' for parameter 'Vacancy Status'.",
+               "Assigning option 'Northeast' for parameter 'Orientation'.",
+               "Assigning option '2 ft' for parameter 'Eaves'.",
+               "Assigning option '20 ft^2' for parameter 'Door Area'.",
+               "Assigning option 'F9 B9 L9 R9' for parameter 'Window Areas'.",
+               "Assigning option 'None' for parameter 'Overhangs'.",
+               "Assigning option 'Left/Right at 15ft' for parameter 'Neighbors'.",
+               "Assigning option 'Ceiling R-30, Vented' for parameter 'Insulation Unfinished Attic'.",
+               "Assigning option 'None' for parameter 'Insulation Finished Roof'.",
+               "Assigning option 'No' for parameter 'Radiant Barrier'.",
+               "Assigning option 'Asphalt Shingles, Medium' for parameter 'Roof Material Unfinished Attic'.",
+               "Assigning option 'None' for parameter 'Roof Material Finished Roof'.",
+               "Assigning option 'Uninsulated' for parameter 'Insulation Slab'.",
+               "Assigning option 'None' for parameter 'Insulation Crawlspace'.",
+               "Assigning option 'None' for parameter 'Insulation Unfinished Basement'.",
+               "Assigning option 'None' for parameter 'Insulation Finished Basement'.",
+               "Assigning option 'None' for parameter 'Insulation Pier Beam'.",
+               "Assigning option 'R-13' for parameter 'Insulation Interzonal Floor'.",
+               "Assigning option 'CMU, 6-in Hollow, R-11' for parameter 'Insulation Wall'.",
+               "Assigning option 'Summer = 0.7, Winter = 0.7' for parameter 'Interior Shading'.",
+               "Assigning option '2+ Pane' for parameter 'Windows'.",
+               "Assigning option 'Fiberglass' for parameter 'Doors'.",
+               "Assigning option 'Gas Standard' for parameter 'Water Heater'.",
+               "Assigning option '100% Usage' for parameter 'Hot Water Fixtures'.",
+               "Assigning option 'Uninsulated, HomeRun, PEX' for parameter 'Hot Water Distribution'.",
+               "Assigning option 'None' for parameter 'Solar Hot Water'.",
+               "Assigning option 'None' for parameter 'HVAC Has Shared System'.",
+               "Assigning option 'None' for parameter 'HVAC Shared Efficiencies'.",
+               "Assigning option 'Ducted Heating' for parameter 'HVAC Heating Type'.",
+               "Assigning option 'Natural Gas Fuel Furnace' for parameter 'HVAC Heating Type And Fuel'.",
+               "Assigning option 'Fuel Furnace, 92.5% AFUE' for parameter 'HVAC Heating Efficiency'.",
+               "Assigning option 'AC, SEER 13' for parameter 'HVAC Cooling Efficiency'.",
+               "Assigning option 'Central AC' for parameter 'HVAC Cooling Type'.",
+               "Assigning option '70F' for parameter 'Heating Setpoint'.",
+               "Assigning option '76F' for parameter 'Cooling Setpoint'.",
+               "Assigning option 'No' for parameter 'Heating Setpoint Has Offset'.",
+               "Assigning option 'No' for parameter 'Cooling Setpoint Has Offset'.",
+               "Assigning option '0F' for parameter 'Heating Setpoint Offset Magnitude'.",
+               "Assigning option '0F' for parameter 'Cooling Setpoint Offset Magnitude'.",
+               "Assigning option 'None' for parameter 'Cooling Setpoint Offset Period'.",
+               "Assigning option 'None' for parameter 'Heating Setpoint Offset Period'.",
+               "Assigning option 'Standard Efficiency' for parameter 'Ceiling Fan'.",
+               "Assigning option 'None' for parameter 'Dehumidifier'.",
+               "Assigning option 'EF 17.6' for parameter 'Refrigerator'.",
+               "Assigning option 'National Average' for parameter 'Refrigeration Schedule'.",
+               "Assigning option 'Gas, 100% Usage' for parameter 'Cooking Range'.",
+               "Assigning option 'None' for parameter 'Dishwasher'.",
+               "Assigning option 'Yes' for parameter 'Clothes Washer Presence'.",
+               "Assigning option 'EnergyStar, 100% Usage' for parameter 'Clothes Washer'.",
+               "Assigning option 'Electric, 100% Usage' for parameter 'Clothes Dryer'.",
+               "Assigning option '100% CFL' for parameter 'Lighting'.",
+               "Assigning option '100% Usage' for parameter 'Lighting Interior Use'.",
+               "Assigning option '100% Usage' for parameter 'Lighting Other Use'.",
+               "Assigning option 'No Exterior Use' for parameter 'Holiday Lighting'.",
+               "Assigning option '100%' for parameter 'Plug Loads'.",
+               "Assigning option 'None' for parameter 'Electric Vehicle'.",
+               "Assigning option 'None' for parameter 'Misc Extra Refrigerator'.",
+               "Assigning option 'None' for parameter 'Misc Freezer'.",
+               "Assigning option 'None' for parameter 'Misc Gas Fireplace'.",
+               "Assigning option 'None' for parameter 'Misc Gas Grill'.",
+               "Assigning option 'None' for parameter 'Misc Gas Lighting'.",
+               "Assigning option 'None' for parameter 'Misc Hot Tub Spa'.",
+               "Assigning option 'None' for parameter 'Misc Pool'.",
+               "Assigning option 'None' for parameter 'Misc Pool Heater'.",
+               "Assigning option 'None' for parameter 'Misc Pool Pump'.",
+               "Assigning option 'National Average' for parameter 'Misc Pool Schedule'.",
+               "Assigning option 'None' for parameter 'Misc Well Pump'.",
+               "Assigning option 'Yes' for parameter 'HVAC Has Ducts'.",
+               "Assigning option '20% Leakage, R-8' for parameter 'Ducts'.",
+               "Assigning option '15 ACH50' for parameter 'Infiltration'.",
+               "Assigning option 'Year-Round, 3 days/wk' for parameter 'Natural Ventilation'.",
+               "Assigning option 'None' for parameter 'Mechanical Ventilation'.",
+               "Assigning option 'Hour0' for parameter 'Bathroom Spot Vent Hour'.",
+               "Assigning option 'Hour18' for parameter 'Range Spot Vent Hour'.",
+               "Assigning option 'None' for parameter 'PV'.",
+               "Assigning option '0.13' for parameter 'Geometry Perimeter Footprint Ratio'.",
+               "Assigning option 'CBSA Houston-The Woodlands-Sugar Land, TX' for parameter 'AHS Region'.",
+               "Assigning option '2A' for parameter 'ASHRAE IECC Climate Zone 2004'.",
+               "Assigning option 'TX' for parameter 'State'.",
+               "Assigning option 'West South Central' for parameter 'Census Division'.",
+               "Assigning option 'South' for parameter 'Census Region'.",
+               "Assigning option 'ERCOT' for parameter 'ISO RTO Region'.",
+               "Assigning option 'Hot-Humid' for parameter 'Building America Climate Zone'.",
+               "Assigning option 'TX, Harris County' for parameter 'County'.",
+               "Assigning option 'TX, 04604' for parameter 'PUMA'.",
+               "Calling ResidentialLocation measure with arguments:\nweather_directory -> ../../../../weather \nweather_file_name -> USA_TX_Houston-Bush.Intercontinental.AP.722430.epw \ndst_start_date -> April 7 \ndst_end_date -> October 26",
+               "Setting weather file.",
+               "Setting site data.",
+               "Setting Building America climate zone to Hot-Humid.",
+               "Setting mains water temperature profile.",
+               "Set daylight saving time from 2007-Apr-07 to 2007-Oct-26.",
+               "Calling ResidentialScheduleGenerator measure with arguments:\nnum_occupants -> 2 \nvacancy_start_date -> NA \nvacancy_end_date -> NA",
+               "No vacancy period set.",
+               "Generated schedule file: /var/simdata/openstudio/run/schedules.csv",
+               "Calling ResidentialGeometryCreateSingleFamilyDetached measure with arguments:\nfoundation_type -> slab \nfoundation_height -> 0 \nnum_floors -> 1 \ngarage_width -> 24 \ngarage_depth -> 24 \ngarage_protrusion -> 0.5 \ngarage_position -> Right \ntotal_ffa -> 1690 \nwall_height -> 8 \naspect_ratio -> 1.8 \nattic_type -> unfinished attic \nroof_type -> gable \nroof_pitch -> 6:12 \nnum_bathrooms -> 2 \nnum_bedrooms -> 3 \norientation -> 225 \nroof_structure -> truss, cantilever \neaves_depth -> 2 \nneighbor_left_offset -> 15 \nneighbor_right_offset -> 15 \nneighbor_back_offset -> 0 \nneighbor_front_offset -> 0",
+               "Set garage space.",
+               "Set living space.",
+               "Set unfinished attic space.",
+               "Set garage attic space.",
+               "The building has been assigned 3 bedroom(s) and 2.0 bathroom(s) across 1 unit(s).",
+               "unit 1 has been assigned 2.0 occupant(s) for space 'living space'.",
+               "The building has been assigned 2.0 occupant(s) across 1 unit(s).",
+               "Added 10 res eaves.",
+               "Added 2 res neighbors shading surfaces.",
+               "The building's initial orientation was 0.0 azimuth.",
+               "The building's final orientation was 225.0 azimuth.",
+               "Calling ResidentialGeometryDoorArea measure with arguments:\ndoor_area -> 20",
+               "For unit 1 added 20.0 ft^2 door.",
+               "Calling ResidentialGeometryWindowSkylightArea measure with arguments:\nfront_wwr -> 0.09 \nback_wwr -> 0.09 \nleft_wwr -> 0.09 \nright_wwr -> 0.09 \nfront_window_area -> 0 \nback_window_area -> 0 \nleft_window_area -> 0 \nright_window_area -> 0 \nwindow_aspect_ratio -> 1.333 \nfront_skylight_area -> 0 \nback_skylight_area -> 0 \nleft_skylight_area -> 0 \nright_skylight_area -> 0 \noverhang_depth -> 0 \noverhang_offset -> 0 \noverhang_front_facade -> false \noverhang_back_facade -> false \noverhang_left_facade -> false \noverhang_right_facade -> false",
+               "Added 2 window(s), totaling 23.5 ft^2, to Surface 13.",
+               "Added 4 window(s), totaling 43.0 ft^2, to Surface 9.",
+               "Added 2 window(s), totaling 23.9 ft^2, to Surface 8.",
+               "Added 2 window(s), totaling 15.2 ft^2, to Surface 10.",
+               "No res overhangs to be added.",
+               "Calling ResidentialConstructionsUnfinishedAttic measure with arguments:\nceiling_r -> 30 \nceiling_install_grade -> 1 \nceiling_ins_thick_in -> 11.23 \nceiling_framing_factor -> 0.07 \nceiling_joist_height_in -> 3.5 \nceiling_drywall_thick_in -> 0.5 \nroof_cavity_r -> 0 \nroof_install_grade -> 1 \nroof_cavity_ins_thick_in -> 0 \nroof_framing_factor -> 0.07 \nroof_framing_thick_in -> 7.25 \nroof_osb_thick_in -> 0.75 \nroof_rigid_r -> 0 \nhas_radiant_barrier -> false \nroofing_material -> Asphalt Shingles, Medium",
+               "Material 'FloorUAAdditionalCeilingIns' was created.",
+               "Material 'FloorUATrussandIns' was created.",
+               "Material 'Drywall 0.5 in.' was created.",
+               "Construction 'FloorFinInsUnfinAttic' was created with 3 materials (FloorUAAdditionalCeilingIns | FloorUATrussandIns | Drywall 0.5 in.).",
+               "Surface 'Surface 22' has been assigned construction 'FloorFinInsUnfinAttic'.",
+               "Construction 'FloorFinInsUnfinAttic Reversed' was created with 3 materials (Drywall 0.5 in. | FloorUATrussandIns | FloorUAAdditionalCeilingIns).",
+               "Surface 'Surface 14' has been assigned construction 'FloorFinInsUnfinAttic Reversed'.",
+               "Material 'Asphalt Shingles, Medium' was created.",
+               "Material 'RoofSheathing' was created.",
+               "Material 'RoofUARoofIns' was created.",
+               "Construction 'RoofUnfinInsExt' was created with 3 materials (Asphalt Shingles, Medium | RoofSheathing | RoofUARoofIns).",
+               "Surface 'Surface 27' has been assigned construction 'RoofUnfinInsExt'.",
+               "Surface 'Surface 17' has been assigned construction 'RoofUnfinInsExt'.",
+               "Construction 'RoofUnfinUninsExt' was created with 3 materials (Asphalt Shingles, Medium | RoofSheathing | RoofUARoofIns).",
+               "Surface 'Surface 23' has been assigned construction 'RoofUnfinUninsExt'.",
+               "Surface 'Surface 24' has been assigned construction 'RoofUnfinUninsExt'.",
+               "Calling ResidentialConstructionsWallsCMU measure with arguments:\nthick_in -> 6 \nconductivity -> 4.29 \ndensity -> 65 \nframing_factor -> 0.076 \nfurring_r -> 11 \nfurring_cavity_depth_in -> 2 \nfurring_spacing -> 24 \ndrywall_thick_in -> 0.5 \nosb_thick_in -> 0.5 \nrigid_r -> 0.0 \nexterior_finish -> Vinyl, Light",
+               "Material 'Vinyl, Light' was created.",
+               "Material 'WallSheathing' was created.",
+               "Material 'WallCMU' was created.",
+               "Material 'WallFurring' was created.",
+               "Construction 'WallExtInsFin' was created with 5 materials (Vinyl, Light | WallSheathing | WallCMU | WallFurring | Drywall 0.5 in.).",
+               "Surface 'Surface 10' has been assigned construction 'WallExtInsFin'.",
+               "Surface 'Surface 9' has been assigned construction 'WallExtInsFin'.",
+               "Surface 'Surface 28' has been assigned construction 'WallExtInsFin'.",
+               "Surface 'Surface 8' has been assigned construction 'WallExtInsFin'.",
+               "Surface 'Surface 13' has been assigned construction 'WallExtInsFin'.",
+               "Surface 'Surface 29' has been assigned construction 'WallExtInsFin'.",
+               "Material 'WallCMU 1' was created.",
+               "Material 'WallFurring 1' was created.",
+               "Construction 'WallIntFinInsUnfin' was created with 3 materials (WallSheathing | WallCMU 1 | WallFurring 1).",
+               "Surface 'Surface 11' has been assigned construction 'WallIntFinInsUnfin'.",
+               "Construction 'WallIntFinInsUnfin Reversed' was created with 3 materials (WallFurring 1 | WallCMU 1 | WallSheathing).",
+               "Surface 'Surface 3' has been assigned construction 'WallIntFinInsUnfin Reversed'.",
+               "Surface 'Surface 12' has been assigned construction 'WallIntFinInsUnfin'.",
+               "Surface 'Surface 2' has been assigned construction 'WallIntFinInsUnfin Reversed'.",
+               "Material 'WallStudAndCavity' was created.",
+               "Construction 'WallExtUninsUnfin' was created with 3 materials (Vinyl, Light | WallSheathing | WallStudAndCavity).",
+               "Surface 'Surface 18' has been assigned construction 'WallExtUninsUnfin'.",
+               "Surface 'Surface 19' has been assigned construction 'WallExtUninsUnfin'.",
+               "Surface 'Surface 26' has been assigned construction 'WallExtUninsUnfin'.",
+               "Surface 'Surface 5' has been assigned construction 'WallExtUninsUnfin'.",
+               "Surface 'Surface 20' has been assigned construction 'WallExtUninsUnfin'.",
+               "Surface 'Surface 4' has been assigned construction 'WallExtUninsUnfin'.",
+               "Added internal mass object 'living space Partition' to space 'living space'",
+               "Material 'WallStudAndCavity 1' was created.",
+               "Construction 'WallIntFinUninsFin' was created with 2 materials (WallStudAndCavity 1 | Drywall 0.5 in.).",
+               "InternalMassDefinition 'living space Partition' has been assigned construction 'WallIntFinUninsFin'.",
+               "Material 'res furniture material living space' was created.",
+               "Construction 'res furniture construction living space' was created with 1 material (res furniture material living space).",
+               "InternalMassDefinition 'res furniture mass living space' has been assigned construction 'res furniture construction living space'.",
+               "Assigned internal mass object 'res furniture mass living space' to space 'living space'.",
+               "Construction 'res furniture construction garage space' was created with 1 material (res furniture material living space).",
+               "InternalMassDefinition 'res furniture mass garage space' has been assigned construction 'res furniture construction garage space'.",
+               "Assigned internal mass object 'res furniture mass garage space' to space 'garage space'.",
+               "Calling ResidentialConstructionsSlab measure with arguments:\nperimeter_r -> 0 \nperimeter_width -> 0 \nwhole_r -> 0 \ngap_r -> 0 \nexterior_r -> 0 \nexterior_depth -> 0",
+               "Material 'Concrete 4.0 in.' was created.",
+               "Material 'Floor Covering' was created.",
+               "Construction 'FloorFndGrndFinSlab' was created with 2 materials (Concrete 4.0 in. | Floor Covering).",
+               "Surface 'Surface 7' has been assigned construction 'FloorFndGrndFinSlab'.",
+               "Construction 'FloorFndGrndUnfinSlab' was created with 1 material (Concrete 4.0 in.).",
+               "Surface 'Surface 1' has been assigned construction 'FloorFndGrndUnfinSlab'.",
+               "Calling ResidentialConstructionsFloors measure with arguments:\ncavity_r -> 13 \ninstall_grade -> 1 \nframing_factor -> 0.13 \njoist_height_in -> 5.5",
+               "Material 'FloorFinStudAndAirFloor' was created.",
+               "Construction 'FloorUnfinUninsUnfin' was created with 2 materials (FloorFinStudAndAirFloor | RoofSheathing).",
+               "Surface 'Surface 15' has been assigned construction 'FloorUnfinUninsUnfin'.",
+               "Construction 'FloorUnfinUninsUnfin Reversed' was created with 2 materials (RoofSheathing | FloorFinStudAndAirFloor).",
+               "Surface 'Surface 6' has been assigned construction 'FloorUnfinUninsUnfin Reversed'.",
+               "Surface 'Surface 21 Reversed' has been assigned construction 'FloorUnfinUninsUnfin'.",
+               "Surface 'Surface 21' has been assigned construction 'FloorUnfinUninsUnfin Reversed'.",
+               "Calling ResidentialConstructionsWindowsSkylights measure with arguments:\nwindow_heat_shade_mult -> 0.7 \nwindow_cool_shade_mult -> 0.7 \nskylight_heat_shade_mult -> 0.7 \nskylight_cool_shade_mult -> 0.7 \nwindow_ufactor -> 0.49 \nwindow_shgc -> 0.56 \nskylight_ufactor -> 0.37 \nskylight_shgc -> 0.3",
+               "Material 'WindowMaterial' was created.",
+               "Construction 'WindowConstruction' was created with 1 material (WindowMaterial).",
+               "SubSurface 'Surface 10 - Window 2' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 9 - Window 1' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 9 - Window 2' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 13 - Window 1' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 8 - Window 2' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 9 - Window 3' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 9 - Window 4' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 8 - Window 1' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 13 - Window 2' has been assigned construction 'WindowConstruction'.",
+               "SubSurface 'Surface 10 - Window 1' has been assigned construction 'WindowConstruction'.",
+               "Construction and interior shades added to 10 window(s).",
+               "Calling ResidentialConstructionsDoors measure with arguments:\nufactor -> 0.2",
+               "Material 'DoorMaterial' was created.",
+               "Construction 'Door' was created with 1 material (DoorMaterial).",
+               "SubSurface 'unit 1 - Surface 13 - Door' has been assigned construction 'Door'.",
+               "Calling ResidentialHotWaterHeaterTank measure with arguments:\nfuel_type -> gas \ntank_volume -> auto \nsetpoint_temp -> 125 \nlocation -> auto \ncapacity -> 40 \nenergy_factor -> 0.59 \nrecovery_efficiency -> 0.76 \noffcyc_power -> 0 \noncyc_power -> 0 \nhas_water_heater_flue -> true",
+               "A new plant loop for DHW will be added to the model",
+               "Calling ResidentialHotWaterFixtures measure with arguments:\nshower_mult -> 1.0 \nsink_mult -> 1.0 \nbath_mult -> 1.0 \nplant_loop -> auto",
+               "Calling ResidentialHotWaterDistribution measure with arguments:\npipe_mat -> pex \ndist_layout -> home run \nspace -> interior \nrecirc_type -> none \ndist_ins -> 0",
+               "Calling ResidentialHVACCentralAirConditionerSingleSpeed measure with arguments:\nseer -> 13.0 \neer -> 11.1 \nshr -> 0.73 \nfan_power_rated -> 0.365 \nfan_power_installed -> 0.5 \ncrankcase_capacity -> 0.0 \ncrankcase_temp -> 55 \neer_capacity_derate_1ton -> 1.0 \neer_capacity_derate_2ton -> 1.0 \neer_capacity_derate_3ton -> 1.0 \neer_capacity_derate_4ton -> 1.0 \neer_capacity_derate_5ton -> 1.0 \ncapacity -> autosize \ndse -> NA",
+               "Added 'res ac clg supply fan' to 'res ac unitary system' of 'res ac asys'",
+               "Added 'res ac cooling coil' to 'res ac unitary system' of 'res ac asys'",
+               "Added 'res ac asys' to 'living zone' of unit 1",
+               "Calling ResidentialHVACFurnace measure with arguments:\nfuel_type -> gas \nafue -> 0.925 \ncapacity -> autosize \nfan_power_installed -> 0.5 \ndse -> NA \nhas_hvac_flue -> false",
+               "Added 'res fur gas htg supply fan' to 'res fur gas unitary system' of 'res fur gas asys'",
+               "Added 'res fur gas heating coil' to 'res fur gas unitary system' of 'res fur gas asys'",
+               "Added 'res fur gas asys' to 'living zone' of unit 1",
+               "Calling ResidentialHVACHeatingSetpoints measure with arguments:\nweekday_setpoint -> 70 \nweekend_setpoint -> 70 \nuse_auto_season -> false \nseason_start_month -> Jan \nseason_end_month -> Dec \nweekday_offset_magnitude -> 0 \nweekend_offset_magnitude -> 0 \nweekday_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nweekend_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+               "Created new thermostat living zone temperature setpoint for living zone.",
+               "Set a dummy cooling setpoint schedule for living zone temperature setpoint.",
+               "Set the heating setpoint schedule for living zone temperature setpoint.",
+               "Calling ResidentialHVACCoolingSetpoints measure with arguments:\nweekday_setpoint -> 76 \nweekend_setpoint -> 76 \nuse_auto_season -> false \nseason_start_month -> Jan \nseason_end_month -> Dec \nweekday_offset_magnitude -> 0 \nweekend_offset_magnitude -> 0 \nweekday_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 \nweekend_offset_schedule -> 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0",
+               "Found existing thermostat living zone temperature setpoint for living zone.",
+               "Set the cooling setpoint schedule for living zone temperature setpoint.",
+               "Calling ResidentialHVACCeilingFan measure with arguments:\ncoverage -> NA \nspecified_num -> 1 \npower -> 45 \ncontrol -> typical \nuse_benchmark_energy -> false \ncooling_setpoint_offset -> 0 \nmult -> 1",
+               "Calling ResidentialApplianceRefrigerator measure with arguments:\nrated_annual_energy -> 434.0 \nmult -> 1.0 \nlocation -> auto \nweekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nweekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nmonthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837",
+               "Calling ResidentialApplianceClothesWasher measure with arguments:\nimef -> 2.07 \nrated_annual_energy -> 123.0 \nannual_cost -> 9.0 \ntest_date -> 2007 \ndrum_volume -> 3.68 \ncold_cycle -> false \nthermostatic_control -> true \ninternal_heater -> false \nfill_sensor -> false \nmult_e -> 1.0 \nmult_hw -> 1.0 \nlocation -> auto \nplant_loop -> auto",
+               "Calling ResidentialApplianceClothesDryer measure with arguments:\nfuel_type -> electric \ncef -> 2.70 \nfuel_split -> 1.0 \nmult -> 1.0 \nlocation -> auto",
+               "Calling ResidentialApplianceDishwasher measure with arguments:\nnum_settings -> 12 \nrated_annual_energy -> 290.0 \nhas_internal_heater -> true \ncold_inlet -> false \ncold_use -> 0.0 \ntest_date -> 2007 \nannual_gas_cost -> 23.0 \nmult_e -> 0.0 \nmult_hw -> 0.0 \nlocation -> auto \nplant_loop -> auto",
+               "Calling ResidentialApplianceCookingRange measure with arguments:\nfuel_type -> gas \ncooktop_ef -> 0.4 \noven_ef -> 0.058 \nhas_elec_ignition -> true \nmult -> 1.0 \nlocation -> auto",
+               "Calling ResidentialLightingInterior measure with arguments:\nhw_cfl -> 1 \nhw_led -> 0 \nhw_lfl -> 0 \npg_cfl -> 1 \npg_led -> 0 \npg_lfl -> 0 \nin_eff -> 15 \ncfl_eff -> 55 \nled_eff -> 80 \nlfl_eff -> 88 \noption_type -> Lamp Fractions \nenergy_use_interior -> 900 \nmult -> 1",
+               "Calling ResidentialLightingOther measure with arguments:\nhw_cfl -> 1 \nhw_led -> 0 \nhw_lfl -> 0 \npg_cfl -> 1 \npg_led -> 0 \npg_lfl -> 0 \nin_eff -> 15 \ncfl_eff -> 55 \nled_eff -> 80 \nlfl_eff -> 88 \noption_type -> Lamp Fractions \nenergy_use_garage -> 100 \nenergy_use_exterior -> 300 \nmult -> 1 \nholiday_daily_energy_use_exterior -> 0 \nholiday_start_date -> November 27 \nholiday_end_date -> January 6",
+               "Lighting with 35 kWhs annual energy consumption has been assigned to the garage(s).",
+               "Lighting with 157 kWhs annual energy consumption has been assigned to the exterior.",
+               "Calling ResidentialMiscPlugLoads measure with arguments:\nmult -> 1.0 \noption_type -> Multiplier \nenergy_use -> 2000 \nsens_frac -> 0.93 \nlat_frac -> 0.021",
+               "Calling ResidentialMiscLargeUncommonLoads measure with arguments:\nhas_electric_vehicle -> false \nev_annual_energy -> 1852 \nev_charger_mult -> 1 \nev_charger_weekday_sch -> 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042 \nev_charger_weekend_sch -> 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042, 0.042 \nev_charger_monthly_sch -> 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 \nhas_fridge -> false \nfridge_rated_annual_energy -> 1102 \nfridge_mult -> 1 \nfridge_weekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfridge_weekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfridge_monthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837 \nfridge_location -> auto \nhas_freezer -> false \nfreezer_rated_annual_energy -> 935 \nfreezer_mult -> 1 \nfreezer_weekday_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfreezer_weekend_sch -> 0.040, 0.039, 0.038, 0.037, 0.036, 0.036, 0.038, 0.040, 0.041, 0.041, 0.040, 0.040, 0.042, 0.042, 0.042, 0.041, 0.044, 0.048, 0.050, 0.048, 0.047, 0.046, 0.044, 0.041 \nfreezer_monthly_sch -> 0.837, 0.835, 1.084, 1.084, 1.084, 1.096, 1.096, 1.096, 1.096, 0.931, 0.925, 0.837 \nfreezer_location -> auto \nhas_gas_fireplace -> false \ngas_fireplace_annual_energy -> 60 \ngas_fireplace_mult -> 1.0 \ngas_fireplace_scale_energy -> true \ngas_fireplace_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_fireplace_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_fireplace_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \ngas_fireplace_location -> auto \nhas_fireplace_chimney -> false \nhas_gas_grill -> false \ngas_grill_annual_energy -> 30 \ngas_grill_mult -> 1.0 \ngas_grill_scale_energy -> true \ngas_grill_weekday_sch -> 0.004, 0.001, 0.001, 0.002, 0.007, 0.012, 0.029, 0.046, 0.044, 0.041, 0.044, 0.046, 0.042, 0.038, 0.049, 0.059, 0.110, 0.161, 0.115, 0.070, 0.044, 0.019, 0.013, 0.007 \ngas_grill_weekend_sch -> 0.004, 0.001, 0.001, 0.002, 0.007, 0.012, 0.029, 0.046, 0.044, 0.041, 0.044, 0.046, 0.042, 0.038, 0.049, 0.059, 0.110, 0.161, 0.115, 0.070, 0.044, 0.019, 0.013, 0.007 \ngas_grill_monthly_sch -> 1.097, 1.097, 0.991, 0.987, 0.991, 0.890, 0.896, 0.896, 0.890, 1.085, 1.085, 1.097 \nhas_gas_lighting -> false \ngas_lighting_annual_energy -> 19 \ngas_lighting_mult -> 1.0 \ngas_lighting_scale_energy -> true \ngas_lighting_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_lighting_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \ngas_lighting_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \nhas_hot_tub_heater_elec -> false \nhas_hot_tub_heater_gas -> false \nhas_hot_tub_pump -> false \nhot_tub_heater_elec_annual_energy -> 0 \nhot_tub_heater_elec_mult -> 0 \nhot_tub_heater_gas_annual_energy -> 0 \nhot_tub_heater_gas_mult -> 0 \nhot_tub_pump_annual_energy -> 0 \nhot_tub_pump_mult -> 0 \nhot_tub_scale_energy -> false \nhot_tub_weekday_sch -> 0.024, 0.029, 0.024, 0.029, 0.047, 0.067, 0.057, 0.024, 0.024, 0.019, 0.015, 0.014, 0.014, 0.014, 0.024, 0.058, 0.126, 0.122, 0.068, 0.061, 0.051, 0.043, 0.024, 0.024 \nhot_tub_weekend_sch -> 0.024, 0.029, 0.024, 0.029, 0.047, 0.067, 0.057, 0.024, 0.024, 0.019, 0.015, 0.014, 0.014, 0.014, 0.024, 0.058, 0.126, 0.122, 0.068, 0.061, 0.051, 0.043, 0.024, 0.024 \nhot_tub_monthly_sch -> 0.921, 0.928, 0.921, 0.915, 0.921, 1.160, 1.158, 1.158, 1.160, 0.921, 0.915, 0.921 \npool_scale_energy -> false \nhas_pool_heater_elec -> false \nhas_pool_heater_gas -> false \npool_heater_elec_annual_energy -> 0 \npool_heater_elec_mult -> 0 \npool_heater_gas_annual_energy -> 0 \npool_heater_gas_mult -> 0 \nhas_pool_pump -> false \npool_pump_annual_energy -> 0 \npool_pump_mult -> 0 \npool_weekday_sch -> 0.003, 0.003, 0.003, 0.004, 0.008, 0.015, 0.026, 0.044, 0.084, 0.121, 0.127, 0.121, 0.120, 0.090, 0.075, 0.061, 0.037, 0.023, 0.013, 0.008, 0.004, 0.003, 0.003, 0.003 \npool_weekend_sch -> 0.003, 0.003, 0.003, 0.004, 0.008, 0.015, 0.026, 0.044, 0.084, 0.121, 0.127, 0.121, 0.120, 0.090, 0.075, 0.061, 0.037, 0.023, 0.013, 0.008, 0.004, 0.003, 0.003, 0.003 \npool_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154 \nhas_well_pump -> false \nwell_pump_annual_energy -> 400 \nwell_pump_mult -> 0.127 \nwell_pump_scale_energy -> true \nwell_pump_weekday_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \nwell_pump_weekend_sch -> 0.044, 0.023, 0.019, 0.015, 0.016, 0.018, 0.026, 0.033, 0.033, 0.032, 0.033, 0.033, 0.032, 0.032, 0.032, 0.033, 0.045, 0.057, 0.066, 0.076, 0.081, 0.086, 0.075, 0.065 \nwell_pump_monthly_sch -> 1.154, 1.161, 1.013, 1.010, 1.013, 0.888, 0.883, 0.883, 0.888, 0.978, 0.974, 1.154",
+               "Calling ResidentialAirflow measure with arguments:\nunfinished_attic_sla -> 0.00333 \ncrawl_ach -> 0 \nclothes_dryer_exhaust -> 100 \nduct_location -> auto \nduct_total_leakage -> 0.2 \nduct_supply_frac -> 0.6 \nduct_return_frac -> 0.067 \nduct_ah_supply_frac -> 0.067 \nduct_ah_return_frac -> 0.267 \nduct_location_frac -> auto \nduct_num_returns -> auto \nduct_supply_area_mult -> 1 \nduct_return_area_mult -> 1 \nduct_r -> 8 \nliving_ach50 -> 15 \ngarage_ach50 -> 15 \nfinished_basement_ach -> 0 \nunfinished_basement_ach -> 0.1 \npier_beam_ach -> 100 \nshelter_coef -> auto \nterrain -> suburban \nnat_vent_htg_offset -> 1 \nnat_vent_clg_offset -> 1 \nnat_vent_ovlp_offset -> 1 \nnat_vent_htg_season -> true \nnat_vent_clg_season -> true \nnat_vent_ovlp_season -> true \nnat_vent_num_weekdays -> 3 \nnat_vent_num_weekends -> 0 \nnat_vent_frac_windows_open -> 0.33 \nnat_vent_frac_window_area_openable -> 0.2 \nnat_vent_max_oa_hr -> 0.0115 \nnat_vent_max_oa_rh -> 0.7 \nis_existing_home -> true \nmech_vent_type -> none \nmech_vent_infil_credit -> false \nmech_vent_total_efficiency -> 0 \nmech_vent_sensible_efficiency -> 0 \nmech_vent_fan_power -> 0 \nmech_vent_frac_62_2 -> 0 \nmech_vent_ashrae_std -> 2010 \nmech_vent_cfis_open_time -> 20.0 \nmech_vent_cfis_airflow_frac -> 1.0 \nbathroom_exhaust_hour -> 0 \nrange_exhaust_hour -> 18",
+               "Created ducts for res fur gas asys.",
+               "Created ducts for res ac asys.",
+               "Calling ResidentialHVACSizing measure with no arguments.",
+               "Found central air conditioner in living zone.",
+               "Found furnace in living zone."
+            ],
+            "step_initial_condition" : "No water heater model currently exists",
+            "step_result" : "Success",
+            "step_values" : [
+               {
+                  "name" : "building_id",
+                  "value" : 2
+               },
+               {
+                  "name" : "workflow_json",
+                  "value" : "measure-info.json"
+               },
+               {
+                  "name" : "sample_weight",
+                  "value" : 1
+               },
+               {
+                  "name" : "location_region",
+                  "value" : "CR09"
+               },
+               {
+                  "name" : "location",
+                  "value" : "TX_Houston-Bush.Intercontinental.AP.722430"
+               },
+               {
+                  "name" : "vintage",
+                  "value" : "2000s"
+               },
+               {
+                  "name" : "vintage_acs",
+                  "value" : "2000-09"
+               },
+               {
+                  "name" : "heating_fuel",
+                  "value" : "Natural Gas"
+               },
+               {
+                  "name" : "usage_level",
+                  "value" : "Medium"
+               },
+               {
+                  "name" : "geometry_building_type_recs",
+                  "value" : "Single-Family Detached"
+               },
+               {
+                  "name" : "geometry_building_type_acs",
+                  "value" : "Single-Family Detached"
+               },
+               {
+                  "name" : "geometry_building_number_units_mf",
+                  "value" : "None"
+               },
+               {
+                  "name" : "geometry_building_number_units_sfa",
+                  "value" : "None"
+               },
+               {
+                  "name" : "geometry_building_number_units_hl",
+                  "value" : "<5"
+               },
+               {
+                  "name" : "geometry_foundation_type",
+                  "value" : "Slab"
+               },
+               {
+                  "name" : "geometry_wall_type",
+                  "value" : "Masonry"
+               },
+               {
+                  "name" : "geometry_stories",
+                  "value" : "1"
+               },
+               {
+                  "name" : "geometry_garage",
+                  "value" : "2 Car"
+               },
+               {
+                  "name" : "geometry_floor_area_bin",
+                  "value" : "1500-2499"
+               },
+               {
+                  "name" : "geometry_floor_area",
+                  "value" : "1500-1999"
+               },
+               {
+                  "name" : "bedrooms",
+                  "value" : "3"
+               },
+               {
+                  "name" : "corridor",
+                  "value" : "Double-Loaded Interior"
+               },
+               {
+                  "name" : "occupants",
+                  "value" : "2"
+               },
+               {
+                  "name" : "vacancy_status",
+                  "value" : "Occupied"
+               },
+               {
+                  "name" : "orientation",
+                  "value" : "Northeast"
+               },
+               {
+                  "name" : "eaves",
+                  "value" : "2 ft"
+               },
+               {
+                  "name" : "door_area",
+                  "value" : "20 ft^2"
+               },
+               {
+                  "name" : "window_areas",
+                  "value" : "F9 B9 L9 R9"
+               },
+               {
+                  "name" : "overhangs",
+                  "value" : "None"
+               },
+               {
+                  "name" : "neighbors",
+                  "value" : "Left/Right at 15ft"
+               },
+               {
+                  "name" : "insulation_unfinished_attic",
+                  "value" : "Ceiling R-30, Vented"
+               },
+               {
+                  "name" : "insulation_finished_roof",
+                  "value" : "None"
+               },
+               {
+                  "name" : "radiant_barrier",
+                  "value" : "No"
+               },
+               {
+                  "name" : "roof_material_unfinished_attic",
+                  "value" : "Asphalt Shingles, Medium"
+               },
+               {
+                  "name" : "roof_material_finished_roof",
+                  "value" : "None"
+               },
+               {
+                  "name" : "insulation_slab",
+                  "value" : "Uninsulated"
+               },
+               {
+                  "name" : "insulation_crawlspace",
+                  "value" : "None"
+               },
+               {
+                  "name" : "insulation_unfinished_basement",
+                  "value" : "None"
+               },
+               {
+                  "name" : "insulation_finished_basement",
+                  "value" : "None"
+               },
+               {
+                  "name" : "insulation_pier_beam",
+                  "value" : "None"
+               },
+               {
+                  "name" : "insulation_interzonal_floor",
+                  "value" : "R-13"
+               },
+               {
+                  "name" : "insulation_wall",
+                  "value" : "CMU, 6-in Hollow, R-11"
+               },
+               {
+                  "name" : "interior_shading",
+                  "value" : "Summer = 0.7, Winter = 0.7"
+               },
+               {
+                  "name" : "windows",
+                  "value" : "2+ Pane"
+               },
+               {
+                  "name" : "doors",
+                  "value" : "Fiberglass"
+               },
+               {
+                  "name" : "water_heater",
+                  "value" : "Gas Standard"
+               },
+               {
+                  "name" : "hot_water_fixtures",
+                  "value" : "100% Usage"
+               },
+               {
+                  "name" : "hot_water_distribution",
+                  "value" : "Uninsulated, HomeRun, PEX"
+               },
+               {
+                  "name" : "solar_hot_water",
+                  "value" : "None"
+               },
+               {
+                  "name" : "hvac_has_shared_system",
+                  "value" : "None"
+               },
+               {
+                  "name" : "hvac_shared_efficiencies",
+                  "value" : "None"
+               },
+               {
+                  "name" : "hvac_heating_type",
+                  "value" : "Ducted Heating"
+               },
+               {
+                  "name" : "hvac_heating_type_and_fuel",
+                  "value" : "Natural Gas Fuel Furnace"
+               },
+               {
+                  "name" : "hvac_heating_efficiency",
+                  "value" : "Fuel Furnace, 92.5% AFUE"
+               },
+               {
+                  "name" : "hvac_cooling_efficiency",
+                  "value" : "AC, SEER 13"
+               },
+               {
+                  "name" : "hvac_cooling_type",
+                  "value" : "Central AC"
+               },
+               {
+                  "name" : "heating_setpoint",
+                  "value" : "70F"
+               },
+               {
+                  "name" : "cooling_setpoint",
+                  "value" : "76F"
+               },
+               {
+                  "name" : "heating_setpoint_has_offset",
+                  "value" : "No"
+               },
+               {
+                  "name" : "cooling_setpoint_has_offset",
+                  "value" : "No"
+               },
+               {
+                  "name" : "heating_setpoint_offset_magnitude",
+                  "value" : "0F"
+               },
+               {
+                  "name" : "cooling_setpoint_offset_magnitude",
+                  "value" : "0F"
+               },
+               {
+                  "name" : "cooling_setpoint_offset_period",
+                  "value" : "None"
+               },
+               {
+                  "name" : "heating_setpoint_offset_period",
+                  "value" : "None"
+               },
+               {
+                  "name" : "ceiling_fan",
+                  "value" : "Standard Efficiency"
+               },
+               {
+                  "name" : "dehumidifier",
+                  "value" : "None"
+               },
+               {
+                  "name" : "refrigerator",
+                  "value" : "EF 17.6"
+               },
+               {
+                  "name" : "refrigeration_schedule",
+                  "value" : "National Average"
+               },
+               {
+                  "name" : "cooking_range",
+                  "value" : "Gas, 100% Usage"
+               },
+               {
+                  "name" : "dishwasher",
+                  "value" : "None"
+               },
+               {
+                  "name" : "clothes_washer_presence",
+                  "value" : "Yes"
+               },
+               {
+                  "name" : "clothes_washer",
+                  "value" : "EnergyStar, 100% Usage"
+               },
+               {
+                  "name" : "clothes_dryer",
+                  "value" : "Electric, 100% Usage"
+               },
+               {
+                  "name" : "lighting",
+                  "value" : "100% CFL"
+               },
+               {
+                  "name" : "lighting_interior_use",
+                  "value" : "100% Usage"
+               },
+               {
+                  "name" : "lighting_other_use",
+                  "value" : "100% Usage"
+               },
+               {
+                  "name" : "holiday_lighting",
+                  "value" : "No Exterior Use"
+               },
+               {
+                  "name" : "plug_loads",
+                  "value" : "100%"
+               },
+               {
+                  "name" : "electric_vehicle",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_extra_refrigerator",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_freezer",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_gas_fireplace",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_gas_grill",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_gas_lighting",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_hot_tub_spa",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_heater",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_pump",
+                  "value" : "None"
+               },
+               {
+                  "name" : "misc_pool_schedule",
+                  "value" : "National Average"
+               },
+               {
+                  "name" : "misc_well_pump",
+                  "value" : "None"
+               },
+               {
+                  "name" : "hvac_has_ducts",
+                  "value" : "Yes"
+               },
+               {
+                  "name" : "ducts",
+                  "value" : "20% Leakage, R-8"
+               },
+               {
+                  "name" : "infiltration",
+                  "value" : "15 ACH50"
+               },
+               {
+                  "name" : "natural_ventilation",
+                  "value" : "Year-Round, 3 days/wk"
+               },
+               {
+                  "name" : "mechanical_ventilation",
+                  "value" : "None"
+               },
+               {
+                  "name" : "bathroom_spot_vent_hour",
+                  "value" : "Hour0"
+               },
+               {
+                  "name" : "range_spot_vent_hour",
+                  "value" : "Hour18"
+               },
+               {
+                  "name" : "pv",
+                  "value" : "None"
+               },
+               {
+                  "name" : "geometry_perimeter_footprint_ratio",
+                  "value" : "0.13"
+               },
+               {
+                  "name" : "ahs_region",
+                  "value" : "CBSA Houston-The Woodlands-Sugar Land, TX"
+               },
+               {
+                  "name" : "ashrae_iecc_climate_zone_2004",
+                  "value" : "2A"
+               },
+               {
+                  "name" : "state",
+                  "value" : "TX"
+               },
+               {
+                  "name" : "census_division",
+                  "value" : "West South Central"
+               },
+               {
+                  "name" : "census_region",
+                  "value" : "South"
+               },
+               {
+                  "name" : "iso_rto_region",
+                  "value" : "ERCOT"
+               },
+               {
+                  "name" : "building_america_climate_zone",
+                  "value" : "Hot-Humid"
+               },
+               {
+                  "name" : "county",
+                  "value" : "TX, Harris County"
+               },
+               {
+                  "name" : "puma",
+                  "value" : "TX, 04604"
+               },
+               {
+                  "name" : "location_city",
+                  "value" : "Houston Bush Intercontinental"
+               },
+               {
+                  "name" : "location_state",
+                  "value" : "TX"
+               },
+               {
+                  "name" : "location_latitude",
+                  "value" : "30.0"
+               },
+               {
+                  "name" : "location_longitude",
+                  "value" : "-95.37"
+               },
+               {
+                  "name" : "climate_zone_ba",
+                  "value" : "Hot-Humid"
+               },
+               {
+                  "name" : "climate_zone_iecc",
+                  "value" : "2A"
+               },
+               {
+                  "name" : "units_represented",
+                  "value" : "1"
+               },
+               {
+                  "name" : "units_modeled",
+                  "value" : "1"
+               },
+               {
+                  "name" : "weight",
+                  "value" : "1.0"
+               }
+            ],
+            "step_warnings" : []
+         }
+      },
+      {
+         "arguments" : {
+            "option_1" : "Infiltration|11.25 ACH50",
+            "run_measure" : 1,
+            "upgrade_name" : "Upgrade1"
+         },
+         "measure_dir_name" : "ApplyUpgrade",
+         "result" : {
+            "completed_at" : "20201008T033100Z",
+            "measure_class_name" : "ApplyUpgrade",
+            "measure_display_name" : "Apply Upgrade",
+            "measure_name" : "apply_upgrade",
+            "measure_taxonomy" : "Whole Building.Space Types",
+            "measure_type" : "ModelMeasure",
+            "measure_uid" : "33f1654c-f734-43d1-b35d-9d2856e41b5a",
+            "measure_version_id" : "a4d54a15-7972-4b34-acf3-66d1c5f16a83",
+            "measure_version_modified" : "20190830T143840Z",
+            "measure_xml_checksum" : "9339BE01",
+            "started_at" : "20201008T033005Z",
+            "stderr" : "",
+            "stdout" : "[openstudio.measure.OSRunner] <1> Cannot find current Workflow Step\n",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_info" : [
+               "Assigning option '11.25 ACH50' for parameter 'Infiltration'.",
+               "Calling ResidentialAirflow measure with arguments:\nliving_ach50 -> 11.25 \ngarage_ach50 -> 11.25 \nfinished_basement_ach -> 0 \nunfinished_basement_ach -> 0.1 \npier_beam_ach -> 100 \nshelter_coef -> auto \nterrain -> suburban \nunfinished_attic_sla -> 0.00333 \ncrawl_ach -> 0 \nclothes_dryer_exhaust -> 100 \nduct_location -> auto \nduct_total_leakage -> 0.2 \nduct_supply_frac -> 0.6 \nduct_return_frac -> 0.067 \nduct_ah_supply_frac -> 0.067 \nduct_ah_return_frac -> 0.267 \nduct_location_frac -> auto \nduct_num_returns -> auto \nduct_supply_area_mult -> 1 \nduct_return_area_mult -> 1 \nduct_r -> 8 \nnat_vent_htg_offset -> 1 \nnat_vent_clg_offset -> 1 \nnat_vent_ovlp_offset -> 1 \nnat_vent_htg_season -> true \nnat_vent_clg_season -> true \nnat_vent_ovlp_season -> true \nnat_vent_num_weekdays -> 3 \nnat_vent_num_weekends -> 0 \nnat_vent_frac_windows_open -> 0.33 \nnat_vent_frac_window_area_openable -> 0.2 \nnat_vent_max_oa_hr -> 0.0115 \nnat_vent_max_oa_rh -> 0.7 \nis_existing_home -> true \nmech_vent_type -> none \nmech_vent_infil_credit -> false \nmech_vent_total_efficiency -> 0 \nmech_vent_sensible_efficiency -> 0 \nmech_vent_fan_power -> 0 \nmech_vent_frac_62_2 -> 0 \nmech_vent_ashrae_std -> 2010 \nmech_vent_cfis_open_time -> 20.0 \nmech_vent_cfis_airflow_frac -> 1.0 \nbathroom_exhaust_hour -> 0 \nrange_exhaust_hour -> 18",
+               "Created ducts for res fur gas asys.",
+               "Created ducts for res ac asys."
+            ],
+            "step_result" : "Success",
+            "step_values" : [
+               {
+                  "name" : "option_1",
+                  "value" : "Infiltration|11.25 ACH50"
+               },
+               {
+                  "name" : "option_1_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_1_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_2_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_2_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_3_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_3_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_4_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_4_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_5_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_5_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_6_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_6_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_7_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_7_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_8_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_8_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_9_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_9_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_10_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_10_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_11_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_11_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_12_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_12_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_13_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_13_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_14_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_14_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_15_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_15_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_16_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_16_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_17_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_17_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_18_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_18_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_19_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_19_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_20_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_20_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_21_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_21_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_22_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_22_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_23_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_23_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_24_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_24_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_25_cost_1_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_25_cost_2_multiplier",
+                  "value" : ""
+               },
+               {
+                  "name" : "run_measure",
+                  "value" : 1
+               },
+               {
+                  "name" : "option_01_cost_1_value_to_apply",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_01_cost_1_multiplier_to_apply",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_01_cost_2_value_to_apply",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_01_cost_2_multiplier_to_apply",
+                  "value" : ""
+               },
+               {
+                  "name" : "option_01_lifetime_to_apply",
+                  "value" : ""
+               },
+               {
+                  "name" : "upgrade_name",
+                  "value" : "Upgrade1"
+               }
+            ],
+            "step_warnings" : []
+         }
+      },
+      {
+         "arguments" : {},
+         "measure_dir_name" : "SimulationOutputReport",
+         "result" : {
+            "completed_at" : "20201008T033159Z",
+            "measure_class_name" : "SimulationOutputReport",
+            "measure_display_name" : "Simulation Output Report",
+            "measure_name" : "simulation_output_report",
+            "measure_taxonomy" : "Reporting.QAQC",
+            "measure_type" : "ReportingMeasure",
+            "measure_uid" : "fc337100-8634-404e-8966-01243d292a79",
+            "measure_version_id" : "d15e833e-2520-4d1c-a8cc-eaf39542c204",
+            "measure_version_modified" : "20200610T202227Z",
+            "measure_xml_checksum" : "2C8A3EEF",
+            "started_at" : "20201008T033145Z",
+            "stderr" : "",
+            "stdout" : "",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_final_condition" : "Report generated successfully.",
+            "step_info" : [
+               "Registering 7163.46 for total_site_electricity_kwh.",
+               "Registering 15.71 for electricity_heating_kwh.",
+               "Registering 0.0 for electricity_central_system_heating_kwh.",
+               "Registering 2062.11 for electricity_cooling_kwh.",
+               "Registering 0.0 for electricity_central_system_cooling_kwh.",
+               "Registering 801.32 for electricity_interior_lighting_kwh.",
+               "Registering 157.09 for electricity_exterior_lighting_kwh.",
+               "Registering 0.0 for electricity_exterior_holiday_lighting_kwh.",
+               "Registering 34.67 for electricity_garage_lighting_kwh.",
+               "Registering 52.9 for electricity_fans_heating_kwh.",
+               "Registering 480.35 for electricity_fans_cooling_kwh.",
+               "Registering 0.0 for electricity_pumps_heating_kwh.",
+               "Registering 0.0 for electricity_central_system_pumps_heating_kwh.",
+               "Registering 0.0 for electricity_pumps_cooling_kwh.",
+               "Registering 0.0 for electricity_central_system_pumps_cooling_kwh.",
+               "Registering 0.0 for electricity_water_systems_kwh.",
+               "Registering -0.0 for electricity_pv_kwh.",
+               "Registering 195.6 for total_site_natural_gas_therm.",
+               "Registering 62.74 for natural_gas_heating_therm.",
+               "Registering 0.0 for natural_gas_central_system_heating_therm.",
+               "Registering 109.61 for natural_gas_water_systems_therm.",
+               "Registering 0.0 for total_site_fuel_oil_mbtu.",
+               "Registering 0.0 for fuel_oil_heating_mbtu.",
+               "Registering 0.0 for fuel_oil_central_system_heating_mbtu.",
+               "Registering 0.0 for fuel_oil_water_systems_mbtu.",
+               "Registering 0.0 for total_site_propane_mbtu.",
+               "Registering 0.0 for propane_heating_mbtu.",
+               "Registering 0.0 for propane_central_system_heating_mbtu.",
+               "Registering 0.0 for propane_water_systems_mbtu.",
+               "Registering 0.0 for total_site_wood_mbtu.",
+               "Registering 0.0 for wood_heating_mbtu.",
+               "Registering 44.0 for total_site_energy_mbtu.",
+               "Registering 0.0 for hours_heating_setpoint_not_met.",
+               "Registering 0.0 for hours_cooling_setpoint_not_met.",
+               "Registering 62361.67 for hvac_cooling_capacity_w.",
+               "Registering 8227.37 for hvac_heating_capacity_w.",
+               "Registering 0.0 for hvac_heating_supp_capacity_w.",
+               "Registering 434.34 for electricity_refrigerator_kwh.",
+               "Registering 28.59 for electricity_clothes_washer_kwh.",
+               "Registering 644.49 for electricity_clothes_dryer_kwh.",
+               "Registering 0.0 for natural_gas_clothes_dryer_therm.",
+               "Registering 0.0 for propane_clothes_dryer_mbtu.",
+               "Registering 65.42 for electricity_cooking_range_kwh.",
+               "Registering 23.25 for natural_gas_cooking_range_therm.",
+               "Registering 0.0 for propane_cooking_range_mbtu.",
+               "Registering 0.0 for electricity_dishwasher_kwh.",
+               "Registering 2247.84 for electricity_plug_loads_kwh.",
+               "Registering 0.0 for electricity_house_fan_kwh.",
+               "Registering 10.95 for electricity_range_fan_kwh.",
+               "Registering 10.95 for electricity_bath_fan_kwh.",
+               "Registering 116.72 for electricity_ceiling_fan_kwh.",
+               "Registering 0.0 for electricity_extra_refrigerator_kwh.",
+               "Registering 0.0 for electricity_freezer_kwh.",
+               "Registering 0.0 for electricity_pool_heater_kwh.",
+               "Registering 0.0 for natural_gas_pool_heater_therm.",
+               "Registering 0.0 for electricity_pool_pump_kwh.",
+               "Registering 0.0 for electricity_hot_tub_heater_kwh.",
+               "Registering 0.0 for natural_gas_hot_tub_heater_therm.",
+               "Registering 0.0 for electricity_hot_tub_pump_kwh.",
+               "Registering 0.0 for natural_gas_grill_therm.",
+               "Registering 0.0 for natural_gas_lighting_therm.",
+               "Registering 0.0 for natural_gas_fireplace_therm.",
+               "Registering 0.0 for electricity_well_pump_kwh.",
+               "Registering 0.0 for electricity_recirc_pump_kwh.",
+               "Registering 0.0 for electricity_vehicle_kwh.",
+               "Registering 1.0 for weight.",
+               "Registering Upgrade1 for upgrade_name.",
+               "Registering 0.0 for upgrade_cost_usd."
+            ],
+            "step_result" : "Success",
+            "step_values" : [
+               {
+                  "name" : "include_enduse_subcategories",
+                  "value" : true
+               },
+               {
+                  "name" : "total_site_electricity_kwh",
+                  "value" : 7163.4563572335446
+               },
+               {
+                  "name" : "electricity_heating_kwh",
+                  "value" : 15.707501231953373
+               },
+               {
+                  "name" : "electricity_central_system_heating_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_cooling_kwh",
+                  "value" : 2062.1149241618527
+               },
+               {
+                  "name" : "electricity_central_system_cooling_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_interior_lighting_kwh",
+                  "value" : 801.32146760615262
+               },
+               {
+                  "name" : "electricity_exterior_lighting_kwh",
+                  "value" : 157.09062162802181
+               },
+               {
+                  "name" : "electricity_exterior_holiday_lighting_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_garage_lighting_kwh",
+                  "value" : 34.668275117910994
+               },
+               {
+                  "name" : "electricity_fans_heating_kwh",
+                  "value" : 52.896903097689865
+               },
+               {
+                  "name" : "electricity_fans_cooling_kwh",
+                  "value" : 480.34754727117712
+               },
+               {
+                  "name" : "electricity_pumps_heating_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_central_system_pumps_heating_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_pumps_cooling_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_central_system_pumps_cooling_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_water_systems_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_pv_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "total_site_natural_gas_therm",
+                  "value" : 195.59827459517672
+               },
+               {
+                  "name" : "natural_gas_heating_therm",
+                  "value" : 62.739773402325767
+               },
+               {
+                  "name" : "natural_gas_central_system_heating_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_water_systems_therm",
+                  "value" : 109.61064002964132
+               },
+               {
+                  "name" : "total_site_fuel_oil_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_heating_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_central_system_heating_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "fuel_oil_water_systems_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "total_site_propane_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_heating_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_central_system_heating_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_water_systems_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "total_site_wood_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "wood_heating_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "total_site_energy_mbtu",
+                  "value" : 43.997875275898338
+               },
+               {
+                  "name" : "hours_heating_setpoint_not_met",
+                  "value" : 0
+               },
+               {
+                  "name" : "hours_cooling_setpoint_not_met",
+                  "value" : 0
+               },
+               {
+                  "name" : "hvac_cooling_capacity_w",
+                  "value" : 62361.665604448797
+               },
+               {
+                  "name" : "hvac_heating_capacity_w",
+                  "value" : 8227.3690601087401
+               },
+               {
+                  "name" : "hvac_heating_supp_capacity_w",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_refrigerator_kwh",
+                  "value" : 434.34332092090909
+               },
+               {
+                  "name" : "electricity_clothes_washer_kwh",
+                  "value" : 28.589416666816355
+               },
+               {
+                  "name" : "electricity_clothes_dryer_kwh",
+                  "value" : 644.49316685443398
+               },
+               {
+                  "name" : "natural_gas_clothes_dryer_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "propane_clothes_dryer_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_cooking_range_kwh",
+                  "value" : 65.419985517420145
+               },
+               {
+                  "name" : "natural_gas_cooking_range_therm",
+                  "value" : 23.247861163209617
+               },
+               {
+                  "name" : "propane_cooking_range_mbtu",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_dishwasher_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_plug_loads_kwh",
+                  "value" : 2247.8419274435328
+               },
+               {
+                  "name" : "electricity_house_fan_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_range_fan_kwh",
+                  "value" : 10.951228169976009
+               },
+               {
+                  "name" : "electricity_bath_fan_kwh",
+                  "value" : 10.951228169976009
+               },
+               {
+                  "name" : "electricity_ceiling_fan_kwh",
+                  "value" : 116.71884337500001
+               },
+               {
+                  "name" : "electricity_extra_refrigerator_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_freezer_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_pool_heater_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_pool_heater_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_pool_pump_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_hot_tub_heater_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_hot_tub_heater_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_hot_tub_pump_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_grill_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_lighting_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "natural_gas_fireplace_therm",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_well_pump_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_recirc_pump_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "electricity_vehicle_kwh",
+                  "value" : 0
+               },
+               {
+                  "name" : "weight",
+                  "value" : 1
+               },
+               {
+                  "name" : "wall_area_above_grade_conditioned_ft_2",
+                  "value" : 1485.0999999999999
+               },
+               {
+                  "name" : "wall_area_above_grade_exterior_ft_2",
+                  "value" : 2023.8199999999999
+               },
+               {
+                  "name" : "wall_area_below_grade_ft_2",
+                  "value" : 0
+               },
+               {
+                  "name" : "floor_area_conditioned_ft_2",
+                  "value" : 1690
+               },
+               {
+                  "name" : "floor_area_attic_ft_2",
+                  "value" : 1690
+               },
+               {
+                  "name" : "floor_area_lighting_ft_2",
+                  "value" : 2266
+               },
+               {
+                  "name" : "roof_area_ft_2",
+                  "value" : 2533.4699999999998
+               },
+               {
+                  "name" : "window_area_ft_2",
+                  "value" : 105.56
+               },
+               {
+                  "name" : "door_area_ft_2",
+                  "value" : 20
+               },
+               {
+                  "name" : "duct_surface_area_ft_2",
+                  "value" : 625.29999999999995
+               },
+               {
+                  "name" : "size_heating_system_kbtu_h",
+                  "value" : 28.07
+               },
+               {
+                  "name" : "size_cooling_system_kbtu_h",
+                  "value" : 212.78999999999999
+               },
+               {
+                  "name" : "size_water_heater_gal",
+                  "value" : 40
+               },
+               {
+                  "name" : "upgrade_name",
+                  "value" : "Upgrade1"
+               },
+               {
+                  "name" : "upgrade_cost_usd",
+                  "value" : 0
+               }
+            ],
+            "step_warnings" : []
+         }
+      },
+      {
+         "arguments" : {
+            "include_enduse_subcategories" : true,
+            "output_variables" : "",
+            "reporting_frequency" : "Timestep"
+         },
+         "measure_dir_name" : "TimeseriesCSVExport",
+         "result" : {
+            "completed_at" : "20201008T033218Z",
+            "measure_class_name" : "TimeseriesCSVExport",
+            "measure_display_name" : "Timeseries CSV Export",
+            "measure_name" : "timeseries_csv_export",
+            "measure_taxonomy" : "Reporting.QAQC",
+            "measure_type" : "ReportingMeasure",
+            "measure_uid" : "2a3442c1-944d-4e91-9e11-11e0cf368c64",
+            "measure_version_id" : "0fc3273d-0302-4739-a8d4-3a5678c5c254",
+            "measure_version_modified" : "20200626T154739Z",
+            "measure_xml_checksum" : "15BF4E57",
+            "started_at" : "20201008T033159Z",
+            "stderr" : "",
+            "stdout" : "",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_info" : [
+               "Exporting total_site_electricity_kwh.",
+               "Exporting electricity_heating_kwh.",
+               "Exporting electricity_central_system_heating_kwh.",
+               "Exporting electricity_cooling_kwh.",
+               "Exporting electricity_central_system_cooling_kwh.",
+               "Exporting electricity_interior_lighting_kwh.",
+               "Exporting electricity_exterior_lighting_kwh.",
+               "Exporting electricity_exterior_holiday_lighting_kwh.",
+               "Exporting electricity_garage_lighting_kwh.",
+               "Exporting electricity_refrigerator_kwh.",
+               "Exporting electricity_clothes_washer_kwh.",
+               "Exporting electricity_clothes_dryer_kwh.",
+               "Exporting electricity_cooking_range_kwh.",
+               "Exporting electricity_dishwasher_kwh.",
+               "Exporting electricity_plug_loads_kwh.",
+               "Exporting electricity_house_fan_kwh.",
+               "Exporting electricity_range_fan_kwh.",
+               "Exporting electricity_bath_fan_kwh.",
+               "Exporting electricity_ceiling_fan_kwh.",
+               "Exporting electricity_extra_refrigerator_kwh.",
+               "Exporting electricity_freezer_kwh.",
+               "Exporting electricity_pool_heater_kwh.",
+               "Exporting electricity_pool_pump_kwh.",
+               "Exporting electricity_hot_tub_heater_kwh.",
+               "Exporting electricity_hot_tub_pump_kwh.",
+               "Exporting electricity_well_pump_kwh.",
+               "Exporting electricity_recirc_pump_kwh.",
+               "Exporting electricity_vehicle_kwh.",
+               "Exporting electricity_fans_heating_kwh.",
+               "Exporting electricity_fans_cooling_kwh.",
+               "Exporting electricity_pumps_heating_kwh.",
+               "Exporting electricity_central_system_pumps_heating_kwh.",
+               "Exporting electricity_pumps_cooling_kwh.",
+               "Exporting electricity_central_system_pumps_cooling_kwh.",
+               "Exporting electricity_water_systems_kwh.",
+               "Exporting electricity_pv_kwh.",
+               "Exporting total_site_natural_gas_therm.",
+               "Exporting natural_gas_heating_therm.",
+               "Exporting natural_gas_central_system_heating_therm.",
+               "Exporting natural_gas_clothes_dryer_therm.",
+               "Exporting natural_gas_cooking_range_therm.",
+               "Exporting natural_gas_pool_heater_therm.",
+               "Exporting natural_gas_hot_tub_heater_therm.",
+               "Exporting natural_gas_grill_therm.",
+               "Exporting natural_gas_lighting_therm.",
+               "Exporting natural_gas_fireplace_therm.",
+               "Exporting natural_gas_water_systems_therm.",
+               "Exporting total_site_fuel_oil_mbtu.",
+               "Exporting fuel_oil_heating_mbtu.",
+               "Exporting fuel_oil_central_system_heating_mbtu.",
+               "Exporting fuel_oil_water_systems_mbtu.",
+               "Exporting total_site_propane_mbtu.",
+               "Exporting propane_heating_mbtu.",
+               "Exporting propane_central_system_heating_mbtu.",
+               "Exporting propane_clothes_dryer_mbtu.",
+               "Exporting propane_cooking_range_mbtu.",
+               "Exporting propane_water_systems_mbtu.",
+               "Exporting total_site_wood_mbtu.",
+               "Exporting wood_heating_mbtu.",
+               "Exporting total_site_energy_mbtu."
+            ],
+            "step_result" : "Success",
+            "step_values" : [
+               {
+                  "name" : "reporting_frequency",
+                  "value" : "Timestep"
+               },
+               {
+                  "name" : "include_enduse_subcategories",
+                  "value" : true
+               },
+               {
+                  "name" : "output_variables",
+                  "value" : ""
+               }
+            ],
+            "step_warnings" : []
+         }
+      },
+      {
+         "arguments" : {},
+         "measure_dir_name" : "ServerDirectoryCleanup",
+         "result" : {
+            "completed_at" : "20201008T033218Z",
+            "measure_class_name" : "ServerDirectoryCleanup",
+            "measure_display_name" : "Server Directory Cleanup",
+            "measure_name" : "server_directory_cleanup",
+            "measure_taxonomy" : "Calibration",
+            "measure_type" : "ReportingMeasure",
+            "measure_uid" : "ec7d04ad-0b7b-495b-825a-e1b6d28d1d3f",
+            "measure_version_id" : "c9dc043c-2ea2-4960-b281-37b9cb49c491",
+            "measure_version_modified" : "20190409T200600Z",
+            "measure_xml_checksum" : "5F1EDF75",
+            "started_at" : "20201008T033218Z",
+            "stderr" : "",
+            "stdout" : "",
+            "step_errors" : [],
+            "step_files" : [],
+            "step_final_condition" : "The following files were in the local run directory following the execution of this measure: ., .., in.epw, measures.osw, enduse_timeseries.csv, eplustbl.htm, measures-upgrade.osw, 000_ResidentialSimulationControls, stdout-expandobject, run.log, eplusout.rdd, 003_TimeseriesCSVExport, eplusout.mtr, eplusout.err, schedules.csv, 002_ApplyUpgrade, 004_TimeseriesCSVExport, stdout-energyplus, 003_ServerDirectoryCleanup, in.idf, eplusout.end, 001_BuildExistingModel, 005_ServerDirectoryCleanup, started.job, 003_SimulationOutputReport, sqlite.err, measure_attributes.json, eplusout.mtd.",
+            "step_info" : [
+               "Deleted ./../eplusout.sql from the run directory.",
+               "Deleted ./../eplusout.audit from the run directory.",
+               "Deleted ./../in.osm from the run directory.",
+               "Deleted ./../eplusout.bnd from the run directory.",
+               "Deleted ./../eplusout.eio from the run directory.",
+               "Deleted ./../eplusout.shd from the run directory.",
+               "Deleted ./../eplusout.mdd from the run directory.",
+               "Deleted ./../eplusout.eso from the run directory.",
+               "Deleted ./../pre-preprocess.idf from the run directory."
+            ],
+            "step_initial_condition" : "The following files were in the local run directory prior to the execution of this measure: ., .., in.osm, in.epw, eplusout.shd, measures.osw, enduse_timeseries.csv, eplustbl.htm, measures-upgrade.osw, 000_ResidentialSimulationControls, stdout-expandobject, eplusout.mdd, eplusout.audit, run.log, eplusout.rdd, eplusout.eio, 003_TimeseriesCSVExport, eplusout.mtr, eplusout.err, schedules.csv, 002_ApplyUpgrade, 004_TimeseriesCSVExport, stdout-energyplus, eplusout.eso, 003_ServerDirectoryCleanup, in.idf, eplusout.end, 001_BuildExistingModel, eplusout.sql, 005_ServerDirectoryCleanup, started.job, 003_SimulationOutputReport, sqlite.err, measure_attributes.json, eplusout.bnd, eplusout.mtd, pre-preprocess.idf.",
+            "step_result" : "Success",
+            "step_values" : [],
+            "step_warnings" : []
+         }
+      }
+   ],
+   "updated_at" : "20201008T033219Z"
+}
