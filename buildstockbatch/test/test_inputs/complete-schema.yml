@@ -1,4 +1,3 @@
-stock_type: residential
 buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/YAML1s
@@ -10,12 +9,18 @@ sampler:
     n_datapoints: 30
     resample: False
     logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+workflow_generator:
+  type: residential_default
+  args:
+    measures_to_ignore:
+      - ResidentialConstructionsSlab
+    simulation_output:
+      include_enduse_subcategories: true
+    timeseries_csv_export:
+      reporting_frequency: Hourly
+      include_enduse_subcategories: true
 baseline:
   n_buildings_represented: 81221016
-  measures_to_ignore:
-    - ResidentialConstructionsSlab
-  osw_template: default
-  include_qaqc: False
 upgrades:
   - upgrade_name: ENERGY STAR 96% AFUE furnace (gas, propane, oil)
     options:
@@ -75,11 +80,6 @@ upgrades:
           - value: 0.40
             multiplier: Floor Area, Lighting (ft^2)
         lifetime: 78.28
-simulation_output:
-  include_enduse_subcategories: true
-timeseries_csv_export:
-  reporting_frequency: Hourly
-  include_enduse_subcategories: true
 eagle:
   account: enduse
   n_jobs: 100

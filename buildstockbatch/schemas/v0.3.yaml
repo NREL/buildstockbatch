@@ -4,8 +4,8 @@ project_directory: str(required=True)
 weather_files_path: str(required=False)
 weather_files_url: str(required=False)
 sampler: include('sampler-spec', required=True)
+workflow_generator: include('workflow-generator-spec', required=True)
 
-stock_type: enum('residential', 'commercial', required=True)
 eagle: include('hpc-spec', required=False)
 aws: include('aws-spec', required=False)
 output_directory: str(required=False)
@@ -13,12 +13,8 @@ sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
 os_version: str(required=False)
 os_sha: str(required=False)
-simulation_output: map(required=False)
-timeseries_csv_export: map(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
-residential_simulation_controls: map(required=False)
-reporting_measures: list(str(), required=False)
 ---
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
@@ -56,21 +52,17 @@ sampler-spec:
   type: str(required=True)
   args: map(key=regex(r'^[a-zA-Z_]\w*$', name='valid variable name'), required=False)
 
+workflow-generator-spec:
+  type: str(required=True)
+  args: map(key=regex(r'^[a-zA-Z_]\w*$', name='valid variable name'), required=False)
+
 sampling-spec:
   time: int(required=True)
 
 sim-spec:
   n_buildings_represented: int(required=True)
-  measures: list(include('measure-spec'), required=False)
   skip_sims: bool(required=False)
-  measures_to_ignore: list(str(), required=False)
-  osw_template: str(required=False)
-  include_qaqc: bool(required=False)
   custom_gems: bool(required=False)
-
-measure-spec:
-  measure_dir_name: str(required=True)
-  arguments: map(required=False)
 
 upgrade-spec:
   upgrade_name: str(required=True)

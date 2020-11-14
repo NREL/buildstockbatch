@@ -53,7 +53,7 @@ def test_reference_scenario(basic_residential_project_file):
     assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
 
 
-def test_combine_files_flexible(basic_residential_project_file):
+def test_combine_files_flexible(basic_residential_project_file, mocker):
     # Allows addition/removable/rename of columns. For columns that remain unchanged, verifies that the data matches
     # with stored test_results. If this test passes but test_combine_files fails, then test_results/parquet and
     # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
@@ -66,12 +66,13 @@ def test_combine_files_flexible(basic_residential_project_file):
     }
     project_filename, results_dir = basic_residential_project_file(post_process_config)
 
-    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
-            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-        bsb = BuildStockBatchBase(project_filename)
-        bsb.process_results()
-        get_dask_client_mock.assert_called_once()
+    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
+    get_dask_client_mock = mocker.patch.object(BuildStockBatchBase, 'get_dask_client')
+    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+
+    bsb = BuildStockBatchBase(project_filename)
+    bsb.process_results()
+    get_dask_client_mock.assert_called_once()
 
     def simplify_columns(colname):
         return colname.lower().replace('_', '')

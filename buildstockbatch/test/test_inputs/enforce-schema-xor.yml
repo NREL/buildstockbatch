@@ -1,4 +1,3 @@
-stock_type: residential
 buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/YAML1s
@@ -8,6 +7,8 @@ sampler:
   type: residential_quota
   args:
     n_datapoints: 30
+workflow_generator:
+  type: residential_default
 baseline:
   n_buildings_represented: 30
 schema_version: '0.3'

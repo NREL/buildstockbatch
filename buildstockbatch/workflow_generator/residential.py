@@ -11,7 +11,10 @@ This object contains the residential classes for generating OSW files from indiv
 """
 
 import datetime as dt
+import json
 import logging
+import re
+import yamale
 
 from .base import WorkflowGeneratorBase
 
@@ -19,6 +22,30 @@ logger = logging.getLogger(__name__)
 
 
 class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
+
+    @classmethod
+    def validate(cls, workflow_generator_args):
+        """Validate arguments
+
+        :param workflow_generator_args: Arguments passed to the workflow generator in the yaml
+        :type workflow_generator_args: dict
+        """
+        schema_yml = """
+        measures_to_ignore: list(str(), required=False)
+        residential_simulation_controls: map(required=False)
+        measures: list(include('measure-spec'), required=False)
+        simulation_output: map(required=False)
+        timeseries_csv_export: map(required=False)
+        reporting_measures: list(str(), required=False)
+        ---
+        measure-spec:
+            measure_dir_name: str(required=True)
+            arguments: map(required=False)
+        """
+        schema_yml = '\n'.join([re.sub(r'^ {8}', '', x) for x in schema_yml.strip().split('\n')])
+        schema = yamale.make_schema(content=schema_yml, parser='ruamel')
+        data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
+        return yamale.validate(schema, data, strict=True)
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
@@ -28,6 +55,14 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         :param building_id: integer building id to use from the sampled buildstock.csv
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
+        # Default argument values
+        workflow_args = {
+            'residential_simulation_controls': {},
+            'measures': [],
+            'simulation_output': {}
+        }
+        workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
+
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
         res_sim_ctl_args = {
@@ -38,18 +73,16 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'end_day_of_month': 31,
             'calendar_year': 2007
         }
-        res_sim_ctl_args.update(self.cfg.get('residential_simulation_controls', {}))
+        res_sim_ctl_args.update(workflow_args['residential_simulation_controls'])
 
-        # FIXME: Figure this out another way.
-        sample_weight = self.cfg['baseline']['n_buildings_represented'] /\
-            self.cfg['baseline']['n_datapoints']
+        # FIXME: The sample weight will likely be wrong for a downselect.
         bld_exist_model_args = {
             'building_id': building_id,
             'workflow_json': 'measure-info.json',
-            'sample_weight': sample_weight,
+            'number_of_buildings_represented': self.cfg['baseline']['n_buildings_represented']
         }
-        if 'measures_to_ignore' in self.cfg['baseline']:
-            bld_exist_model_args['measures_to_ignore'] = '|'.join(self.cfg['baseline']['measures_to_ignore'])
+        if 'measures_to_ignore' in workflow_args:
+            bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
 
         osw = {
             'id': sim_id,
@@ -69,15 +102,12 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             ],
         }
 
-        osw['steps'].extend(self.cfg['baseline'].get('measures', []))
-
-        sim_output_args = {}
-        sim_output_args.update(self.cfg.get('simulation_output', {}))
+        osw['steps'].extend(workflow_args['measures'])
 
         osw['steps'].extend([
             {
                 'measure_dir_name': 'SimulationOutputReport',
-                'arguments': sim_output_args
+                'arguments': workflow_args['simulation_output']
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
@@ -113,24 +143,24 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     self.make_apply_logic_arg(measure_d['package_apply_logic'])
 
             build_existing_model_idx = \
-                list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
+                [x['measure_dir_name'] == 'BuildExistingModel' for x in osw['steps']].index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
-        if 'timeseries_csv_export' in self.cfg:
+        if 'timeseries_csv_export' in workflow_args:
             timeseries_csv_export_args = {
                 'reporting_frequency': 'Hourly',
                 'include_enduse_subcategories': False,
                 'output_variables': ''
             }
-            timeseries_csv_export_args.update(self.cfg.get('timeseries_csv_export', {}))
+            timeseries_csv_export_args.update(workflow_args['timeseries_csv_export'])
             timeseries_measure = {
                 'measure_dir_name': 'TimeseriesCSVExport',
                 'arguments': timeseries_csv_export_args
             }
             osw['steps'].insert(-1, timeseries_measure)  # right before ServerDirectoryCleanup
 
-        if 'reporting_measures' in self.cfg:
-            for measure_dir_name in self.cfg['reporting_measures']:
+        if 'reporting_measures' in workflow_args:
+            for measure_dir_name in workflow_args['reporting_measures']:
                 reporting_measure = {
                     'measure_dir_name': measure_dir_name,
                     'arguments': {}

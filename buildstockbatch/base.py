@@ -27,9 +27,11 @@ from collections import defaultdict, Counter
 import xml.etree.ElementTree as ET
 
 from buildstockbatch.__version__ import __schema_version__
-from buildstockbatch import sampler
-from .workflow_generator import ResidentialDefaultWorkflowGenerator, CommercialDefaultWorkflowGenerator
-from buildstockbatch import postprocessing
+from buildstockbatch import (
+    sampler,
+    workflow_generator,
+    postprocessing
+)
 from buildstockbatch.exc import SimulationExists, ValidationError
 from buildstockbatch.utils import path_rel_to_file
 
@@ -78,6 +80,12 @@ class BuildStockBatchBase(object):
         sampler_class_name = ''.join(x.capitalize() for x in sampler_name.strip().split('_')) + 'Sampler'
         return getattr(sampler, sampler_class_name)
 
+    @staticmethod
+    def get_workflow_generator_class(workflow_generator_name):
+        workflow_generator_class_name = \
+            ''.join(x.capitalize() for x in workflow_generator_name.strip().split('_')) + 'WorkflowGenerator'
+        return getattr(workflow_generator, workflow_generator_class_name)
+
     def path_rel_to_projectfile(self, x):
         return path_rel_to_file(self.project_filename, x)
 
@@ -101,10 +109,6 @@ class BuildStockBatchBase(object):
                     zf.extractall(self.weather_dir)
 
     @property
-    def stock_type(self):
-        return self.cfg['stock_type']
-
-    @property
     def weather_dir(self):
         raise NotImplementedError
 
@@ -124,13 +128,10 @@ class BuildStockBatchBase(object):
     def run_batch(self):
         raise NotImplementedError
 
-    @staticmethod
-    def create_osw(cfg, *args, **kwargs):
-        if cfg['stock_type'] == 'residential':
-            osw_generator = ResidentialDefaultWorkflowGenerator(cfg)
-        else:
-            assert(cfg['stock_type'] == 'commercial')
-            osw_generator = CommercialDefaultWorkflowGenerator(cfg)
+    @classmethod
+    def create_osw(cls, cfg, *args, **kwargs):
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg['workflow_generator']['type'])
+        osw_generator = WorkflowGenerator(cfg)
         return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod
@@ -686,7 +687,7 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg.keys()
+        do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
         fs = LocalFileSystem()
         if not skip_combine:

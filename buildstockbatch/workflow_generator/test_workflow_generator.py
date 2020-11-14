@@ -45,6 +45,10 @@ def test_residential_package_apply():
             'n_datapoints': 10,
             'n_buildings_represented': 100
         },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
+        },
         'upgrades': [
             {
                 'upgrade_name': 'upgrade 1',
@@ -83,6 +87,10 @@ def test_residential_simulation_controls_config():
             'n_datapoints': 10,
             'n_buildings_represented': 100
         },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
+        },
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
@@ -98,7 +106,7 @@ def test_residential_simulation_controls_config():
     }
     for k, v in default_args.items():
         assert(step0['arguments'][k] == v)
-    cfg['residential_simulation_controls'] = {
+    cfg['workflow_generator']['args']['residential_simulation_controls'] = {
         'timesteps_per_hr': 2,
         'begin_month': 7
     }
@@ -120,9 +128,14 @@ def test_timeseries_csv_export():
             'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'timeseries_csv_export': {
-            'reporting_frequency': 'Timestep',
-            'output_variables': 'Zone Mean Air Temperature'
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'timeseries_csv_export': {
+                    'reporting_frequency': 'Timestep',
+                    'output_variables': 'Zone Mean Air Temperature'
+                }
+            }
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
@@ -152,10 +165,15 @@ def test_additional_reporting_measures():
             'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'reporting_measures': [
-            'ReportingMeasure1',
-            'ReportingMeasure2'
-        ]
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'reporting_measures': [
+                    'ReportingMeasure1',
+                    'ReportingMeasure2'
+                ]
+            }
+        }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
@@ -173,12 +191,18 @@ def test_ignore_measures_argument():
         'baseline': {
             'n_datapoints': 10,
             'n_buildings_represented': 100,
-            'measures_to_ignore': [
-                'ResidentialApplianceCookingRange',
-                'ResidentialApplianceDishwasher',
-                'ResidentialApplianceClothesWasher',
-                'ResidentialApplianceClothesDryer',
-                'ResidentialApplianceRefrigerator']
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'measures_to_ignore': [
+                    'ResidentialApplianceCookingRange',
+                    'ResidentialApplianceDishwasher',
+                    'ResidentialApplianceClothesWasher',
+                    'ResidentialApplianceClothesDryer',
+                    'ResidentialApplianceRefrigerator'
+                ]
+            }
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
@@ -203,6 +227,10 @@ def test_default_apply_upgrade():
         'baseline': {
             'n_datapoints': 10,
             'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
         },
         'upgrades': [
             {
@@ -234,8 +262,13 @@ def test_simulation_output():
             'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'simulation_output': {
-            'include_enduse_subcategories': True
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'simulation_output': {
+                    'include_enduse_subcategories': True
+                }
+            }
         }
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
