@@ -10,7 +10,7 @@ jobs:
           name: Install buildstock
           command: |
             conda install -c conda-forge -y -q scipy numpy "pandas>=1.0.0,!=1.0.4" "pyarrow>=0.14.1" dask joblib pyyaml
-            pip install .[dev] --progress-bar off
+            pip3 install .[dev] --progress-bar off
       - run:
           name: Run PyTest
           command: |
