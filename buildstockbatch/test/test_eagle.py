@@ -10,6 +10,7 @@ from unittest.mock import patch
 import gzip
 
 from buildstockbatch.eagle import user_cli, EagleBatch
+from buildstockbatch.utils import get_project_configuration
 
 here = os.path.dirname(os.path.abspath(__file__))
 
@@ -26,7 +27,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
     sim_path = tmp_path / 'output' / 'simulation_output' / 'up00' / 'bldg0000001'
     os.makedirs(sim_path)
 
-    cfg = EagleBatch.get_project_configuration(project_filename)
+    cfg = get_project_configuration(project_filename)
 
     with patch.object(EagleBatch, 'weather_dir', None), \
             patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'), \

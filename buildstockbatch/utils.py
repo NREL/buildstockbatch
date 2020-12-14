@@ -1,7 +1,11 @@
 import enum
 import inspect
 import os
+import logging
 import traceback
+import yaml
+
+logger = logging.getLogger(__name__)
 
 
 class ContainerRuntime(enum.Enum):
@@ -14,6 +18,25 @@ def path_rel_to_file(startfile, x):
         return os.path.abspath(x)
     else:
         return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
+
+
+def get_project_configuration(project_file):
+    try:
+        with open(project_file) as f:
+            cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    except FileNotFoundError as err:
+        logger.error('Failed to load input yaml for validation')
+        raise err
+
+    # Set absolute paths
+    cfg['buildstock_directory'] = path_rel_to_file(project_file, cfg['buildstock_directory'])
+    # if 'precomputed_sample' in cfg.get('baseline', {}):
+    #     cfg['baseline']['precomputed_sample'] = \
+    #         path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+    if 'weather_files_path' in cfg:
+        cfg['weather_files_path'] = path_rel_to_file(project_file, cfg['weather_files_path'])
+
+    return cfg
 
 
 def _str_repr(obj, list_max=20, dict_max=20, string_max=100):

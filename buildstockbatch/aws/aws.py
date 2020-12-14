@@ -40,7 +40,7 @@ from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
-from ..utils import log_error_details
+from ..utils import log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -1661,7 +1661,7 @@ class AwsBatch(DockerBatchBase):
 
     @staticmethod
     def validate_instance_types(project_file):
-        cfg = AwsBatch.get_project_configuration(project_file)
+        cfg = get_project_configuration(project_file)
         aws_config = cfg['aws']
         boto3_session = boto3.Session(region_name=aws_config['region'])
         ec2 = boto3_session.client('ec2')

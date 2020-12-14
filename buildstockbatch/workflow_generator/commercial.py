@@ -24,11 +24,11 @@ logger = logging.getLogger(__name__)
 class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
-    def validate(cls, workflow_generator_args):
+    def validate(cls, cfg):
         """Validate arguments
 
-        :param workflow_generator_args: Arguments passed to the workflow generator in the yaml
-        :type workflow_generator_args: dict
+        :param cfg: project configuration
+        :type cfg: dict
         """
         schema_yml = """
         measures: list(include('measure-spec'), required=False)
@@ -38,7 +38,8 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             measure_dir_name: str(required=True)
             arguments: map(required=False)
         """
-        schema_yml = '\n'.join([re.sub(r'^ {8}', '', x) for x in schema_yml.strip().split('\n')])
+        workflow_generator_args = cfg['workflow_generator']['args']
+        schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         return yamale.validate(schema, data, strict=True)

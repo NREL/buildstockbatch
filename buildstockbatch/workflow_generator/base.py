@@ -19,7 +19,7 @@ class WorkflowGeneratorBase(object):
 
     def __init__(self, cfg):
         self.cfg = cfg
-        self.validate(self.cfg['workflow_generator']['args'])
+        self.validate(self.cfg)
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
@@ -57,12 +57,12 @@ class WorkflowGeneratorBase(object):
             return logic
 
     @classmethod
-    def validate(cls, workflow_generator_args):
+    def validate(cls, cfg):
         """Validate the workflor generator arguments
 
         Replace this in your subclass.
 
-        :param workflow_generator_args: argmuents passed to the workflow generator in the config file.
-        :type workflow_generator_args: dict
+        :param cfg: project configuration
+        :type cfg: dict
         """
         return True
