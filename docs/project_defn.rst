@@ -133,7 +133,6 @@ following properties:
 - ``reference_scenario``: (optional) The `upgrade_name` which should act as a reference to this upgrade to calculate
   savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
   Buildstockbatch will not do the savings calculation.
-Note: ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied. Do not add to the list of reporting measures.
 
 Simulation Annual Outputs Options
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -159,7 +158,6 @@ Additional Reporting Measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
 Any columns reported by these additional measures will be appended to the results csv.
-Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run to fail prematurely. ApplyUpgrade is applied automatically when the ``upgrades`` key is supplied.
 
 Output Directory
 ~~~~~~~~~~~~~~~~
