@@ -3,7 +3,7 @@ buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/YAML1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
-schema_version: 0.2
+schema_version: 0.3
 baseline:
   n_datapoints: 100
   n_buildings_represented: 30000

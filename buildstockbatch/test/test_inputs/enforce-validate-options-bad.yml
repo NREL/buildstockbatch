@@ -37,4 +37,4 @@ upgrades:
 downselect:
   resample: False
   logic: Invalid Parameter|2000s
-schema_version: 0.2
+schema_version: 0.3

@@ -6,4 +6,4 @@ baseline:
   n_datapoints: 12345
   n_buildings_represented: 12345
   sampling_algorithm: quota
-schema_version: 0.2
+schema_version: 0.3

@@ -7,4 +7,4 @@ baseline:
   n_datapoints: 30
   sampling_algorithm: quota
   precomputed_sample: mybuildstock.csv
-schema_version: 0.2
+schema_version: 0.3
