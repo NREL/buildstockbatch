@@ -37,5 +37,6 @@ timeseries_csv_export:
   output_variables:
     - Zone Mean Air Temperature
 reporting_measures:
-  - ReportingMeasure1
-schema_version: 0.2
+  - measure:
+      measure_dir_name: ReportingMeasure1
+schema_version: 0.3
