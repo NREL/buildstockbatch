@@ -44,9 +44,7 @@ timeseries_csv_export:
     - Zone Mean Air Temperature
 
 reporting_measures:
-  - measure:
-      measure_dir_name: ReportingMeasure2
-  - measure:
-      measure_dir_name: ReportingMeasure3
+  - measure_dir_name: ReportingMeasure2
+  - measure_dir_name: ReportingMeasure3
 
 schema_version: 0.3

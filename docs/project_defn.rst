@@ -21,7 +21,7 @@ First we tell it what project we're running with the following keys:
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is
-  ``0.2``.
+  ``0.3``.
 
 .. _OpenStudio-BuildStock: https://github.com/NREL/OpenStudio-BuildStock
 
@@ -76,16 +76,12 @@ Information about baseline simulations are listed under the ``baseline`` key.
   is a starting place if this is required.
 - ``osw_template``: An optional key allowing for switching of which workflow generator to use within the commercial or
   residential classes.
-- ``include_qaqc``: An optional flag - only configured for commercial at the moment - which when set to ``True`` runs
-  some additional measures that check a number of key (and often incorrectly configured) part of the simulation inputs
-  as well as providing additional model QAQC data streams on the output side. Recommended for test runs but not
-  production analyses.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
-details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.2``
+details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.3``
 schema: ``os_version`` and ``os_sha``.
 
 Residential Simulation Controls
@@ -156,8 +152,16 @@ The best thing you can do is to verify that it works with what is in your branch
 
 Additional Reporting Measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
+Include the ``reporting_measures`` key along with a list of reporting measure directory names and argument/value pairs to apply additional reporting measures to the workflow.
 Any columns reported by these additional measures will be appended to the results csv.
+
+.. code-block:: yaml
+
+  reporting_measures:
+    - measure_dir_name: super_duper_report
+      arguments:
+        some_arg_name: True
+        other_arg_name: 100.0
 
 Output Directory
 ~~~~~~~~~~~~~~~~
@@ -354,7 +358,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
     * ``master_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
     * ``slave_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
       Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
@@ -388,7 +392,7 @@ follows:
    are horizontally concatenated with the time series files before aggregation,
    making sure the schedule values are properly lined up with the timestamps in the
    `same way that Energeyplus handles ScheduleFiles <https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076>`_.
-   
+
 
 Uploading to AWS Athena
 .......................
