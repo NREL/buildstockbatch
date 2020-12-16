@@ -1,4 +1,4 @@
-schema_version: 0.2
+schema_version: 0.3
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_heterogeneity  # Relative to buildstock_directory
 output_directory: /scratch/nmerket/heterogeneity4

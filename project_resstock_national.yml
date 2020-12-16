@@ -1,4 +1,4 @@
-schema_version: 0.2
+schema_version: 0.3
 stock_type: residential
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory

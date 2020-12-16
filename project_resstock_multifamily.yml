@@ -1,4 +1,4 @@
-schema_version: 0.2
+schema_version: 0.3
 buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_resstock_multifamily  # Relative to buildstock_directory
 weather_files_path: /projects/res_stock/project_resstock_national_weather.zip  # Relative to this file or absolute path to zipped weather files
