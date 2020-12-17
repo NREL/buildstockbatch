@@ -192,7 +192,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     for reporting_measure in cfg.get('reporting_measures', []):
         reporting_measure_cols = sorted([col for col in results_df.columns if
-                                        col.startswith(to_camelcase(reporting_measure))])
+                                        col.startswith(to_camelcase(reporting_measure['measure_dir_name']))])
         sorted_cols += reporting_measure_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)

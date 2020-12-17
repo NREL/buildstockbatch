@@ -56,7 +56,7 @@ def basic_residential_project_file():
                     },
                     'account': 'testaccount',
                 },
-                'schema_version': 0.2
+                'schema_version': 0.3
             }
             cfg.update(update_args)
             project_filename = os.path.join(test_directory, 'project.yml')

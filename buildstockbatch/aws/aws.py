@@ -1972,7 +1972,9 @@ class AwsBatch(DockerBatchBase):
 
         fs = S3FileSystem()
         local_fs = LocalFileSystem()
-        reporting_measures = cfg.get('reporting_measures', [])
+        reporting_measures = []
+        for reporting_measure in cfg.get('reporting_measures', []):
+            reporting_measures.append(reporting_measure['measure_dir_name'])
         dpouts = []
         simulation_output_tar_filename = sim_dir.parent / 'simulation_outputs.tar.gz'
         with tarfile.open(str(simulation_output_tar_filename), 'w:gz') as simout_tar:

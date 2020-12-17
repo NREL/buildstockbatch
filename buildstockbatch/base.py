@@ -399,8 +399,8 @@ class BuildStockBatchBase(object):
                         'TimeseriesCSVExport': 'timeseries_csv_export'
                         }
         if 'reporting_measures' in cfg.keys():
-            for reporting_measure in cfg['reporting_measures']:
-                measure_names[reporting_measure] = 'reporting_measures'
+            for reporting_measure in cfg.get('reporting_measures', []):
+                measure_names[reporting_measure['measure_dir_name']] = 'reporting_measures'
 
         error_msgs = ''
         warning_msgs = ''

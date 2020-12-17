@@ -153,16 +153,26 @@ def test_additional_reporting_measures():
             'n_buildings_represented': 100
         },
         'reporting_measures': [
-            'ReportingMeasure1',
-            'ReportingMeasure2'
+            {'measure_dir_name': 'ReportingMeasure1',
+             'arguments': {'arg_bool': True,
+                           'arg_double': 100.0,
+                           'arg_int': 99,
+                           'arg_str': 'SomeString'
+                           }},
+            {'measure_dir_name': 'ReportingMeasure2'}
         ]
     }
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     reporting_measure_1_step = osw['steps'][-3]
     assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
+    assert(reporting_measure_1_step['arguments']['arg_bool'])
+    assert(reporting_measure_1_step['arguments']['arg_double'] == 100.0)
+    assert(reporting_measure_1_step['arguments']['arg_int'] == 99)
+    assert(reporting_measure_1_step['arguments']['arg_str'] == 'SomeString')
     reporting_measure_2_step = osw['steps'][-2]
     assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
+    assert(reporting_measure_2_step['arguments'] == {})
 
 
 def test_ignore_measures_argument():

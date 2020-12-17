@@ -60,79 +60,10 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'weather_file': 'weather/empty.epw'
         }
 
+        # Baseline measures (not typically used in ComStock)
         osw['steps'].extend(self.cfg['baseline'].get('measures', []))
 
-        osw['steps'].extend([
-            {
-                "measure_dir_name": "SimulationOutputReport",
-                "arguments": {},
-                "measure_type": "ReportingMeasure"
-            },
-            {
-                "measure_dir_name": "f8e23017-894d-4bdf-977f-37e3961e6f42",
-                "arguments": {
-                    "building_summary_section": True,
-                    "annual_overview_section": True,
-                    "monthly_overview_section": True,
-                    "utility_bills_rates_section": True,
-                    "envelope_section_section": True,
-                    "space_type_breakdown_section": True,
-                    "space_type_details_section": True,
-                    "interior_lighting_section": True,
-                    "plug_loads_section": True,
-                    "exterior_light_section": True,
-                    "water_use_section": True,
-                    "hvac_load_profile": True,
-                    "zone_condition_section": True,
-                    "zone_summary_section": True,
-                    "zone_equipment_detail_section": True,
-                    "air_loops_detail_section": True,
-                    "plant_loops_detail_section": True,
-                    "outdoor_air_section": True,
-                    "cost_summary_section": True,
-                    "source_energy_section": True,
-                    "schedules_overview_section": True
-                },
-                "measure_type": "ReportingMeasure"
-            },
-            {
-                "measure_dir_name": "TimeseriesCSVExport",
-                "arguments": {
-                    "reporting_frequency": "Timestep",
-                    "inc_output_variables": False
-                },
-                "measure_type": "ReportingMeasure"
-            },
-            {
-                "measure_dir_name": "comstock_sensitivity_reports",
-                "arguments": {},
-                "measure_type": "ReportingMeasure"
-            },
-            {
-                "measure_dir_name": "qoi_report",
-                "arguments": {},
-                "measure_type": "ReportingMeasure"
-            }
-        ])
-
-        if self.cfg.get('baseline', {}).get('include_qaqc', False):
-            osw['steps'].extend([
-                {
-                    'measure_dir_name': 'la_100_qaqc',
-                    'arguments': {
-                        'run_qaqc': True
-                    },
-                    'measure_type': 'ReportingMeasure'
-                },
-                {
-                    'measure_dir_name': 'simulation_settings_check',
-                    'arguments': {
-                        'run_sim_settings_checks': True
-                    },
-                    'measure_type': 'ReportingMeasure'
-                }
-            ])
-
+        # Upgrades
         if upgrade_idx is not None:
             measure_d = self.cfg['upgrades'][upgrade_idx]
             apply_upgrade_measure = {
@@ -163,5 +94,32 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             build_existing_model_idx = \
                 list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
+
+        # Always-added reporting measures
+        osw['steps'].extend([
+            {
+                "measure_dir_name": "SimulationOutputReport",
+                "arguments": {},
+                "measure_type": "ReportingMeasure"
+            },
+            {
+                "measure_dir_name": "TimeseriesCSVExport",
+                "arguments": {
+                    "reporting_frequency": "Timestep",
+                    "inc_output_variables": False
+                },
+                "measure_type": "ReportingMeasure"
+            }
+        ])
+
+        # User-specified reporting measures
+        if 'reporting_measures' in self.cfg:
+            for measure_dir_name in self.cfg.get('reporting_measures', []):
+                reporting_measure = {
+                    'measure_dir_name': measure_dir_name['measure_dir_name'],
+                    'arguments': measure_dir_name.get('arguments', {}),
+                    'measure_type': 'ReportingMeasure'
+                }
+                osw['steps'].append(reporting_measure)
 
         return osw

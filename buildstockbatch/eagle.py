@@ -421,7 +421,10 @@ class EagleBatch(BuildStockBatchBase):
                         i
                     )
 
-        reporting_measures = cfg.get('reporting_measures', [])
+        reporting_measures = []
+        for reporting_measure in cfg.get('reporting_measures', []):
+            reporting_measures.append(reporting_measure['measure_dir_name'])
+
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 

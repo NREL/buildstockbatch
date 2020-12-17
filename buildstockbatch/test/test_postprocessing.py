@@ -14,13 +14,15 @@ from unittest.mock import patch
 
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):
-    reporting_measures = [
-        'ReportingMeasure1',
-        'ReportingMeasure2'
-    ]
+    reporting_measures = [{'measure_dir_name': 'ReportingMeasure1'},
+                          {'measure_dir_name': 'ReportingMeasure2'}]
     project_filename, results_dir = basic_residential_project_file({
         'reporting_measures': reporting_measures
     })
+
+    # Going from dict of measures to list of measure_dir_names
+    # is normally handled by the derived classes
+    reporting_measures = ['ReportingMeasure1', 'ReportingMeasure2']
 
     fs = LocalFileSystem()
 
