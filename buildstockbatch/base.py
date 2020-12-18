@@ -250,10 +250,7 @@ class BuildStockBatchBase(object):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
             cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
-            actual_time_cols = []
-            for possible_time_col in possible_time_cols:
-                if possible_time_col in cols:
-                    actual_time_cols.append(possible_time_col)
+            actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
