@@ -163,9 +163,10 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         if col in results_df.columns:
             del results_df[col]
     for col in ('started_at', 'completed_at'):
-        results_df[col] = results_df[col].map(
-            lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if isinstance(x, str) else x
-        )
+        if col in results_df.columns:
+            results_df[col] = results_df[col].map(
+                lambda x: dt.datetime.strptime(x, '%Y%m%dT%H%M%SZ') if isinstance(x, str) else x
+            )
     reference_scenarios = dict([(i, x.get('reference_scenario')) for i, x in enumerate(cfg.get('upgrades', []), 1)])
     results_df['apply_upgrade.reference_scenario'] = \
         results_df['upgrade'].map(reference_scenarios).fillna('').astype(str)

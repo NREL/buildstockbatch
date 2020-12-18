@@ -31,12 +31,11 @@ import shutil
 import subprocess
 import sys
 import time
-import traceback
 import yaml
 
 from .base import BuildStockBatchBase, SimulationExists
 from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
-from .utils import log_error_details
+from .utils import log_error_details, get_error_details
 from . import postprocessing
 
 logger = logging.getLogger(__name__)
@@ -292,14 +291,18 @@ class EagleBatch(BuildStockBatchBase):
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
 
+        traceback_file_path = self.local_output_dir / 'simulation_output' / f'traceback{job_array_number}.out'
+
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
                 return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
             except Exception:
-                _, sim_dir = self.make_sim_dir(i, upgrade_idx, self.results_dir, overwrite_existing=True)
-                with open(os.path.join(sim_dir, 'traceback.out'), 'w') as f:
-                    traceback.print_exc(file=f)
+                with open(traceback_file_path, 'a') as f:
+                    txt = get_error_details()
+                    txt = "\n" + "#" * 20 + "\n" + f"Traceback for building{i}\n" + txt
+                    f.write(txt)
+                    del txt
 
         # Run the simulations, get the data_point_out.json info from each
         tick = time.time()
@@ -329,6 +332,10 @@ class EagleBatch(BuildStockBatchBase):
             ],
             check=True
         )
+
+        # copy the tracebacks if it exists
+        if os.path.exists(traceback_file_path):
+            shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
     @classmethod
     def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
@@ -413,10 +420,10 @@ class EagleBatch(BuildStockBatchBase):
                         upgrade_id,
                         i
                     )
-        finally:
-            reporting_measures = cfg.get('reporting_measures', [])
-            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
-            return dpout
+
+        reporting_measures = cfg.get('reporting_measures', [])
+        dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
+        return dpout
 
     def queue_jobs(self, array_ids=None):
         eagle_cfg = self.cfg['eagle']
@@ -484,7 +491,6 @@ class EagleBatch(BuildStockBatchBase):
         return [job_id]
 
     def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False):
-
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
