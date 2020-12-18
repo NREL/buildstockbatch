@@ -423,7 +423,8 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     bucket = s3.Bucket(s3_bucket)
     s3_path = f's3://{s3_bucket}/{s3_prefix}'
     n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
-    assert n_existing_files > 0, f"There are no files in {s3_path}, cannot create Athena tables using glue crawler"
+    if n_existing_files == 0:
+        logger.warning(f"There are no files in {s3_path}, Athena tables will not be created as intended")
 
     glueClient = boto3.client('glue', region_name=region_name)
     crawlTarget = {
