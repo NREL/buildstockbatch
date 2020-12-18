@@ -383,7 +383,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     for files in parquet_dir.rglob('*.parquet'):
         all_files.append(files.relative_to(parquet_dir))
 
-    s3_prefix = aws_conf.get('s3', {}).get('prefix', None).rstrip('/')
+    s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
     if not (s3_prefix and s3_bucket):
         logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
