@@ -159,7 +159,7 @@ Additional Reporting Measures
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
 Any columns reported by these additional measures will be appended to the results csv.
-Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run to fail prematurely. ApplyUpgrade is applied automatically when the ``upgrades`` key is supplied.
+Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run to fail prematurely. ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
 
 Output Directory
 ~~~~~~~~~~~~~~~~
