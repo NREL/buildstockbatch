@@ -247,7 +247,14 @@ class BuildStockBatchBase(object):
         timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
         schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
         if os.path.isfile(timeseries_filepath):
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=['Time', 'TimeDST', 'TimeUTC'])
+            # Find the time columns present in the enduse_timeseries file
+            possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
+            cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
+            actual_time_cols = [c for c in cols if c in possible_time_cols]
+            if not actual_time_cols:
+                logger.error(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
+                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
