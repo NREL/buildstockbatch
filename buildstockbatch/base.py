@@ -127,9 +127,9 @@ class BuildStockBatchBase(object):
         raise NotImplementedError
 
     @classmethod
-    def create_osw(cls, cfg, *args, **kwargs):
+    def create_osw(cls, cfg, n_datapoints, *args, **kwargs):
         WorkflowGenerator = cls.get_workflow_generator_class(cfg['workflow_generator']['type'])
-        osw_generator = WorkflowGenerator(cfg)
+        osw_generator = WorkflowGenerator(cfg, n_datapoints)
         return osw_generator.create_osw(*args, **kwargs)
 
     @staticmethod

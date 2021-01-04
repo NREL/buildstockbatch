@@ -1834,6 +1834,7 @@ class AwsBatch(DockerBatchBase):
                 with open(job_json_filename, 'w') as f:
                     json.dump({
                         'job_num': i,
+                        'n_datapoints': n_datapoints,
                         'batch': batch,
                     }, f, indent=4)
             array_size = i
@@ -1978,7 +1979,7 @@ class AwsBatch(DockerBatchBase):
                 sim_id = f'bldg{building_id:07d}up{upgrade_id:02d}'
 
                 # Create OSW
-                osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
+                osw = cls.create_osw(cfg, jobs_d['n_datapoints'], sim_id, building_id, upgrade_idx)
                 with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                     json.dump(osw, f, indent=4)
 

@@ -87,7 +87,7 @@ class LocalDockerBatch(DockerBatchBase):
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
-                     cfg, i, upgrade_idx=None):
+                     n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
@@ -109,7 +109,7 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
 
-        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+        osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
@@ -162,6 +162,7 @@ class LocalDockerBatch(DockerBatchBase):
 
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
+        n_datapoints = len(building_ids)
         run_building_d = functools.partial(
             delayed(self.run_building),
             self.project_dir,
@@ -170,6 +171,7 @@ class LocalDockerBatch(DockerBatchBase):
             self.docker_image,
             self.results_dir,
             measures_only,
+            n_datapoints,
             self.cfg
         )
         upgrade_sims = []

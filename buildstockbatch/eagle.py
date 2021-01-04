@@ -208,6 +208,7 @@ class EagleBatch(BuildStockBatchBase):
             with open(job_json_filename, 'w') as f:
                 json.dump({
                     'job_num': i,
+                    'n_datapoints': n_datapoints,
                     'batch': batch,
                 }, f, indent=4)
 
@@ -250,7 +251,7 @@ class EagleBatch(BuildStockBatchBase):
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
+                return self.run_building(self.output_dir, self.cfg, args['n_datapoints'], i, upgrade_idx)
             except Exception:
                 with open(traceback_file_path, 'a') as f:
                     txt = get_error_details()
@@ -292,7 +293,7 @@ class EagleBatch(BuildStockBatchBase):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
     @classmethod
-    def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
 
         fs = LocalFileSystem()
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -303,7 +304,7 @@ class EagleBatch(BuildStockBatchBase):
             sim_dir = ex.sim_dir
         else:
             # Generate the osw for this simulation
-            osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+            osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
             with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                 json.dump(osw, f, indent=4)
 
