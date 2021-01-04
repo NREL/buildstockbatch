@@ -31,7 +31,6 @@
         <script src="_static/jquery.js"></script>
         <script src="_static/underscore.js"></script>
         <script src="_static/doctools.js"></script>
-        <script src="_static/language_data.js"></script>
     
     <script type="text/javascript" src="_static/js/theme.js"></script>
 
@@ -389,6 +388,7 @@ See <a class="reference internal" href="#filtering-logic"><span class="std std-r
 savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
 Buildstockbatch will not do the savings calculation.</p></li>
 </ul>
+<p>Note: <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> is applied automatically when the <code class="docutils literal notranslate"><span class="pre">upgrades</span></code> key is supplied. Do not add to the list of reporting measures.</p>
 </div>
 <div class="section" id="simulation-annual-outputs-options">
 <h2>Simulation Annual Outputs Options<a class="headerlink" href="#simulation-annual-outputs-options" title="Permalink to this headline">¶</a></h2>
@@ -411,7 +411,8 @@ The best thing you can do is to verify that it works with what is in your branch
 <div class="section" id="additional-reporting-measures">
 <h2>Additional Reporting Measures<a class="headerlink" href="#additional-reporting-measures" title="Permalink to this headline">¶</a></h2>
 <p>Include the <code class="docutils literal notranslate"><span class="pre">reporting_measures</span></code> key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
-Any columns reported by these additional measures will be appended to the results csv.</p>
+Any columns reported by these additional measures will be appended to the results csv.
+Note: For upgrade runs, do not add <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> to the list of reporting measures, doing so will cause run to fail prematurely. <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> is applied automatically when the <code class="docutils literal notranslate"><span class="pre">upgrades</span></code> key is supplied.</p>
 </div>
 <div class="section" id="output-directory">
 <h2>Output Directory<a class="headerlink" href="#output-directory" title="Permalink to this headline">¶</a></h2>
