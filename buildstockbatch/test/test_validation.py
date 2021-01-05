@@ -93,7 +93,7 @@ def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_measures_and_arguments', lambda _: True):
+            patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True):
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)
@@ -131,7 +131,7 @@ def test_bad_measures(project_file):
 
     with LogCapture(level=logging.INFO) as logs:
         try:
-            BuildStockBatchBase.validate_measures_and_arguments(project_file)
+            BuildStockBatchBase.validate_workflow_generator(project_file)
         except ValidationError as er:
             er = str(er)
             warning_logs = filter_logs(logs, 'WARNING')
@@ -154,7 +154,7 @@ def test_bad_measures(project_file):
 ])
 def test_good_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
-        assert BuildStockBatchBase.validate_measures_and_arguments(project_file)
+        assert BuildStockBatchBase.validate_workflow_generator(project_file)
         warning_logs = filter_logs(logs, 'WARNING')
         error_logs = filter_logs(logs, 'ERROR')
         assert warning_logs == ''

@@ -210,6 +210,7 @@ class BuildStockBatchBase(object):
     def validate_project(project_file):
         assert(BuildStockBatchBase.validate_project_schema(project_file))
         assert(BuildStockBatchBase.validate_sampler(project_file))
+        assert(BuildStockBatchBase.validate_workflow_generator(project_file))
         assert(BuildStockBatchBase.validate_misc_constraints(project_file))
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
@@ -237,6 +238,12 @@ class BuildStockBatchBase(object):
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
         args = cfg['sampler']['args']
         return Sampler.validate_args(project_file, **args)
+
+    @classmethod
+    def validate_workflow_generator(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg['workflow_generator']['type'])
+        return WorkflowGenerator.validate(cfg)
 
     @staticmethod
     def validate_project_schema(project_file):

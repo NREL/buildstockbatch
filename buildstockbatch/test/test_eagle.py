@@ -92,12 +92,10 @@ def test_singularity_image_download_url(basic_residential_project_file):
         assert r.status_code == requests.codes.ok
 
 
-@patch('buildstockbatch.base.BuildStockBatchBase.validate_measures_and_arguments')
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, mock_validate_options, mock_validate_measures, basic_residential_project_file,
+def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file,
                   monkeypatch):
-    mock_validate_measures.return_value = True
     mock_validate_options.return_value = True
 
     project_filename, results_dir = basic_residential_project_file()
@@ -195,8 +193,11 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(raw=True)
     results_dir = pathlib.Path(results_dir)
 
-    job_json = {'job_num': 1, 'batch': [(1, 0), (2, 0), (3, 0), (4, 0),
-                                        (1, None), (2, None), (3, None), (4, None)]}
+    job_json = {
+        'job_num': 1,
+        'batch': [(1, 0), (2, 0), (3, 0), (4, 0), (1, None), (2, None), (3, None), (4, None)],
+        'n_datapoints': 8
+    }
     with open(results_dir / 'job001.json', 'w') as f:
         json.dump(job_json, f)
 
@@ -252,12 +253,16 @@ def test_run_building_process(mocker,  basic_residential_project_file):
         compare_ts_parquets(file, results_file)
 
 
-def test_run_building_error_caught(mocker,  basic_residential_project_file):
+def test_run_building_error_caught(mocker, basic_residential_project_file):
 
     project_filename, results_dir = basic_residential_project_file()
     results_dir = pathlib.Path(results_dir)
 
-    job_json = {'job_num': 1, 'batch': [(1, 0)]}
+    job_json = {
+        'job_num': 1,
+        'batch': [(1, 0)],
+        'n_datapoints': 1
+    }
     with open(results_dir / 'job001.json', 'w') as f:
         json.dump(job_json, f)
 

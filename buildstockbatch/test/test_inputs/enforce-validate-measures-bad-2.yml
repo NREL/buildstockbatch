@@ -1,17 +1,33 @@
-stock_type: residential
+schema_version: '0.3'
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
 weather_files_url: https://fake-url
 baseline:
-  n_datapoints: 30
   n_buildings_represented: 81221016
-  sampling_algorithm: quota
-residential_simulation_controls:
-  timesteps_per_hr: 4
-  begin_month: 1
-  begin_day_of_month: 1.5
-  end_month: 12
-  end_day_of_month: 31
+
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 30
+
+workflow_generator:
+  type: residential_default
+  args:
+    residential_simulation_controls:
+      timesteps_per_hr: 4
+      begin_month: 1
+      begin_day_of_month: 1.5
+      end_month: 12
+      end_day_of_month: 31
+    timeseries_csv_export:
+      reporting_frequency: Huorly
+    #  include_enduse_subcategories: true
+      output_variable:
+        - Zone Mean Air Temperature
+    simulation_output:
+      include_enduse_subcategory: true
+    reporting_measures:
+      - ReportingMeasure2
 
 upgrades:
   - upgrade_name: good upgrade
@@ -33,17 +49,3 @@ upgrades:
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
     reference_scenario: non-existing upgrade
-
-simulation_output:
-  include_enduse_subcategory: true
-
-timeseries_csv_export:
-  reporting_frequency: Huorly
-#  include_enduse_subcategories: true
-  output_variable:
-    - Zone Mean Air Temperature
-
-reporting_measures:
-  - ReportingMeasure2
-
-schema_version: 0.2

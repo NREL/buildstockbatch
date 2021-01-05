@@ -82,21 +82,34 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             a = cfg
             for path_item in path_items:
                 try:
-                    a = cfg[path_item]  # noqa F841
+                    a = a[path_item]  # noqa F841
                 except KeyError:
                     return False
             return True
 
-        if 'reporting_measures' in cfg.keys():
-            for reporting_measure in cfg['reporting_measures']:
-                measure_names[reporting_measure] = 'reporting_measures'
+        def get_cfg_path(cfg_path):
+            if cfg_path is None:
+                return None
+            path_items = cfg_path.split('.')
+            a = cfg
+            for path_item in path_items:
+                try:
+                    a = a[path_item]
+                except KeyError:
+                    return None
+            return a
+
+        workflow_args = cfg['workflow_generator'].get('args', {})
+        if 'reporting_measures' in workflow_args.keys():
+            for reporting_measure in workflow_args['reporting_measures']:
+                measure_names[reporting_measure] = 'workflow_generator.args.reporting_measures'
 
         error_msgs = ''
         warning_msgs = ''
         for measure_name, cfg_key in measure_names.items():
             measure_path = os.path.join(measures_dir, measure_name)
 
-            if cfg_path_exists(cfg_key) or cfg_key == 'residential_simulation_controls':
+            if cfg_path_exists(cfg_key) or cfg_key == 'workflow_generator.args.residential_simulation_controls':
                 # if they exist in the cfg, make sure they exist in the buildstock checkout
                 if not os.path.exists(measure_path):
                     error_msgs += f"* {measure_name} does not exist in {buildstock_dir}. \n"
@@ -130,7 +143,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     else:
                         expected_arguments[name] = argument.find('./type').text
 
-                for actual_argument_key in cfg[measure_names[measure_name]].keys():
+                for actual_argument_key in get_cfg_path(measure_names[measure_name]).keys():
                     if actual_argument_key not in expected_arguments.keys():
                         error_msgs += f"* Found unexpected argument key {actual_argument_key} for "\
                                       f"{measure_names[measure_name]} in yaml file. The available keys are: " \
@@ -140,7 +153,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                     required_args_no_default.pop(actual_argument_key, None)
                     required_args_with_default.pop(actual_argument_key, None)
 
-                    actual_argument_value = cfg[measure_names[measure_name]][actual_argument_key]
+                    actual_argument_value = get_cfg_path(measure_names[measure_name])[actual_argument_key]
                     expected_argument_type = expected_arguments[actual_argument_key]
 
                     if type(expected_argument_type) is not list:
