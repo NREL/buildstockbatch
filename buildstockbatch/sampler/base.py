@@ -27,8 +27,8 @@ class BuildStockSampler(object):
         due to unique requirements created by the commercial tsv set.
 
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the resstock or comstock repo
+        :param project_dir: The project directory within the resstock or comstock repo
         """
         self.cfg = cfg
         self.buildstock_dir = buildstock_dir
