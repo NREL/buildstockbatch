@@ -41,7 +41,7 @@ Install the library by doing the following:
 ::
 
    cd /path/to/buildstockbatch
-   pip install -e .
+   python -m pip install -e . --user
 
 .. _aws-user-config-local:
 
