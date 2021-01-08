@@ -51,7 +51,7 @@ AWS User Configuration
 To use BuildStock Batch on AWS, or enable automatic upload of processed results to AWS Athena, you'll need to
 configure your user account with your AWS credentials. This setup only needs to be done once.
 
-1. `Install the AWS CLI`_ version 2.
+1. `Install the AWS CLI`_ version 2 (select the version for your local OS; not for Docker).
 2. `Configure the AWS CLI`_. (Don't type the ``$`` in the example.)
 
 .. _Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
