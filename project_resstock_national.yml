@@ -1,14 +1,14 @@
 schema_version: '0.3'
-buildstock_directory: ../resstock  # Relative to this file or absolute
+buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
-output_directory: ../national_test_outputs
+output_directory: /scratch/nmerket/national_test_outputs2
 # weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
-weather_files_path: ../buildstock_2018.zip  # Relative to this file or absolute path to zipped weather files
+weather_files_path: /shared-projects/buildstock/weather/buildstock_2018.zip  # Relative to this file or absolute path to zipped weather files
 
 sampler:
   type: residential_quota_downselect
   args:
-    n_datapoints: 10
+    n_datapoints: 100
     # Uncomment and set specify logic you you want to downselect to a subset of the building stock
     resample: false
     logic:
@@ -37,13 +37,13 @@ upgrades:
 
 eagle:
   n_jobs: 4
-  minutes_per_sim: 30
+  minutes_per_sim: 4
   account: enduse
   sampling:
-    time: 20
+    time: 5
   postprocessing:
-    time: 60
-    n_workers: 3
+    time: 10
+    n_workers: 1
 
 # aws:
 #   # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur

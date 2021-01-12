@@ -81,7 +81,7 @@ class BuildStockSampler(object):
             return self._run_sampling_docker()
         else:
             assert self.container_runtime == ContainerRuntime.SINGULARITY
-            return self._run_sampling_singluarity()
+            return self._run_sampling_singularity()
 
     def _run_sampling_docker(self):
         """
@@ -91,7 +91,7 @@ class BuildStockSampler(object):
         """
         raise NotImplementedError
 
-    def _run_sampling_singluarity(self):
+    def _run_sampling_singularity(self):
         """
         Execute the sampling in a singularity container
 

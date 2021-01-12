@@ -69,10 +69,6 @@ class BuildStockBatchBase(object):
         self.os_sha = self.cfg.get('os_sha', self.DEFAULT_OS_SHA)
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
-        # Select a sampler
-        Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
-        self.sampler = Sampler(self, **self.cfg['sampler'].get('args', {}))
-
     @staticmethod
     def get_sampler_class(sampler_name):
         sampler_class_name = ''.join(x.capitalize() for x in sampler_name.strip().split('_')) + 'Sampler'
@@ -83,6 +79,12 @@ class BuildStockBatchBase(object):
         workflow_generator_class_name = \
             ''.join(x.capitalize() for x in workflow_generator_name.strip().split('_')) + 'WorkflowGenerator'
         return getattr(workflow_generator, workflow_generator_class_name)
+
+    @property
+    def sampler(self):
+        # Select a sampler
+        Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
+        return Sampler(self, **self.cfg['sampler'].get('args', {}))
 
     def path_rel_to_projectfile(self, x):
         return path_rel_to_file(self.project_filename, x)
