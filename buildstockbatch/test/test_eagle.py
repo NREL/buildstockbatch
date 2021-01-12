@@ -223,10 +223,14 @@ def test_run_building_process(mocker,  basic_residential_project_file):
         return sim_id, sim_dir
 
     mocker.patch.object(EagleBatch, 'make_sim_dir', make_sim_dir_mock)
+    sampler_prop_mock = mocker.patch.object(EagleBatch, 'sampler', new_callable=mocker.PropertyMock)
+    sampler_mock = mocker.MagicMock()
+    sampler_prop_mock.return_value = sampler_mock
+    sampler_mock.run_sampling = mocker.MagicMock(return_value='buildstock.csv')
 
     b = EagleBatch(project_filename)
-    mocker.patch.object(b.sampler, 'run_sampling', lambda: "buildstock.csv")
     b.run_batch(sampling_only=True)  # so the directories can be created
+    sampler_mock.run_sampling.assert_called_once()
     b.run_job_batch(1)
 
     # check results job-json

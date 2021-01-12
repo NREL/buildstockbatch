@@ -12,7 +12,7 @@ import pytest
 import re
 import shutil
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
@@ -159,12 +159,14 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
         })
         mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
         mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+        sampler_property_mock = mocker.patch.object(BuildStockBatchBase, 'sampler', new_callable=PropertyMock)
+        sampler_mock = mocker.MagicMock()
+        sampler_property_mock.return_value = sampler_mock
+        sampler_mock.run_sampling = MagicMock(return_value=buildstock_csv)
 
         bsb = BuildStockBatchBase(project_filename)
-        run_sampling_mock = MagicMock(return_value=buildstock_csv)
-        mocker.patch.object(bsb.sampler, 'run_sampling', run_sampling_mock)
         bsb.sampler.run_sampling()
-        run_sampling_mock.assert_called_once()
+        sampler_mock.run_sampling.assert_called_once()
         with open(buildstock_csv, 'r', newline='') as f:
             cf = csv.DictReader(f)
             for row in cf:
