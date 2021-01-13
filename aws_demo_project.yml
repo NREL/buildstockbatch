@@ -1,6 +1,6 @@
 schema_version: 0.2
 stock_type: residential
-buildstock_directory: ../OpenStudio-BuildStock  # Relative to this file or absolute
+buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
 weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
@@ -36,7 +36,9 @@ aws:
     bucket: resbldg-datasets
     prefix: testing/external_demo_project
   emr:
-    slave_instance_count: 1
+    manager_instance_type: m5.xlarge
+    worker_instance_type: r5.4xlarge
+    worker_instance_count: 1
   region: us-west-2
   use_spot: true
   batch_array_size: 4

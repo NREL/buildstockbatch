@@ -1486,14 +1486,14 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                     {
                         'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
                         'InstanceRole': 'MASTER',
-                        'InstanceType': self.emr_master_instance_type,
+                        'InstanceType': self.emr_manager_instance_type,
                         'InstanceCount': 1
                     },
                     {
                         'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
                         'InstanceRole': 'CORE',
-                        'InstanceType': self.emr_slave_instance_type,
-                        'InstanceCount': self.emr_slave_instance_count
+                        'InstanceType': self.emr_worker_instance_type,
+                        'InstanceCount': self.emr_worker_instance_count
                     },
                 ],
                 'Ec2SubnetId': self.priv_vpc_subnet_id_1,
@@ -1667,8 +1667,8 @@ class AwsBatch(DockerBatchBase):
         ec2 = boto3_session.client('ec2')
         job_base = AwsJobBase('genericjobid', aws_config, boto3_session)
         instance_types_requested = set()
-        instance_types_requested.add(job_base.emr_master_instance_type)
-        instance_types_requested.add(job_base.emr_slave_instance_type)
+        instance_types_requested.add(job_base.emr_manager_instance_type)
+        instance_types_requested.add(job_base.emr_worker_instance_type)
         inst_type_resp = ec2.describe_instance_type_offerings(Filters=[{
             'Name': 'instance-type',
             'Values': list(instance_types_requested)

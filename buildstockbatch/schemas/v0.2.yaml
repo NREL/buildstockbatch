@@ -35,9 +35,9 @@ aws-job-environment:
   memory: int(min=1024, required=False)
 
 aws-emr-spec:
-  master_instance_type: str(required=False)
-  slave_instance_type: str(required=False)
-  slave_instance_count: int(min=1, required=False)
+  manager_instance_type: str(required=False)
+  worker_instance_type: str(required=False)
+  worker_instance_count: int(min=1, required=False)
   dask_worker_vcores: int(min=1, required=False)
 
 hpc-spec:

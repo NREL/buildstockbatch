@@ -48,7 +48,7 @@ eagle:
 #     bucket: resbldg-datasets
 #     prefix: testing/user_test
 #   emr:
-#     slave_instance_count: 1
+#     worker_instance_count: 1
 #   region: us-west-2
 #   use_spot: true
 #   batch_array_size: 10
