@@ -216,6 +216,8 @@ class EagleBatch(BuildStockBatchBase):
         # jobs - this is rare but happens quasi-repeatably when lustre is really lagging
         _ = self.weather_dir
 
+        assert(self.validate_weather_files(self.project_filename, buildstock_csv_filename, self.weather_dir))
+
         if sampling_only:
             return
 
