@@ -320,7 +320,7 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
-        
+            
     @staticmethod
     def validate_weather_files(project_file, buildstock_csv_filename, weather_dir):
         location_options = pd.read_csv(buildstock_csv_filename, usecols=['Location'])
@@ -379,7 +379,7 @@ class BuildStockBatchBase(object):
         for option_name in option_names:
             if not found_options[option_name]:
                 logger.error(
-                    f'Could not find parameter {str(parameter_name)} and option {str(option_name)} in {str(lookup_file)}.')
+                    f'Could not find parameter {parameter_name} and option {option_name} in {lookup_file}.')
         return options_measure_args
 
     @staticmethod
