@@ -245,7 +245,6 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         }
         res_sim_ctl_args.update(workflow_args['residential_simulation_controls'])
 
-        # FIXME: The sample weight will likely be wrong for a downselect.
         bld_exist_model_args = {
             'building_id': building_id,
             'workflow_json': 'measure-info.json',

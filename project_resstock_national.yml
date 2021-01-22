@@ -8,7 +8,7 @@ weather_files_path: /shared-projects/buildstock/weather/buildstock_2018.zip  # R
 sampler:
   type: residential_quota_downselect
   args:
-    n_datapoints: 100
+    n_datapoints: 350000
     # Uncomment and set specify logic you you want to downselect to a subset of the building stock
     resample: false
     logic:
@@ -45,28 +45,28 @@ eagle:
     time: 10
     n_workers: 1
 
-# aws:
-#   # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur
-#   job_identifier: test_proj
-#   s3:
-#     bucket: resbldg-datasets
-#     prefix: testing/user_test
-#   emr:
-#     slave_instance_count: 1
-#   region: us-west-2
-#   use_spot: true
-#   batch_array_size: 10
-#   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-#   notifications_email: user@nrel.gov
+aws:
+  # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur
+  job_identifier: test_proj
+  s3:
+    bucket: resbldg-datasets
+    prefix: testing/user_test
+  emr:
+    slave_instance_count: 1
+  region: us-west-2
+  use_spot: true
+  batch_array_size: 10
+  # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
+  notifications_email: user@nrel.gov
 
-# postprocessing:
-#   aggregate_timeseries: true
-#   aws:
-#     region_name: 'us-west-2'
-#     s3:
-#       bucket: resbldg-datasets
-#       prefix: resstock-athena/calibration_runs_new
-#     athena:
-#       glue_service_role: service-role/AWSGlueServiceRole-default
-#       database_name: testing
-#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+postprocessing:
+  aggregate_timeseries: true
+  aws:
+    region_name: 'us-west-2'
+    s3:
+      bucket: resbldg-datasets
+      prefix: resstock-athena/calibration_runs_new
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: testing
+      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it

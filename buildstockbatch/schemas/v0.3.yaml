@@ -5,7 +5,6 @@ weather_files_path: str(required=False)
 weather_files_url: str(required=False)
 sampler: include('sampler-spec', required=True)
 workflow_generator: include('workflow-generator-spec', required=True)
-
 eagle: include('hpc-spec', required=False)
 aws: include('aws-spec', required=False)
 output_directory: str(required=False)
