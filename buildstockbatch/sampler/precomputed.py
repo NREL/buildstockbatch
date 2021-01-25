@@ -26,8 +26,8 @@ class PrecomputedBaseSampler(BuildStockSampler):
         Initialize the sampler.
 
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the comstock or resstock repo
+        :param project_dir: The project directory within the comstock or resstock repo
         """
         super().__init__(*args, **kwargs)
         self.buildstock_csv = self.cfg['baseline']['precomputed_sample']
@@ -51,8 +51,8 @@ class PrecomputedSingularitySampler(PrecomputedBaseSampler):
 
         :param output_dir: Simulation working directory
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the comstock or resstock repo
+        :param project_dir: The project directory within the comstock or resstock repo
         """
         super().__init__(*args, **kwargs)
         self.csv_path = os.path.join(output_dir, 'housing_characteristics', 'buildstock.csv')
@@ -65,8 +65,8 @@ class PrecomputedDockerSampler(PrecomputedBaseSampler):
         Initialize the sampler.
 
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the comstock or resstock repo
+        :param project_dir: The project directory within the comstock or resstock repo
         """
         super().__init__(*args, **kwargs)
         self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
