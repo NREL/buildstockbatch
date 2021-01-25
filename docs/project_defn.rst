@@ -2,7 +2,7 @@ Project Definition
 ------------------
 
 Most of the project definition happens in a project folder in the
-checked out copy of OpenStudio-BuildStock. However, for this library to
+checked out copy of the resstock or comstock repo. However, for this library to
 work, a separate project YAML file provides the details needed for the
 batch run. An example file is in this repo as
 ``project_resstock_national.yml`` as shown below.
@@ -17,13 +17,13 @@ Reference the project
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `OpenStudio-BuildStock`_
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is
   ``0.2``.
 
-.. _OpenStudio-BuildStock: https://github.com/NREL/OpenStudio-BuildStock
+.. _ResStock: https://github.com/NREL/resstock
 
 Weather Files
 ~~~~~~~~~~~~~
@@ -45,9 +45,9 @@ Custom Weather Files
 
 To use your own custom weather files for a specific location, this can be done in **one** of two ways:
 
-- Rename the filename references in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder to match your custom weather file names. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
+- Rename the filename references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder to match your custom weather file names. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
 
-- Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
+- Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
 
 Baseline simulations incl. sampling algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,7 +92,7 @@ Residential Simulation Controls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If the key ``residential_simulation_controls`` is in the project yaml file, the parameters to the
-`ResidentialSimulationControls <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ResidentialSimulationControls/measure.xml>`_
+`ResidentialSimulationControls <https://github.com/NREL/resstock/blob/master/measures/ResidentialSimulationControls/measure.xml>`_
 measure will be modified from their defaults to what is specified there. The defaults are:
 
 .. include:: ../buildstockbatch/workflow_generator/residential.py
@@ -112,8 +112,8 @@ following properties:
 -  ``options``: A list of options to apply as part of this upgrade.
 
    -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in
-      `options_lookup.tsv <https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv>`_
-      in `OpenStudio-BuildStock`_.
+      `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_
+      in `ResStock`_.
    -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See
       :ref:`filtering-logic` for instructions.
    - ``costs``: A list of costs for the upgrade.
@@ -124,7 +124,7 @@ following properties:
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
-          `this enumeration list in OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
+          `this enumeration list inthe resstock or comstock repo <https://github.com/NREL/resstock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
           or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
@@ -140,9 +140,9 @@ Simulation Annual Outputs Options
 
 Include the ``simulation_output`` key to optionally include annual totals for end use subcategories (i.e., interior equipment broken out by end use) along with
 the usual annual simulation results. This argument is passed directly into the
-`SimulationOutputReport measure <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/SimulationOutputReport/measure.xml>`_
-in OpenStudio-BuildStock. Please refer to the measure argument there to determine what to set it to in your config file.
-Note that this measure and presence of any arguments may be different depending on which version of OpenStudio-BuildStock you're using.
+`SimulationOutputReport measure <https://github.com/NREL/resstock/blob/master/measures/SimulationOutputReport/measure.xml>`_
+inthe resstock or comstock repo. Please refer to the measure argument there to determine what to set it to in your config file.
+Note that this measure and presence of any arguments may be different depending on which version ofthe resstock or comstock repo you're using.
 The best thing you can do is to verify that it works with what is in your branch.
 
 Time Series Export Options
@@ -150,9 +150,9 @@ Time Series Export Options
 
 Include the ``timeseries_csv_export`` key to include hourly or subhourly results along with the usual
 annual simulation results. These arguments are passed directly to the
-`TimeseriesCSVExport measure <https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/TimeseriesCSVExport/measure.xml>`_
-in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
-Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you're using.
+`TimeseriesCSVExport measure <https://github.com/NREL/resstock/blob/master/measures/TimeseriesCSVExport/measure.xml>`_
+inthe resstock or comstock repo. Please refer to the measure arguments there to determine what to set them to in your config file.
+Note that this measure and arguments may be different depending on which version ofthe resstock or comstock repo you're using.
 The best thing you can do is to verify that it works with what is in your branch.
 
 Additional Reporting Measures
@@ -389,7 +389,7 @@ follows:
    For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
    are horizontally concatenated with the time series files before aggregation,
    making sure the schedule values are properly lined up with the timestamps in the
-   `same way that Energeyplus handles ScheduleFiles <https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076>`_.
+   `same way that Energeyplus handles ScheduleFiles <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
    
 
 Uploading to AWS Athena
