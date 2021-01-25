@@ -199,13 +199,13 @@
   <div class="section" id="project-definition">
 <h1>Project Definition<a class="headerlink" href="#project-definition" title="Permalink to this headline">¶</a></h1>
 <p>Most of the project definition happens in a project folder in the
-checked out copy of OpenStudio-BuildStock. However, for this library to
+checked out copy of the resstock or comstock repo. However, for this library to
 work, a separate project YAML file provides the details needed for the
 batch run. An example file is in this repo as
 <code class="docutils literal notranslate"><span class="pre">project_resstock_national.yml</span></code> as shown below.</p>
 <div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">schema_version</span><span class="p">:</span> <span class="mf">0.2</span>
 <span class="n">stock_type</span><span class="p">:</span> <span class="n">residential</span>
-<span class="n">buildstock_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">OpenStudio</span><span class="o">-</span><span class="n">BuildStock</span>  <span class="c1"># Relative to this file or absolute</span>
+<span class="n">buildstock_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">resstock</span>  <span class="c1"># Relative to this file or absolute</span>
 <span class="n">project_directory</span><span class="p">:</span> <span class="n">project_national</span>  <span class="c1"># Relative to buildstock_directory</span>
 <span class="n">output_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">national_test_outputs</span>
 <span class="n">weather_files_url</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">data</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="o">/</span><span class="n">system</span><span class="o">/</span><span class="n">files</span><span class="o">/</span><span class="mi">128</span><span class="o">/</span><span class="n">ResStock_TMY3</span><span class="o">.</span><span class="n">zip</span>
@@ -278,7 +278,7 @@ batch run. An example file is in this repo as
 <h2>Reference the project<a class="headerlink" href="#reference-the-project" title="Permalink to this headline">¶</a></h2>
 <p>First we tell it what project we’re running with the following keys:</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">buildstock_directory</span></code>: The absolute (or relative to this YAML file) path of the <a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">OpenStudio-BuildStock</a>
+<li><p><code class="docutils literal notranslate"><span class="pre">buildstock_directory</span></code>: The absolute (or relative to this YAML file) path of the <a class="reference external" href="https://github.com/NREL/resstock">ResStock</a>
 repository.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">project_directory</span></code>: The relative (to the <code class="docutils literal notranslate"><span class="pre">buildstock_directory</span></code>) path of the project.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">schema_version</span></code>: The version of the project yaml file to use and validate - currently the minimum version is
@@ -301,8 +301,8 @@ following keys:</p>
 <h3>Custom Weather Files<a class="headerlink" href="#custom-weather-files" title="Permalink to this headline">¶</a></h3>
 <p>To use your own custom weather files for a specific location, this can be done in <strong>one</strong> of two ways:</p>
 <ul class="simple">
-<li><p>Rename the filename references in your local <a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a> in the <code class="docutils literal notranslate"><span class="pre">resources</span></code> folder to match your custom weather file names. For example, in the options_lookup tsv, the Location <code class="docutils literal notranslate"><span class="pre">AL_Birmingham.Muni.AP.722280</span></code> is matched to the <code class="docutils literal notranslate"><span class="pre">weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw</span></code>. To update the weather file for this location, the <cite>weather_file_name</cite> field needs to be updated to match your new name specified.</p></li>
-<li><p>Rename your custom .epw weather file to match the references in your local <a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a> in the <code class="docutils literal notranslate"><span class="pre">resources</span></code> folder.</p></li>
+<li><p>Rename the filename references in your local <a class="reference external" href="https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a> in the <code class="docutils literal notranslate"><span class="pre">resources</span></code> folder to match your custom weather file names. For example, in the options_lookup tsv, the Location <code class="docutils literal notranslate"><span class="pre">AL_Birmingham.Muni.AP.722280</span></code> is matched to the <code class="docutils literal notranslate"><span class="pre">weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw</span></code>. To update the weather file for this location, the <cite>weather_file_name</cite> field needs to be updated to match your new name specified.</p></li>
+<li><p>Rename your custom .epw weather file to match the references in your local <a class="reference external" href="https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a> in the <code class="docutils literal notranslate"><span class="pre">resources</span></code> folder.</p></li>
 </ul>
 </div>
 </div>
@@ -347,7 +347,7 @@ schema: <code class="docutils literal notranslate"><span class="pre">os_version<
 <div class="section" id="residential-simulation-controls">
 <h2>Residential Simulation Controls<a class="headerlink" href="#residential-simulation-controls" title="Permalink to this headline">¶</a></h2>
 <p>If the key <code class="docutils literal notranslate"><span class="pre">residential_simulation_controls</span></code> is in the project yaml file, the parameters to the
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ResidentialSimulationControls/measure.xml">ResidentialSimulationControls</a>
+<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/ResidentialSimulationControls/measure.xml">ResidentialSimulationControls</a>
 measure will be modified from their defaults to what is specified there. The defaults are:</p>
 <pre class="code python literal-block"><code>            <span class="literal string single">'timesteps_per_hr'</span><span class="punctuation">:</span> <span class="literal number integer">6</span><span class="punctuation">,</span>
             <span class="literal string single">'begin_month'</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
@@ -366,8 +366,8 @@ upgrade scenario.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">options</span></code>: A list of options to apply as part of this upgrade.</p>
 <ul>
 <li><p><code class="docutils literal notranslate"><span class="pre">option</span></code>: (required) The option to apply, in the format <code class="docutils literal notranslate"><span class="pre">parameter|option</span></code> which can be found in
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a>
-in <a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">OpenStudio-BuildStock</a>.</p></li>
+<a class="reference external" href="https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a>
+in <a class="reference external" href="https://github.com/NREL/resstock">ResStock</a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">apply_logic</span></code>: Logic that defines which buildings to apply the upgrade to. See
 <a class="reference internal" href="#filtering-logic"><span class="std std-ref">Filtering Logic</span></a> for instructions.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">costs</span></code>: A list of costs for the upgrade.
@@ -379,7 +379,7 @@ Multiple costs can be entered and each is multiplied by a cost multiplier, descr
 Since there can be multiple costs, this permits both fixed and variable costs for upgrades
 that depend on the properties of the baseline building.
 The multiplier needs to be from
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87">this enumeration list in OpenStudio-BuildStock</a>
+<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87">this enumeration list inthe resstock or comstock repo</a>
 or from the list in your branch of that repo.</p></li>
 </ul>
 </div></blockquote>
@@ -399,18 +399,18 @@ Buildstockbatch will not do the savings calculation.</p></li>
 <h2>Simulation Annual Outputs Options<a class="headerlink" href="#simulation-annual-outputs-options" title="Permalink to this headline">¶</a></h2>
 <p>Include the <code class="docutils literal notranslate"><span class="pre">simulation_output</span></code> key to optionally include annual totals for end use subcategories (i.e., interior equipment broken out by end use) along with
 the usual annual simulation results. This argument is passed directly into the
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/SimulationOutputReport/measure.xml">SimulationOutputReport measure</a>
-in OpenStudio-BuildStock. Please refer to the measure argument there to determine what to set it to in your config file.
-Note that this measure and presence of any arguments may be different depending on which version of OpenStudio-BuildStock you’re using.
+<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/SimulationOutputReport/measure.xml">SimulationOutputReport measure</a>
+inthe resstock or comstock repo. Please refer to the measure argument there to determine what to set it to in your config file.
+Note that this measure and presence of any arguments may be different depending on which version ofthe resstock or comstock repo you’re using.
 The best thing you can do is to verify that it works with what is in your branch.</p>
 </div>
 <div class="section" id="time-series-export-options">
 <h2>Time Series Export Options<a class="headerlink" href="#time-series-export-options" title="Permalink to this headline">¶</a></h2>
 <p>Include the <code class="docutils literal notranslate"><span class="pre">timeseries_csv_export</span></code> key to include hourly or subhourly results along with the usual
 annual simulation results. These arguments are passed directly to the
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/blob/master/measures/TimeseriesCSVExport/measure.xml">TimeseriesCSVExport measure</a>
-in OpenStudio-BuildStock. Please refer to the measure arguments there to determine what to set them to in your config file.
-Note that this measure and arguments may be different depending on which version of OpenStudio-BuildStock you’re using.
+<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/TimeseriesCSVExport/measure.xml">TimeseriesCSVExport measure</a>
+inthe resstock or comstock repo. Please refer to the measure arguments there to determine what to set them to in your config file.
+Note that this measure and arguments may be different depending on which version ofthe resstock or comstock repo you’re using.
 The best thing you can do is to verify that it works with what is in your branch.</p>
 </div>
 <div class="section" id="additional-reporting-measures">
@@ -626,7 +626,7 @@ analysis tools.</p>
 <p>For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
 are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
-<a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock/issues/469#issuecomment-697849076">same way that Energeyplus handles ScheduleFiles</a>.</p>
+<a class="reference external" href="https://github.com/NREL/resstock/issues/469#issuecomment-697849076">same way that Energeyplus handles ScheduleFiles</a>.</p>
 </li>
 </ol>
 <div class="section" id="uploading-to-aws-athena">
