@@ -2,7 +2,7 @@ Installation
 ------------
 
 BuildStock-Batch installations depend on the
-`OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
+`ResStock <https://github.com/NREL/resstock>`__
 repository. Either ``git clone`` it or download a copy of it or your
 fork or branch of it with your projects.
 
