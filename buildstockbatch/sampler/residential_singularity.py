@@ -29,8 +29,8 @@ class ResidentialSingularitySampler(BuildStockSampler):
         :param singularity_image: path to the singularity image to use
         :param output_dir: Simulation working directory
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the resstock or comstock repo
+        :param project_dir: The project directory within the resstock or comstock repo
         """
         super().__init__(*args, **kwargs)
         self.singularity_image = singularity_image
