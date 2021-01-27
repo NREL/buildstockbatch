@@ -320,67 +320,87 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
-            
+
     @staticmethod
     def validate_weather_files(project_file, buildstock_csv_filename, weather_dir):
-        location_options = pd.read_csv(buildstock_csv_filename, usecols=['Location'])
+        # location_options = pd.read_csv(buildstock_csv_filename, usecols=['Location'])
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
-        args = BuildStockBatchBase.get_measure_args_from_option_names(
+        # args = BuildStockBatchBase.get_measure_args_from_option_names(
+        #     options_lookup_path,
+        #     location_options['Location'].tolist(),
+        #     'Location',
+        #     'weather_file_name')
+        args = BuildStockBatchBase.get_weather_args_from_measure_dir(
             options_lookup_path,
-            location_options['Location'].tolist(),
-            'Location',
-            'weather_file_name')
-        arg_vals = set(args.values())  # epws from buildstock.csv
+            'ResidentialLocation'
+        )
+        arg_vals = set(args))  # epws from buildstock.csv
         weather_dir_files = os.listdir(weather_dir)  # epws from weather file path
 
-        if not arg_vals.issubset(set(weather_dir_files)):
+        if not set(weather_dir_files).issubset(arg_vals):
             raise ValidationError("Invalid weather file inputs for weather directory")
         else:
             return True
 
     @staticmethod
-    def get_measure_args_from_option_names(lookup_file, option_names, parameter_name, argument_name):
+    def get_weather_args_from_measure_dir(lookup_file, mesure_dir):
+        # def get_measure_args_from_option_names(lookup_file, option_names, parameter_name, argument_name):
         found_options = {}
         options_measure_args = {}
         for option_name in option_names:
             found_options[option_name] = False
-        current_option = None
+
+        weather_args = []
         with open(os.path.join(lookup_file)) as f:
             csv_reader = csv.reader(f, delimiter='\t')
             for row in csv_reader:
-                if len(row) < 2:
+                if not row[2]:
                     continue
-
-                # Found option row?
-                if row[0] and row[1]:
-                    current_option = None  # reset
-                    for option_name in option_names:
-                        if str(row[0]).lower() == parameter_name.lower() and str(row[1]).lower() == option_name.lower():
-                            current_option = option_name
+                if str(row[2]).lower == measure_dir.lower():
+                    if len(row) <= 3:
+                        continue
+                    for col in range(3, len(row), 1):
+                        if row[col] is None or "=" not in str(row[col]):
+                            continue
+                        data = row[col].split("=")
+                        arg_value = data[1]
+                        if ".epw" in arg_value
+                            weather_args.append(arg_value)
                             break
-                if current_option:
-                    found_options[current_option] = True
-                    if len(row) >= 3 and row[2]:
-                        for col in range(3, len(row), 1):
-                            if row[col] is None or "=" not in str(row[col]):
-                                continue
-                            data = row[col].split("=")
-                            arg_name = data[0]
-                            if arg_name.lower() == argument_name.lower():
-                                arg_val = data[1]
-                                break
 
-                        options_measure_args[current_option] = arg_val
-                else:
-                    if False not in set(found_options.values()):
-                        break
-        for option_name in option_names:
-            if not found_options[option_name]:
-                logger.error(
-                    f'Could not find parameter {parameter_name} and option {option_name} in {lookup_file}.')
-        return options_measure_args
+        return weather_args
+
+        #         # Found option row?
+        #         if row[0] and row[1]:
+        #             current_option = None  # reset
+        #             for option_name in option_names:
+        #                 if str(row[0]).lower() == parameter_name.lower() and str(row[1]).lower() == option_name.lower():
+                        
+        #                     current_option = option_name
+        #                     break
+        #         if current_option:
+        #             found_options[current_option] = True
+        #             if len(row) >= 3 and row[2]:
+        #                 for col in range(3, len(row), 1):
+        #                     if row[col] is None or "=" not in str(row[col]):
+        #                         continue
+        #                     data = row[col].split("=")
+        #                     arg_name = data[0]
+        #                     if arg_name.lower() == argument_name.lower():
+        #                         arg_val = data[1]
+        #                         break
+
+        #                 options_measure_args[current_option] = arg_val
+        #         else:
+        #             if False not in set(found_options.values()):
+        #                 break
+        # for option_name in option_names:
+        #     if not found_options[option_name]:
+        #         logger.error(
+        #             f'Could not find parameter {parameter_name} and option {option_name} in {lookup_file}.')
+        # return options_measure_args
 
     @staticmethod
     def validate_project_schema(project_file):
