@@ -22,3 +22,10 @@ Development Changelog
 
         Changed the project configuration for samplers and workflow generators.
         See migration guide for details.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 203
+
+        https://github.com/NREL/OpenStudio-BuildStock was renamed to https://github.com/NREL/resstock so references to 
+        OpenStudio-BuildStock in docs were replaced with references to resstock and/or comstock.

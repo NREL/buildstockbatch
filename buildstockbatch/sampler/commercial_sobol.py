@@ -35,8 +35,8 @@ class CommercialSobolSampler(BuildStockSampler):
 
         :param output_dir: Directory in which to place buildstock.csv
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the comstock or resstock repo
+        :param project_dir: The project directory within the comstock or resstock repo
         """
         super().__init__(parent)
         self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
