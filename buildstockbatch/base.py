@@ -326,12 +326,12 @@ class BuildStockBatchBase(object):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
-        arg_vals = BuildStockBatchBase.get_weather_args_from_measure_dir( 
+        arg_vals = BuildStockBatchBase.get_weather_args_from_measure_dir(
             options_lookup_path,
-            'ResidentialLocation') # epws from buildstock.csv
+            'ResidentialLocation')  # epws from buildstock.csv
         weather_dir_files = os.listdir(weather_dir)  # epws from weather file path
         weather_dir_files = [f for f in weather_dir_files if ".epw" in f]
-        if len(set.intersection(set(weather_dir_files), set(arg_vals))) == 0: # not files overlap
+        if len(set.intersection(set(weather_dir_files), set(arg_vals))) == 0:  # not files overlap
             raise ValidationError("Weather file arguments are invalid")
         else:
             return True
@@ -435,13 +435,13 @@ class BuildStockBatchBase(object):
         type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
 
         measure_names = {
-                        'ResidentialSimulationControls': 'residential_simulation_controls',
-                        'BuildExistingModel': 'baseline',
-                        'SimulationOutputReport': 'simulation_output',
-                        'ServerDirectoryCleanup': None,
-                        'ApplyUpgrade': 'upgrades',
-                        'TimeseriesCSVExport': 'timeseries_csv_export'
-                        }
+            'ResidentialSimulationControls': 'residential_simulation_controls',
+            'BuildExistingModel': 'baseline',
+            'SimulationOutputReport': 'simulation_output',
+            'ServerDirectoryCleanup': None,
+            'ApplyUpgrade': 'upgrades',
+            'TimeseriesCSVExport': 'timeseries_csv_export'
+        }
         if 'reporting_measures' in cfg.keys():
             for reporting_measure in cfg['reporting_measures']:
                 measure_names[reporting_measure] = 'reporting_measures'
@@ -517,11 +517,11 @@ class BuildStockBatchBase(object):
                         if actual_argument_value not in expected_argument_type:
                             error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
                                           f"{measure_names[measure_name]} in yaml file. Valid values are " \
-                                           f"{expected_argument_type}.\n"
+                                f"{expected_argument_type}.\n"
 
                 for arg, default in required_args_no_default.items():
                     error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
-                                    f"There is no default for this argument.\n"
+                        f"There is no default for this argument.\n"
 
                 for arg, default in required_args_with_default.items():
                     warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
