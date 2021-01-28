@@ -31,7 +31,7 @@ log file here
 **Platform (please complete the following information):**
 - Simulation platform: [e.g. Eagle, AWS, local docker; please label with this as well]
 - BuildStockBatch version, branch, or sha: 
-- OpenStudio-BuildStock version, branch, or sha:
+- resstock or comstock repo version, branch, or sha:
 - Local Desktop OS: [e.g. Windows, Mac, Linux, especially important if running locally]
 
 **Additional context**
