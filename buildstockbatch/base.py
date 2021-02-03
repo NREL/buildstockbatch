@@ -291,6 +291,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_weather_files(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -322,16 +323,26 @@ class BuildStockBatchBase(object):
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
 
     @staticmethod
-    def validate_weather_files(project_file, buildstock_csv_filename, weather_dir):
+    def validate_weather_files(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
+        if not 'weather_files_path' in cfg or cfg['stock_type'] != 'residential':
+            return true 
+
+        # Weather directory files
+        weather_file_path = cfg['weather_files_path']
+        with zipfile.ZipFile(weather_file_path, 'r') as zf:
+            weather_dir_files = zf.namelist()
+        weather_dir_files = [f for f in weather_dir_files if ".epw" in f]
+
+        # Weather argument values
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
         options_lookup_path = f'{buildstock_dir}/resources/options_lookup.tsv'
         arg_vals = BuildStockBatchBase.get_weather_args_from_measure_dir( 
             options_lookup_path,
-            'ResidentialLocation') # epws from buildstock.csv
-        weather_dir_files = os.listdir(weather_dir)  # epws from weather file path
-        weather_dir_files = [f for f in weather_dir_files if ".epw" in f]
-        if len(set.intersection(set(weather_dir_files), set(arg_vals))) == 0: # not files overlap
+            'ResidentialLocation')
+
+        # Check overlap
+        if len(set.intersection(set(weather_dir_files), set(arg_vals))) == 0:  # no overlap
             raise ValidationError("Weather file arguments are invalid")
         else:
             return True

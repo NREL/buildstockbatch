@@ -219,9 +219,6 @@ class EagleBatch(BuildStockBatchBase):
         if sampling_only:
             return
 
-        # Check if sampled weather files are contained in weather file directory
-        assert(self.validate_weather_files(self.project_filename, buildstock_csv_filename, self.weather_dir))
-
         # Determine the number of simulations expected to be executed
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
 
