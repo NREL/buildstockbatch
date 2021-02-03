@@ -326,7 +326,7 @@ class BuildStockBatchBase(object):
     def validate_weather_files(project_file):
         cfg = BuildStockBatchBase.get_project_configuration(project_file)
         if not 'weather_files_path' in cfg or cfg['stock_type'] != 'residential':
-            return true 
+            return True 
 
         # Weather directory files
         weather_file_path = cfg['weather_files_path']
