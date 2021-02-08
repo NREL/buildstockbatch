@@ -134,7 +134,7 @@ New Spec:
     sampler:
       type: precomputed
       args:
-        path/to/buildstock.csv # n_datapoints determined from csv file
+        sample_file: path/to/buildstock.csv # n_datapoints determined from csv file
 
 Workflow Generator Specification
 --------------------------------
