@@ -2,14 +2,13 @@ schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: /scratch/nmerket/national_test_outputs2
-# weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
-weather_files_path: /shared-projects/buildstock/weather/buildstock_2018.zip  # Relative to this file or absolute path to zipped weather files
+# weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+weather_files_path: /shared-projects/buildstock/weather/BuildStock_TMY3_FIPS.zip  # Relative to this file or absolute path to zipped weather files
 
 sampler:
   type: residential_quota_downselect
   args:
     n_datapoints: 350000
-    # Uncomment and set specify logic you you want to downselect to a subset of the building stock
     resample: false
     logic:
       - Geometry Building Type RECS|Single-Family Detached

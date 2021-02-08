@@ -2,8 +2,8 @@ schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_resstock_heterogeneity  # Relative to buildstock_directory
 output_directory: /scratch/nmerket/heterogeneity4
-# weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
-weather_files_path: /shared-projects/buildstock/weather/buildstock_2018.zip  # Relative to this file or absolute path to zipped weather files
+# weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+weather_files_path: /shared-projects/buildstock/weather/BuildStock_TMY3_FIPS.zip  # Relative to this file or absolute path to zipped weather files
 baseline:
   n_buildings_represented: 81221016
 

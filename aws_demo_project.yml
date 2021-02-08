@@ -2,7 +2,7 @@ schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
-weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
+weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
 
 baseline:
   n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
@@ -11,10 +11,10 @@ sampler:
   type: residential_quota # change to residential_quota_downselect to do downselect
   args:
     n_datapoints: 4
-    # resample: false # Uncomment and set specify logic you you want to downselect to a subset of the building stock
     # logic:
     #   - Geometry Building Type RECS|Single-Family Detached
     #   - Vacancy Status|Occupied
+    # resample: false # Uncomment and specify logic you you want to downselect to a subset of the building stock
 
 workflow_generator:
   type: residential_default  
