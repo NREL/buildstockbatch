@@ -16,11 +16,11 @@ workflow_generator:
     residential_simulation_controls:
       timesteps_per_hr: 4
       begin_month: 1
-      begin_day_of_month: 1.5
+      begin_day_of_month: 1.5 # intentional bad input data type for unit testing input validation
       end_month: 12
       end_day_of_month: 31
     timeseries_csv_export:
-      reporting_frequency: Huorly
+      reporting_frequency: Huorly # intentionally misspelled for unit testing input validation
     #  include_enduse_subcategories: true
       output_variable:
         - Zone Mean Air Temperature
