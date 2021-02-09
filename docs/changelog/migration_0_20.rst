@@ -88,10 +88,10 @@ Old Spec:
       sampling_algorithm: quota
       n_datapoints: 350000
     downselect:
-      resample: false
       logic:
         - Geometry Building Type RECS|Single-Family Detached
         - Vacancy Status|Occupied
+      resample: false
 
 New Spec:
 
@@ -102,10 +102,10 @@ New Spec:
       type: residential_quota_downselect
       args:
         n_datapoints: 350000
-        resample: false
         logic:
           - Geometry Building Type RECS|Single-Family Detached
           - Vacancy Status|Occupied
+        resample: false
 
 Precomputed Sampling
 ~~~~~~~~~~~~~~~~~~~~

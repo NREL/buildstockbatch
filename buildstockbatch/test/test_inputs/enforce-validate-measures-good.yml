@@ -9,6 +9,6 @@ baseline:
     - ResidentialConstructionsUnfinishedBasement
     - ResidentialConstructionsFinishedBasement
 downselect:
-  resample: False
   logic: Vintage|2000s
+  resample: False
 schema_version: 0.2

@@ -29,10 +29,10 @@ Configuration Example
       type: residential_quota_downselect
       args:
         n_datapoints: 350000
-        resample: false
         logic:
           - Geometry Building Type RECS|Single-Family Detached
           - Vacancy Status|Occupied
+        resample: false
 
 Arguments
 ~~~~~~~~~

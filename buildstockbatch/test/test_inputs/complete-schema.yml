@@ -7,8 +7,8 @@ sampler:
   type: residential_quota_downselect
   args:
     n_datapoints: 30
-    resample: False
     logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
+    resample: False
 workflow_generator:
   type: residential_default
   args:
