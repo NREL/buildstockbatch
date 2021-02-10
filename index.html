@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>BuildStock Batch &mdash; buildstockbatch 0.19 documentation</title>
+  <title>BuildStock Batch &mdash; buildstockbatch 0.20 documentation</title>
   
 
   
@@ -64,7 +64,7 @@
             
             
               <div class="version">
-                0.19
+                0.20
               </div>
             
           
@@ -93,6 +93,9 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="project_defn.html">Project Definition</a></li>
+<li class="toctree-l1"><a class="reference internal" href="samplers/index.html">Samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow_generators/index.html">Workflow Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filtering_logic.html">Filtering Logic</a></li>
 <li class="toctree-l1"><a class="reference internal" href="run_sims.html">Running a Project</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Changes &amp; Migration</span></p>
@@ -185,19 +188,34 @@ supercomputer, Eagle.</p>
 <li class="toctree-l1"><a class="reference internal" href="project_defn.html">Project Definition</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#reference-the-project">Reference the project</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#weather-files">Weather Files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_defn.html#sampler">Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="project_defn.html#workflow-generator">Workflow Generator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#baseline-simulations-incl-sampling-algorithm">Baseline simulations incl. sampling algorithm</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#openstudio-version-overrides">OpenStudio Version Overrides</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#residential-simulation-controls">Residential Simulation Controls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#upgrade-scenarios">Upgrade Scenarios</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#simulation-annual-outputs-options">Simulation Annual Outputs Options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#time-series-export-options">Time Series Export Options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#additional-reporting-measures">Additional Reporting Measures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#output-directory">Output Directory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#down-selecting-the-sampling-space">Down Selecting the Sampling Space</a></li>
-<li class="toctree-l2"><a class="reference internal" href="project_defn.html#filtering-logic">Filtering Logic</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#eagle-configuration">Eagle Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#aws-configuration">AWS Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="project_defn.html#postprocessing">Postprocessing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="samplers/index.html">Samplers</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="samplers/residential_quota.html">Residential Quota Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="samplers/residential_quota_downselect.html">Residential Quota Downselect Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="samplers/precomputed.html">Precomputed Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="samplers/commercial_sobol.html">Commercial Sobol Sampler</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="workflow_generators/index.html">Workflow Generators</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="workflow_generators/residential_default.html">Residential Workflow Generator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="workflow_generators/commercial_default.html">Commercial Workflow Generator</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="filtering_logic.html">Filtering Logic</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="filtering_logic.html#and">And</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_logic.html#or">Or</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_logic.html#not">Not</a></li>
+<li class="toctree-l2"><a class="reference internal" href="filtering_logic.html#combining-logic">Combining Logic</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="run_sims.html">Running a Project</a><ul>
@@ -247,7 +265,7 @@ supercomputer, Eagle.</p>
 
   <div role="contentinfo">
     <p>
-        &#169; Copyright Copyright 2020 The Alliance for Sustainable Energy.
+        &#169; Copyright Copyright 2021 The Alliance for Sustainable Energy.
 
     </p>
   </div>

@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>What’s new in buildstockbatch 0.19? &mdash; buildstockbatch 0.20 documentation</title>
+  <title>Commercial Sobol Sampler &mdash; buildstockbatch 0.20 documentation</title>
   
 
   
@@ -40,8 +40,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="What’s new in buildstockbatch 0.18?" href="migration_0_18.html" />
-    <link rel="prev" title="Development Changelog" href="changelog_dev.html" /> 
+    <link rel="next" title="Workflow Generators" href="../workflow_generators/index.html" />
+    <link rel="prev" title="Precomputed Sampler" href="precomputed.html" /> 
 </head>
 
 <body class="wy-body-for-nav">
@@ -91,31 +91,27 @@
             
             
               <p class="caption"><span class="caption-text">Contents:</span></p>
-<ul>
+<ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../project_defn.html">Project Definition</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../samplers/index.html">Samplers</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Samplers</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="residential_quota.html">Residential Quota Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="residential_quota_downselect.html">Residential Quota Downselect Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="precomputed.html">Precomputed Sampler</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Commercial Sobol Sampler</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration-example">Configuration Example</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#arguments">Arguments</a></li>
+</ul>
+</li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../workflow_generators/index.html">Workflow Generators</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../filtering_logic.html">Filtering Logic</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../run_sims.html">Running a Project</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Changes &amp; Migration</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Changes and Migration</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="index.html#current-migration-guide">Current Migration Guide</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#change-logs">Change logs</a></li>
-<li class="toctree-l2"><a class="reference internal" href="index.html#development">Development</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="index.html#older-migration-guides">Older Migration Guides</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">What’s new in buildstockbatch 0.19?</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#general">General</a></li>
-<li class="toctree-l4"><a class="reference internal" href="#schema-updates">Schema Updates</a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="migration_0_18.html">What’s new in buildstockbatch 0.18?</a></li>
-</ul>
-</li>
-</ul>
-</li>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../changelog/index.html">Changes and Migration</a></li>
 </ul>
 
             
@@ -164,15 +160,15 @@
     
       <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
         
-          <li><a href="index.html">Changes and Migration</a> &raquo;</li>
+          <li><a href="index.html">Samplers</a> &raquo;</li>
         
-      <li>What’s new in buildstockbatch 0.19?</li>
+      <li>Commercial Sobol Sampler</li>
     
     
       <li class="wy-breadcrumbs-aside">
         
           
-            <a href="../_sources/changelog/migration_0_19.rst.txt" rel="nofollow"> View page source</a>
+            <a href="../_sources/samplers/commercial_sobol.rst.txt" rel="nofollow"> View page source</a>
           
         
       </li>
@@ -185,23 +181,26 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
             
-  <div class="section" id="what-s-new-in-buildstockbatch-0-19">
-<h1>What’s new in buildstockbatch 0.19?<a class="headerlink" href="#what-s-new-in-buildstockbatch-0-19" title="Permalink to this headline">¶</a></h1>
-<div class="admonition-about-this-document admonition">
-<p class="admonition-title">About this Document</p>
-<p>This document describes changes between buildstockbatch version 0.18 and buildstockbatch version 0.19</p>
+  <div class="section" id="commercial-sobol-sampler">
+<h1>Commercial Sobol Sampler<a class="headerlink" href="#commercial-sobol-sampler" title="Permalink to this headline">¶</a></h1>
+<div class="admonition-todo admonition" id="id1">
+<p class="admonition-title">Todo</p>
+<p>Write the description of this sampler.</p>
 </div>
-<div class="section" id="general">
-<h2>General<a class="headerlink" href="#general" title="Permalink to this headline">¶</a></h2>
-<p>Changes between these versions focused on bugfixes, performance improvements,
-and documentation updates. See <a class="reference internal" href="changelog_0_19.html"><span class="doc">0.19 Changelog</span></a> for details.</p>
+<div class="section" id="configuration-example">
+<h2>Configuration Example<a class="headerlink" href="#configuration-example" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">sampler</span><span class="p">:</span>
+  <span class="nt">type</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">commercial_sobol</span>
+  <span class="nt">args</span><span class="p">:</span>
+    <span class="nt">n_datapoints</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">350000</span>
+</pre></div>
 </div>
-<div class="section" id="schema-updates">
-<h2>Schema Updates<a class="headerlink" href="#schema-updates" title="Permalink to this headline">¶</a></h2>
-<p>Only one change was made to the schema, which is to require
-<code class="docutils literal notranslate"><span class="pre">n_buildings_represented</span></code>. Previously that field wasn’t <em>required</em> in the
-schema, but the simulation would fail without it. Therefore, no changes should
-be required to existing working project files.</p>
+</div>
+<div class="section" id="arguments">
+<h2>Arguments<a class="headerlink" href="#arguments" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">n_datapoints</span></code>: The number of datapoints to sample.</p></li>
+</ul>
 </div>
 </div>
 
@@ -211,8 +210,8 @@ be required to existing working project files.</p>
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="migration_0_18.html" class="btn btn-neutral float-right" title="What’s new in buildstockbatch 0.18?" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
-        <a href="changelog_dev.html" class="btn btn-neutral float-left" title="Development Changelog" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../workflow_generators/index.html" class="btn btn-neutral float-right" title="Workflow Generators" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="precomputed.html" class="btn btn-neutral float-left" title="Precomputed Sampler" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
   <hr/>

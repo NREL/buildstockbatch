@@ -7,7 +7,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <title>Project Definition &mdash; buildstockbatch 0.19 documentation</title>
+  <title>Project Definition &mdash; buildstockbatch 0.20 documentation</title>
   
 
   
@@ -40,7 +40,7 @@
     
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Running a Project" href="run_sims.html" />
+    <link rel="next" title="Samplers" href="samplers/index.html" />
     <link rel="prev" title="Installation" href="installation.html" /> 
 </head>
 
@@ -65,7 +65,7 @@
             
             
               <div class="version">
-                0.19
+                0.20
               </div>
             
           
@@ -99,22 +99,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#custom-weather-files">Custom Weather Files</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#sampler">Sampler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#workflow-generator">Workflow Generator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#baseline-simulations-incl-sampling-algorithm">Baseline simulations incl. sampling algorithm</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#openstudio-version-overrides">OpenStudio Version Overrides</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#residential-simulation-controls">Residential Simulation Controls</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#upgrade-scenarios">Upgrade Scenarios</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#simulation-annual-outputs-options">Simulation Annual Outputs Options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#time-series-export-options">Time Series Export Options</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#additional-reporting-measures">Additional Reporting Measures</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#output-directory">Output Directory</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#down-selecting-the-sampling-space">Down Selecting the Sampling Space</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#filtering-logic">Filtering Logic</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#and">And</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#or">Or</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#not">Not</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#combining-logic">Combining Logic</a></li>
-</ul>
-</li>
 <li class="toctree-l2"><a class="reference internal" href="#eagle-configuration">Eagle Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#aws-configuration">AWS Configuration</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#postprocessing">Postprocessing</a><ul>
@@ -124,6 +114,9 @@
 </li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="samplers/index.html">Samplers</a></li>
+<li class="toctree-l1"><a class="reference internal" href="workflow_generators/index.html">Workflow Generators</a></li>
+<li class="toctree-l1"><a class="reference internal" href="filtering_logic.html">Filtering Logic</a></li>
 <li class="toctree-l1"><a class="reference internal" href="run_sims.html">Running a Project</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Changes &amp; Migration</span></p>
@@ -203,18 +196,31 @@ checked out copy of the resstock or comstock repo. However, for this library to
 work, a separate project YAML file provides the details needed for the
 batch run. An example file is in this repo as
 <code class="docutils literal notranslate"><span class="pre">project_resstock_national.yml</span></code> as shown below.</p>
-<div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">schema_version</span><span class="p">:</span> <span class="mf">0.2</span>
-<span class="n">stock_type</span><span class="p">:</span> <span class="n">residential</span>
+<div class="code yaml highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">schema_version</span><span class="p">:</span> <span class="s1">&#39;0.3&#39;</span>
 <span class="n">buildstock_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">resstock</span>  <span class="c1"># Relative to this file or absolute</span>
 <span class="n">project_directory</span><span class="p">:</span> <span class="n">project_national</span>  <span class="c1"># Relative to buildstock_directory</span>
-<span class="n">output_directory</span><span class="p">:</span> <span class="o">../</span><span class="n">national_test_outputs</span>
-<span class="n">weather_files_url</span><span class="p">:</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">data</span><span class="o">.</span><span class="n">nrel</span><span class="o">.</span><span class="n">gov</span><span class="o">/</span><span class="n">system</span><span class="o">/</span><span class="n">files</span><span class="o">/</span><span class="mi">128</span><span class="o">/</span><span class="n">ResStock_TMY3</span><span class="o">.</span><span class="n">zip</span>
-<span class="c1"># weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files</span>
+<span class="n">output_directory</span><span class="p">:</span> <span class="o">/</span><span class="n">scratch</span><span class="o">/</span><span class="n">nmerket</span><span class="o">/</span><span class="n">national_test_outputs2</span>
+<span class="c1"># weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip</span>
+<span class="n">weather_files_path</span><span class="p">:</span> <span class="o">/</span><span class="n">shared</span><span class="o">-</span><span class="n">projects</span><span class="o">/</span><span class="n">buildstock</span><span class="o">/</span><span class="n">weather</span><span class="o">/</span><span class="n">BuildStock_TMY3_FIPS</span><span class="o">.</span><span class="n">zip</span>  <span class="c1"># Relative to this file or absolute path to zipped weather files</span>
+
+<span class="n">sampler</span><span class="p">:</span>
+  <span class="nb">type</span><span class="p">:</span> <span class="n">residential_quota_downselect</span>
+  <span class="n">args</span><span class="p">:</span>
+    <span class="n">n_datapoints</span><span class="p">:</span> <span class="mi">350000</span>
+    <span class="n">logic</span><span class="p">:</span>
+      <span class="o">-</span> <span class="n">Geometry</span> <span class="n">Building</span> <span class="n">Type</span> <span class="n">RECS</span><span class="o">|</span><span class="n">Single</span><span class="o">-</span><span class="n">Family</span> <span class="n">Detached</span>
+      <span class="o">-</span> <span class="n">Vacancy</span> <span class="n">Status</span><span class="o">|</span><span class="n">Occupied</span>
+    <span class="n">resample</span><span class="p">:</span> <span class="n">false</span>
+
+<span class="n">workflow_generator</span><span class="p">:</span>
+  <span class="nb">type</span><span class="p">:</span> <span class="n">residential_default</span>
+  <span class="n">args</span><span class="p">:</span>
+    <span class="n">timeseries_csv_export</span><span class="p">:</span>
+      <span class="n">reporting_frequency</span><span class="p">:</span> <span class="n">Hourly</span>
+      <span class="n">include_enduse_subcategories</span><span class="p">:</span> <span class="n">true</span>
 
 <span class="n">baseline</span><span class="p">:</span>
-  <span class="n">n_datapoints</span><span class="p">:</span> <span class="mi">4</span>
-  <span class="n">n_buildings_represented</span><span class="p">:</span> <span class="mi">133172057</span>  <span class="c1"># Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.</span>
-  <span class="n">sampling_algorithm</span><span class="p">:</span> <span class="n">quota</span> <span class="c1"># The default resstock sampling algorithm - use precomputed if using the precomputed_sample option</span>
+  <span class="n">n_buildings_represented</span><span class="p">:</span> <span class="mi">133172057</span>  <span class="c1"># Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from a census tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.</span>
 
 <span class="n">upgrades</span><span class="p">:</span>
   <span class="o">-</span> <span class="n">upgrade_name</span><span class="p">:</span> <span class="n">Triple</span><span class="o">-</span><span class="n">Pane</span> <span class="n">Windows</span>
@@ -226,51 +232,41 @@ batch run. An example file is in this repo as
             <span class="n">multiplier</span><span class="p">:</span> <span class="n">Window</span> <span class="n">Area</span> <span class="p">(</span><span class="n">ft</span><span class="o">^</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">lifetime</span><span class="p">:</span> <span class="mi">30</span>
 
-<span class="n">timeseries_csv_export</span><span class="p">:</span>
-  <span class="n">reporting_frequency</span><span class="p">:</span> <span class="n">Hourly</span>
-  <span class="n">include_enduse_subcategories</span><span class="p">:</span> <span class="n">true</span>
-
-<span class="c1"># downselect: # Uncomment and set specify logic you you want to downselect to a subset of the building stock</span>
-<span class="c1">#   resample: true</span>
-<span class="c1">#   logic:</span>
-<span class="c1">#     - Geometry Building Type RECS|Single-Family Detached</span>
-<span class="c1">#     - Vacancy Status|Occupied</span>
-
 <span class="n">eagle</span><span class="p">:</span>
   <span class="n">n_jobs</span><span class="p">:</span> <span class="mi">4</span>
-  <span class="n">minutes_per_sim</span><span class="p">:</span> <span class="mi">30</span>
+  <span class="n">minutes_per_sim</span><span class="p">:</span> <span class="mi">4</span>
   <span class="n">account</span><span class="p">:</span> <span class="n">enduse</span>
   <span class="n">sampling</span><span class="p">:</span>
-    <span class="n">time</span><span class="p">:</span> <span class="mi">20</span>
+    <span class="n">time</span><span class="p">:</span> <span class="mi">5</span>
   <span class="n">postprocessing</span><span class="p">:</span>
-    <span class="n">time</span><span class="p">:</span> <span class="mi">60</span>
-    <span class="n">n_workers</span><span class="p">:</span> <span class="mi">3</span>
+    <span class="n">time</span><span class="p">:</span> <span class="mi">10</span>
+    <span class="n">n_workers</span><span class="p">:</span> <span class="mi">1</span>
 
-<span class="c1"># aws:</span>
-<span class="c1">#   # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur</span>
-<span class="c1">#   job_identifier: test_proj</span>
-<span class="c1">#   s3:</span>
-<span class="c1">#     bucket: resbldg-datasets</span>
-<span class="c1">#     prefix: testing/user_test</span>
-<span class="c1">#   emr:</span>
-<span class="c1">#     slave_instance_count: 1</span>
-<span class="c1">#   region: us-west-2</span>
-<span class="c1">#   use_spot: true</span>
-<span class="c1">#   batch_array_size: 10</span>
-<span class="c1">#   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
-<span class="c1">#   notifications_email: user@nrel.gov</span>
+<span class="n">aws</span><span class="p">:</span>
+  <span class="c1"># The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur</span>
+  <span class="n">job_identifier</span><span class="p">:</span> <span class="n">test_proj</span>
+  <span class="n">s3</span><span class="p">:</span>
+    <span class="n">bucket</span><span class="p">:</span> <span class="n">resbldg</span><span class="o">-</span><span class="n">datasets</span>
+    <span class="n">prefix</span><span class="p">:</span> <span class="n">testing</span><span class="o">/</span><span class="n">user_test</span>
+  <span class="n">emr</span><span class="p">:</span>
+    <span class="n">slave_instance_count</span><span class="p">:</span> <span class="mi">1</span>
+  <span class="n">region</span><span class="p">:</span> <span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span>
+  <span class="n">use_spot</span><span class="p">:</span> <span class="n">true</span>
+  <span class="n">batch_array_size</span><span class="p">:</span> <span class="mi">10</span>
+  <span class="c1"># To receive email updates on job progress accept the request to receive emails that will be sent from Amazon</span>
+  <span class="n">notifications_email</span><span class="p">:</span> <span class="n">user</span><span class="nd">@nrel</span><span class="o">.</span><span class="n">gov</span>
 
-<span class="c1"># postprocessing:</span>
-<span class="c1">#   aggregate_timeseries: true</span>
-<span class="c1">#   aws:</span>
-<span class="c1">#     region_name: &#39;us-west-2&#39;</span>
-<span class="c1">#     s3:</span>
-<span class="c1">#       bucket: resbldg-datasets</span>
-<span class="c1">#       prefix: resstock-athena/calibration_runs_new</span>
-<span class="c1">#     athena:</span>
-<span class="c1">#       glue_service_role: service-role/AWSGlueServiceRole-default</span>
-<span class="c1">#       database_name: testing</span>
-<span class="c1">#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it</span>
+<span class="n">postprocessing</span><span class="p">:</span>
+  <span class="n">aggregate_timeseries</span><span class="p">:</span> <span class="n">true</span>
+  <span class="n">aws</span><span class="p">:</span>
+    <span class="n">region_name</span><span class="p">:</span> <span class="s1">&#39;us-west-2&#39;</span>
+    <span class="n">s3</span><span class="p">:</span>
+      <span class="n">bucket</span><span class="p">:</span> <span class="n">resbldg</span><span class="o">-</span><span class="n">datasets</span>
+      <span class="n">prefix</span><span class="p">:</span> <span class="n">resstock</span><span class="o">-</span><span class="n">athena</span><span class="o">/</span><span class="n">calibration_runs_new</span>
+    <span class="n">athena</span><span class="p">:</span>
+      <span class="n">glue_service_role</span><span class="p">:</span> <span class="n">service</span><span class="o">-</span><span class="n">role</span><span class="o">/</span><span class="n">AWSGlueServiceRole</span><span class="o">-</span><span class="n">default</span>
+      <span class="n">database_name</span><span class="p">:</span> <span class="n">testing</span>
+      <span class="n">max_crawling_time</span><span class="p">:</span> <span class="mi">300</span> <span class="c1">#time to wait for the crawler to complete before aborting it</span>
 </pre></div>
 </div>
 <p>The next few paragraphs will describe each section of the file and what it does.</p>
@@ -281,8 +277,7 @@ batch run. An example file is in this repo as
 <li><p><code class="docutils literal notranslate"><span class="pre">buildstock_directory</span></code>: The absolute (or relative to this YAML file) path of the <a class="reference external" href="https://github.com/NREL/resstock">ResStock</a>
 repository.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">project_directory</span></code>: The relative (to the <code class="docutils literal notranslate"><span class="pre">buildstock_directory</span></code>) path of the project.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">schema_version</span></code>: The version of the project yaml file to use and validate - currently the minimum version is
-<code class="docutils literal notranslate"><span class="pre">0.2</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">schema_version</span></code>: The version of the project yaml file to use and validate - currently the minimum version is <code class="docutils literal notranslate"><span class="pre">0.3</span></code>.</p></li>
 </ul>
 </div>
 <div class="section" id="weather-files">
@@ -306,36 +301,37 @@ following keys:</p>
 </ul>
 </div>
 </div>
+<div class="section" id="sampler">
+<h2>Sampler<a class="headerlink" href="#sampler" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">sampler</span></code> key defines the type of building sampler to be used for the batch of simulations. The purpose of the sampler is to enumerate the buildings and building characteristics to be run as part of the building stock simulation. It has two arguments, <code class="docutils literal notranslate"><span class="pre">type</span></code> and <code class="docutils literal notranslate"><span class="pre">args</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">type</span></code> tells buildstockbatch which sampler class to use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">args</span></code> are passed to the sampler to define how it is run.</p></li>
+</ul>
+<p>Different samplers are available for ResStock and ComStock and variations thereof. Details of what samplers are available and their arguments are available at <a class="reference internal" href="samplers/index.html"><span class="doc">Samplers</span></a>.</p>
+</div>
+<div class="section" id="workflow-generator">
+<h2>Workflow Generator<a class="headerlink" href="#workflow-generator" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">workflow_generator</span></code> key defines which workflow generator will be used to transform a building description from a set of high level characteristics into an OpenStudio workflow that in turn generates the detailed EnergyPlus model. It has two arguments, <code class="docutils literal notranslate"><span class="pre">type</span></code> and <code class="docutils literal notranslate"><span class="pre">args</span></code>.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">type</span></code> tells buildstockbatch which workflow generator class to use.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">args</span></code> are passed to the sampler to define how it is run.</p></li>
+</ul>
+<p>Different workflow generators are available for ResStock and ComStock and variations thereof. Details of what workflow generators and their arguments are available at <a class="reference internal" href="workflow_generators/index.html"><span class="doc">Workflow Generators</span></a>.</p>
+</div>
 <div class="section" id="baseline-simulations-incl-sampling-algorithm">
 <h2>Baseline simulations incl. sampling algorithm<a class="headerlink" href="#baseline-simulations-incl-sampling-algorithm" title="Permalink to this headline">¶</a></h2>
 <p>Information about baseline simulations are listed under the <code class="docutils literal notranslate"><span class="pre">baseline</span></code> key.</p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">sampling_algorithm</span></code>: The sampling algorithm to use for this project - the default residential option is <code class="docutils literal notranslate"><span class="pre">quota</span></code>,
-the default commercial option is <code class="docutils literal notranslate"><span class="pre">sobol</span></code> (this is not supported for residential projects), or if using a previously
-computed buildstock.csv file use the <code class="docutils literal notranslate"><span class="pre">precomputed</span></code> sampler.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">n_datapoints</span></code>: The number of buildings to sample and run for the baseline case if using the <code class="docutils literal notranslate"><span class="pre">sobol</span></code> or <code class="docutils literal notranslate"><span class="pre">quota</span></code>
-sampling algorithms.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">n_buildings_represented</span></code>: The number of buildings that this sample is meant to represent.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">precomputed_sample</span></code>: Filepath of csv containing pre-defined building options to use in the precomputed sampling
-routine. This can be absolute or relative (to this file).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">skip_sims</span></code>: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
 this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
 will be provided when the baseline simulations are skipped.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">measures_to_ignore</span></code>: <strong>ADVANCED FEATURE (USE WITH CAUTION–ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)</strong> to optionally
-not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped
-during model creation. The measures are referenced by their directory name. This feature is currently only implemented
-for residential models constructed with the BuildExistingModel measure.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">custom_gems</span></code>: <strong>VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE</strong> This
 activates the <code class="docutils literal notranslate"><span class="pre">bundle</span></code> and <code class="docutils literal notranslate"><span class="pre">bundle_path</span></code> interfaces in the OpenStudio CLI to allow for custom gem packages (needed
 to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
 image is properly configured but that’s easier said than done. The la100 branch on the nrel/docker-openstudio repo
 is a starting place if this is required.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">osw_template</span></code>: An optional key allowing for switching of which workflow generator to use within the commercial or
-residential classes.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">include_qaqc</span></code>: An optional flag - only configured for commercial at the moment - which when set to <code class="docutils literal notranslate"><span class="pre">True</span></code> runs
-some additional measures that check a number of key (and often incorrectly configured) part of the simulation inputs
-as well as providing additional model QAQC data streams on the output side. Recommended for test runs but not
-production analyses.</p></li>
 </ul>
 </div>
 <div class="section" id="openstudio-version-overrides">
@@ -343,18 +339,6 @@ production analyses.</p></li>
 <p>This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
 details on the correct configuration. This is noted here to explain the presence of two keys in the version <code class="docutils literal notranslate"><span class="pre">0.2</span></code>
 schema: <code class="docutils literal notranslate"><span class="pre">os_version</span></code> and <code class="docutils literal notranslate"><span class="pre">os_sha</span></code>.</p>
-</div>
-<div class="section" id="residential-simulation-controls">
-<h2>Residential Simulation Controls<a class="headerlink" href="#residential-simulation-controls" title="Permalink to this headline">¶</a></h2>
-<p>If the key <code class="docutils literal notranslate"><span class="pre">residential_simulation_controls</span></code> is in the project yaml file, the parameters to the
-<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/ResidentialSimulationControls/measure.xml">ResidentialSimulationControls</a>
-measure will be modified from their defaults to what is specified there. The defaults are:</p>
-<pre class="code python literal-block"><code>            <span class="literal string single">'timesteps_per_hr'</span><span class="punctuation">:</span> <span class="literal number integer">6</span><span class="punctuation">,</span>
-            <span class="literal string single">'begin_month'</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
-            <span class="literal string single">'begin_day_of_month'</span><span class="punctuation">:</span> <span class="literal number integer">1</span><span class="punctuation">,</span>
-            <span class="literal string single">'end_month'</span><span class="punctuation">:</span> <span class="literal number integer">12</span><span class="punctuation">,</span>
-            <span class="literal string single">'end_day_of_month'</span><span class="punctuation">:</span> <span class="literal number integer">31</span><span class="punctuation">,</span>
-            <span class="literal string single">'calendar_year'</span><span class="punctuation">:</span> <span class="literal number integer">2007</span></code></pre>
 </div>
 <div class="section" id="upgrade-scenarios">
 <h2>Upgrade Scenarios<a class="headerlink" href="#upgrade-scenarios" title="Permalink to this headline">¶</a></h2>
@@ -369,7 +353,7 @@ upgrade scenario.</p></li>
 <a class="reference external" href="https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv">options_lookup.tsv</a>
 in <a class="reference external" href="https://github.com/NREL/resstock">ResStock</a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">apply_logic</span></code>: Logic that defines which buildings to apply the upgrade to. See
-<a class="reference internal" href="#filtering-logic"><span class="std std-ref">Filtering Logic</span></a> for instructions.</p></li>
+<a class="reference internal" href="filtering_logic.html#filtering-logic"><span class="std std-ref">Filtering Logic</span></a> for instructions.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">costs</span></code>: A list of costs for the upgrade.
 Multiple costs can be entered and each is multiplied by a cost multiplier, described below.</p>
 <blockquote>
@@ -388,144 +372,15 @@ or from the list in your branch of that repo.</p></li>
 </ul>
 </li>
 <li><p><code class="docutils literal notranslate"><span class="pre">package_apply_logic</span></code>: (optional) The conditions under which this package of upgrades should be performed.
-See <a class="reference internal" href="#filtering-logic"><span class="std std-ref">Filtering Logic</span></a>.</p></li>
+See <a class="reference internal" href="filtering_logic.html#filtering-logic"><span class="std std-ref">Filtering Logic</span></a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">reference_scenario</span></code>: (optional) The <cite>upgrade_name</cite> which should act as a reference to this upgrade to calculate
 savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
 Buildstockbatch will not do the savings calculation.</p></li>
 </ul>
-<p>Note: <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> is applied automatically when the <code class="docutils literal notranslate"><span class="pre">upgrades</span></code> key is supplied. Do not add to the list of reporting measures.</p>
-</div>
-<div class="section" id="simulation-annual-outputs-options">
-<h2>Simulation Annual Outputs Options<a class="headerlink" href="#simulation-annual-outputs-options" title="Permalink to this headline">¶</a></h2>
-<p>Include the <code class="docutils literal notranslate"><span class="pre">simulation_output</span></code> key to optionally include annual totals for end use subcategories (i.e., interior equipment broken out by end use) along with
-the usual annual simulation results. This argument is passed directly into the
-<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/SimulationOutputReport/measure.xml">SimulationOutputReport measure</a>
-inthe resstock or comstock repo. Please refer to the measure argument there to determine what to set it to in your config file.
-Note that this measure and presence of any arguments may be different depending on which version ofthe resstock or comstock repo you’re using.
-The best thing you can do is to verify that it works with what is in your branch.</p>
-</div>
-<div class="section" id="time-series-export-options">
-<h2>Time Series Export Options<a class="headerlink" href="#time-series-export-options" title="Permalink to this headline">¶</a></h2>
-<p>Include the <code class="docutils literal notranslate"><span class="pre">timeseries_csv_export</span></code> key to include hourly or subhourly results along with the usual
-annual simulation results. These arguments are passed directly to the
-<a class="reference external" href="https://github.com/NREL/resstock/blob/master/measures/TimeseriesCSVExport/measure.xml">TimeseriesCSVExport measure</a>
-inthe resstock or comstock repo. Please refer to the measure arguments there to determine what to set them to in your config file.
-Note that this measure and arguments may be different depending on which version ofthe resstock or comstock repo you’re using.
-The best thing you can do is to verify that it works with what is in your branch.</p>
-</div>
-<div class="section" id="additional-reporting-measures">
-<h2>Additional Reporting Measures<a class="headerlink" href="#additional-reporting-measures" title="Permalink to this headline">¶</a></h2>
-<p>Include the <code class="docutils literal notranslate"><span class="pre">reporting_measures</span></code> key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
-Any columns reported by these additional measures will be appended to the results csv.
-Note: For upgrade runs, do not add <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> to the list of reporting measures, doing so will cause run to fail prematurely. <code class="docutils literal notranslate"><span class="pre">ApplyUpgrade</span></code> is applied automatically when the <code class="docutils literal notranslate"><span class="pre">upgrades</span></code> key is supplied.</p>
 </div>
 <div class="section" id="output-directory">
 <h2>Output Directory<a class="headerlink" href="#output-directory" title="Permalink to this headline">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">output_directory</span></code> specifies where the outputs of the simulation should be stored.</p>
-</div>
-<div class="section" id="down-selecting-the-sampling-space">
-<h2>Down Selecting the Sampling Space<a class="headerlink" href="#down-selecting-the-sampling-space" title="Permalink to this headline">¶</a></h2>
-<p>Sometimes it is desirable to run a stock simulation of a subset of what is included in a project.
-For instance one might want to run the simulation only in one climate region or for certain vintages.
-However, it can be a considerable effort to create a new project. Adding the <code class="docutils literal notranslate"><span class="pre">downselect</span></code> key to
-the project file permits a user to specify filters of what buildings should be simulated.</p>
-<p>Downselecting can be performed in one of two ways: with and without resampling.
-Downselecting with resampling samples twice, once to determine how much smaller the
-set of sampled buildings becomes when it is filtered down and again with a larger sample so
-the final set of sampled buildings is at or near the number specified in <code class="docutils literal notranslate"><span class="pre">n_datapoints</span></code>.</p>
-<p>Downselecting without resampling skips that step. In this case the total sampled buildings returned
-will be the number left over after sampling the entire stock and then filtering down to the
-buildings that meet the criteria. Unlike downselect with resampling, downselect without resampling can be used with
-buildstock.csv too. So, instead of starting with a fresh set of samples and filtering them based on the dowselect logic,
-the sampler starts with the buildstock.csv provided, and filters out the buildings using the downselect logic.</p>
-<p>The downselect block works as follows:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">downselect</span><span class="p">:</span>
-  <span class="nt">resample</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">true</span>
-  <span class="nt">logic</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Heating Fuel|Natural Gas</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<p>For details on how to specify the filters, see <a class="reference internal" href="#filtering-logic"><span class="std std-ref">Filtering Logic</span></a>.</p>
-</div>
-<div class="section" id="filtering-logic">
-<span id="id3"></span><h2>Filtering Logic<a class="headerlink" href="#filtering-logic" title="Permalink to this headline">¶</a></h2>
-<p>There are several places where logic is applied to filter simulations by the option values.
-This is done by specifying the parameter|option criteria you want to include or exclude along
-with the appropriate logical operator. This is done in the YAML syntax as follows:</p>
-<div class="section" id="and">
-<h3>And<a class="headerlink" href="#and" title="Permalink to this headline">¶</a></h3>
-<p>To include certain parameter option combinations, specify them in a list or by using the <code class="docutils literal notranslate"><span class="pre">and</span></code> key.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">and</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<p>The above example would include buildings in climate region 2 built in the 1950s. A list, except for that inside an
-<code class="docutils literal notranslate"><span class="pre">or</span></code> block is always interpreted as <code class="docutils literal notranslate"><span class="pre">and</span></code> block.</p>
-</div>
-<div class="section" id="or">
-<h3>Or<a class="headerlink" href="#or" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">or</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|&lt;1950</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1960s</span>
-</pre></div>
-</div>
-<p>This example would include buildings built before 1970.</p>
-</div>
-<div class="section" id="not">
-<h3>Not<a class="headerlink" href="#not" title="Permalink to this headline">¶</a></h3>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Heating Fuel|Propane</span>
-</pre></div>
-</div>
-<p>This will select buildings that does not have Propane Fuel type.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">not</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<p>This will select buildings that are not both Vintage 1950s <strong>and</strong> in location region CR02. It should be noted that this
-<strong>will</strong> select buildings of 1950s vintage provided they aren’t in region CR02. It will also select buildings in
-location CR02 provided they aren’t of vintage 1950s. If only those buildings that are neither of Vintage 1950s nor in
-region CR02 needs to be selected, the following logic should be used:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-<span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<p>or,</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">and</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-  <span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-<p>or,</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">not</span><span class="p">:</span>
-  <span class="nt">or</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Location Region|CR02</span>
-</pre></div>
-</div>
-</div>
-<div class="section" id="combining-logic">
-<h3>Combining Logic<a class="headerlink" href="#combining-logic" title="Permalink to this headline">¶</a></h3>
-<p>These constructs can be combined to declare arbitrarily complex logic. Here is an example:</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="p p-Indicator">-</span> <span class="nt">or</span><span class="p">:</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|&lt;1950</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1950s</span>
-  <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Vintage|1960s</span>
-<span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Geometry Garage|3 Car</span>
-<span class="p p-Indicator">-</span> <span class="nt">not</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Geometry House Size|3500+</span>
-<span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">Geometry Stories|1</span>
-</pre></div>
-</div>
-<p>This will select homes that were built before 1970, don’t have three car garages, are less
-than 3500 sq.ft., and have only one storey.</p>
-</div>
 </div>
 <div class="section" id="eagle-configuration">
 <h2>Eagle Configuration<a class="headerlink" href="#eagle-configuration" title="Permalink to this headline">¶</a></h2>
@@ -611,7 +466,7 @@ this works better if set to 2048.</p></li>
 </ul>
 </div>
 <div class="section" id="postprocessing">
-<span id="id4"></span><h2>Postprocessing<a class="headerlink" href="#postprocessing" title="Permalink to this headline">¶</a></h2>
+<span id="id3"></span><h2>Postprocessing<a class="headerlink" href="#postprocessing" title="Permalink to this headline">¶</a></h2>
 <p>After a batch of simulation completes, to analyze BuildStock results the
 individual simulation results are aggregated in a postprocessing step as
 follows:</p>
@@ -699,7 +554,7 @@ before aborting it.</p></li>
           </div>
           <footer>
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-        <a href="run_sims.html" class="btn btn-neutral float-right" title="Running a Project" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="samplers/index.html" class="btn btn-neutral float-right" title="Samplers" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
         <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
     </div>
 
@@ -707,7 +562,7 @@ before aborting it.</p></li>
 
   <div role="contentinfo">
     <p>
-        &#169; Copyright Copyright 2020 The Alliance for Sustainable Energy.
+        &#169; Copyright Copyright 2021 The Alliance for Sustainable Energy.
 
     </p>
   </div>
