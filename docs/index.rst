@@ -19,6 +19,9 @@ supercomputer, Eagle.
 
    installation
    project_defn
+   samplers/index
+   workflow_generators/index
+   filtering_logic
    run_sims
 
 

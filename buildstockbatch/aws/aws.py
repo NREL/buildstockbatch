@@ -40,7 +40,7 @@ from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
-from ..utils import log_error_details
+from ..utils import log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -1661,7 +1661,7 @@ class AwsBatch(DockerBatchBase):
 
     @staticmethod
     def validate_instance_types(project_file):
-        cfg = AwsBatch.get_project_configuration(project_file)
+        cfg = get_project_configuration(project_file)
         aws_config = cfg['aws']
         boto3_session = boto3.Session(region_name=aws_config['region'])
         ec2 = boto3_session.client('ec2')
@@ -1772,10 +1772,7 @@ class AwsBatch(DockerBatchBase):
         """
 
         # Generate buildstock.csv
-        if 'downselect' in self.cfg:
-            buildstock_csv_filename = self.downselect()
-        else:
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
         # Compress and upload assets to S3
         with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as tmp_weather_dir:
@@ -1837,6 +1834,7 @@ class AwsBatch(DockerBatchBase):
                 with open(job_json_filename, 'w') as f:
                     json.dump({
                         'job_num': i,
+                        'n_datapoints': n_datapoints,
                         'batch': batch,
                     }, f, indent=4)
             array_size = i
@@ -1981,7 +1979,7 @@ class AwsBatch(DockerBatchBase):
                 sim_id = f'bldg{building_id:07d}up{upgrade_id:02d}'
 
                 # Create OSW
-                osw = cls.create_osw(cfg, sim_id, building_id, upgrade_idx)
+                osw = cls.create_osw(cfg, jobs_d['n_datapoints'], sim_id, building_id, upgrade_idx)
                 with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                     json.dump(osw, f, indent=4)
 

@@ -71,7 +71,6 @@ def test_missing_required_key_fails(project_file):
 @pytest.mark.parametrize("project_file,expected", [
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
-    (os.path.join(example_yml_dir, 'enforce-validate-no-precomputed-quota.yml'), ValidationError)
 ])
 def test_xor_violations_fail(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
@@ -87,8 +86,6 @@ def test_xor_violations_fail(project_file, expected):
     (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
     (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-bad.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-validate-downselect-resample-good.yml'), True),
     (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
     (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
 ])
@@ -96,7 +93,7 @@ def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_measures_and_arguments', lambda _: True):
+            patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True):
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)
@@ -134,7 +131,7 @@ def test_bad_measures(project_file):
 
     with LogCapture(level=logging.INFO) as logs:
         try:
-            BuildStockBatchBase.validate_measures_and_arguments(project_file)
+            BuildStockBatchBase.validate_workflow_generator(project_file)
         except ValidationError as er:
             er = str(er)
             warning_logs = filter_logs(logs, 'WARNING')
@@ -157,7 +154,7 @@ def test_bad_measures(project_file):
 ])
 def test_good_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
-        assert BuildStockBatchBase.validate_measures_and_arguments(project_file)
+        assert BuildStockBatchBase.validate_workflow_generator(project_file)
         warning_logs = filter_logs(logs, 'WARNING')
         error_logs = filter_logs(logs, 'ERROR')
         assert warning_logs == ''
@@ -199,7 +196,6 @@ def test_bad_options_validation(project_file):
         assert "Insulation Slat" in er
         assert "Vintage|1960s|Vintage|1960s" in er
         assert "Vintage|1960s||Vintage|1940s&&Vintage|1980s" in er
-        assert "Invalid Parameter" in er
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")

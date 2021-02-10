@@ -1,15 +1,28 @@
-schema_version: 0.2
-stock_type: residential
+schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
-output_directory: ../national_test_outputs
-weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
-# weather_files_path: ../ResStock_TMY3.zip  # Relative to this file or absolute path to zipped weather files
+output_directory: /scratch/nmerket/national_test_outputs2
+# weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+weather_files_path: /shared-projects/buildstock/weather/BuildStock_TMY3_FIPS.zip  # Relative to this file or absolute path to zipped weather files
+
+sampler:
+  type: residential_quota_downselect
+  args:
+    n_datapoints: 350000
+    logic:
+      - Geometry Building Type RECS|Single-Family Detached
+      - Vacancy Status|Occupied
+    resample: false
+
+workflow_generator:
+  type: residential_default
+  args:
+    timeseries_csv_export:
+      reporting_frequency: Hourly
+      include_enduse_subcategories: true
 
 baseline:
-  n_datapoints: 4
-  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
-  sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
+  n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from a census tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
 
 upgrades:
   - upgrade_name: Triple-Pane Windows
@@ -21,48 +34,38 @@ upgrades:
             multiplier: Window Area (ft^2)
         lifetime: 30
 
-timeseries_csv_export:
-  reporting_frequency: Hourly
-  include_enduse_subcategories: true
-
-# downselect: # Uncomment and set specify logic you you want to downselect to a subset of the building stock
-#   resample: true
-#   logic:
-#     - Geometry Building Type RECS|Single-Family Detached
-#     - Vacancy Status|Occupied
-
 eagle:
   n_jobs: 4
-  minutes_per_sim: 30
+  minutes_per_sim: 4
   account: enduse
   sampling:
-    time: 20
+    time: 5
   postprocessing:
-    time: 60
-    n_workers: 3
+    time: 10
+    n_workers: 1
 
-# aws:
-#   # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur
-#   job_identifier: test_proj
-#   s3:
-#     bucket: resbldg-datasets
-#     prefix: testing/user_test
-#   emr:
-#     slave_instance_count: 1
-#   region: us-west-2
-#   use_spot: true
-#   batch_array_size: 10
-#   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-#   notifications_email: user@nrel.gov
+aws:
+  # The job_identifier should be unique, start with alpha, not include dashes, and limited to 10 chars or data loss can occur
+  job_identifier: test_proj
+  s3:
+    bucket: resbldg-datasets
+    prefix: testing/user_test
+  emr:
+    slave_instance_count: 1
+  region: us-west-2
+  use_spot: true
+  batch_array_size: 10
+  # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
+  notifications_email: user@nrel.gov
 
-# postprocessing:
-#   aggregate_timeseries: true
-#   aws:
-#     region_name: 'us-west-2'
-#     s3:
-#       bucket: resbldg-datasets
-#       prefix: resstock-athena/calibration_runs_new
-#     athena:
-#       glue_service_role: service-role/AWSGlueServiceRole-default
-#       database_name: testing
-#       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
+postprocessing:
+  aggregate_timeseries: true
+  aws:
+    region_name: 'us-west-2'
+    s3:
+      bucket: resbldg-datasets
+      prefix: resstock-athena/calibration_runs_new
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: testing
+      max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
