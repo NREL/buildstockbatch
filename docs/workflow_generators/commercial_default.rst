@@ -1,5 +1,5 @@
-Commercial Workflow Generator
------------------------------
+Commercial Default Workflow Generator
+-------------------------------------
 
 Configuration Example
 ~~~~~~~~~~~~~~~~~~~~~
