@@ -99,6 +99,7 @@ class LocalDockerBatch(DockerBatchBase):
         bind_mounts = [
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
+            (os.path.join(buildstock_dir, 'resources', 'hpxml-measures'), 'resources/hpxml-measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')

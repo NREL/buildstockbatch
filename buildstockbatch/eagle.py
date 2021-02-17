@@ -230,6 +230,10 @@ class EagleBatch(BuildStockBatchBase):
             self.local_buildstock_dir / 'measures'
         )
         self.clear_and_copy_dir(
+            pathlib.Path(self.buildstock_dir) / 'resources/hpxml-measures',
+            self.local_buildstock_dir / 'resources/hpxml-measures'
+        )
+        self.clear_and_copy_dir(
             self.weather_dir,
             self.local_weather_dir
         )
