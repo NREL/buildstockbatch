@@ -87,8 +87,8 @@ def flatten_datapoint_json(reporting_measures, d):
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
 
-    new_d['building_id'] = new_d['BuildExistingModel.building_unit_id']
-    del new_d['BuildExistingModel.building_unit_id']
+    new_d['building_id'] = new_d['BuildExistingModel.building_id']
+    del new_d['BuildExistingModel.building_id']
 
     return new_d
 
@@ -110,7 +110,7 @@ def read_out_osw(fs, filename):
             out_d[key] = d.get(key, None)
         for step in d.get('steps', []):
             if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_id'] = step['arguments']['building_unit_id']
+                out_d['building_id'] = step['arguments']['building_id']
         return out_d
 
 
