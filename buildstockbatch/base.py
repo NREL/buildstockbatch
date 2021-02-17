@@ -38,8 +38,9 @@ logger = logging.getLogger(__name__)
 
 class BuildStockBatchBase(object):
 
-    DEFAULT_OS_VERSION = '2.9.1'
-    DEFAULT_OS_SHA = '3472e8b799'
+    # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
+    DEFAULT_OS_VERSION = '3.1.0'
+    DEFAULT_OS_SHA = 'e165090621'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -172,7 +173,12 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+        results_timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
+        timeseries_filepath = results_timeseries_filepath
+        # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
+        if not os.path.isfile(results_timeseries_filepath):
+            enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            timeseries_filepath = enduse_timeseries_filepath
         schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
@@ -180,8 +186,8 @@ class BuildStockBatchBase(object):
             cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
-                logger.error(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
-                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
+                logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
+                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
@@ -540,6 +546,21 @@ class BuildStockBatchBase(object):
         self.get_dask_client()  # noqa: F841
 
         do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
+        if not do_timeseries:
+            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                for arg in ['include_timeseries_fuel_consumptions',
+                            'include_timeseries_end_use_consumptions',
+                            'include_timeseries_hot_water_uses',
+                            'include_timeseries_total_loads',
+                            'include_timeseries_component_loads',
+                            'include_timeseries_unmet_loads',
+                            'include_timeseries_zone_temperatures',
+                            'include_timeseries_airflows',
+                            'include_timeseries_weather']:
+                    if do_timeseries:
+                        continue
+                    if arg in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+                        do_timeseries = self.cfg['workflow_generator']['args']['simulation_output_report'][arg]
 
         fs = LocalFileSystem()
         if not skip_combine:
