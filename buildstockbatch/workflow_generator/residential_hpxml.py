@@ -17,7 +17,6 @@ import re
 import yamale
 
 from .base import WorkflowGeneratorBase
-from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +76,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
         }
         bld_exist_model_args.update(sim_ctl_run_prd_args)
-        bld_exist_model_args.update(workflow_args['build_existing_model'])        
+        bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         sim_out_rep_args = {
             'timeseries_frequency': True,
