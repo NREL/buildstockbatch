@@ -1,6 +1,9 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
+from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 
+
+# TODO: Write tests for HPXML workflow generator
 
 def test_apply_logic_recursion():
 
