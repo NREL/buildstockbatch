@@ -99,11 +99,13 @@ class LocalDockerBatch(DockerBatchBase):
         bind_mounts = [
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
-            (os.path.join(buildstock_dir, 'resources', 'hpxml-measures'), 'resources/hpxml-measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
+        if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
+            bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
+                            'resources/hpxml-measures', 'ro')]
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))

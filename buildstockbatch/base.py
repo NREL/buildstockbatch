@@ -175,10 +175,12 @@ class BuildStockBatchBase(object):
         # and copy it to the results directory
         results_timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         timeseries_filepath = results_timeseries_filepath
+        skiprows = [1]
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
         if not os.path.isfile(results_timeseries_filepath):
             enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
             timeseries_filepath = enduse_timeseries_filepath
+            skiprows = False
         schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
@@ -188,7 +190,11 @@ class BuildStockBatchBase(object):
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
+            if skiprows:
+                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+                tsdf['TimeDST'] = tsdf['Time']  # FIXME: Actually write TimeDST to results_timeseries.csv?
+            else:
+                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)

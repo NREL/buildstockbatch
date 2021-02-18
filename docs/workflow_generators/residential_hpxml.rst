@@ -1,5 +1,5 @@
 Residential HPXML Workflow Generator
-------------------------------
+------------------------------------
 
 Configuration Example
 ~~~~~~~~~~~~~~~~~~~~~

@@ -71,7 +71,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         }
 
         bld_exist_model_args = {
-            'building_unit_id': building_id,
+            'building_id': building_id,
             'workflow_json': 'measure-info.json',
             'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
         }
