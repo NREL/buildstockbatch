@@ -318,7 +318,7 @@ class EagleBatch(BuildStockBatchBase):
                 os.path.join(cls.local_buildstock_dir, 'measures'),
                 cls.local_weather_dir,
             ]
-            if os.path.exiats(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
                 dirs_to_mount += [os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')]
 
             # Build the command to instantiate and configure the singularity container the simulation is run inside
