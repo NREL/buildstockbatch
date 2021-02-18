@@ -340,11 +340,10 @@ class EagleBatch(BuildStockBatchBase):
                 runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
 
             if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+                runscript.append('ln -s /resources /var/simdata/openstudio/resources')
                 src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
                 container_mount = '/resources/hpxml-measures'
                 args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
-                container_symlink = os.path.join('/var/simdata/openstudio/resources/hpxml-measures')
-                runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
 
             # Build the openstudio command that will be issued within the singularity container
             # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
