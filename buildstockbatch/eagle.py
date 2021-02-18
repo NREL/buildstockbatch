@@ -318,8 +318,6 @@ class EagleBatch(BuildStockBatchBase):
                 os.path.join(cls.local_buildstock_dir, 'measures'),
                 cls.local_weather_dir,
             ]
-            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
-                dirs_to_mount += [os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')]
 
             # Build the command to instantiate and configure the singularity container the simulation is run inside
             local_resources_dir = cls.local_buildstock_dir / 'resources'
@@ -339,6 +337,13 @@ class EagleBatch(BuildStockBatchBase):
                 container_mount = '/' + os.path.basename(src)
                 args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
                 container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
+                runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+
+            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+                src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
+                container_mount = '/resources/hpxml-measures'
+                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                container_symlink = os.path.join('/var/simdata/openstudio/resources/hpxml-measures')
                 runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
 
             # Build the openstudio command that will be issued within the singularity container
