@@ -103,7 +103,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'created_at': dt.datetime.now().isoformat(),
             'measure_paths': [
                 'measures',
-                'resources/hpxml-measures'
+                'hpxml-measures'
             ],
         }
 

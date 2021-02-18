@@ -1785,7 +1785,7 @@ class AwsBatch(DockerBatchBase):
                 buildstock_path = pathlib.Path(self.buildstock_dir)
                 tar_f.add(buildstock_path / 'measures', 'measures')
                 if os.path.exists(buildstock_path / 'resources/hpxml-measures'):
-                    tar_f.add(buildstock_path / 'resources/hpxml-measures', 'resources/hpxml-measures')
+                    tar_f.add(buildstock_path / 'resources/hpxml-measures', 'hpxml-measures')
                 tar_f.add(buildstock_path / 'resources', 'lib/resources')
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
             logger.debug('Compressing weather files')
