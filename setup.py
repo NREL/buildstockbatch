@@ -57,10 +57,10 @@ setuptools.setup(
     install_requires=[
         'pyyaml',
         'requests',
-        'numpy>=1.11',
+        'numpy>=1.11,<1.20.0',
         'pandas>=1.0.0,!=1.0.4',
         'joblib',
-        'pyarrow>=0.14.1,<3.0.0',
+        'pyarrow>=0.14.1',
         'dask[complete]>=2.1.0',
         'docker',
         'boto3>=1.10.44',

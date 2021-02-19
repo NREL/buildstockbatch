@@ -11,5 +11,6 @@ setup(
         'boto3',
         'pandas>=1.0.0,!=1.0.4',
         'pyarrow>=0.14.1',
+        'numpy<1.20.0'
     ]
 )
