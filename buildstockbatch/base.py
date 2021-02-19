@@ -554,19 +554,10 @@ class BuildStockBatchBase(object):
         do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
         if not do_timeseries:
             if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
-                for arg in ['include_timeseries_fuel_consumptions',
-                            'include_timeseries_end_use_consumptions',
-                            'include_timeseries_hot_water_uses',
-                            'include_timeseries_total_loads',
-                            'include_timeseries_component_loads',
-                            'include_timeseries_unmet_loads',
-                            'include_timeseries_zone_temperatures',
-                            'include_timeseries_airflows',
-                            'include_timeseries_weather']:
-                    if do_timeseries:
-                        continue
-                    if arg in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
-                        do_timeseries = self.cfg['workflow_generator']['args']['simulation_output_report'][arg]
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+                    do_timeseries = \
+                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
+                            'none')
 
         fs = LocalFileSystem()
         if not skip_combine:
