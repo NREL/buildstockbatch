@@ -46,7 +46,7 @@ def read_data_point_out_json(fs, reporting_measures, filename):
     else:
         if 'SimulationOutputReport' not in d:
             d['SimulationOutputReport'] = {'applicable': False}
-        for reporting_measure in reporting_measures:
+        for reporting_measure in reporting_measures + ['UpgradeCosts']:
             if reporting_measure not in d:
                 d[reporting_measure] = {'applicable': False}
         return d
@@ -194,6 +194,10 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         reporting_measure_cols = sorted([col for col in results_df.columns if
                                         col.startswith(to_camelcase(reporting_measure))])
         sorted_cols += reporting_measure_cols
+
+    upgrade_costs_cols = sorted([col for col in results_df.columns if
+                                col.startswith(to_camelcase('UpgradeCosts'))])
+    sorted_cols += upgrade_costs_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
 
