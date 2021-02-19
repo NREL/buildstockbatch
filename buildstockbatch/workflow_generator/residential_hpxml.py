@@ -105,6 +105,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'measures',
                 'resources/hpxml-measures'
             ],
+            'run_options': {
+                'fast': False,
+                'skip_expand_objects': True,
+                'skip_energyplus_preprocess': True
+            }
         }
 
         osw['steps'].extend([
