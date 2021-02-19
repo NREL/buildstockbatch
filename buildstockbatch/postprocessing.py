@@ -83,7 +83,7 @@ def flatten_datapoint_json(reporting_measures, d):
         new_d[f'{col2}.{k}'] = v
 
     # additional reporting measures
-    for col in reporting_measures:
+    for col in reporting_measures + ['UpgradeCosts']:
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
 
