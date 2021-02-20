@@ -9,7 +9,7 @@ jobs:
       - run:
           name: Install buildstock
           command: |
-            conda install -c conda-forge -y -q scipy "numpy<1.20.0" "pandas>=1.0.0,!=1.0.4" "pyarrow>=0.14.1" dask joblib pyyaml "ruamel.yaml>=0.15.0"
+            conda install -c conda-forge -y -q scipy "numpy>=1.20.0" "pandas>=1.0.0,!=1.0.4" "pyarrow>=3.0.0" dask joblib pyyaml "ruamel.yaml>=0.15.0"
             pip install .[dev] --progress-bar off
       - run:
           name: Run PyTest
