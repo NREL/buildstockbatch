@@ -1,9 +1,12 @@
-stock_type: commercial
 buildstock_directory: here
 project_directory: there
 weather_files_path: over-yonder
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 12345
+workflow_generator:
+  type: commercial_default
 baseline:
-  n_datapoints: 12345
   n_buildings_represented: 12345
-  sampling_algorithm: quota
-schema_version: 0.2
+schema_version: '0.3'

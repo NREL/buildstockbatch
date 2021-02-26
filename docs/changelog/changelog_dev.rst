@@ -16,6 +16,14 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
+        :tags: general, feature
+        :pullreq: 187
+        :tickets: 147
+
+        Changed the project configuration for samplers and workflow generators.
+        See migration guide for details.
+
+    .. change::
         :tags: documentation
         :pullreq: 203
 

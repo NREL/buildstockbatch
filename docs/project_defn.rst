@@ -20,8 +20,7 @@ First we tell it what project we're running with the following keys:
 - ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
-- ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is
-  ``0.2``.
+- ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
 
 .. _ResStock: https://github.com/NREL/resstock
 
@@ -49,37 +48,40 @@ To use your own custom weather files for a specific location, this can be done i
 
 - Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
 
+Sampler
+~~~~~~~
+
+The ``sampler`` key defines the type of building sampler to be used for the batch of simulations. The purpose of the sampler is to enumerate the buildings and building characteristics to be run as part of the building stock simulation. It has two arguments, ``type`` and ``args``.
+
+- ``type`` tells buildstockbatch which sampler class to use.
+- ``args`` are passed to the sampler to define how it is run.
+
+Different samplers are available for ResStock and ComStock and variations thereof. Details of what samplers are available and their arguments are available at :doc:`samplers/index`.
+
+Workflow Generator
+~~~~~~~~~~~~~~~~~~
+
+The ``workflow_generator`` key defines which workflow generator will be used to transform a building description from a set of high level characteristics into an OpenStudio workflow that in turn generates the detailed EnergyPlus model. It has two arguments, ``type`` and ``args``.
+
+- ``type`` tells buildstockbatch which workflow generator class to use.
+- ``args`` are passed to the sampler to define how it is run.
+
+Different workflow generators are available for ResStock and ComStock and variations thereof. Details of what workflow generators and their arguments are available at :doc:`workflow_generators/index`.
+
 Baseline simulations incl. sampling algorithm
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Information about baseline simulations are listed under the ``baseline`` key.
 
-- ``sampling_algorithm``: The sampling algorithm to use for this project - the default residential option is ``quota``,
-  the default commercial option is ``sobol`` (this is not supported for residential projects), or if using a previously
-  computed buildstock.csv file use the ``precomputed`` sampler.
-- ``n_datapoints``: The number of buildings to sample and run for the baseline case if using the ``sobol`` or ``quota``
-  sampling algorithms.
 - ``n_buildings_represented``: The number of buildings that this sample is meant to represent.
-- ``precomputed_sample``: Filepath of csv containing pre-defined building options to use in the precomputed sampling
-  routine. This can be absolute or relative (to this file).
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``measures_to_ignore``: **ADVANCED FEATURE (USE WITH CAUTION--ADVANCED USERS/WORKFLOW DEVELOPERS ONLY)** to optionally
-  not run one or more measures (specified as a list) that are referenced in the options_lookup.tsv but should be skipped
-  during model creation. The measures are referenced by their directory name. This feature is currently only implemented
-  for residential models constructed with the BuildExistingModel measure.
 - ``custom_gems``: **VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE** This
   activates the ``bundle`` and ``bundle_path`` interfaces in the OpenStudio CLI to allow for custom gem packages (needed
   to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
   image is properly configured but that's easier said than done. The la100 branch on the nrel/docker-openstudio repo
   is a starting place if this is required.
-- ``osw_template``: An optional key allowing for switching of which workflow generator to use within the commercial or
-  residential classes.
-- ``include_qaqc``: An optional flag - only configured for commercial at the moment - which when set to ``True`` runs
-  some additional measures that check a number of key (and often incorrectly configured) part of the simulation inputs
-  as well as providing additional model QAQC data streams on the output side. Recommended for test runs but not
-  production analyses.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -87,19 +89,6 @@ OpenStudio Version Overrides
 This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
 details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.2``
 schema: ``os_version`` and ``os_sha``.
-
-Residential Simulation Controls
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-If the key ``residential_simulation_controls`` is in the project yaml file, the parameters to the
-`ResidentialSimulationControls <https://github.com/NREL/resstock/blob/master/measures/ResidentialSimulationControls/measure.xml>`_
-measure will be modified from their defaults to what is specified there. The defaults are:
-
-.. include:: ../buildstockbatch/workflow_generator/residential.py
-   :code: python
-   :start-after: res_sim_ctl_args = {
-   :end-before: }
-
 
 Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
@@ -133,170 +122,11 @@ following properties:
 - ``reference_scenario``: (optional) The `upgrade_name` which should act as a reference to this upgrade to calculate
   savings. All this does is that reference_scenario show up as a column in results csvs alongside the upgrade name;
   Buildstockbatch will not do the savings calculation.
-Note: ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied. Do not add to the list of reporting measures.
-
-Simulation Annual Outputs Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Include the ``simulation_output`` key to optionally include annual totals for end use subcategories (i.e., interior equipment broken out by end use) along with
-the usual annual simulation results. This argument is passed directly into the
-`SimulationOutputReport measure <https://github.com/NREL/resstock/blob/master/measures/SimulationOutputReport/measure.xml>`_
-inthe resstock or comstock repo. Please refer to the measure argument there to determine what to set it to in your config file.
-Note that this measure and presence of any arguments may be different depending on which version ofthe resstock or comstock repo you're using.
-The best thing you can do is to verify that it works with what is in your branch.
-
-Time Series Export Options
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Include the ``timeseries_csv_export`` key to include hourly or subhourly results along with the usual
-annual simulation results. These arguments are passed directly to the
-`TimeseriesCSVExport measure <https://github.com/NREL/resstock/blob/master/measures/TimeseriesCSVExport/measure.xml>`_
-inthe resstock or comstock repo. Please refer to the measure arguments there to determine what to set them to in your config file.
-Note that this measure and arguments may be different depending on which version ofthe resstock or comstock repo you're using.
-The best thing you can do is to verify that it works with what is in your branch.
-
-Additional Reporting Measures
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Include the ``reporting_measures`` key along with a list of reporting measure names to apply additional reporting measures (that require no arguments) to the workflow.
-Any columns reported by these additional measures will be appended to the results csv.
-Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run to fail prematurely. ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
 
 Output Directory
 ~~~~~~~~~~~~~~~~
 
 ``output_directory`` specifies where the outputs of the simulation should be stored.
-
-Down Selecting the Sampling Space
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Sometimes it is desirable to run a stock simulation of a subset of what is included in a project.
-For instance one might want to run the simulation only in one climate region or for certain vintages.
-However, it can be a considerable effort to create a new project. Adding the ``downselect`` key to
-the project file permits a user to specify filters of what buildings should be simulated.
-
-Downselecting can be performed in one of two ways: with and without resampling.
-Downselecting with resampling samples twice, once to determine how much smaller the
-set of sampled buildings becomes when it is filtered down and again with a larger sample so
-the final set of sampled buildings is at or near the number specified in ``n_datapoints``.
-
-Downselecting without resampling skips that step. In this case the total sampled buildings returned
-will be the number left over after sampling the entire stock and then filtering down to the
-buildings that meet the criteria. Unlike downselect with resampling, downselect without resampling can be used with
-buildstock.csv too. So, instead of starting with a fresh set of samples and filtering them based on the dowselect logic,
-the sampler starts with the buildstock.csv provided, and filters out the buildings using the downselect logic.
-
-The downselect block works as follows:
-
-.. code-block:: yaml
-
-  downselect:
-    resample: true
-    logic:
-      - Heating Fuel|Natural Gas
-      - Location Region|CR02
-
-For details on how to specify the filters, see :ref:`filtering-logic`.
-
-.. _filtering-logic:
-
-Filtering Logic
-~~~~~~~~~~~~~~~
-
-There are several places where logic is applied to filter simulations by the option values.
-This is done by specifying the parameter|option criteria you want to include or exclude along
-with the appropriate logical operator. This is done in the YAML syntax as follows:
-
-And
-...
-
-To include certain parameter option combinations, specify them in a list or by using the ``and`` key.
-
-.. code-block:: yaml
-
-  - Vintage|1950s
-  - Location Region|CR02
-
-.. code-block:: yaml
-
-  and:
-    - Vintage|1950s
-    - Location Region|CR02
-
-The above example would include buildings in climate region 2 built in the 1950s. A list, except for that inside an
-``or`` block is always interpreted as ``and`` block.
-
-Or
-..
-
-.. code-block:: yaml
-
-  or:
-    - Vintage|<1950
-    - Vintage|1950s
-    - Vintage|1960s
-
-This example would include buildings built before 1970.
-
-Not
-...
-
-.. code-block:: yaml
-
-  not: Heating Fuel|Propane
-
-This will select buildings that does not have Propane Fuel type.
-
-.. code-block:: yaml
-
-    not:
-      - Vintage|1950s
-      - Location Region|CR02
-
-This will select buildings that are not both Vintage 1950s **and** in location region CR02. It should be noted that this
-**will** select buildings of 1950s vintage provided they aren't in region CR02. It will also select buildings in
-location CR02 provided they aren't of vintage 1950s. If only those buildings that are neither of Vintage 1950s nor in
-region CR02 needs to be selected, the following logic should be used:
-
-.. code-block:: yaml
-
-      - not: Vintage|1950s
-      - not: Location Region|CR02
-
-or,
-
-.. code-block:: yaml
-
-      and:
-        - not: Vintage|1950s
-        - not: Location Region|CR02
-
-or,
-
-.. code-block:: yaml
-
-    not:
-      or:
-        - Vintage|1950s
-        - Location Region|CR02
-
-
-Combining Logic
-...............
-
-These constructs can be combined to declare arbitrarily complex logic. Here is an example:
-
-.. code-block:: yaml
-
-  - or:
-    - Vintage|<1950
-    - Vintage|1950s
-    - Vintage|1960s
-  - not: Geometry Garage|3 Car
-  - not: Geometry House Size|3500+
-  - Geometry Stories|1
-
-This will select homes that were built before 1970, don't have three car garages, are less
-than 3500 sq.ft., and have only one storey.
 
 Eagle Configuration
 ~~~~~~~~~~~~~~~~~~~

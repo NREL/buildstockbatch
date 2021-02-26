@@ -1,33 +1,36 @@
-schema_version: 0.2
-stock_type: residential
+schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
-weather_files_url: https://data.nrel.gov/system/files/128/ResStock_TMY3.zip
+weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
 
 baseline:
-  n_datapoints: 4  # Comment this line out if using a custom buildstock csv file
   n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
-  sampling_algorithm: quota # The default resstock sampling algorithm - use precomputed if using the precomputed_sample option
+
+sampler:
+  type: residential_quota # change to residential_quota_downselect to do downselect
+  args:
+    n_datapoints: 4
+    # logic:
+    #   - Geometry Building Type RECS|Single-Family Detached
+    #   - Vacancy Status|Occupied
+    # resample: false # Uncomment and specify logic you you want to downselect to a subset of the building stock
+
+workflow_generator:
+  type: residential_default  
+  args:
+    timeseries_csv_export:
+      reporting_frequency: Hourly
+      include_enduse_subcategories: true
 
 upgrades:
   - upgrade_name: Triple-Pane Windows
     options:
       - option: Windows|Low-E, Triple, Non-metal, Air, L-Gain
-#        apply_logic:
         costs:
           - value: 45.77
             multiplier: Window Area (ft^2)
         lifetime: 30
-timeseries_csv_export:
-  reporting_frequency: Hourly
-  include_enduse_subcategories: true
-
-# downselect: # Uncomment and set specify logic you you want to downselect to a subset of the building stock
-#   resample: true
-#   logic:
-#     - Geometry Building Type RECS|Single-Family Detached
-#     - Vacancy Status|Occupied
 
 aws:
   # The job_identifier must be unique, start with alpha, not include dashes, and limited to 10 chars
