@@ -14,9 +14,11 @@ from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
+import collections
 import csv
 from fsspec.implementations.local import LocalFileSystem
 import gzip
+import hashlib
 import itertools
 from joblib import Parallel, delayed
 import json
@@ -78,6 +80,20 @@ def compress_file(in_filename, out_filename):
     with gzip.open(str(out_filename), 'wb') as f_out:
         with open(str(in_filename), 'rb') as f_in:
             shutil.copyfileobj(f_in, f_out)
+
+
+def calc_hash_for_file(filename):
+    with open(filename, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
+    s3 = boto3.client('s3')
+    s3.copy(
+        {'Bucket': src_bucket, 'Key': src_key},
+        dest_bucket,
+        dest_key
+    )
 
 
 class AwsBatchEnv(AwsJobBase):
@@ -1775,7 +1791,7 @@ class AwsBatch(DockerBatchBase):
         buildstock_csv_filename = self.sampler.run_sampling()
 
         # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as tmp_weather_dir:
+        with tempfile.TemporaryDirectory(prefix='bsb_') as tmpdir, tempfile.TemporaryDirectory(prefix='bsb_') as tmp_weather_dir:  # noqa: E501
             self._weather_dir = tmp_weather_dir
             self._get_weather_files()
             tmppath = pathlib.Path(tmpdir)
@@ -1786,17 +1802,32 @@ class AwsBatch(DockerBatchBase):
                 tar_f.add(buildstock_path / 'measures', 'measures')
                 tar_f.add(buildstock_path / 'resources', 'lib/resources')
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
-            logger.debug('Compressing weather files')
+
+            # Weather files
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
+
+            # Determine the unique weather files
+            epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            logger.debug('Calculating hashes for weather files')
+            epw_hashes = Parallel(n_jobs=-1, verbose=9)(
+                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
+                for epw_filename in epw_filenames
+            )
+            unique_epws = collections.defaultdict(list)
+            for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
+                unique_epws[epw_hash].append(epw_filename)
+
+            # Compress unique weather files
+            logger.debug('Compressing weather files')
             Parallel(n_jobs=-1, verbose=9)(
                 delayed(compress_file)(
-                    pathlib.Path(self.weather_dir) / epw_filename,
-                    str(weather_path / epw_filename) + '.gz'
+                    pathlib.Path(self.weather_dir) / x[0],
+                    str(weather_path / x[0]) + '.gz'
                 )
-                for epw_filename
-                in filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir))
+                for x in unique_epws.values()
             )
+
             logger.debug('Writing project configuration for upload')
             with open(tmppath / 'config.json', 'wt', encoding='utf-8') as f:
                 json.dump(self.cfg, f)
@@ -1854,6 +1885,22 @@ class AwsBatch(DockerBatchBase):
 
             logger.debug('Uploading files to S3')
             upload_directory_to_s3(tmppath, self.cfg['aws']['s3']['bucket'], self.cfg['aws']['s3']['prefix'])
+
+        # Copy the non-unique weather files on S3
+        epws_to_copy = []
+        for epws in unique_epws.values():
+            # The first in the list is already up there, copy the rest
+            for filename in epws[1:]:
+                epws_to_copy.append((
+                    f"{self.cfg['aws']['s3']['prefix']}/weather/{epws[0]}.gz",
+                    f"{self.cfg['aws']['s3']['prefix']}/weather/{filename}.gz"
+                ))
+
+        logger.debug('Copying weather files on S3')
+        bucket = self.cfg['aws']['s3']['bucket']
+        Parallel(n_jobs=-1, verbose=9)(
+            delayed(copy_s3_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy
+        )
 
         # Create the output directories
         fs = S3FileSystem()
