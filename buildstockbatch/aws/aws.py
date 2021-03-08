@@ -1930,7 +1930,7 @@ class AwsBatch(DockerBatchBase):
         job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
             image_url,
-            command=['python3', '-m', 'buildstockbatch.aws.aws'],
+            command=['python3.8', '-m', 'buildstockbatch.aws.aws'],
             vcpus=job_env_cfg.get('vcpus', 1),
             memory=job_env_cfg.get('memory', 1024),
             env_vars=env_vars
@@ -1993,19 +1993,34 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug('Getting weather files')
         weather_dir = sim_dir / 'weather'
-        os.makedirs(weather_dir)
-        building_ids = [x[0] for x in jobs_d['batch']]
+        os.makedirs(weather_dir, exist_ok=True)
+
+        # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+        with open(sim_dir / 'lib' / 'resources' / 'options_lookup.tsv', 'r', encoding='utf-8') as f:
+            tsv_reader = csv.reader(f, delimiter='\t')
+            next(tsv_reader)  # skip headers
+            param_name = None
+            epws_by_option = {}
+            for row in tsv_reader:
+                row_has_epw = [x.endswith('.epw') for x in row[2:]]
+                if sum(row_has_epw):
+                    if row[0] != param_name and param_name is not None:
+                        raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')
+                    epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                    param_name = row[0]
+                    option_name = row[1]
+                    epws_by_option[option_name] = epw_filename
+
+        # Look through the buildstock.csv to find the appropriate location and epw
         epws_to_download = set()
+        building_ids = [x[0] for x in jobs_d['batch']]
         with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
             csv_reader = csv.DictReader(f)
-            loc_col = 'Location Weather Filename'
-            if loc_col not in csv_reader.fieldnames:
-                loc_col = 'Location'
             for row in csv_reader:
                 if int(row['Building']) in building_ids:
-                    epws_to_download.add(row[loc_col])
-        if loc_col == 'Location':
-            epws_to_download = map('USA_{}.epw'.format, epws_to_download)
+                    epws_to_download.add(epws_by_option[row[param_name]])
+
+        # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))

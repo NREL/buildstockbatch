@@ -2,7 +2,8 @@ schema_version: '0.3'
 buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
-weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+# weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+weather_files_path: ../weather/BuildStock_TMY3_FIPS.zip
 
 baseline:
   n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
@@ -10,7 +11,7 @@ baseline:
 sampler:
   type: residential_quota # change to residential_quota_downselect to do downselect
   args:
-    n_datapoints: 4
+    n_datapoints: 100
     # logic:
     #   - Geometry Building Type RECS|Single-Family Detached
     #   - Vacancy Status|Occupied
@@ -34,19 +35,19 @@ upgrades:
 
 aws:
   # The job_identifier must be unique, start with alpha, not include dashes, and limited to 10 chars
-  job_identifier: ext_demo
+  job_identifier: nmerkdemo1
   s3:
     bucket: resbldg-datasets
-    prefix: testing/external_demo_project
+    prefix: testing/nmerk_demo1
   emr:
     manager_instance_type: m5.xlarge
     worker_instance_type: r5.4xlarge
     worker_instance_count: 1
   region: us-west-2
   use_spot: true
-  batch_array_size: 4
+  batch_array_size: 100
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-  notifications_email: user@example.com
+  notifications_email: noel.merket@nrel.gov
 
 postprocessing:
   aws:
@@ -56,5 +57,5 @@ postprocessing:
       prefix: resstock-athena/external_demo
     athena:
       glue_service_role: service-role/AWSGlueServiceRole-default
-      database_name: ext_demo1
+      database_name: testing
       max_crawling_time: 300 #time to wait for the crawler to complete before aborting it
