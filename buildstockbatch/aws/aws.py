@@ -2005,7 +2005,7 @@ class AwsBatch(DockerBatchBase):
                 row_has_epw = [x.endswith('.epw') for x in row[2:]]
                 if sum(row_has_epw):
                     if row[0] != param_name and param_name is not None:
-                        raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')
+                        raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')  # noqa: E501
                     epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
                     param_name = row[0]
                     option_name = row[1]
