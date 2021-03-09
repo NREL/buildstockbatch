@@ -48,6 +48,7 @@ class PrecomputedSampler(BuildStockSampler):
                     raise ValidationError(f'sample_file doesn\'t exist: {v}')
             else:
                 raise ValidationError(f'Unknown argument for sampler: {k}')
+        return True
 
     def run_sampling(self):
         """
