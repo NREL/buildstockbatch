@@ -14,9 +14,11 @@ from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
+import collections
 import csv
 from fsspec.implementations.local import LocalFileSystem
 import gzip
+import hashlib
 import itertools
 from joblib import Parallel, delayed
 import json
@@ -78,6 +80,20 @@ def compress_file(in_filename, out_filename):
     with gzip.open(str(out_filename), 'wb') as f_out:
         with open(str(in_filename), 'rb') as f_in:
             shutil.copyfileobj(f_in, f_out)
+
+
+def calc_hash_for_file(filename):
+    with open(filename, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
+    s3 = boto3.client('s3')
+    s3.copy(
+        {'Bucket': src_bucket, 'Key': src_key},
+        dest_bucket,
+        dest_key
+    )
 
 
 class AwsBatchEnv(AwsJobBase):
@@ -1486,14 +1502,14 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                     {
                         'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
                         'InstanceRole': 'MASTER',
-                        'InstanceType': self.emr_master_instance_type,
+                        'InstanceType': self.emr_manager_instance_type,
                         'InstanceCount': 1
                     },
                     {
                         'Market': 'SPOT' if self.batch_use_spot else 'ON_DEMAND',
                         'InstanceRole': 'CORE',
-                        'InstanceType': self.emr_slave_instance_type,
-                        'InstanceCount': self.emr_slave_instance_count
+                        'InstanceType': self.emr_worker_instance_type,
+                        'InstanceCount': self.emr_worker_instance_count
                     },
                 ],
                 'Ec2SubnetId': self.priv_vpc_subnet_id_1,
@@ -1667,8 +1683,8 @@ class AwsBatch(DockerBatchBase):
         ec2 = boto3_session.client('ec2')
         job_base = AwsJobBase('genericjobid', aws_config, boto3_session)
         instance_types_requested = set()
-        instance_types_requested.add(job_base.emr_master_instance_type)
-        instance_types_requested.add(job_base.emr_slave_instance_type)
+        instance_types_requested.add(job_base.emr_manager_instance_type)
+        instance_types_requested.add(job_base.emr_worker_instance_type)
         inst_type_resp = ec2.describe_instance_type_offerings(Filters=[{
             'Name': 'instance-type',
             'Values': list(instance_types_requested)
@@ -1775,7 +1791,7 @@ class AwsBatch(DockerBatchBase):
         buildstock_csv_filename = self.sampler.run_sampling()
 
         # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory() as tmpdir, tempfile.TemporaryDirectory() as tmp_weather_dir:
+        with tempfile.TemporaryDirectory(prefix='bsb_') as tmpdir, tempfile.TemporaryDirectory(prefix='bsb_') as tmp_weather_dir:  # noqa: E501
             self._weather_dir = tmp_weather_dir
             self._get_weather_files()
             tmppath = pathlib.Path(tmpdir)
@@ -1786,17 +1802,32 @@ class AwsBatch(DockerBatchBase):
                 tar_f.add(buildstock_path / 'measures', 'measures')
                 tar_f.add(buildstock_path / 'resources', 'lib/resources')
                 tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
-            logger.debug('Compressing weather files')
+
+            # Weather files
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
+
+            # Determine the unique weather files
+            epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            logger.debug('Calculating hashes for weather files')
+            epw_hashes = Parallel(n_jobs=-1, verbose=9)(
+                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
+                for epw_filename in epw_filenames
+            )
+            unique_epws = collections.defaultdict(list)
+            for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
+                unique_epws[epw_hash].append(epw_filename)
+
+            # Compress unique weather files
+            logger.debug('Compressing weather files')
             Parallel(n_jobs=-1, verbose=9)(
                 delayed(compress_file)(
-                    pathlib.Path(self.weather_dir) / epw_filename,
-                    str(weather_path / epw_filename) + '.gz'
+                    pathlib.Path(self.weather_dir) / x[0],
+                    str(weather_path / x[0]) + '.gz'
                 )
-                for epw_filename
-                in filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir))
+                for x in unique_epws.values()
             )
+
             logger.debug('Writing project configuration for upload')
             with open(tmppath / 'config.json', 'wt', encoding='utf-8') as f:
                 json.dump(self.cfg, f)
@@ -1855,6 +1886,22 @@ class AwsBatch(DockerBatchBase):
             logger.debug('Uploading files to S3')
             upload_directory_to_s3(tmppath, self.cfg['aws']['s3']['bucket'], self.cfg['aws']['s3']['prefix'])
 
+        # Copy the non-unique weather files on S3
+        epws_to_copy = []
+        for epws in unique_epws.values():
+            # The first in the list is already up there, copy the rest
+            for filename in epws[1:]:
+                epws_to_copy.append((
+                    f"{self.cfg['aws']['s3']['prefix']}/weather/{epws[0]}.gz",
+                    f"{self.cfg['aws']['s3']['prefix']}/weather/{filename}.gz"
+                ))
+
+        logger.debug('Copying weather files on S3')
+        bucket = self.cfg['aws']['s3']['bucket']
+        Parallel(n_jobs=-1, verbose=9)(
+            delayed(copy_s3_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy
+        )
+
         # Create the output directories
         fs = S3FileSystem()
         for upgrade_id in range(len(self.cfg.get('upgrades', [])) + 1):
@@ -1883,7 +1930,7 @@ class AwsBatch(DockerBatchBase):
         job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
             image_url,
-            command=['python3', '-m', 'buildstockbatch.aws.aws'],
+            command=['python3.8', '-m', 'buildstockbatch.aws.aws'],
             vcpus=job_env_cfg.get('vcpus', 1),
             memory=job_env_cfg.get('memory', 1024),
             env_vars=env_vars
@@ -1946,19 +1993,34 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug('Getting weather files')
         weather_dir = sim_dir / 'weather'
-        os.makedirs(weather_dir)
-        building_ids = [x[0] for x in jobs_d['batch']]
+        os.makedirs(weather_dir, exist_ok=True)
+
+        # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+        with open(sim_dir / 'lib' / 'resources' / 'options_lookup.tsv', 'r', encoding='utf-8') as f:
+            tsv_reader = csv.reader(f, delimiter='\t')
+            next(tsv_reader)  # skip headers
+            param_name = None
+            epws_by_option = {}
+            for row in tsv_reader:
+                row_has_epw = [x.endswith('.epw') for x in row[2:]]
+                if sum(row_has_epw):
+                    if row[0] != param_name and param_name is not None:
+                        raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')  # noqa: E501
+                    epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                    param_name = row[0]
+                    option_name = row[1]
+                    epws_by_option[option_name] = epw_filename
+
+        # Look through the buildstock.csv to find the appropriate location and epw
         epws_to_download = set()
+        building_ids = [x[0] for x in jobs_d['batch']]
         with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
             csv_reader = csv.DictReader(f)
-            loc_col = 'Location Weather Filename'
-            if loc_col not in csv_reader.fieldnames:
-                loc_col = 'Location'
             for row in csv_reader:
                 if int(row['Building']) in building_ids:
-                    epws_to_download.add(row[loc_col])
-        if loc_col == 'Location':
-            epws_to_download = map('USA_{}.epw'.format, epws_to_download)
+                    epws_to_download.add(epws_by_option[row[param_name]])
+
+        # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
             with io.BytesIO() as f_gz:
                 logger.debug('Downloading {}.gz'.format(epw_filename))

@@ -184,9 +184,9 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
    subscription to receive further notification emails.
 *  ``emr``: Optional key to specify options for postprocessing using an EMR cluster. Generally the defaults should work fine.
 
-    * ``master_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
-    * ``slave_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``slave_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+    * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
+    * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
+    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
       Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
