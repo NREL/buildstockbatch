@@ -249,7 +249,7 @@ batch run. An example file is in this repo as
     <span class="n">bucket</span><span class="p">:</span> <span class="n">resbldg</span><span class="o">-</span><span class="n">datasets</span>
     <span class="n">prefix</span><span class="p">:</span> <span class="n">testing</span><span class="o">/</span><span class="n">user_test</span>
   <span class="n">emr</span><span class="p">:</span>
-    <span class="n">slave_instance_count</span><span class="p">:</span> <span class="mi">1</span>
+    <span class="n">worker_instance_count</span><span class="p">:</span> <span class="mi">1</span>
   <span class="n">region</span><span class="p">:</span> <span class="n">us</span><span class="o">-</span><span class="n">west</span><span class="o">-</span><span class="mi">2</span>
   <span class="n">use_spot</span><span class="p">:</span> <span class="n">true</span>
   <span class="n">batch_array_size</span><span class="p">:</span> <span class="mi">10</span>
@@ -446,9 +446,9 @@ subscription to receive further notification emails.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">emr</span></code>: Optional key to specify options for postprocessing using an EMR cluster. Generally the defaults should work fine.</p>
 <blockquote>
 <div><ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">master_instance_type</span></code>: The <a class="reference external" href="https://aws.amazon.com/ec2/instance-types/">instance type</a> to use for the EMR master node. Default: <code class="docutils literal notranslate"><span class="pre">m5.xlarge</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">slave_instance_type</span></code>: The <a class="reference external" href="https://aws.amazon.com/ec2/instance-types/">instance type</a> to use for the EMR worker nodes. Default: <code class="docutils literal notranslate"><span class="pre">r5.4xlarge</span></code>.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">slave_instance_count</span></code>: The number of worker nodes to use. Same as <code class="docutils literal notranslate"><span class="pre">eagle.postprocessing.n_workers</span></code>.
+<li><p><code class="docutils literal notranslate"><span class="pre">manager_instance_type</span></code>: The <a class="reference external" href="https://aws.amazon.com/ec2/instance-types/">instance type</a> to use for the EMR master node. Default: <code class="docutils literal notranslate"><span class="pre">m5.xlarge</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">worker_instance_type</span></code>: The <a class="reference external" href="https://aws.amazon.com/ec2/instance-types/">instance type</a> to use for the EMR worker nodes. Default: <code class="docutils literal notranslate"><span class="pre">r5.4xlarge</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">worker_instance_count</span></code>: The number of worker nodes to use. Same as <code class="docutils literal notranslate"><span class="pre">eagle.postprocessing.n_workers</span></code>.
 Increase this for a large dataset. Default: 2.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">dask_worker_vcores</span></code>: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.</p></li>
 </ul>

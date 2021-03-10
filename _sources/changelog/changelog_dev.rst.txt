@@ -29,3 +29,10 @@ Development Changelog
 
         https://github.com/NREL/OpenStudio-BuildStock was renamed to https://github.com/NREL/resstock so references to 
         OpenStudio-BuildStock in docs were replaced with references to resstock and/or comstock.
+
+    .. change::
+        :tags: general
+        :pullreq: 205
+        :tickets: 164
+
+        Removing master/slave language from AWS EMR configuration in project schema.

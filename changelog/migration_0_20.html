@@ -324,6 +324,33 @@ See <a class="reference internal" href="../workflow_generators/index.html"><span
 </pre></div>
 </div>
 </div>
+<div class="section" id="aws-emr-configuration-name-changes">
+<h3>AWS EMR Configuration Name Changes<a class="headerlink" href="#aws-emr-configuration-name-changes" title="Permalink to this headline">¶</a></h3>
+<p>In an effort to use more appropriate language, in the <a class="reference internal" href="../project_defn.html#aws-config"><span class="std std-ref">AWS Configuration</span></a>, we
+renamed the following keys under <code class="docutils literal notranslate"><span class="pre">aws.emr</span></code>:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 49%" />
+<col style="width: 51%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Old Name</p></th>
+<th class="head"><p>New Name</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>master_instance_type</p></td>
+<td><p>manager_instance_type</p></td>
+</tr>
+<tr class="row-odd"><td><p>slave_instance_type</p></td>
+<td><p>worker_instance_type</p></td>
+</tr>
+<tr class="row-even"><td><p>slave_instance_count</p></td>
+<td><p>worker_instance_count</p></td>
+</tr>
+</tbody>
+</table>
+</div>
 </div>
 </div>
 
