@@ -9,10 +9,11 @@ A module containing utility functions for postprocessing
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-
+import traceback
 import boto3
 import dask.bag as db
 import dask.dataframe as dd
+from dask.distributed import performance_report
 import dask
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
@@ -34,7 +35,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-MAX_PARQUET_MEMORY = 1e9  # maximum size of the parquet file in memory when combining multiple parquets
+MAX_PARQUET_MEMORY = 4e9  # maximum size of the parquet file in memory when combining multiple parquets
 
 
 def read_data_point_out_json(fs, reporting_measures, filename):
@@ -227,8 +228,16 @@ def read_enduse_timeseries_parquet(fs, filename, all_cols):
     return df[all_cols]
 
 
-def read_and_concat_enduse_timeseries_parquet(fs, filenames, all_cols):
-    return pd.concat(read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames)
+def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filenames, group_id):
+    try:
+        dfs = [read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames]
+        grouped_df = pd.concat(dfs)
+        grouped_df.set_index('building_id', inplace=True)
+        grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
+        return ("success", group_id, len(grouped_df))
+        del grouped_df
+    except Exception as exp:
+        return ("fail", group_id, f"Exp: {traceback.format_exc()}")
 
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
@@ -336,26 +345,31 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
+            N = len(ts_files_in_each_partition[0])
+            group_ids = list(range(npartitions))
 
-            # Read the timeseries into a dask dataframe
-            read_and_concat_ts_pq_d = dask.delayed(
-                partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
-            )
-            ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
-            ts_df = ts_df.set_index('building_id', sorted=True)
-
-            # Write out new dask timeseries dataframe.
+            logger.info(f"Combining about {N} parquets together. Creating {npartitions} groups.")
             if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
+                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
             else:
                 assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
-            logger.info(f'Writing {ts_out_loc}')
-            ts_df.to_parquet(
-                ts_out_loc,
-                engine='pyarrow',
-                flavor='spark'
+                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
+
+            fs.makedirs(ts_out_loc)
+            logger.info(f'Created directory {ts_out_loc} for writing.')
+            # Read the timeseries into a dask dataframe
+            read_and_concat_ts_pq_d = dask.delayed(
+                # fs, all_cols, output_dir, filenames, group_id
+                partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
             )
+            group_ids = list(range(npartitions))
+            with performance_report(filename='dask_combine_report.html'):
+                results = dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))[0]
+
+            logger.info(f"Finished combining and saving. First 10 results: {results[:10]}")
+            failed_results = [r for r in results if r[0] == 'fail']
+            if failed_results:
+                logger.info(f"{len(failed_results)} groupings have failed. First 10 failed results: {results[:10]}")
 
 
 def remove_intermediate_files(fs, results_dir):

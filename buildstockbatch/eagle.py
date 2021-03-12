@@ -494,7 +494,8 @@ class EagleBatch(BuildStockBatchBase):
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
-
+        memory = self.cfg['eagle'].get('postprocessing', {}).get('memory', 85248)
+        print(f"Submitting job to {memory}MB memory nodes.")
         # Throw an error if the files already exist.
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
@@ -530,7 +531,7 @@ class EagleBatch(BuildStockBatchBase):
             '--output=postprocessing.out',
             '--nodes=1',
             ':',
-            '--mem=180000',
+            '--mem={}'.format(memory),
             '--output=dask_workers.out',
             '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
             eagle_post_sh
@@ -599,7 +600,6 @@ def user_cli(argv=sys.argv[1:]):
     '''
     This is the user entry point for running buildstockbatch on Eagle
     '''
-
     # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
 
