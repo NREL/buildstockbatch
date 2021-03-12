@@ -1,11 +1,28 @@
-stock_type: residential
+schema_version: '0.3'
 buildstock_directory: test_openstudio_buildstock
 project_directory: project_singlefamilydetached
 weather_files_url: https://fake-url
 baseline:
-  n_datapoints: 30
   n_buildings_represented: 81221016
-  sampling_algorithm: quota
+
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 30
+
+workflow_generator:
+  type: residential_default
+  args:
+    simulation_output:
+      include_enduse_subcategories: true
+    timeseries_csv_export:
+      reporting_frequency: Timestep
+      include_enduse_subcategories: true
+      output_variables:
+        - Zone Mean Air Temperature
+    reporting_measures:
+      - ReportingMeasure1
+
 upgrades:
   - upgrade_name: cool upgrade
     options:
@@ -29,13 +46,3 @@ upgrades:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
     reference_scenario: cool upgrade
-simulation_output:
-  include_enduse_subcategories: true
-timeseries_csv_export:
-  reporting_frequency: Timestep
-  include_enduse_subcategories: true
-  output_variables:
-    - Zone Mean Air Temperature
-reporting_measures:
-  - ReportingMeasure1
-schema_version: 0.2

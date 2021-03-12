@@ -33,10 +33,9 @@ import sys
 import time
 import yaml
 
-from .base import BuildStockBatchBase, SimulationExists
-from .sampler import ResidentialSingularitySampler, CommercialSobolSingularitySampler, PrecomputedSingularitySampler
-from .utils import log_error_details, get_error_details
-from . import postprocessing
+from buildstockbatch.base import BuildStockBatchBase, SimulationExists
+from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
+from buildstockbatch import postprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +45,8 @@ def get_bool_env_var(varname):
 
 
 class EagleBatch(BuildStockBatchBase):
+
+    CONTAINER_RUNTIME = ContainerRuntime.SINGULARITY
 
     sys_image_dir = '/shared-projects/buildstock/singularity_images'
     hpc_name = 'eagle'
@@ -66,43 +67,6 @@ class EagleBatch(BuildStockBatchBase):
             os.makedirs(output_dir)
         logger.debug('Output directory = {}'.format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
-        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
-        if sampling_algorithm is None:
-            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
-                           'configuration yaml. This key is required.')
-        if sampling_algorithm == 'precomputed':
-            logger.info('calling precomputed sampler')
-            self.sampler = PrecomputedSingularitySampler(
-                self.output_dir,
-                self.cfg,
-                self.buildstock_dir,
-                self.project_dir
-            )
-        elif self.stock_type == 'residential':
-            if sampling_algorithm == 'quota':
-                self.sampler = ResidentialSingularitySampler(
-                    self.singularity_image,
-                    self.output_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented for residential projects.'.
-                                          format(sampling_algorithm))
-        elif self.stock_type == 'commercial':
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolSingularitySampler(
-                    self.output_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithem "{}" is not implemented for commercial projects.'.
-                                          format(sampling_algorithm))
-        else:
-            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
     @staticmethod
     def validate_project(project_file):
@@ -198,19 +162,9 @@ class EagleBatch(BuildStockBatchBase):
             destination_dir
         )
         logger.debug("Housing characteristics copied.")
+
         # run sampling
-        #   NOTE: If a buildstock_csv is provided, the BuildStockBatch
-        #   constructor ensures that 'downselect' not in self.cfg and
-        #   run_sampling simply copies that .csv to the correct location if
-        #   necessary and returns the path
-        if 'downselect' in self.cfg:
-            # if there is a downselect section in the yml,
-            # BuildStockBatchBase.downselect calls run_sampling and does
-            # additional processing before and after
-            buildstock_csv_filename = self.downselect()
-        else:
-            # otherwise just the plain sampling process needs to be run
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
         # Hit the weather_dir API to make sure that creating the weather directory isn't a race condition in the array
         # jobs - this is rare but happens quasi-repeatably when lustre is really lagging
@@ -254,6 +208,7 @@ class EagleBatch(BuildStockBatchBase):
             with open(job_json_filename, 'w') as f:
                 json.dump({
                     'job_num': i,
+                    'n_datapoints': n_datapoints,
                     'batch': batch,
                 }, f, indent=4)
 
@@ -296,7 +251,7 @@ class EagleBatch(BuildStockBatchBase):
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(self.output_dir, self.cfg, i, upgrade_idx)
+                return self.run_building(self.output_dir, self.cfg, args['n_datapoints'], i, upgrade_idx)
             except Exception:
                 with open(traceback_file_path, 'a') as f:
                     txt = get_error_details()
@@ -340,7 +295,7 @@ class EagleBatch(BuildStockBatchBase):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
     @classmethod
-    def run_building(cls, output_dir, cfg, i, upgrade_idx=None):
+    def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
 
         fs = LocalFileSystem()
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -351,7 +306,7 @@ class EagleBatch(BuildStockBatchBase):
             sim_dir = ex.sim_dir
         else:
             # Generate the osw for this simulation
-            osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+            osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
             with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
                 json.dump(osw, f, indent=4)
 

@@ -2,14 +2,13 @@ version: 2
 jobs:
   build:
     docker:
-      - image: continuumio/miniconda3
+      - image: cimg/python:3.8
     steps:
       - setup_remote_docker
       - checkout
       - run:
           name: Install buildstock
           command: |
-            conda install -c conda-forge -y -q scipy numpy "pandas>=1.0.0,!=1.0.4" "pyarrow>=0.14.1" dask joblib pyyaml "ruamel.yaml>=0.15.0"
             pip install .[dev] --progress-bar off
       - run:
           name: Run PyTest
@@ -35,7 +34,6 @@ jobs:
           name: Build documentation
           when: always
           command: |
-            apt-get install make
             cd docs
             make html
             mkdir /tmp/docs

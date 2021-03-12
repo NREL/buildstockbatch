@@ -41,8 +41,9 @@ conda install \
 python=3.7 \
 "dask-yarn>=0.7.0" \
 "pandas>=1.0.0,!=1.0.4" \
-"pyarrow>=0.14.1" \
+"pyarrow>=3.0.0" \
 "s3fs>=0.4.2,<0.5.0" \
+"numpy>=1.20.0" \
 conda-pack \
 tornado=5 
 

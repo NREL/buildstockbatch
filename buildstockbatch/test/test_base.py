@@ -8,13 +8,17 @@ import numpy as np
 import os
 import pandas as pd
 from pyarrow import parquet
+import pytest
 import re
 import shutil
 import tempfile
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
+import yaml
 
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
+from buildstockbatch.utils import ContainerRuntime
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +53,7 @@ def test_reference_scenario(basic_residential_project_file):
     assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
 
 
-def test_combine_files_flexible(basic_residential_project_file):
+def test_combine_files_flexible(basic_residential_project_file, mocker):
     # Allows addition/removable/rename of columns. For columns that remain unchanged, verifies that the data matches
     # with stored test_results. If this test passes but test_combine_files fails, then test_results/parquet and
     # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
@@ -62,12 +66,13 @@ def test_combine_files_flexible(basic_residential_project_file):
     }
     project_filename, results_dir = basic_residential_project_file(post_process_config)
 
-    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
-            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-        bsb = BuildStockBatchBase(project_filename)
-        bsb.process_results()
-        get_dask_client_mock.assert_called_once()
+    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
+    get_dask_client_mock = mocker.patch.object(BuildStockBatchBase, 'get_dask_client')
+    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+
+    bsb = BuildStockBatchBase(project_filename)
+    bsb.process_results()
+    get_dask_client_mock.assert_called_once()
 
     def simplify_columns(colname):
         return colname.lower().replace('_', '')
@@ -125,7 +130,7 @@ def test_combine_files_flexible(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
 
-def test_downselect_integer_options(basic_residential_project_file):
+def test_downselect_integer_options(basic_residential_project_file, mocker):
     with tempfile.TemporaryDirectory() as buildstock_csv_dir:
         buildstock_csv = os.path.join(buildstock_csv_dir, 'buildstock.csv')
         valid_option_values = set()
@@ -143,22 +148,29 @@ def test_downselect_integer_options(basic_residential_project_file):
                 cf_out.writerow(row)
 
         project_filename, results_dir = basic_residential_project_file({
-            'downselect': {
-                'resample': False,
-                'logic': 'Geometry House Size|1500-2499'
+            'sampler': {
+                'type': 'residential_quota_downselect',
+                'args': {
+                    'n_datapoints': 8,
+                    'resample': False,
+                    'logic': 'Geometry House Size|1500-2499'
+                }
             }
         })
-        run_sampling_mock = MagicMock(return_value=buildstock_csv)
-        with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-                patch.object(BuildStockBatchBase, 'results_dir', results_dir), \
-                patch.object(BuildStockBatchBase, 'run_sampling', run_sampling_mock):
-            bsb = BuildStockBatchBase(project_filename)
-            bsb.downselect()
-            run_sampling_mock.assert_called_once()
-            with open(buildstock_csv, 'r', newline='') as f:
-                cf = csv.DictReader(f)
-                for row in cf:
-                    assert(row['Days Shifted'] in valid_option_values)
+        mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
+        mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+        sampler_property_mock = mocker.patch.object(BuildStockBatchBase, 'sampler', new_callable=PropertyMock)
+        sampler_mock = mocker.MagicMock()
+        sampler_property_mock.return_value = sampler_mock
+        sampler_mock.run_sampling = MagicMock(return_value=buildstock_csv)
+
+        bsb = BuildStockBatchBase(project_filename)
+        bsb.sampler.run_sampling()
+        sampler_mock.run_sampling.assert_called_once()
+        with open(buildstock_csv, 'r', newline='') as f:
+            cf = csv.DictReader(f)
+            for row in cf:
+                assert(row['Days Shifted'] in valid_option_values)
 
 
 def test_combine_files(basic_residential_project_file):
@@ -332,7 +344,8 @@ def test_write_parquet_no_index():
 def test_skipping_baseline(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file({
         'baseline': {
-            'skip_sims': True
+            'skip_sims': True,
+            'sampling_algorithm': 'quota'
         }
     })
 
@@ -364,3 +377,34 @@ def test_skipping_baseline(basic_residential_project_file):
 
     up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
     assert(os.path.exists(up01_csv_gz))
+
+
+def test_provide_buildstock_csv(basic_residential_project_file, mocker):
+    buildstock_csv = os.path.join(here, 'buildstock.csv')
+    df = pd.read_csv(buildstock_csv)
+    project_filename, results_dir = basic_residential_project_file({
+        'sampler': {
+            'type': 'precomputed',
+            'args': {
+                'sample_file': buildstock_csv
+            }
+        }
+    })
+    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
+    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+    mocker.patch.object(BuildStockBatchBase, 'CONTAINER_RUNTIME', ContainerRuntime.DOCKER)
+
+    bsb = BuildStockBatchBase(project_filename)
+    sampling_output_csv = bsb.sampler.run_sampling()
+    df2 = pd.read_csv(sampling_output_csv)
+    pd.testing.assert_frame_equal(df, df2)
+
+    # Test file missing
+    with open(project_filename, 'r') as f:
+        cfg = yaml.safe_load(f)
+    cfg['sampler']['args']['sample_file'] = os.path.join(here, 'non_existant_file.csv')
+    with open(project_filename, 'w') as f:
+        yaml.dump(cfg, f)
+
+    with pytest.raises(ValidationError, match=r"sample_file doesn't exist"):
+        BuildStockBatchBase(project_filename).sampler.run_sampling()

@@ -28,58 +28,25 @@ import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.sampler import ResidentialDockerSampler, CommercialSobolDockerSampler, PrecomputedDockerSampler
 from buildstockbatch import postprocessing
-from .utils import log_error_details
+from .utils import log_error_details, ContainerRuntime
 
 logger = logging.getLogger(__name__)
 
 
 class DockerBatchBase(BuildStockBatchBase):
 
+    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
+
     def __init__(self, project_filename):
         super().__init__(project_filename)
+
         self.docker_client = docker.DockerClient.from_env()
         try:
             self.docker_client.ping()
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
             logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
             raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
-        sampling_algorithm = self.cfg['baseline'].get('sampling_algorithm', None)
-        if sampling_algorithm is None:
-            raise KeyError('The key `sampling_algorithm` is not specified in the `baseline` section of the project '
-                           'configuration yaml. This key is required.')
-        if sampling_algorithm == 'precomputed':
-            logger.info('calling precomputed sampler')
-            self.sampler = PrecomputedDockerSampler(
-                self.cfg,
-                self.buildstock_dir,
-                self.project_dir
-            )
-        elif self.stock_type == 'residential':
-            if sampling_algorithm == 'quota':
-                self.sampler = ResidentialDockerSampler(
-                    self.docker_image,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for residential projects.'.
-                                          format(sampling_algorithm))
-        elif self.stock_type == 'commercial':
-            if sampling_algorithm == 'sobol':
-                self.sampler = CommercialSobolDockerSampler(
-                    self.project_dir,
-                    self.cfg,
-                    self.buildstock_dir,
-                    self.project_dir
-                )
-            else:
-                raise NotImplementedError('Sampling algorithm "{}" is not implemented for commercial projects.'.
-                                          format(sampling_algorithm))
-        else:
-            raise KeyError('stock_type = "{}" is not valid'.format(self.stock_type))
 
         self._weather_dir = None
 
@@ -120,7 +87,7 @@ class LocalDockerBatch(DockerBatchBase):
 
     @classmethod
     def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
-                     cfg, i, upgrade_idx=None):
+                     n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
@@ -142,7 +109,7 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
 
-        osw = cls.create_osw(cfg, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+        osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
@@ -188,16 +155,14 @@ class LocalDockerBatch(DockerBatchBase):
         return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
-        if 'downselect' in self.cfg:
-            buildstock_csv_filename = self.downselect()
-        else:
-            buildstock_csv_filename = self.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
         if sampling_only:
             return
 
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
+        n_datapoints = len(building_ids)
         run_building_d = functools.partial(
             delayed(self.run_building),
             self.project_dir,
@@ -206,6 +171,7 @@ class LocalDockerBatch(DockerBatchBase):
             self.docker_image,
             self.results_dir,
             measures_only,
+            n_datapoints,
             self.cfg
         )
         upgrade_sims = []
