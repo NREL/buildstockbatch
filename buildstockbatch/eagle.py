@@ -258,6 +258,8 @@ class EagleBatch(BuildStockBatchBase):
                     txt = "\n" + "#" * 20 + "\n" + f"Traceback for building{i}\n" + txt
                     f.write(txt)
                     del txt
+                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+                return {"building_id": i, "upgrade": upgrade_id}
 
         # Run the simulations, get the data_point_out.json info from each
         tick = time.time()

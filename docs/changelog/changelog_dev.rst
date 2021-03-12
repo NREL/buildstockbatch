@@ -36,3 +36,10 @@ Development Changelog
         :tickets: 164
 
         Removing master/slave language from AWS EMR configuration in project schema.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 197
+        :tickets: 196
+
+        Fixing issue where the postprocessing fails when a building simulation crashes in buildstockbatch.
