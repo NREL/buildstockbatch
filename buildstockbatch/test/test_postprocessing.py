@@ -7,7 +7,6 @@ import re
 import tarfile
 import pytest
 import shutil
-import buildstockbatch
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
 from unittest.mock import patch, MagicMock
