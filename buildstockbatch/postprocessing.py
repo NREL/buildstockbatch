@@ -35,7 +35,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-MAX_PARQUET_MEMORY = 4e9  # maximum size of the parquet file in memory when combining multiple parquets
+MAX_PARQUET_MEMORY = 4000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
 
 
 def read_data_point_out_json(fs, reporting_measures, filename):
@@ -219,13 +219,16 @@ def read_results_json(fs, filename):
 
 
 def read_enduse_timeseries_parquet(fs, filename, all_cols):
-    with fs.open(filename, 'rb') as f:
-        df = pd.read_parquet(f, engine='pyarrow')
-    building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
-    df['building_id'] = building_id
-    for col in set(all_cols).difference(df.columns.values):
-        df[col] = np.nan
-    return df[all_cols]
+    try:
+        with fs.open(filename, 'rb') as f:
+            df = pd.read_parquet(f, engine='pyarrow')
+        building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
+        df['building_id'] = building_id
+        for col in set(all_cols).difference(df.columns.values):
+            df[col] = np.nan
+        return df[all_cols]
+    except:
+        return pd.DataFrame(columns=[all_cols]+['building_id'])
 
 
 def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filenames, group_id):
@@ -339,10 +342,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
             sample_size = min(len(ts_filenames), 36 * 3)
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames)
+            total_mem = mean_mem * len(ts_filenames) / 1e6 # total_mem in MB
 
             # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
+            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            logger.info(f"Max parquet memory: {parquet_memory} MB")
+            npartitions = math.ceil(total_mem / parquet_memory)  # 1 GB per partition
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
             N = len(ts_files_in_each_partition[0])
@@ -374,6 +379,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
 def remove_intermediate_files(fs, results_dir):
     # Remove aggregated files to save space
+    return
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'

@@ -50,7 +50,8 @@ hpc-spec:
 hpc-postprocessing-spec:
   time: int(required=True)
   n_workers: int(required=False)
-  memory: enum(85248, 180224, 751616, required=False)
+  node_memory_mb: enum(85248, 180224, 751616, required=False)
+  parquet_memory_mb: int(required=False)
 
 sampling-spec:
   time: int(required=True)

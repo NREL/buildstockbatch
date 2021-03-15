@@ -519,6 +519,7 @@ class EagleBatch(BuildStockBatchBase):
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
         env['OUT_DIR'] = self.output_dir
         env['UPLOADONLY'] = str(upload_only)
+        env['MEMORY'] = str(memory)
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
@@ -526,7 +527,7 @@ class EagleBatch(BuildStockBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
