@@ -52,6 +52,7 @@ hpc-postprocessing-spec:
   n_workers: int(required=False)
   node_memory_mb: enum(85248, 180224, 751616, required=False)
   parquet_memory_mb: int(required=False)
+  keep_intermediate_files: bool(required=False)
 
 sampling-spec:
   time: int(required=True)

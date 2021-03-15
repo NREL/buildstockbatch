@@ -12,7 +12,6 @@ A module containing utility functions for postprocessing
 import traceback
 import boto3
 import dask.bag as db
-import dask.dataframe as dd
 from dask.distributed import performance_report
 import dask
 import datetime as dt
@@ -227,7 +226,7 @@ def read_enduse_timeseries_parquet(fs, filename, all_cols):
         for col in set(all_cols).difference(df.columns.values):
             df[col] = np.nan
         return df[all_cols]
-    except:
+    except Exception:
         return pd.DataFrame(columns=[all_cols]+['building_id'])
 
 
@@ -239,7 +238,7 @@ def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filename
         grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
         return ("success", group_id, len(grouped_df))
         del grouped_df
-    except Exception as exp:
+    except Exception:
         return ("fail", group_id, f"Exp: {traceback.format_exc()}")
 
 
@@ -342,12 +341,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
             sample_size = min(len(ts_filenames), 36 * 3)
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames) / 1e6 # total_mem in MB
+            total_mem = mean_mem * len(ts_filenames) / 1e6  # total_mem in MB
 
             # Determine how many files should be in each partition and group the files
             parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
-            npartitions = math.ceil(total_mem / parquet_memory)  # 1 GB per partition
+            npartitions = math.ceil(total_mem / parquet_memory)
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
             N = len(ts_files_in_each_partition[0])
@@ -379,7 +378,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
 def remove_intermediate_files(fs, results_dir):
     # Remove aggregated files to save space
-    return
     sim_output_dir = f'{results_dir}/simulation_output'
     ts_in_dir = f'{sim_output_dir}/timeseries'
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
