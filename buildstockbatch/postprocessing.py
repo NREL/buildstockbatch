@@ -347,10 +347,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             npartitions = math.ceil(total_mem / parquet_memory)
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
-            N = len(ts_files_in_each_partition[0])
-            group_ids = list(range(npartitions))
 
-            logger.info(f"Combining about {N} parquets together. Creating {npartitions} groups.")
+            logger.info(f"Combining about {len(ts_files_in_each_partition[0])} parquets together."
+                        f" Creating {npartitions} groups.")
             if isinstance(fs, LocalFileSystem):
                 ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
             else:
@@ -359,6 +358,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             fs.makedirs(ts_out_loc)
             logger.info(f'Created directory {ts_out_loc} for writing.')
+
             # Read the timeseries into a dask dataframe
             read_and_concat_ts_pq_d = dask.delayed(
                 # fs, all_cols, output_dir, filenames, group_id
@@ -366,7 +366,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             )
             group_ids = list(range(npartitions))
             with performance_report(filename=f'dask_combine_report{upgrade_id}.html'):
-                dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))[0]
+                dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
 
