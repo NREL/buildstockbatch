@@ -494,7 +494,7 @@ class EagleBatch(BuildStockBatchBase):
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
-        memory = self.cfg['eagle'].get('postprocessing', {}).get('memory', 85248)
+        memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
         print(f"Submitting job to {memory}MB memory nodes.")
         # Throw an error if the files already exist.
         if not upload_only:
