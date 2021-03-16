@@ -9,7 +9,6 @@ A module containing utility functions for postprocessing
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-import traceback
 import boto3
 import dask.bag as db
 from dask.distributed import performance_report
@@ -218,28 +217,21 @@ def read_results_json(fs, filename):
 
 
 def read_enduse_timeseries_parquet(fs, filename, all_cols):
-    try:
-        with fs.open(filename, 'rb') as f:
-            df = pd.read_parquet(f, engine='pyarrow')
-        building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
-        df['building_id'] = building_id
-        for col in set(all_cols).difference(df.columns.values):
-            df[col] = np.nan
-        return df[all_cols]
-    except Exception:
-        return pd.DataFrame(columns=[all_cols]+['building_id'])
+    with fs.open(filename, 'rb') as f:
+        df = pd.read_parquet(f, engine='pyarrow')
+    building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
+    df['building_id'] = building_id
+    for col in set(all_cols).difference(df.columns.values):
+        df[col] = np.nan
+    return df[all_cols]
 
 
 def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filenames, group_id):
-    try:
-        dfs = [read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames]
-        grouped_df = pd.concat(dfs)
-        grouped_df.set_index('building_id', inplace=True)
-        grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
-        return ("success", group_id, len(grouped_df))
-        del grouped_df
-    except Exception:
-        return ("fail", group_id, f"Exp: {traceback.format_exc()}")
+    dfs = [read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames]
+    grouped_df = pd.concat(dfs)
+    grouped_df.set_index('building_id', inplace=True)
+    grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
+    del grouped_df
 
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
@@ -268,6 +260,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         fs.makedirs(dr)
 
     # Results "CSV"
+    logger.info("Creating results_df.")
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     results_jsons = fs.glob(results_job_json_glob)
     results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
@@ -288,6 +281,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     if do_timeseries:
 
         # Look at all the parquet files to see what columns are in all of them.
+        logger.info("Collecting all the columns in timeseries parquet files.")
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
         all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
             fold(lambda x, y: set(x).union(y)).compute()
@@ -336,6 +330,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             # Get the names of the timseries file for each simulation in this upgrade
             ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
+            if not ts_filenames:
+                logger.info(f"There are no timeseries files for upgrade{upgrade_id}.")
+                continue
+
             # Calculate the mean and estimate the total memory usage
             read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
@@ -367,13 +365,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
             )
             group_ids = list(range(npartitions))
-            with performance_report(filename='dask_combine_report.html'):
-                results = dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))[0]
+            with performance_report(filename=f'dask_combine_report{upgrade_id}.html'):
+                dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))[0]
 
-            logger.info(f"Finished combining and saving. First 10 results: {results[:10]}")
-            failed_results = [r for r in results if r[0] == 'fail']
-            if failed_results:
-                logger.info(f"{len(failed_results)} groupings have failed. First 10 failed results: {results[:10]}")
+            logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
 
 
 def remove_intermediate_files(fs, results_dir):
