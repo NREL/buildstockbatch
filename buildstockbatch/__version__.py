@@ -1,7 +1,7 @@
 __title__ = 'buildstockbatch'
 __description__ = 'Executing BuildStock projects on batch infrastructure.'
 __url__ = 'http://github.com/NREL/buildstockbatch'
-__version__ = '0.19'
+__version__ = '0.19.1'
 __schema_version__ = '0.2'
 __author__ = 'Noel Merket'
 __author_email__ = 'noel.merket@nrel.gov'
