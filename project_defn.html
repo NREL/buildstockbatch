@@ -401,7 +401,19 @@ the Eagle supercomputer.</p>
 <blockquote>
 <div><ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">time</span></code>: Maximum time in minutes to allocate postprocessing job</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">n_workers</span></code>: Number of eagle workers to parallelize the postprocessing job into</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">n_workers</span></code>: Number of eagle workers to parallelize the postprocessing job into. Max supported is 32.</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">node_memory_mb</span></code>: The memory (in MB) to request for eagle node for postprocessing. The valid values are</dt><dd><p>85248, 180224 and 751616. Default is 85248.</p>
+</dd>
+</dl>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parquet_memory_mb</span></code>: The size (in MB) of the combined parquet file in memory. Default is 40000.</p></li>
+<li><dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">keep_intermediate_files</span></code>: Set this to true if you want to keep postprocessing intermediate files (for debugging</dt><dd><p>or other explorative purpose). The intermediate files contain results_job*.json.gz
+files and individual building’s timeseries parquet files. Default is false.</p>
+</dd>
+</dl>
+</li>
 </ul>
 </div></blockquote>
 </li>

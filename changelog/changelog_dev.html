@@ -207,10 +207,20 @@ See migration guide for details.</p>
 </li>
 </ul>
 </div>
+<div class="section" id="change-development-postprocessing">
+<h3>postprocessing<a class="headerlink" href="#change-development-postprocessing" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p class="caption" id="change-development-3"><span class="target" id="change-d2ba2104aaa64f15b85c376d0bb1b60f"><strong>[postprocessing]</strong> <a class="changelog-reference headerlink reference internal" href="#change-d2ba2104aaa64f15b85c376d0bb1b60f">¶</a></span><p>Use a map of dask delayed function to combine parquets instead of a giant dask df to avoid memory issues.
+Default to 85GB memory nodes in eagle with single process and single thread in each node to avoid memory issues.</p>
+<p>References: <a class="reference external" href="https://www.github.com/nrel/buildstockbatch/pull/212">pull request 212</a></p>
+</p>
+</li>
+</ul>
+</div>
 <div class="section" id="change-development-documentation">
 <h3>documentation<a class="headerlink" href="#change-development-documentation" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><p class="caption" id="change-development-3"><span class="target" id="change-e321a47393b9e8dd67af5d8fa39df285"><strong>[documentation]</strong> <a class="changelog-reference headerlink reference internal" href="#change-e321a47393b9e8dd67af5d8fa39df285">¶</a></span><p><a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">https://github.com/NREL/OpenStudio-BuildStock</a> was renamed to <a class="reference external" href="https://github.com/NREL/resstock">https://github.com/NREL/resstock</a> so references to
+<li><p class="caption" id="change-development-4"><span class="target" id="change-e321a47393b9e8dd67af5d8fa39df285"><strong>[documentation]</strong> <a class="changelog-reference headerlink reference internal" href="#change-e321a47393b9e8dd67af5d8fa39df285">¶</a></span><p><a class="reference external" href="https://github.com/NREL/OpenStudio-BuildStock">https://github.com/NREL/OpenStudio-BuildStock</a> was renamed to <a class="reference external" href="https://github.com/NREL/resstock">https://github.com/NREL/resstock</a> so references to
 OpenStudio-BuildStock in docs were replaced with references to resstock and/or comstock.</p>
 <p>References: <a class="reference external" href="https://www.github.com/nrel/buildstockbatch/pull/203">pull request 203</a></p>
 </p>
@@ -220,7 +230,7 @@ OpenStudio-BuildStock in docs were replaced with references to resstock and/or c
 <div class="section" id="change-development-misc">
 <h3>misc<a class="headerlink" href="#change-development-misc" title="Permalink to this headline">¶</a></h3>
 <ul class="simple">
-<li><p class="caption" id="change-development-4"><span class="target" id="change-d4c424c2a5a5ba38754592d799485aef"><strong>[bugfix]</strong> <a class="changelog-reference headerlink reference internal" href="#change-d4c424c2a5a5ba38754592d799485aef">¶</a></span><p>Fixing issue where the postprocessing fails when a building simulation crashes in buildstockbatch.</p>
+<li><p class="caption" id="change-development-5"><span class="target" id="change-d4c424c2a5a5ba38754592d799485aef"><strong>[bugfix]</strong> <a class="changelog-reference headerlink reference internal" href="#change-d4c424c2a5a5ba38754592d799485aef">¶</a></span><p>Fixing issue where the postprocessing fails when a building simulation crashes in buildstockbatch.</p>
 <p>References: <a class="reference external" href="http://www.github.com/nrel/buildstockbatch/issues/196">#196</a>, <a class="reference external" href="https://www.github.com/nrel/buildstockbatch/pull/197">pull request 197</a></p>
 </p>
 </li>
