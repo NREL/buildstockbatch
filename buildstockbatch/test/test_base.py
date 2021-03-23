@@ -15,6 +15,7 @@ import tempfile
 from unittest.mock import patch, MagicMock, PropertyMock
 import yaml
 
+import buildstockbatch
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
@@ -24,6 +25,8 @@ dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
 
 OUTPUT_FOLDER_NAME = 'output'
+
+buildstockbatch.postprocessing.performance_report = MagicMock()
 
 
 def test_reference_scenario(basic_residential_project_file):
@@ -316,13 +319,13 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
-    s3_file_path = s3_path + 'timeseries/upgrade=0/part.0.parquet'
-    source_file_path = os.path.join(source_path, 'timeseries', 'upgrade=0', 'part.0.parquet')
+    s3_file_path = s3_path + 'timeseries/upgrade=0/group0.parquet'
+    source_file_path = os.path.join(source_path, 'timeseries', 'upgrade=0', 'group0.parquet')
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
-    s3_file_path = s3_path + 'timeseries/upgrade=1/part.0.parquet'
-    source_file_path = os.path.join(source_path, 'timeseries', 'upgrade=1', 'part.0.parquet')
+    s3_file_path = s3_path + 'timeseries/upgrade=1/group0.parquet'
+    source_file_path = os.path.join(source_path, 'timeseries', 'upgrade=1', 'group0.parquet')
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 

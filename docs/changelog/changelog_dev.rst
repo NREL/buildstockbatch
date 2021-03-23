@@ -43,3 +43,11 @@ Development Changelog
         :tickets: 196
 
         Fixing issue where the postprocessing fails when a building simulation crashes in buildstockbatch.
+
+    .. change::
+        :tags: postprocessing
+        :pullreq: 212
+        :tickets:
+
+        Use a map of dask delayed function to combine parquets instead of a giant dask df to avoid memory issues.
+        Default to 85GB memory nodes in eagle with single process and single thread in each node to avoid memory issues.

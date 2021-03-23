@@ -7,11 +7,13 @@ import re
 import tarfile
 import pytest
 import shutil
+from unittest.mock import patch, MagicMock
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration
-from unittest.mock import patch
+
+postprocessing.performance_report = MagicMock()
 
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):
