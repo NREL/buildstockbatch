@@ -36,14 +36,18 @@ def test_apply_logic_recursion():
     assert(apply_logic == '(!abc&&(def||ghi)&&jkl&&mno)')
 
 
-def test_residential_package_apply():
+def test_residential_package_apply(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldg1up1'
     building_id = 1
     upgrade_idx = 0
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
         },
         'upgrades': [
             {
@@ -66,7 +70,7 @@ def test_residential_package_apply():
             }
         ]
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     upg_step = osw['steps'][2]
     assert(upg_step['measure_dir_name'] == 'ApplyUpgrade')
@@ -74,17 +78,22 @@ def test_residential_package_apply():
     assert(upg_step['arguments']['package_apply_logic'] == WorkflowGeneratorBase.make_apply_logic_arg(cfg['upgrades'][0]['package_apply_logic']))  # noqa E501
 
 
-def test_residential_simulation_controls_config():
+def test_residential_simulation_controls_config(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
         },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
+        },
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    n_datapoints = 10
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     step0 = osw['steps'][0]
     assert(step0['measure_dir_name'] == 'ResidentialSimulationControls')
@@ -98,11 +107,11 @@ def test_residential_simulation_controls_config():
     }
     for k, v in default_args.items():
         assert(step0['arguments'][k] == v)
-    cfg['residential_simulation_controls'] = {
+    cfg['workflow_generator']['args']['residential_simulation_controls'] = {
         'timesteps_per_hr': 2,
         'begin_month': 7
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     args = osw['steps'][0]['arguments']
     assert(args['timesteps_per_hr'] == 2)
@@ -111,21 +120,27 @@ def test_residential_simulation_controls_config():
         assert(args[argname] == default_args[argname])
 
 
-def test_timeseries_csv_export():
+def test_timeseries_csv_export(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'timeseries_csv_export': {
-            'reporting_frequency': 'Timestep',
-            'output_variables': 'Zone Mean Air Temperature'
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'timeseries_csv_export': {
+                    'reporting_frequency': 'Timestep',
+                    'output_variables': 'Zone Mean Air Temperature'
+                }
+            }
         }
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    n_datapoints = 10
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     timeseries_step = osw['steps'][-2]
     assert(timeseries_step['measure_dir_name'] == 'TimeseriesCSVExport')
@@ -134,7 +149,7 @@ def test_timeseries_csv_export():
         'include_enduse_subcategories': False,
         'output_variables': ''
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     args = osw['steps'][-2]['arguments']
     assert(args['reporting_frequency'] == 'Timestep')
@@ -143,21 +158,26 @@ def test_timeseries_csv_export():
         assert(args[argname] == default_args[argname])
 
 
-def test_additional_reporting_measures():
+def test_additional_reporting_measures(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'reporting_measures': [
-            'ReportingMeasure1',
-            'ReportingMeasure2'
-        ]
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'reporting_measures': [
+                    'ReportingMeasure1',
+                    'ReportingMeasure2'
+                ]
+            }
+        }
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     reporting_measure_1_step = osw['steps'][-3]
     assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
@@ -165,23 +185,29 @@ def test_additional_reporting_measures():
     assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
 
 
-def test_ignore_measures_argument():
+def test_ignore_measures_argument(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100,
-            'measures_to_ignore': [
-                'ResidentialApplianceCookingRange',
-                'ResidentialApplianceDishwasher',
-                'ResidentialApplianceClothesWasher',
-                'ResidentialApplianceClothesDryer',
-                'ResidentialApplianceRefrigerator']
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'measures_to_ignore': [
+                    'ResidentialApplianceCookingRange',
+                    'ResidentialApplianceDishwasher',
+                    'ResidentialApplianceClothesWasher',
+                    'ResidentialApplianceClothesDryer',
+                    'ResidentialApplianceRefrigerator'
+                ]
+            }
         }
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     measure_step = None
     for step in osw['steps']:
@@ -195,14 +221,18 @@ def test_ignore_measures_argument():
         'ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
 
 
-def test_default_apply_upgrade():
+def test_default_apply_upgrade(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldg1up1'
     building_id = 1
     upgrade_idx = 0
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
         },
         'upgrades': [
             {
@@ -214,7 +244,7 @@ def test_default_apply_upgrade():
             }
         ]
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     for step in osw['steps']:
         if step['measure_dir_name'] == 'ApplyUpgrade':
@@ -225,27 +255,33 @@ def test_default_apply_upgrade():
     assert(step['arguments']['option_1'] == 'Parameter|Option')
 
 
-def test_simulation_output():
+def test_simulation_output(mocker):
+    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = None
     cfg = {
         'baseline': {
-            'n_datapoints': 10,
             'n_buildings_represented': 100
         },
-        'simulation_output': {
-            'include_enduse_subcategories': True
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {
+                'simulation_output': {
+                    'include_enduse_subcategories': True
+                }
+            }
         }
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    n_datapoints = 10
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     simulation_output_step = osw['steps'][-2]
     assert(simulation_output_step['measure_dir_name'] == 'SimulationOutputReport')
     default_args = {
         'include_enduse_subcategories': False
     }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg)
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     args = osw['steps'][-2]['arguments']
     for argname in ('include_enduse_subcategories',):

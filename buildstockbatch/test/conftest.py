@@ -27,18 +27,30 @@ def basic_residential_project_file():
             os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
             os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
             cfg = {
-                'stock_type': 'residential',
                 'buildstock_directory': buildstock_directory,
                 'project_directory': project_directory,
                 'output_directory': output_directory,
                 'weather_files_url': 'https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip',
-                'baseline': {
-                    'n_datapoints': 8,
-                    'n_buildings_represented': 80000000,
-                    'sampling_algorithm': 'quota'
+                'sampler': {
+                    'type': 'residential_quota',
+                    'args': {
+                        'n_datapoints': 8
+                    }
                 },
-                'simulation_output': {
-                    'include_enduse_subcategories': True
+                'workflow_generator': {
+                    'type': 'residential_default',
+                    'args': {
+                        'timeseries_csv_export': {
+                            'reporting_frequency': 'Hourly',
+                            'include_enduse_subcategories': True
+                        },
+                        'simulation_output': {
+                            'include_enduse_subcategories': True
+                        },
+                    }
+                },
+                'baseline': {
+                    'n_buildings_represented': 80000000,
                 },
                 'upgrades': [{
                     'upgrade_name': 'Upgrade1',
@@ -46,17 +58,13 @@ def basic_residential_project_file():
                         {'option': 'Infiltration|11.25 ACH50'}
                     ]
                             }],
-                'timeseries_csv_export': {
-                    'reporting_frequency': 'Hourly',
-                    'include_enduse_subcategories': True
-                },
                 'eagle': {
                     'sampling': {
                         'time': 20
                     },
                     'account': 'testaccount',
                 },
-                'schema_version': 0.2
+                'schema_version': '0.3'
             }
             cfg.update(update_args)
             project_filename = os.path.join(test_directory, 'project.yml')

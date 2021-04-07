@@ -11,7 +11,10 @@ This object contains the commercial classes for generating OSW files from indivi
 """
 
 import datetime as dt
+import json
 import logging
+import re
+import yamale
 
 from .base import WorkflowGeneratorBase
 
@@ -19,6 +22,27 @@ logger = logging.getLogger(__name__)
 
 
 class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
+
+    @classmethod
+    def validate(cls, cfg):
+        """Validate arguments
+
+        :param cfg: project configuration
+        :type cfg: dict
+        """
+        schema_yml = """
+        measures: list(include('measure-spec'), required=False)
+        include_qaqc: bool(required=False)
+        ---
+        measure-spec:
+            measure_dir_name: str(required=True)
+            arguments: map(required=False)
+        """
+        workflow_generator_args = cfg['workflow_generator']['args']
+        schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
+        schema = yamale.make_schema(content=schema_yml, parser='ruamel')
+        data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
+        return yamale.validate(schema, data, strict=True)
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
@@ -29,6 +53,13 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
+
+        workflow_args = {
+            'measures': [],
+            'include_qaqc': False
+        }
+        workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
+
         osw = {
             'id': sim_id,
             'steps': [
@@ -60,7 +91,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'weather_file': 'weather/empty.epw'
         }
 
-        osw['steps'].extend(self.cfg['baseline'].get('measures', []))
+        osw['steps'].extend(workflow_args['measures'])
 
         osw['steps'].extend([
             {
@@ -115,7 +146,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             }
         ])
 
-        if self.cfg.get('baseline', {}).get('include_qaqc', False):
+        if workflow_args['include_qaqc']:
             osw['steps'].extend([
                 {
                     'measure_dir_name': 'la_100_qaqc',
