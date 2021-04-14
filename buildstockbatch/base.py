@@ -181,7 +181,11 @@ class BuildStockBatchBase(object):
             enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
             timeseries_filepath = enduse_timeseries_filepath
             skiprows = False
-        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
+        schedules_filepath = ''
+        if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
+            for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
+                if file.endswith('schedules.csv'):
+                    schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
