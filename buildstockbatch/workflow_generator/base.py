@@ -20,7 +20,6 @@ class WorkflowGeneratorBase(object):
     def __init__(self, cfg, n_datapoints):
         self.cfg = cfg
         self.n_datapoints = n_datapoints
-        self.validate(self.cfg)
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """

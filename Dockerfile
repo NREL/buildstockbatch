@@ -1,26 +1,24 @@
 FROM nrel/openstudio:2.9.1
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-ENV PATH /opt/conda/bin:$PATH
 
-RUN apt-get update --fix-missing && \
-    apt-get install -y wget bzip2 ca-certificates libglib2.0-0 libxext6 libsm6 libxrender1 git mercurial subversion && \
-    apt-get clean
+RUN sudo apt update && \
+    sudo apt install -y wget build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev \
+    libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
 
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    rm ~/miniconda.sh && \
-    /opt/conda/bin/conda clean -tipsy && \
-    ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
-    echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate base" >> ~/.bashrc && \
-    find /opt/conda/ -follow -type f -name '*.a' -delete && \
-    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
-    /opt/conda/bin/conda clean -afy
+RUN wget https://www.python.org/ftp/python/3.8.8/Python-3.8.8.tgz && \
+    tar xzf Python-3.8.8.tgz && \
+    cd Python-3.8.8 && \
+    ./configure --enable-optimizations && \
+    make altinstall && \
+    rm -rf Python-3.8.8 && \
+    rm -rf Python-3.8.8.tgz
 
-
-RUN conda install -c conda-forge -y pandas dask pyarrow python-dateutil joblib && \
-    python -m pip install --upgrade pip
+RUN sudo apt install -y -V ca-certificates lsb-release && \
+    wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
+    sudo apt update && \
+    sudo apt install -y -V libarrow-dev libarrow-glib-dev libarrow-dataset-dev libparquet-dev libparquet-glib-dev
 
 COPY . /buildstock-batch/
-RUN python -m pip install /buildstock-batch
+RUN python3.8 -m pip install /buildstock-batch

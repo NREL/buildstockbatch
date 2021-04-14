@@ -3,6 +3,7 @@ buildstock_directory: ../resstock  # Relative to this file or absolute
 project_directory: project_national  # Relative to buildstock_directory
 output_directory: ../demo_test_outputs
 weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+# weather_files_path: ../weather/BuildStock_TMY3_FIPS.zip
 
 baseline:
   n_buildings_represented: 133172057  # Total number of residential dwelling units in contiguous United States, including unoccupied units, resulting from acensus tract level query of ACS 5-yr 2016 (i.e. 2012-2016), using this script: https://github.com/NREL/resstock-estimation/blob/master/sources/spatial/tsv_maker.py.
@@ -10,7 +11,7 @@ baseline:
 sampler:
   type: residential_quota # change to residential_quota_downselect to do downselect
   args:
-    n_datapoints: 4
+    n_datapoints: 100
     # logic:
     #   - Geometry Building Type RECS|Single-Family Detached
     #   - Vacancy Status|Occupied
@@ -39,10 +40,12 @@ aws:
     bucket: resbldg-datasets
     prefix: testing/external_demo_project
   emr:
-    slave_instance_count: 1
+    manager_instance_type: m5.xlarge
+    worker_instance_type: r5.4xlarge
+    worker_instance_count: 1
   region: us-west-2
   use_spot: true
-  batch_array_size: 4
+  batch_array_size: 100
   # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
   notifications_email: user@example.com
 

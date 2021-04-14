@@ -263,6 +263,8 @@ class EagleBatch(BuildStockBatchBase):
                     txt = "\n" + "#" * 20 + "\n" + f"Traceback for building{i}\n" + txt
                     f.write(txt)
                     del txt
+                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+                return {"building_id": i, "upgrade": upgrade_id}
 
         # Run the simulations, get the data_point_out.json info from each
         tick = time.time()
@@ -460,7 +462,8 @@ class EagleBatch(BuildStockBatchBase):
         # Configuration values
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
-
+        memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
+        print(f"Submitting job to {memory}MB memory nodes.")
         # Throw an error if the files already exist.
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
@@ -484,6 +487,7 @@ class EagleBatch(BuildStockBatchBase):
         env['MY_CONDA_ENV'] = os.environ['CONDA_PREFIX']
         env['OUT_DIR'] = self.output_dir
         env['UPLOADONLY'] = str(upload_only)
+        env['MEMORY'] = str(memory)
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
@@ -491,12 +495,12 @@ class EagleBatch(BuildStockBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
             ':',
-            '--mem=180000',
+            '--mem={}'.format(memory),
             '--output=dask_workers.out',
             '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
             eagle_post_sh
@@ -565,7 +569,6 @@ def user_cli(argv=sys.argv[1:]):
     '''
     This is the user entry point for running buildstockbatch on Eagle
     '''
-
     # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
 

@@ -9,10 +9,9 @@ A module containing utility functions for postprocessing
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-
 import boto3
 import dask.bag as db
-import dask.dataframe as dd
+from dask.distributed import performance_report
 import dask
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
@@ -34,7 +33,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-MAX_PARQUET_MEMORY = 1e9  # maximum size of the parquet file in memory when combining multiple parquets
+MAX_PARQUET_MEMORY = 4000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
 
 
 def read_data_point_out_json(fs, reporting_measures, filename):
@@ -231,8 +230,12 @@ def read_enduse_timeseries_parquet(fs, filename, all_cols):
     return df[all_cols]
 
 
-def read_and_concat_enduse_timeseries_parquet(fs, filenames, all_cols):
-    return pd.concat(read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames)
+def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filenames, group_id):
+    dfs = [read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames]
+    grouped_df = pd.concat(dfs)
+    grouped_df.set_index('building_id', inplace=True)
+    grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
+    del grouped_df
 
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
@@ -261,6 +264,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         fs.makedirs(dr)
 
     # Results "CSV"
+    logger.info("Creating results_df.")
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     results_jsons = fs.glob(results_job_json_glob)
     results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
@@ -281,6 +285,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     if do_timeseries:
 
         # Look at all the parquet files to see what columns are in all of them.
+        logger.info("Collecting all the columns in timeseries parquet files.")
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
         all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
             fold(lambda x, y: set(x).union(y)).compute()
@@ -329,37 +334,45 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             # Get the names of the timseries file for each simulation in this upgrade
             ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
+            if not ts_filenames:
+                logger.info(f"There are no timeseries files for upgrade{upgrade_id}.")
+                continue
+
             # Calculate the mean and estimate the total memory usage
             read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
             sample_size = min(len(ts_filenames), 36 * 3)
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames)
+            total_mem = mean_mem * len(ts_filenames) / 1e6  # total_mem in MB
 
             # Determine how many files should be in each partition and group the files
-            npartitions = math.ceil(total_mem / MAX_PARQUET_MEMORY)  # 1 GB per partition
+            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            logger.info(f"Max parquet memory: {parquet_memory} MB")
+            npartitions = math.ceil(total_mem / parquet_memory)
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
 
-            # Read the timeseries into a dask dataframe
-            read_and_concat_ts_pq_d = dask.delayed(
-                partial(read_and_concat_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
-            )
-            ts_df = dd.from_delayed(map(read_and_concat_ts_pq_d, ts_files_in_each_partition))
-            ts_df = ts_df.set_index('building_id', sorted=True)
-
-            # Write out new dask timeseries dataframe.
+            logger.info(f"Combining about {len(ts_files_in_each_partition[0])} parquets together."
+                        f" Creating {npartitions} groups.")
             if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
+                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
             else:
                 assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
-            logger.info(f'Writing {ts_out_loc}')
-            ts_df.to_parquet(
-                ts_out_loc,
-                engine='pyarrow',
-                flavor='spark'
+                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
+
+            fs.makedirs(ts_out_loc)
+            logger.info(f'Created directory {ts_out_loc} for writing.')
+
+            # Read the timeseries into a dask dataframe
+            read_and_concat_ts_pq_d = dask.delayed(
+                # fs, all_cols, output_dir, filenames, group_id
+                partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
             )
+            group_ids = list(range(npartitions))
+            with performance_report(filename=f'dask_combine_report{upgrade_id}.html'):
+                dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
+
+            logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
 
 
 def remove_intermediate_files(fs, results_dir):

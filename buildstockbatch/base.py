@@ -569,4 +569,8 @@ class BuildStockBatchBase(object):
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 
-        postprocessing.remove_intermediate_files(fs, self.results_dir)
+        if not self.cfg['eagle'].get('postprocessing', {}).get('keep_intermediate_files', False):
+            logger.info("Removing intermediate files.")
+            postprocessing.remove_intermediate_files(fs, self.results_dir)
+        else:
+            logger.info("Skipped removing intermediate files.")

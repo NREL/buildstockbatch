@@ -31,9 +31,9 @@ aws-job-environment:
   memory: int(min=1024, required=False)
 
 aws-emr-spec:
-  master_instance_type: str(required=False)
-  slave_instance_type: str(required=False)
-  slave_instance_count: int(min=1, required=False)
+  manager_instance_type: str(required=False)
+  worker_instance_type: str(required=False)
+  worker_instance_count: int(min=1, required=False)
   dask_worker_vcores: int(min=1, required=False)
 
 hpc-spec:
@@ -46,6 +46,9 @@ hpc-spec:
 hpc-postprocessing-spec:
   time: int(required=True)
   n_workers: int(required=False)
+  node_memory_mb: enum(85248, 180224, 751616, required=False)
+  parquet_memory_mb: int(required=False)
+  keep_intermediate_files: bool(required=False)
 
 sampler-spec:
   type: str(required=True)

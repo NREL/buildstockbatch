@@ -168,3 +168,19 @@ New Spec:
         timeseries_csv_export:
           reporting_frequency: Hourly
           include_enduse_subcategories: true
+
+AWS EMR Configuration Name Changes
+----------------------------------
+
+In an effort to use more appropriate language, in the :ref:`aws-config`, we
+renamed the following keys under ``aws.emr``:
+
++----------------------+-----------------------+
+|       Old Name       |       New Name        |
++======================+=======================+
+| master_instance_type | manager_instance_type |
++----------------------+-----------------------+
+| slave_instance_type  | worker_instance_type  |
++----------------------+-----------------------+
+| slave_instance_count | worker_instance_count |
++----------------------+-----------------------+
