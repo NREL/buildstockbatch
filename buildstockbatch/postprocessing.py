@@ -36,19 +36,23 @@ logger = logging.getLogger(__name__)
 MAX_PARQUET_MEMORY = 4000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
 
 
-def read_results_json(fs, reporting_measures, filename):
+def read_data_point_out_json(fs, reporting_measures, filename):
     try:
         with fs.open(filename, 'r') as f:
             d = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return None
-    else:
-        if 'SimulationOutputReport' not in d:
-            d['SimulationOutputReport'] = {'applicable': False}
-        for reporting_measure in reporting_measures + ['UpgradeCosts']:
-            if reporting_measure not in d:
-                d[reporting_measure] = {'applicable': False}
-        return d
+        try:
+            with fs.open(filename.replace('data_point_out', 'results'), 'r') as f:
+                d = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+    if 'SimulationOutputReport' not in d:
+        d['SimulationOutputReport'] = {'applicable': False}
+    for reporting_measure in reporting_measures + ['UpgradeCosts']:
+        if reporting_measure not in d:
+            d[reporting_measure] = {'applicable': False}
+    return d
 
 
 def to_camelcase(x):
@@ -107,10 +111,28 @@ def read_out_osw(fs, filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
-        for step in d.get('steps', []):
-            if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_id'] = step['arguments']['building_id']
         return out_d
+
+
+def read_job_files(fs, started, finished):
+    jobs = {'completed_status': 'Fail'}
+    try:
+        with fs.open(started, 'r') as f:
+            started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
+            started_at = started_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
+            jobs['started_at'] = started_at
+    except:
+        return None
+    try:
+        with fs.open(finished, 'r') as f:
+            completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
+            completed_at = completed_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
+            jobs['completed_at'] = completed_at
+    except:
+        return None
+    else:
+        jobs['completed_status'] = 'Success'
+    return jobs
 
 
 def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
@@ -129,8 +151,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     :return: dpout [dict]
     """
 
-    dpout = read_results_json(
-        fs, reporting_measures, f'{sim_dir}/run/results.json'
+    dpout = read_data_point_out_json(
+        fs, reporting_measures, f'{sim_dir}/run/data_point_out.json'
     )
     if dpout is None:
         dpout = {}
@@ -139,6 +161,9 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
     if out_osw:
         dpout.update(out_osw)
+    else: # for when run_options: fast=true
+        jobs = read_job_files(fs, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
+        dpout.update(jobs)
     dpout['upgrade'] = upgrade_id
     dpout['building_id'] = building_id
     return dpout
@@ -213,7 +238,7 @@ def get_cols(fs, filename):
     return schema.names
 
 
-def read_results_job_json(fs, filename):
+def read_results_json(fs, filename):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
@@ -266,9 +291,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     # Results "CSV"
     logger.info("Creating results_df.")
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
-    results_job_jsons = fs.glob(results_job_json_glob)
-    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_job_jsons]
-    dpouts_by_job = dask.compute([dask.delayed(read_results_job_json)(fs, x) for x in results_job_jsons])[0]
+    results_jsons = fs.glob(results_job_json_glob)
+    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
+    dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
     for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
         for dpout in dpouts_for_this_job:
             dpout['job_id'] = job_id

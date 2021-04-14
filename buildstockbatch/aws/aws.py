@@ -2070,7 +2070,7 @@ class AwsBatch(DockerBatchBase):
                     building_id
                 )
 
-                # Read results.json
+                # Read data_point_out.json
                 dpout = postprocessing.read_simulation_outputs(
                     local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
                 )
