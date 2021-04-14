@@ -33,6 +33,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         build_existing_model: map(required=False)
         simulation_output_report: map(required=False)
+        measures: list(include('measure-spec'), required=False)
+        reporting_measures: list(str(), required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -56,6 +58,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         # Default argument values
         workflow_args = {
             'build_existing_model': {},
+            'measures': [],
             'simulation_output_report': {},
         }
         workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
@@ -122,6 +125,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             }
         }
 
+        osw['steps'].extend(workflow_args['measures'])
+
         if not workflow_args['build_existing_model']['debug']:
             osw['steps'].extend([
                 {
@@ -160,5 +165,13 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             build_existing_model_idx = \
                 [x['measure_dir_name'] == 'BuildExistingModel' for x in osw['steps']].index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
+
+        if 'reporting_measures' in workflow_args:
+            for measure_dir_name in workflow_args['reporting_measures']:
+                reporting_measure = {
+                    'measure_dir_name': measure_dir_name,
+                    'arguments': {}
+                }
+                osw['steps'].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
 
         return osw
