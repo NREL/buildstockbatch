@@ -67,19 +67,21 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_begin_day_of_month': 1,
             'simulation_control_run_period_end_month': 12,
             'simulation_control_run_period_end_day_of_month': 31,
-            'simulation_control_run_period_calendar_year': 2007,
+            'simulation_control_run_period_calendar_year': 2007
         }
 
         bld_exist_model_args = {
             'building_id': building_id,
             'workflow_json': 'measure-info.json',
             'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
+            'simulation_control_timestep': 60,
+            'debug': False
         }
         bld_exist_model_args.update(sim_ctl_run_prd_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         sim_out_rep_args = {
-            'timeseries_frequency': True,
+            'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': False,
             'include_timeseries_hot_water_uses': False,
@@ -98,6 +100,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 {
                     'measure_dir_name': 'BuildExistingModel',
                     'arguments': bld_exist_model_args
+                },
+                {
+                    'measure_dir_name': 'SimulationOutputReport',
+                    'arguments': sim_out_rep_args
+                },
+                {
+                    'measure_dir_name': 'UpgradeCosts',
+                    'arguments': {}
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
@@ -112,20 +122,13 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             }
         }
 
-        osw['steps'].extend([
-            {
-                'measure_dir_name': 'SimulationOutputReport',
-                'arguments': workflow_args['simulation_output_report']
-            },
-            {
-                'measure_dir_name': 'UpgradeCosts',
-                'arguments': {}
-            },
-            {
-                'measure_dir_name': 'ServerDirectoryCleanup',
-                'arguments': {}
-            }
-        ])
+        if not workflow_args['build_existing_model']['debug']:
+            osw['steps'].extend([
+                {
+                    'measure_dir_name': 'ServerDirectoryCleanup',
+                    'arguments': {}
+                }
+            ])
 
         if upgrade_idx is not None:
             measure_d = self.cfg['upgrades'][upgrade_idx]
