@@ -106,7 +106,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'resources/hpxml-measures'
             ],
             'run_options': {
-                'fast': False,
+                'fast': True,
                 'skip_expand_objects': True,
                 'skip_energyplus_preprocess': True
             }
@@ -119,6 +119,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
+                'arguments': {}
+            },
+            {
+                'measure_dir_name': 'ServerDirectoryCleanup',
                 'arguments': {}
             }
         ])
