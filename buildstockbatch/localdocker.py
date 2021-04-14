@@ -152,7 +152,7 @@ class LocalDockerBatch(DockerBatchBase):
             i
         )
 
-        # Read data_point_out.json
+        # Read results.json
         reporting_measures = cfg.get('reporting_measures', [])
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout

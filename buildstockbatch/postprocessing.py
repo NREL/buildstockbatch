@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 MAX_PARQUET_MEMORY = 4000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
 
 
-def read_data_point_out_json(fs, reporting_measures, filename):
+def read_results_json(fs, reporting_measures, filename):
     try:
         with fs.open(filename, 'r') as f:
             d = json.load(f)
@@ -129,8 +129,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     :return: dpout [dict]
     """
 
-    dpout = read_data_point_out_json(
-        fs, reporting_measures, f'{sim_dir}/run/data_point_out.json'
+    dpout = read_results_json(
+        fs, reporting_measures, f'{sim_dir}/run/results.json'
     )
     if dpout is None:
         dpout = {}
@@ -213,7 +213,7 @@ def get_cols(fs, filename):
     return schema.names
 
 
-def read_results_json(fs, filename):
+def read_results_job_json(fs, filename):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
@@ -266,9 +266,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     # Results "CSV"
     logger.info("Creating results_df.")
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
-    results_jsons = fs.glob(results_job_json_glob)
-    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
-    dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
+    results_job_jsons = fs.glob(results_job_json_glob)
+    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_job_jsons]
+    dpouts_by_job = dask.compute([dask.delayed(read_results_job_json)(fs, x) for x in results_job_jsons])[0]
     for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
         for dpout in dpouts_for_this_job:
             dpout['job_id'] = job_id

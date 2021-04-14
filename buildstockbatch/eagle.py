@@ -266,7 +266,7 @@ class EagleBatch(BuildStockBatchBase):
                 upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
                 return {"building_id": i, "upgrade": upgrade_id}
 
-        # Run the simulations, get the data_point_out.json info from each
+        # Run the simulations, get the reaults.json info from each
         tick = time.time()
         with Parallel(n_jobs=-1, verbose=9) as parallel:
             dpouts = parallel(itertools.starmap(run_building_d, args['batch']))
