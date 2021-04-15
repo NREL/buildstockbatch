@@ -66,3 +66,10 @@ class WorkflowGeneratorBase(object):
         :type cfg: dict
         """
         return True
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in the outputs
+
+        Replace this in your subclass
+        """
+        return []

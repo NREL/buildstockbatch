@@ -59,6 +59,10 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         yamale.validate(schema, data, strict=True)
         return cls.validate_measures_and_arguments(cfg)
 
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        return self.cfg['workflow_generator'].get('args', {}).get('reporting_measures', [])
+
     @staticmethod
     def validate_measures_and_arguments(cfg):
 

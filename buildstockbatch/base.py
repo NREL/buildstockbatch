@@ -125,6 +125,12 @@ class BuildStockBatchBase(object):
         baseline_skip = self.cfg['baseline'].get('skip_sims', False)
         return baseline_skip
 
+    @classmethod
+    def get_reporting_measures(cls, cfg):
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg['workflow_generator']['type'])
+        wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
+        return wg.reporting_measures()
+
     def run_batch(self):
         raise NotImplementedError
 

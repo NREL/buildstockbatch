@@ -32,6 +32,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         """
         schema_yml = """
         measures: list(include('measure-spec'), required=False)
+        reporting_measures: list(include('measure-spec'), required=False)
         include_qaqc: bool(required=False)
         ---
         measure-spec:
@@ -43,6 +44,11 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         return yamale.validate(schema, data, strict=True)
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        workflow_args = self.cfg['workflow_generator'].get('args', {})
+        return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
