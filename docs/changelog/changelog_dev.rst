@@ -60,3 +60,10 @@ Development Changelog
         The glue crawler was failing when there was a trailing ``/`` character.
         This fixes that as well as checks to make sure files were uploaded
         before running the crawler.
+
+    .. change::
+        :tags: workflow
+        :pullreq:
+        :tickets:
+
+        Adding measure arguments for reporting measures in the workflow generator.
