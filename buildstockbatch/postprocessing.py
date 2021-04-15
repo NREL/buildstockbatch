@@ -119,15 +119,15 @@ def read_job_files(fs, started, finished):
     try:
         with fs.open(started, 'r') as f:
             started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
-            started_at = started_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
-            jobs['started_at'] = started_at
+            started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
+            jobs['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
         return None
     try:
         with fs.open(finished, 'r') as f:
             completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
-            completed_at = completed_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
-            jobs['completed_at'] = completed_at
+            completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
+            jobs['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
         return None
     else:
