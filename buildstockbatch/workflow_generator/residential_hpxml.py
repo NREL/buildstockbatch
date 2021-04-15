@@ -56,28 +56,29 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         # Default argument values
         workflow_args = {
             'build_existing_model': {},
+            'measures': [],
             'simulation_output_report': {},
         }
         workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
 
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
-        sim_ctl_run_prd_args = {
+        sim_ctl_args = {
+            'simulation_control_timestep': 60,
             'simulation_control_run_period_begin_month': 1,
             'simulation_control_run_period_begin_day_of_month': 1,
             'simulation_control_run_period_end_month': 12,
             'simulation_control_run_period_end_day_of_month': 31,
-            'simulation_control_run_period_calendar_year': 2007
+            'simulation_control_run_period_calendar_year': 2007,
+            'debug': False
         }
 
         bld_exist_model_args = {
             'building_id': building_id,
             'workflow_json': 'measure-info.json',
-            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
-            'simulation_control_timestep': 60,
-            'debug': False
+            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented']
         }
-        bld_exist_model_args.update(sim_ctl_run_prd_args)
+        bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         sim_out_rep_args = {
@@ -100,14 +101,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 {
                     'measure_dir_name': 'BuildExistingModel',
                     'arguments': bld_exist_model_args
-                },
-                {
-                    'measure_dir_name': 'SimulationOutputReport',
-                    'arguments': sim_out_rep_args
-                },
-                {
-                    'measure_dir_name': 'UpgradeCosts',
-                    'arguments': {}
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
@@ -122,13 +115,18 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             }
         }
 
-        if not bld_exist_model_args['debug']:
-            osw['steps'].extend([
-                {
-                    'measure_dir_name': 'ServerDirectoryCleanup',
-                    'arguments': {}
-                }
-            ])
+        osw['steps'].extend(workflow_args['measures'])
+
+        osw['steps'].extend([
+            {
+                'measure_dir_name': 'SimulationOutputReport',
+                'arguments': sim_out_rep_args
+            },
+            {
+                'measure_dir_name': 'UpgradeCosts',
+                'arguments': {}
+            }
+        ])
 
         if upgrade_idx is not None:
             measure_d = self.cfg['upgrades'][upgrade_idx]
@@ -160,5 +158,21 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             build_existing_model_idx = \
                 [x['measure_dir_name'] == 'BuildExistingModel' for x in osw['steps']].index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
+
+        if 'reporting_measures' in workflow_args:
+            for measure_dir_name in workflow_args['reporting_measures']:
+                reporting_measure = {
+                    'measure_dir_name': measure_dir_name,
+                    'arguments': {}
+                }
+                osw['steps'].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
+
+        if not bld_exist_model_args['debug']:
+            osw['steps'].extend([
+                {
+                    'measure_dir_name': 'ServerDirectoryCleanup',
+                    'arguments': {}
+                }
+            ])
 
         return osw
