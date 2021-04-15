@@ -122,7 +122,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             }
         }
 
-        if not workflow_args['build_existing_model']['debug']:
+        if not bld_exist_model_args['debug']:
             osw['steps'].extend([
                 {
                     'measure_dir_name': 'ServerDirectoryCleanup',
