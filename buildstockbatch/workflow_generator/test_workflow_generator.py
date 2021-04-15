@@ -171,18 +171,25 @@ def test_additional_reporting_measures(mocker):
             'type': 'residential_default',
             'args': {
                 'reporting_measures': [
-                    'ReportingMeasure1',
-                    'ReportingMeasure2'
+                    {'measure_dir_name': 'ReportingMeasure1'},
+                    {'measure_dir_name': 'ReportingMeasure2', 'arguments': {'arg1': 'asdf', 'arg2': 'jkl'}}
                 ]
             }
         }
     }
+    ResidentialDefaultWorkflowGenerator.validate(cfg)
     osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
     reporting_measure_1_step = osw['steps'][-3]
     assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
+    assert(reporting_measure_1_step['arguments'] == {})
+    assert(reporting_measure_1_step['measure_type'] == 'ReportingMeasure')
     reporting_measure_2_step = osw['steps'][-2]
     assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
+    assert(reporting_measure_2_step['arguments']['arg1'] == 'asdf')
+    assert(reporting_measure_2_step['arguments']['arg2'] == 'jkl')
+    assert(len(reporting_measure_2_step['arguments']))
+    assert(reporting_measure_2_step['measure_type'] == 'ReportingMeasure')
 
 
 def test_ignore_measures_argument(mocker):

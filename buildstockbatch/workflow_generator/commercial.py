@@ -152,6 +152,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             }
         ])
 
+        # FIXME: Insert the reporting measures somewhere around here
         if workflow_args['include_qaqc']:
             osw['steps'].extend([
                 {
