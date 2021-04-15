@@ -19,11 +19,23 @@ Configuration Example
 Arguments
 ~~~~~~~~~
 
-- ``build_existing_model`` (optional): TODO. See
+- ``build_existing_model``: Update the arguments to the `BuildExistingModel`_ measure. See
   :ref:`build-existing-model-defaults` for current defaults.
 
-- ``simulation_output_report`` (optional): TODO. See
+- ``simulation_output_report``: Update the arguments to the `SimulationOutputReport`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
+
+- ``measures`` (optional): Add these optional measures to the end of your workflow.
+
+    - ``measure_dir_name``: Name of measure directory.
+    - ``arguments``: map of key, value arguments to pass to the measure.
+
+- ``reporting_measures`` (optional): a list of reporting measure names to apply
+  additional reporting measures (that require no arguments) to the workflow. Any
+  columns reported by these additional measures will be appended to the results
+  csv. Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of
+  reporting measures, doing so will cause run to fail prematurely.
+  ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
 
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/restructure-v3/measures/BuildExistingModel/measure.xml
 .. _SimulationOutputReport: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/SimulationOutputReport/measure.xml
