@@ -51,3 +51,12 @@ Development Changelog
 
         Use a map of dask delayed function to combine parquets instead of a giant dask df to avoid memory issues.
         Default to 85GB memory nodes in eagle with single process and single thread in each node to avoid memory issues.
+
+    .. change::
+        :tags: postprocessing
+        :pullreq: 202
+        :tickets: 159
+
+        The glue crawler was failing when there was a trailing ``/`` character.
+        This fixes that as well as checks to make sure files were uploaded
+        before running the crawler.

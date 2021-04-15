@@ -425,7 +425,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     for files in parquet_dir.rglob('*.parquet'):
         all_files.append(files.relative_to(parquet_dir))
 
-    s3_prefix = aws_conf.get('s3', {}).get('prefix', None)
+    s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
     if not (s3_prefix and s3_bucket):
         logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
@@ -460,10 +460,19 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     max_crawling_time = aws_conf.get('athena', {}).get('max_crawling_time', 600)
     assert db_name, "athena:database_name not supplied"
 
+    # Check that there are files in the s3 bucket before creating and running glue crawler
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket)
+    s3_path = f's3://{s3_bucket}/{s3_prefix}'
+    n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
+    if n_existing_files == 0:
+        logger.warning(f"There are no files in {s3_path}, Athena tables will not be created as intended")
+        return
+
     glueClient = boto3.client('glue', region_name=region_name)
     crawlTarget = {
         'S3Targets': [{
-            'Path': f's3://{s3_bucket}/{s3_prefix}',
+            'Path': s3_path,
             'Exclusions': []
         }]
     }

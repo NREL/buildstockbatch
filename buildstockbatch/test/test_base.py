@@ -240,7 +240,7 @@ def test_combine_files(basic_residential_project_file):
 
 
 @patch('buildstockbatch.postprocessing.boto3')
-def test_upload_files(mocked_s3, basic_residential_project_file):
+def test_upload_files(mocked_boto3, basic_residential_project_file):
     s3_bucket = 'test_bucket'
     s3_prefix = 'test_prefix'
     db_name = 'test_db_name'
@@ -265,7 +265,8 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
                     }
     mocked_glueclient = MagicMock()
     mocked_glueclient.get_crawler = MagicMock(return_value={'Crawler': {'State': 'READY'}})
-    mocked_s3.client = MagicMock(return_value=mocked_glueclient)
+    mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
+    mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ['a', 'b', 'c']]
     project_filename, results_dir = basic_residential_project_file(upload_config)
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'output_dir', results_dir), \
@@ -278,7 +279,7 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
     files_uploaded = []
     crawler_created = False
     crawler_started = False
-    for call in mocked_s3.mock_calls + mocked_s3.client().mock_calls:
+    for call in mocked_boto3.mock_calls[2:] + mocked_boto3.client().mock_calls:
         call_function = call[0].split('.')[-1]  # 0 is for the function name
         if call_function == 'resource':
             assert call[1][0] in ['s3']  # call[1] is for the positional arguments
@@ -289,7 +290,7 @@ def test_upload_files(mocked_s3, basic_residential_project_file):
             destination_path = call[1][1]
             files_uploaded.append((source_file_path, destination_path))
         if call_function == 'create_crawler':
-            crawler_para = call[2]  # 2 is for the keyboard arguments
+            crawler_para = call[2]  # 2 is for the keyword arguments
             crawler_created = True
             assert crawler_para['DatabaseName'] == upload_config['postprocessing']['aws']['athena']['database_name']
             assert crawler_para['Role'] == upload_config['postprocessing']['aws']['athena']['glue_service_role']
