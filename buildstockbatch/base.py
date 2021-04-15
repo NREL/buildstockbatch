@@ -40,8 +40,8 @@ class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
     # OpenStudio-3.2.0.3674123721-flex-Singularity.simg
-    # DEFAULT_OS_VERSION = '3.2.0' # eagle
-    DEFAULT_OS_VERSION = 'flex' # localdocker
+    # DEFAULT_OS_VERSION = '3.2.0'  # eagle
+    DEFAULT_OS_VERSION = 'flex'  # localdocker
     DEFAULT_OS_SHA = '3674123721-flex'
     CONTAINER_RUNTIME = None
     LOGO = '''
