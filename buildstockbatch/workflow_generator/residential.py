@@ -269,6 +269,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
+            'run_options': {
+                'fast': True,
+                'skip_expand_objects': True,
+                'skip_energyplus_preprocess': True
+            }
         }
 
         osw['steps'].extend(workflow_args['measures'])
