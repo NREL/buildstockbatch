@@ -121,14 +121,14 @@ def read_job_files(fs, started, finished):
             started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
             started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
             jobs['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
-    except:
+    except (FileNotFoundError):
         return None
     try:
         with fs.open(finished, 'r') as f:
             completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
             completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
             jobs['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
-    except:
+    except (FileNotFoundError):
         return None
     else:
         jobs['completed_status'] = 'Success'
@@ -161,7 +161,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
     if out_osw:
         dpout.update(out_osw)
-    else: # for when run_options: fast=true
+    else:  # for when run_options: fast=true
         jobs = read_job_files(fs, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
         dpout.update(jobs)
     dpout['upgrade'] = upgrade_id
