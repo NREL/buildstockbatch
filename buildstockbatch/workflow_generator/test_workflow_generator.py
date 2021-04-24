@@ -1,6 +1,6 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
-
+from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
 
 def test_apply_logic_recursion():
 
@@ -293,3 +293,37 @@ def test_simulation_output(mocker):
     args = osw['steps'][-2]['arguments']
     for argname in ('include_enduse_subcategories',):
         assert(args[argname] != default_args[argname])
+
+
+def test_com_default_workflow_generator(mocker):
+    mocker.patch.object(CommercialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    cfg = {
+        'baseline': {
+            'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'commercial_default',
+            'args': {
+                'reporting_measures': [
+                    {'measure_dir_name': 'ReportingMeasure1'},
+                    {'measure_dir_name': 'ReportingMeasure2', 'arguments': {'arg1': 'asdf', 'arg2': 'jkl'}}
+                ]
+            }
+        }
+    }
+    CommercialDefaultWorkflowGenerator.validate(cfg)
+    osw_gen = CommercialDefaultWorkflowGenerator(cfg, 10)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    reporting_measure_1_step = osw['steps'][-2]
+    assert(reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1')
+    assert(reporting_measure_1_step['arguments'] == {})
+    assert(reporting_measure_1_step['measure_type'] == 'ReportingMeasure')
+    reporting_measure_2_step = osw['steps'][-1]
+    assert(reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2')
+    assert(reporting_measure_2_step['arguments']['arg1'] == 'asdf')
+    assert(reporting_measure_2_step['arguments']['arg2'] == 'jkl')
+    assert(len(reporting_measure_2_step['arguments']))
+    assert(reporting_measure_2_step['measure_type'] == 'ReportingMeasure')
