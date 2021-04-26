@@ -10,7 +10,6 @@ This object contains the commercial classes for generating OSW files from indivi
 :license: BSD-3
 """
 
-from collections import Counter
 import datetime as dt
 import json
 import logging
@@ -74,7 +73,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             measure_class_names.append(measure_class_name)
 
         return measure_class_names
-
 
     @staticmethod
     def validate_measures_and_arguments(cfg):

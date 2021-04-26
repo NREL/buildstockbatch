@@ -2,6 +2,7 @@ from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
 
+
 def test_apply_logic_recursion():
 
     apply_logic = WorkflowGeneratorBase.make_apply_logic_arg(['one', 'two', 'three'])
