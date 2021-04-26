@@ -21,6 +21,6 @@ upgrades:
           - Insulation Unfinished Basement|Extra Argument
     package_apply_logic: Vintage|1960s||Vintage|1940s
 downselect:
-  resample: False
   logic: Vintage|2000s
+  resample: False
 schema_version: 0.2

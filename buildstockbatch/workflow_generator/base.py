@@ -17,8 +17,9 @@ logger = logging.getLogger(__name__)
 
 class WorkflowGeneratorBase(object):
 
-    def __init__(self, cfg):
+    def __init__(self, cfg, n_datapoints):
         self.cfg = cfg
+        self.n_datapoints = n_datapoints
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
@@ -54,3 +55,14 @@ class WorkflowGeneratorBase(object):
             return '(' + '&&'.join(map(cls.make_apply_logic_arg, logic)) + ')'
         elif isinstance(logic, str):
             return logic
+
+    @classmethod
+    def validate(cls, cfg):
+        """Validate the workflor generator arguments
+
+        Replace this in your subclass.
+
+        :param cfg: project configuration
+        :type cfg: dict
+        """
+        return True

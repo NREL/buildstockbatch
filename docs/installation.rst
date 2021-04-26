@@ -2,7 +2,7 @@ Installation
 ------------
 
 BuildStock-Batch installations depend on the
-`OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
+`ResStock <https://github.com/NREL/resstock>`__
 repository. Either ``git clone`` it or download a copy of it or your
 fork or branch of it with your projects.
 
@@ -31,7 +31,7 @@ Get a copy of this code either by downloading the zip file from GitHub or
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
-environment`_ if you're using Anaconda. Then activate your environment. 
+environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.6 or greater. Then activate your environment. 
 
 .. _python virtual environment: https://docs.python.org/3/library/venv.html
 .. _conda environment: https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
@@ -41,7 +41,7 @@ Install the library by doing the following:
 ::
 
    cd /path/to/buildstockbatch
-   pip install -e .
+   python -m pip install -e . --user
 
 .. _aws-user-config-local:
 
@@ -51,7 +51,7 @@ AWS User Configuration
 To use BuildStock Batch on AWS, or enable automatic upload of processed results to AWS Athena, you'll need to
 configure your user account with your AWS credentials. This setup only needs to be done once.
 
-1. `Install the AWS CLI`_ version 2.
+1. `Install the AWS CLI`_ version 2 (select the version for your local OS; not for Docker).
 2. `Configure the AWS CLI`_. (Don't type the ``$`` in the example.)
 
 .. _Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html

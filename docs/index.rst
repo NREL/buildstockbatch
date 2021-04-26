@@ -6,10 +6,10 @@
 BuildStock Batch
 ================
 
-This set of tools provides an alternative means to PAT to run and manage the batch
+This set of tools provides a means to run and manage the batch
 simulations for the
-`OpenStudio-BuildStock <https://github.com/NREL/OpenStudio-BuildStock>`__
-building stock energy modeling platform. It can be used to run the
+`ResStock <https://github.com/NREL/resstock>`__
+and `ComStock <https://github.com/NREL/comstock>`__ building stock energy modeling platforms. It can be used to run the
 simulations locally, on Amazon Web Services (beta), or on NREL's
 supercomputer, Eagle.
 
@@ -19,13 +19,16 @@ supercomputer, Eagle.
 
    installation
    project_defn
+   samplers/index
+   workflow_generators/index
+   filtering_logic
    run_sims
 
 
 Updates & Changelog
 ===================
 
-:doc:`Migration from 0.17 to 0.18 <changelog/migration_0_18>`
+:doc:`Migration from 0.18 to 0.19 <changelog/migration_0_19>`
 
 .. toctree::
    :maxdepth: 2

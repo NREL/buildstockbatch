@@ -50,13 +50,16 @@ hpc-spec:
 hpc-postprocessing-spec:
   time: int(required=True)
   n_workers: int(required=False)
+  node_memory_mb: enum(85248, 180224, 751616, required=False)
+  parquet_memory_mb: int(required=False)
+  keep_intermediate_files: bool(required=False)
 
 sampling-spec:
   time: int(required=True)
 
 sim-spec:
   n_datapoints: int(required=True)
-  n_buildings_represented: int(required=False)
+  n_buildings_represented: int(required=True)
   measures: list(include('measure-spec'), required=False)
   precomputed_sample: str(required=False)
   skip_sims: bool(required=False)

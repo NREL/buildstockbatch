@@ -7,10 +7,13 @@ import re
 import tarfile
 import pytest
 import shutil
+from unittest.mock import patch, MagicMock
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
-from unittest.mock import patch
+from buildstockbatch.utils import get_project_configuration
+
+postprocessing.performance_report = MagicMock()
 
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):
@@ -48,7 +51,7 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
     with gzip.open(sim_out_dir / 'results_job0.json.gz', 'wt', encoding='utf-8') as f:
         json.dump(dpouts2, f)
 
-    cfg = BuildStockBatchBase.get_project_configuration(project_filename)
+    cfg = get_project_configuration(project_filename)
 
     postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
@@ -67,7 +70,7 @@ def test_empty_results_assertion(basic_residential_project_file, capsys):
     results_dir = pathlib.Path(results_dir)
     sim_out_dir = results_dir / 'simulation_output'
     shutil.rmtree(sim_out_dir)  # no results
-    cfg = BuildStockBatchBase.get_project_configuration(project_filename)
+    cfg = get_project_configuration(project_filename)
 
     with pytest.raises(ValueError, match=r'No simulation results found to post-process'):
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)

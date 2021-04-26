@@ -21,39 +21,49 @@ from warnings import warn
 
 from .sobol_lib import i4_sobol_generate
 from .base import BuildStockSampler
+from buildstockbatch.utils import ContainerRuntime
+from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
 
 
-class CommercialBaseSobolSampler(BuildStockSampler):
+class CommercialSobolSampler(BuildStockSampler):
 
-    def __init__(self, output_dir, *args, **kwargs):
+    def __init__(self, parent, n_datapoints):
         """
         Initialize the sampler.
 
         :param output_dir: Directory in which to place buildstock.csv
         :param cfg: YAML configuration specified by the user for the analysis
-        :param buildstock_dir: The location of the OpenStudio-BuildStock repo
-        :param project_dir: The project directory within the OpenStudio-BuildStock repo
+        :param buildstock_dir: The location of the comstock or resstock repo
+        :param project_dir: The project directory within the comstock or resstock repo
         """
-        super().__init__(*args, **kwargs)
-        self.output_dir = output_dir
+        super().__init__(parent)
+        self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
+        if self.container_runtime == ContainerRuntime.SINGULARITY:
+            self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
+        else:
+            assert self.container_runtime == ContainerRuntime.DOCKER
+            self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
+        self.n_datapoints = n_datapoints
 
-    @property
-    def csv_path(self):
-        return os.path.join(self.project_dir, 'buildstock.csv')
+    @classmethod
+    def validate_args(cls, project_filename, **kw):
+        expected_args = set(['n_datapoints'])
+        for k, v in kw.items():
+            expected_args.discard(k)
+            if k == 'n_datapoints':
+                if not isinstance(v, int):
+                    raise ValidationError('n_datapoints needs to be an integer')
+                if v <= 0:
+                    raise ValidationError('n_datapoints need to be >= 1')
+            else:
+                raise ValidationError(f'Unknown argument for sampler: {k}')
+        if len(expected_args) > 0:
+            raise ValidationError('The following sampler arguments are required: ' + ', '.join(expected_args))
+        return True
 
-    def run_sampling(self, n_datapoints):
-        """
-        Execute the sampling generating the specified number of datapoints.
-
-        This is a stub. It needs to be implemented in the child classes for each deployment environment.
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        """
-        raise NotImplementedError
-
-    def run_sobol_sampling(self, n_datapoints=None):
+    def run_sampling(self):
         """
         Run the commercial sampling.
 
@@ -65,8 +75,8 @@ class CommercialBaseSobolSampler(BuildStockSampler):
         :return: Absolute path to the output buildstock.csv file
         """
         sample_number = self.cfg['baseline'].get('n_datapoints', 350000)
-        if isinstance(n_datapoints, int):
-            sample_number = n_datapoints
+        if isinstance(self.n_datapoints, int):
+            sample_number = self.n_datapoints
         logging.debug(f'Sampling, number of data points is {sample_number}')
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
@@ -188,42 +198,3 @@ class CommercialBaseSobolSampler(BuildStockSampler):
                 fd.write(csv_row)
         finally:
             lock.release()
-
-
-class CommercialSobolSingularitySampler(CommercialBaseSobolSampler):
-
-    def __init__(self, output_dir, *args, **kwargs):
-        """
-        This class uses the Commercial Sobol Sampler to execute samples for Peregrine Singularity deployments
-        """
-        self.output_dir = output_dir
-        super().__init__(*args, **kwargs)
-
-    def run_sampling(self, n_datapoints):
-        """
-        Execute the sampling for use in Peregrine Singularity deployments
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :return: Path to the sample CSV file
-        """
-        csv_path = os.path.join(self.output_dir, 'buildstock.csv')
-        return self.run_sobol_sampling(n_datapoints, csv_path)
-
-
-class CommercialSobolDockerSampler(CommercialBaseSobolSampler):
-
-    def __init__(self, *args, **kwargs):
-        """
-        This class uses the Commercial Sobol Sampler to execute samples for local Docker deployments
-        """
-        super().__init__(*args, **kwargs)
-
-    def run_sampling(self, n_datapoints):
-        """
-        Execute the sampling for use in local Docker deployments
-
-        :param n_datapoints: Number of datapoints to sample from the distributions.
-        :return: Path to the sample CSV file
-        """
-        csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-        return self.run_sobol_sampling(n_datapoints, csv_path)

@@ -1,5 +1,42 @@
-import traceback
+import enum
 import inspect
+import os
+import logging
+import traceback
+import yaml
+
+logger = logging.getLogger(__name__)
+
+
+class ContainerRuntime(enum.Enum):
+    DOCKER = 1
+    SINGULARITY = 2
+
+
+def path_rel_to_file(startfile, x):
+    if os.path.isabs(x):
+        return os.path.abspath(x)
+    else:
+        return os.path.abspath(os.path.join(os.path.dirname(startfile), x))
+
+
+def get_project_configuration(project_file):
+    try:
+        with open(project_file) as f:
+            cfg = yaml.load(f, Loader=yaml.SafeLoader)
+    except FileNotFoundError as err:
+        logger.error('Failed to load input yaml for validation')
+        raise err
+
+    # Set absolute paths
+    cfg['buildstock_directory'] = path_rel_to_file(project_file, cfg['buildstock_directory'])
+    # if 'precomputed_sample' in cfg.get('baseline', {}):
+    #     cfg['baseline']['precomputed_sample'] = \
+    #         path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+    if 'weather_files_path' in cfg:
+        cfg['weather_files_path'] = path_rel_to_file(project_file, cfg['weather_files_path'])
+
+    return cfg
 
 
 def _str_repr(obj, list_max=20, dict_max=20, string_max=100):
@@ -41,7 +78,7 @@ def _str_repr(obj, list_max=20, dict_max=20, string_max=100):
         return str(obj)
 
 
-def _get_error_details():
+def get_error_details():
     text = ""
     text += traceback.format_exc()
     frames = inspect.trace()
@@ -60,8 +97,10 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
             try:
                 return func(*args, **kwargs)
             except Exception:
-                with open(output_file, "w") as f:
-                    f.write(_get_error_details())
+                with open(output_file, "a") as f:
+                    text = "\n" + "#" * 20 + "\n"
+                    text += get_error_details()
+                    f.write(text)
                 raise
         return run_with_error_capture
 
