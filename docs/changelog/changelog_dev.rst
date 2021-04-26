@@ -60,3 +60,11 @@ Development Changelog
         The glue crawler was failing when there was a trailing ``/`` character.
         This fixes that as well as checks to make sure files were uploaded
         before running the crawler.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 224
+        :tickets: 221
+
+        Defaults to the newer datetime encoding in the parquet files now that
+        Athena can understand it.
