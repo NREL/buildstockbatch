@@ -147,7 +147,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
 def write_dataframe_as_parquet(df, fs, filename):
     tbl = pa.Table.from_pandas(df, preserve_index=False)
     with fs.open(filename, 'wb') as f:
-        parquet.write_table(tbl, f, flavor='spark')
+        parquet.write_table(tbl, f)
 
 
 def clean_up_results_df(df, cfg, keep_upgrade_id=False):
