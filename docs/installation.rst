@@ -53,9 +53,11 @@ configure your user account with your AWS credentials. This setup only needs to 
 
 1. `Install the AWS CLI`_ version 2 (select the version for your local OS; not for Docker).
 2. `Configure the AWS CLI`_. (Don't type the ``$`` in the example.)
+3. You may need to `change the Athena Engine version`_ for your query workgroup to v2.
 
 .. _Install the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html
 .. _Configure the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration
+.. _change the Athena Engine version: https://docs.aws.amazon.com/athena/latest/ug/engine-versions-changing.html
 
 .. _eagle_install:
 
