@@ -233,18 +233,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                         "building_id": int(building_id)
                     },
                     "measure_type": "ModelMeasure"
-                },
-                {
-                    "measure_dir_name": "add_blinds_to_selected_windows",
-                    "arguments": {
-                        "add_blinds": True
-                    },
-                    "measure_type": "ModelMeasure"
-                },
-                {
-                    "measure_dir_name": "set_space_type_load_subcategories",
-                    "arguments": {},
-                    "measure_type": "ModelMeasure"
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
