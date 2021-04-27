@@ -48,8 +48,10 @@ def read_data_point_out_json(fs, reporting_measures, filename):
             return None
 
     if 'SimulationOutputReport' not in d:
-        d['SimulationOutputReport'] = {'applicable': False}
-    for reporting_measure in reporting_measures + ['UpgradeCosts']:
+        d['SimulationOutputReport'] = {'applicable': False, 'completed_status': 'Invalid'}
+    else:
+        d['SimulationOutputReport'] = {'completed_status': 'Fail'}
+    for reporting_measure in reporting_measures:
         if reporting_measure not in d:
             d[reporting_measure] = {'applicable': False}
     return d
@@ -93,6 +95,9 @@ def flatten_datapoint_json(reporting_measures, d):
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
+    new_d['completed_status'] = new_d['SimulationOutputReport.completed_status']
+    del new_d['SimulationOutputReport.completed_status']
+
     return new_d
 
 
@@ -114,25 +119,26 @@ def read_out_osw(fs, filename):
         return out_d
 
 
-def read_job_files(fs, started, finished):
-    jobs = {'completed_status': 'Fail'}
+def read_job_files(fs, dpout, started, finished):
     try:
         with fs.open(started, 'r') as f:
             started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
             started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
-            jobs['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
+            dpout['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
-        return None
+        return dpout
     try:
         with fs.open(finished, 'r') as f:
             completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
             completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
-            jobs['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
+            dpout['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
-        return None
+        return dpout
     else:
-        jobs['completed_status'] = 'Success'
-    return jobs
+        print(dpout['completed_status'])
+        if dpout['completed_status'] != 'Invalid':
+            dpout['completed_status'] = 'Success'
+    return dpout
 
 
 def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
@@ -162,8 +168,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     if out_osw:
         dpout.update(out_osw)
     else:  # for when run_options: fast=true
-        jobs = read_job_files(fs, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
-        dpout.update(jobs)
+        dpout = read_job_files(fs, dpout, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
     dpout['upgrade'] = upgrade_id
     dpout['building_id'] = building_id
     return dpout
@@ -212,14 +217,11 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+    upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
+    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
 
     remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
     sorted_cols += remaining_cols
-
-    upgrade_costs_cols = sorted([col for col in results_df.columns if
-                                col.startswith(to_camelcase('UpgradeCosts'))])
-    sorted_cols += upgrade_costs_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
 
