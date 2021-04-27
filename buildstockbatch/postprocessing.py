@@ -135,7 +135,6 @@ def read_job_files(fs, dpout, started, finished):
     except (FileNotFoundError):
         return dpout
     else:
-        print(dpout['completed_status'])
         if dpout['completed_status'] != 'Invalid':
             dpout['completed_status'] = 'Success'
     return dpout
