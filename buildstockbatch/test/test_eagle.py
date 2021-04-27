@@ -227,6 +227,7 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     sampler_prop_mock = mocker.patch.object(EagleBatch, 'sampler', new_callable=mocker.PropertyMock)
     sampler_mock = mocker.MagicMock()
     sampler_prop_mock.return_value = sampler_mock
+    sampler_mock.csv_path = results_dir.parent / 'housing_characteristic2' / 'buildstock.csv'
     sampler_mock.run_sampling = mocker.MagicMock(return_value='buildstock.csv')
 
     b = EagleBatch(project_filename)

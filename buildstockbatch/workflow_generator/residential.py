@@ -44,9 +44,9 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         measures_to_ignore: list(str(), required=False)
         residential_simulation_controls: map(required=False)
         measures: list(include('measure-spec'), required=False)
+        reporting_measures: list(include('measure-spec'), required=False)
         simulation_output: map(required=False)
         timeseries_csv_export: map(required=False)
-        reporting_measures: list(str(), required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -58,6 +58,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         yamale.validate(schema, data, strict=True)
         return cls.validate_measures_and_arguments(cfg)
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        workflow_args = self.cfg['workflow_generator'].get('args', {})
+        return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
 
     @staticmethod
     def validate_measures_and_arguments(cfg):
@@ -102,7 +107,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         workflow_args = cfg['workflow_generator'].get('args', {})
         if 'reporting_measures' in workflow_args.keys():
             for reporting_measure in workflow_args['reporting_measures']:
-                measure_names[reporting_measure] = 'workflow_generator.args.reporting_measures'
+                measure_names[reporting_measure['measure_dir_name']] = 'workflow_generator.args.reporting_measures'
 
         error_msgs = ''
         warning_msgs = ''
@@ -334,11 +339,10 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             osw['steps'].insert(-1, timeseries_measure)  # right before ServerDirectoryCleanup
 
         if 'reporting_measures' in workflow_args:
-            for measure_dir_name in workflow_args['reporting_measures']:
-                reporting_measure = {
-                    'measure_dir_name': measure_dir_name,
-                    'arguments': {}
-                }
+            for reporting_measure in workflow_args['reporting_measures']:
+                if 'arguments' not in reporting_measure:
+                    reporting_measure['arguments'] = {}
+                reporting_measure['measure_type'] = 'ReportingMeasure'
                 osw['steps'].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
 
         return osw

@@ -27,7 +27,7 @@ workflow_generator:
     simulation_output:
       include_enduse_subcategory: true
     reporting_measures:
-      - ReportingMeasure2
+      - measure_dir_name: ReportingMeasure2
 
 upgrades:
   - upgrade_name: good upgrade
