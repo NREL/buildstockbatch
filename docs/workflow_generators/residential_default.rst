@@ -48,12 +48,16 @@ Arguments
   version of resstock you're using. The best thing you can do is to
   verify that it works with what is in your branch.
 
-- ``reporting_measures`` (optional): a list of reporting measure names to apply
-  additional reporting measures (that require no arguments) to the workflow. Any
-  columns reported by these additional measures will be appended to the results
-  csv. Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of
-  reporting measures, doing so will cause run to fail prematurely.
-  ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
+- ``reporting_measures`` (optional): a list of reporting measures to apply
+  to the workflow. Any columns reported by these additional measures will be
+  appended to the results csv. Note: For upgrade runs, do not add
+  ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run
+  to fail prematurely. ``ApplyUpgrade`` is applied automatically when the
+  ``upgrades`` key is supplied.
+
+  - ``measure_dir_name``: Name of measure directory.
+  - ``arguments``: map of key, value arguments to pass to the measure.
+
 
 .. _ResidentialSimulationControls: https://github.com/NREL/resstock/blob/master/measures/ResidentialSimulationControls/measure.xml
 .. _SimulationOutputReport: https://github.com/NREL/resstock/blob/master/measures/SimulationOutputReport/measure.xml

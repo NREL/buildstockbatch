@@ -126,6 +126,12 @@ class BuildStockBatchBase(object):
         baseline_skip = self.cfg['baseline'].get('skip_sims', False)
         return baseline_skip
 
+    @classmethod
+    def get_reporting_measures(cls, cfg):
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg['workflow_generator']['type'])
+        wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
+        return wg.reporting_measures()
+
     def run_batch(self):
         raise NotImplementedError
 
@@ -573,7 +579,7 @@ class BuildStockBatchBase(object):
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 
-        if not self.cfg['eagle'].get('postprocessing', {}).get('keep_intermediate_files', False):
+        if not self.cfg.get('eagle', {}).get('postprocessing', {}).get('keep_intermediate_files', False):
             logger.info("Removing intermediate files.")
             postprocessing.remove_intermediate_files(fs, self.results_dir)
         else:

@@ -21,7 +21,7 @@ workflow_generator:
       output_variables:
         - Zone Mean Air Temperature
     reporting_measures:
-      - ReportingMeasure1
+      - measure_dir_name: ReportingMeasure1
 
 upgrades:
   - upgrade_name: cool upgrade

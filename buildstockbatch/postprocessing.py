@@ -214,20 +214,14 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
     sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
 
-    for reporting_measure in cfg.get('reporting_measures', []):
-        reporting_measure_cols = sorted([col for col in results_df.columns if
-                                        col.startswith(to_camelcase(reporting_measure))])
-        sorted_cols += reporting_measure_cols
+    remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
+    sorted_cols += remaining_cols
 
     upgrade_costs_cols = sorted([col for col in results_df.columns if
                                 col.startswith(to_camelcase('UpgradeCosts'))])
     sorted_cols += upgrade_costs_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
-
-    # for col in results_df.columns:
-    #     if col.startswith('simulation_output_report.') and not col == 'simulation_output_report.applicable':
-    #         results_df[col] = pd.to_numeric(results_df[col], errors='coerce')
 
     return results_df
 
