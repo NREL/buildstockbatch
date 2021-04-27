@@ -68,3 +68,10 @@ Development Changelog
 
         Defaults to the newer datetime encoding in the parquet files now that
         Athena can understand it.
+
+    .. change::
+        :tags: workflow
+        :pullreq: 219
+        :tickets: 189
+
+        Adding measure arguments for reporting measures in the workflow generator.

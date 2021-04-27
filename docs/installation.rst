@@ -45,6 +45,19 @@ Install the library by doing the following:
 
 .. _aws-user-config-local:
 
+.. note::
+
+   Users using a Windows operating system with Python version 3.8 or higher may encounter the following
+   error when running simulations locally:
+
+   `docker.errors.DockerException: Install pypiwin32 package to enable npipe:// support`
+
+   Manually running the pywin32 post-install script using the following command may resolve the error:
+
+   ::
+
+       python <path-to-python-env>\Scripts\pywin32_postinstall.py -install
+
 AWS User Configuration
 ......................
 
