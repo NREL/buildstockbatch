@@ -75,3 +75,11 @@ Development Changelog
         :tickets: 189
 
         Adding measure arguments for reporting measures in the workflow generator.
+
+    .. change::
+        :tags: workflow
+        :pullreq: 220
+        :tickets: 
+
+        Use ``run_options`` in residential and commercial workflow generators.
+        Remove data_point.zip from outputs.
