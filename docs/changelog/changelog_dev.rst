@@ -77,7 +77,7 @@ Development Changelog
         Adding measure arguments for reporting measures in the workflow generator.
 
     .. change::
-        :tags: general, egale
+        :tags: general, eagle
         :pullreq: 226
         :tickets:
 
