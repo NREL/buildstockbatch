@@ -75,3 +75,10 @@ Development Changelog
         :tickets: 189
 
         Adding measure arguments for reporting measures in the workflow generator.
+
+    .. change::
+        :tags: general, egale
+        :pullreq: 226
+        :tickets:
+
+        Fix for create_eagle_env.sh not creating environment.
