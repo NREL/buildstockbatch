@@ -7,6 +7,7 @@ import requests
 import shutil
 import tarfile
 from unittest.mock import patch
+from unittest import TestCase
 import gzip
 
 from buildstockbatch.eagle import user_cli, EagleBatch
@@ -235,18 +236,22 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     b.run_job_batch(1)
 
     # check results job-json
-    refrence_path = pathlib.Path(__file__).resolve().parent / 'test_results' / 'reference_files'
+    reference_path = pathlib.Path(__file__).resolve().parent / 'test_results' / 'reference_files'
 
-    refrence_list = json.loads(gzip.open(refrence_path / 'results_job1.json.gz', 'r').read())
+    reference_list = sorted(
+        json.loads(gzip.open(reference_path / 'results_job1.json.gz', 'r').read()),
+        key=lambda x: (x['upgrade'], x['building_id'])
+    )
 
-    output_list = json.loads(gzip.open(results_dir / 'simulation_output' / 'results_job1.json.gz', 'r').read())
+    output_list = sorted(
+        json.loads(gzip.open(results_dir / 'simulation_output' / 'results_job1.json.gz', 'r').read()),
+        key=lambda x: (x['upgrade'], x['building_id'])
+    )
 
-    refrence_list = [json.dumps(d) for d in refrence_list]
-    output_list = [json.dumps(d) for d in output_list]
+    for x, y in zip(reference_list, output_list):
+        TestCase().assertDictEqual(x, y)
 
-    assert sorted(refrence_list) == sorted(output_list)
-
-    ts_files = list(refrence_path.glob('**/*.parquet'))
+    ts_files = list(reference_path.glob('**/*.parquet'))
 
     def compare_ts_parquets(source, dst):
         test_pq = pd.read_parquet(source).reset_index().drop(columns=['index'])

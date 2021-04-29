@@ -50,7 +50,7 @@ def read_data_point_out_json(fs, reporting_measures, filename):
     if 'SimulationOutputReport' not in d:
         d['SimulationOutputReport'] = {'applicable': False, 'completed_status': 'Invalid'}
     else:
-        d['SimulationOutputReport'] = {'completed_status': 'Fail'}
+        d['SimulationOutputReport']['completed_status'] = 'Fail'
     for reporting_measure in reporting_measures:
         if reporting_measure not in d:
             d[reporting_measure] = {'applicable': False}
