@@ -75,3 +75,10 @@ Development Changelog
         :tickets: 189
 
         Adding measure arguments for reporting measures in the workflow generator.
+
+    .. change::
+        :tags: workflow
+        :pullreq: 208
+        :tickets: 
+
+        Add ``residential_hpxml`` workflow generator.
