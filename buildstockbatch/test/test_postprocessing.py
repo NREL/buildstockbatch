@@ -33,7 +33,7 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
         tarf.extractall(sim_out_dir)
 
     dpouts2 = []
-    for filename in sim_out_dir.rglob('results.json'):
+    for filename in sim_out_dir.rglob('data_point_out.json'):
         with filename.open('rt', encoding='utf-8') as f:
             dpout = json.load(f)
         dpout['ReportingMeasure1'] = {'column_1': 1, 'column_2': 2}

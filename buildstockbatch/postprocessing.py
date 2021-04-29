@@ -48,8 +48,10 @@ def read_data_point_out_json(fs, reporting_measures, filename):
             return None
 
     if 'SimulationOutputReport' not in d:
-        d['SimulationOutputReport'] = {'applicable': False}
-    for reporting_measure in reporting_measures + ['UpgradeCosts']:
+        d['SimulationOutputReport'] = {'applicable': False, 'completed_status': 'Invalid'}
+    else:
+        d['SimulationOutputReport']['completed_status'] = 'Fail'
+    for reporting_measure in reporting_measures:
         if reporting_measure not in d:
             d[reporting_measure] = {'applicable': False}
     return d
@@ -93,6 +95,9 @@ def flatten_datapoint_json(reporting_measures, d):
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
+    new_d['completed_status'] = new_d['SimulationOutputReport.completed_status']
+    del new_d['SimulationOutputReport.completed_status']
+
     return new_d
 
 
@@ -114,25 +119,25 @@ def read_out_osw(fs, filename):
         return out_d
 
 
-def read_job_files(fs, started, finished):
-    jobs = {'completed_status': 'Fail'}
+def read_job_files(fs, dpout, started, finished):
     try:
         with fs.open(started, 'r') as f:
             started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
-            started_at = started_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
-            jobs['started_at'] = started_at
+            started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
+            dpout['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
-        return None
+        return dpout
     try:
         with fs.open(finished, 'r') as f:
             completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
-            completed_at = completed_at.replace('-', '').replace(':', '').replace(' ', 'T') + 'Z'
-            jobs['completed_at'] = completed_at
+            completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
+            dpout['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
     except (FileNotFoundError):
-        return None
+        return dpout
     else:
-        jobs['completed_status'] = 'Success'
-    return jobs
+        if dpout['completed_status'] != 'Invalid':
+            dpout['completed_status'] = 'Success'
+    return dpout
 
 
 def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
@@ -162,8 +167,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     if out_osw:
         dpout.update(out_osw)
     else:  # for when run_options: fast=true
-        jobs = read_job_files(fs, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
-        dpout.update(jobs)
+        dpout = read_job_files(fs, dpout, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
     dpout['upgrade'] = upgrade_id
     dpout['building_id'] = building_id
     return dpout
@@ -172,7 +176,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
 def write_dataframe_as_parquet(df, fs, filename):
     tbl = pa.Table.from_pandas(df, preserve_index=False)
     with fs.open(filename, 'wb') as f:
-        parquet.write_table(tbl, f, flavor='spark')
+        parquet.write_table(tbl, f)
 
 
 def clean_up_results_df(df, cfg, keep_upgrade_id=False):
@@ -212,22 +216,13 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+    upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
+    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
 
-    for reporting_measure in cfg.get('reporting_measures', []):
-        reporting_measure_cols = sorted([col for col in results_df.columns if
-                                        col.startswith(to_camelcase(reporting_measure))])
-        sorted_cols += reporting_measure_cols
-
-    upgrade_costs_cols = sorted([col for col in results_df.columns if
-                                col.startswith(to_camelcase('UpgradeCosts'))])
-    sorted_cols += upgrade_costs_cols
+    remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
+    sorted_cols += remaining_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
-
-    # for col in results_df.columns:
-    #     if col.startswith('simulation_output_report.') and not col == 'simulation_output_report.applicable':
-    #         results_df[col] = pd.to_numeric(results_df[col], errors='coerce')
 
     return results_df
 
@@ -425,7 +420,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     for files in parquet_dir.rglob('*.parquet'):
         all_files.append(files.relative_to(parquet_dir))
 
-    s3_prefix = aws_conf.get('s3', {}).get('prefix', None)
+    s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
     if not (s3_prefix and s3_bucket):
         logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
@@ -460,10 +455,19 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     max_crawling_time = aws_conf.get('athena', {}).get('max_crawling_time', 600)
     assert db_name, "athena:database_name not supplied"
 
+    # Check that there are files in the s3 bucket before creating and running glue crawler
+    s3 = boto3.resource('s3')
+    bucket = s3.Bucket(s3_bucket)
+    s3_path = f's3://{s3_bucket}/{s3_prefix}'
+    n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
+    if n_existing_files == 0:
+        logger.warning(f"There are no files in {s3_path}, Athena tables will not be created as intended")
+        return
+
     glueClient = boto3.client('glue', region_name=region_name)
     crawlTarget = {
         'S3Targets': [{
-            'Path': f's3://{s3_bucket}/{s3_prefix}',
+            'Path': s3_path,
             'Exclusions': []
         }]
     }

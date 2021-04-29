@@ -169,6 +169,68 @@ New Spec:
           reporting_frequency: Hourly
           include_enduse_subcategories: true
 
+Commercial Workflw Generator Hard-Coded Measures
+------------------------------------------------
+
+The commercial workflow generator has changed to remove most of the hard-coded
+reporting measures, allowing them to be added to the config file as-needed.
+This should avoid the need to create custom BuildStockBatch environments
+for each project that needs to add/remove/modify reporting measures.
+
+Old hard-coded reporting measures:
+
+- SimulationOutputReport
+- OpenStudio Results (measure_dir_name: f8e23017-894d-4bdf-977f-37e3961e6f42)
+- TimeseriesCSVExport
+- comstock_sensitivity_reports
+- qoi_report
+- la_100_qaqc (if include_qaqc = true in config)
+- simulation_settings_check (if include_qaqc = true in config)
+
+New hard-coded reporting measures:
+
+- SimulationOutputReport (reports annual totals in results.csv)
+- TimeseriesCSVExport (generates timeseries results at Timestep frequency)
+
+Two other hard-coded model measures were removed from the workflow.  These will
+be added to the workflow via the options-lookup.tsv in ComStock instead.
+
+Removed hard-coded model measures:
+
+- add_blinds_to_selected_windows
+- set_space_type_load_subcategories
+
+Reporting Measures in Workflows
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The ``reporting_measures`` configuration key that now resides under ``workflow_generator.args``
+allows measure arguments to be passed to reporting measures. 
+
+Old Spec:
+
+.. code-block:: yaml
+
+    schema_version: 0.2
+    stock_type: residential
+    reporting_measures:
+      - ReportingMeasure1
+      - ReportingMeasure2
+
+New Spec:
+
+.. code-block:: yaml
+
+    schema_version: '0.3'
+    workflow_generator:
+      type: residential_default
+      args:
+        reporting_measures:
+          - measure_dir_name: ReportingMeasure1
+            arguments:
+              arg1: value
+          - measure_dir_name: ReportingMeasure2
+
+
 AWS EMR Configuration Name Changes
 ----------------------------------
 

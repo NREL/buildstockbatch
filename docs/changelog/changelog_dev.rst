@@ -51,3 +51,34 @@ Development Changelog
 
         Use a map of dask delayed function to combine parquets instead of a giant dask df to avoid memory issues.
         Default to 85GB memory nodes in eagle with single process and single thread in each node to avoid memory issues.
+
+    .. change::
+        :tags: postprocessing
+        :pullreq: 202
+        :tickets: 159
+
+        The glue crawler was failing when there was a trailing ``/`` character.
+        This fixes that as well as checks to make sure files were uploaded
+        before running the crawler.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 224
+        :tickets: 221
+
+        Defaults to the newer datetime encoding in the parquet files now that
+        Athena can understand it.
+
+    .. change::
+        :tags: workflow
+        :pullreq: 219
+        :tickets: 189
+
+        Adding measure arguments for reporting measures in the workflow generator.
+
+    .. change::
+        :tags: workflow
+        :pullreq: 208
+        :tickets: 
+
+        Add ``residential_hpxml`` workflow generator.
