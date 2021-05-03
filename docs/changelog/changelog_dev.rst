@@ -82,3 +82,11 @@ Development Changelog
         :tickets:
 
         Fix for create_eagle_env.sh not creating environment.
+
+    .. change:
+        :tags: documentation
+        :pullreq: 229
+        :tickets: 225
+
+        Modifies docs to specify that the ``eagle.postprocessing.n_workers`` key
+        is for how many Eagle nodes are used and indicates the default of 2.
