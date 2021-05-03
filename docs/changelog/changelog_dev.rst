@@ -83,3 +83,10 @@ Development Changelog
 
         Use ``run_options`` in residential and commercial workflow generators.
         Remove data_point.zip from outputs.
+
+    .. change::
+        :tags: general, eagle
+        :pullreq: 226
+        :tickets:
+
+        Fix for create_eagle_env.sh not creating environment.
