@@ -91,10 +91,10 @@ def test_large_parquet_combine(basic_residential_project_file):
 
 
 @pytest.mark.parametrize('keep_individual_timeseries', [True, False])
-def test_keep_intermediate_files(keep_individual_timeseries, basic_residential_project_file, mocker):
+def test_keep_individual_timeseries(keep_individual_timeseries, basic_residential_project_file, mocker):
     project_filename, results_dir = basic_residential_project_file({
         'postprocessing': {
-            'keep_intermediate_files': keep_individual_timeseries
+            'keep_individual_timeseries': keep_individual_timeseries
         }
     })
 

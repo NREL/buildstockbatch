@@ -105,7 +105,7 @@ cost-spec:
 
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
-  keep_intermediate_files: bool(required=False)
+  keep_individual_timeseries: bool(required=False)
 
 aws-postprocessing-spec:
   region_name: str(required=False)
