@@ -59,7 +59,6 @@ aws:
   notifications_email: user@nrel.gov
 
 postprocessing:
-  aggregate_timeseries: true
   aws:
     region_name: 'us-west-2'
     s3:

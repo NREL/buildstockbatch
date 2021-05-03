@@ -80,12 +80,7 @@ def test_large_parquet_combine(basic_residential_project_file):
     # Test a simulated scenario where the individual timeseries parquet are larger than the max memory per partition
     # allocated for the parquet file combining.
 
-    post_process_config = {
-        'postprocessing': {
-            'aggregate_timeseries': True
-        }
-    }
-    project_filename, results_dir = basic_residential_project_file(post_process_config)
+    project_filename, results_dir = basic_residential_project_file()
 
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client'), \

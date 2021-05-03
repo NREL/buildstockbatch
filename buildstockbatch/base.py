@@ -270,9 +270,6 @@ class BuildStockBatchBase(object):
         # validate other miscellaneous constraints
         cfg = get_project_configuration(project_file)
 
-        if cfg.get('postprocessing', {}).get('aggregate_timeseries', False):
-            logger.warning('aggregate_timeseries has been deprecated and will be removed in a future version.')
-
         return True
 
     @staticmethod

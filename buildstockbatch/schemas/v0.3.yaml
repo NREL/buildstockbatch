@@ -48,7 +48,6 @@ hpc-postprocessing-spec:
   n_workers: int(required=False)
   node_memory_mb: enum(85248, 180224, 751616, required=False)
   parquet_memory_mb: int(required=False)
-  keep_intermediate_files: bool(required=False)
 
 sampler-spec:
   type: str(required=True)
@@ -106,7 +105,7 @@ cost-spec:
 
 postprocessing-spec:
   aws: include('aws-postprocessing-spec', required=False)
-  aggregate_timeseries: bool(required=False)
+  keep_intermediate_files: bool(required=False)
 
 aws-postprocessing-spec:
   region_name: str(required=False)
