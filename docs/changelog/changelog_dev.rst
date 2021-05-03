@@ -82,3 +82,13 @@ Development Changelog
         :tickets:
 
         Fix for create_eagle_env.sh not creating environment.
+
+    .. change::
+        :tags: postprocessing
+        :pullreq: 227
+        :tickets: 182
+
+        Moves the ``eagle.postprocessing.keep_intermediate_files`` to
+        ``postprocessing.keep_individual_timeseries`` and changes behavior to
+        keep only the timeseries parquet files. Also, removes the deprecated
+        ``aggregate_timeseries`` key as that aggregation always happens.
