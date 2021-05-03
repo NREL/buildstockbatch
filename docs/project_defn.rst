@@ -144,7 +144,7 @@ the Eagle supercomputer.
 *  ``postprocessing``: Eagle configuration for the postprocessing step
 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle workers to parallelize the postprocessing job into. Max supported is 32.
+    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32. Default is 2.
     *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
                            85248, 180224 and 751616. Default is 85248.
     *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 40000.
