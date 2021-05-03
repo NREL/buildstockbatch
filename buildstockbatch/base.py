@@ -268,7 +268,7 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_misc_constraints(project_file):
         # validate other miscellaneous constraints
-        cfg = get_project_configuration(project_file)
+        cfg = get_project_configuration(project_file)  # noqa F841
 
         return True
 
@@ -554,8 +554,5 @@ class BuildStockBatchBase(object):
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 
-        if not self.cfg.get('eagle', {}).get('postprocessing', {}).get('keep_intermediate_files', False):
-            logger.info("Removing intermediate files.")
-            postprocessing.remove_intermediate_files(fs, self.results_dir)
-        else:
-            logger.info("Skipped removing intermediate files.")
+        keep_individual_timeseries = self.cfg.get('postprocessing', {}).get('keep_intermediate_files', False)
+        postprocessing.remove_intermediate_files(fs, self.results_dir, keep_individual_timeseries)

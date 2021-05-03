@@ -57,7 +57,8 @@ def do_postprocessing(s3_bucket, s3_bucket_prefix):
             f'{s3_bucket_prefix}/results/parquet'
         )
 
-    remove_intermediate_files(fs, results_s3_loc)
+    keep_individual_timeseries = cfg.get('postprocessing', {}).get('keep_intermediate_files', False)
+    remove_intermediate_files(fs, results_s3_loc, keep_individual_timeseries)
 
 
 if __name__ == '__main__':
