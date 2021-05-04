@@ -29,6 +29,7 @@ from pyarrow import parquet
 import random
 import re
 from s3fs import S3FileSystem
+import tempfile
 import time
 
 logger = logging.getLogger(__name__)
@@ -325,7 +326,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
             if not ts_filenames:
-                logger.info(f"There are no timeseries files for upgrade{upgrade_id}.")
+                logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
                 continue
 
             # Calculate the mean and estimate the total memory usage
@@ -359,8 +360,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
             )
             group_ids = list(range(npartitions))
-            with performance_report(filename=f'dask_combine_report{upgrade_id}.html'):
-                dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmpfilepath = Path(tmpdir, 'dask-report.html')
+                with performance_report(filename=str(tmpfilepath)):
+                    dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
+                if tmpfilepath.exists():
+                    fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
 

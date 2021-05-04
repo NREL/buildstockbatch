@@ -100,3 +100,13 @@ Development Changelog
 
         Modifies docs to specify that the ``eagle.postprocessing.n_workers`` key
         is for how many Eagle nodes are used and indicates the default of 2.
+
+    .. change::
+        :tags: postprocessing, bugfix
+        :pullreq: 230
+        :tickets: 199
+
+        Previously the postprocessing would fail if an upgrade scenario didn't
+        have any timeseries simulation output. Now it will skip it and post a
+        warning message. This was fixed previously, but now we have tests for
+        it.
