@@ -11,6 +11,7 @@ This object contains the code required for execution of local docker batch simul
 """
 
 import argparse
+from dask.distributed import Client, LocalCluster
 import docker
 import functools
 from fsspec.implementations.local import LocalFileSystem
@@ -217,6 +218,9 @@ class LocalDockerBatch(DockerBatchBase):
             os.makedirs(results_dir)
         return results_dir
 
+    def get_dask_client(self):
+        cluster = LocalCluster(local_directory=os.path.join(self.results_dir, 'dask-tmp'))
+        return Client(cluster)
 
 @log_error_details()
 def main():
