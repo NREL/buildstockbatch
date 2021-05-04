@@ -92,3 +92,11 @@ Development Changelog
         ``postprocessing.keep_individual_timeseries`` and changes behavior to
         keep only the timeseries parquet files. Also, removes the deprecated
         ``aggregate_timeseries`` key as that aggregation always happens.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 229
+        :tickets: 225
+
+        Modifies docs to specify that the ``eagle.postprocessing.n_workers`` key
+        is for how many Eagle nodes are used and indicates the default of 2.
