@@ -222,6 +222,7 @@ class LocalDockerBatch(DockerBatchBase):
         cluster = LocalCluster(local_directory=os.path.join(self.results_dir, 'dask-tmp'))
         return Client(cluster)
 
+
 @log_error_details()
 def main():
     logging.config.dictConfig({
