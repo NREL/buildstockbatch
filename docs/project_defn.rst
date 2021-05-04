@@ -148,9 +148,6 @@ the Eagle supercomputer.
     *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
                            85248, 180224 and 751616. Default is 85248.
     *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 40000.
-    *  ``keep_intermediate_files``: Set this to true if you want to keep postprocessing intermediate files (for debugging
-                                    or other explorative purpose). The intermediate files contain results_job*.json.gz
-                                    files and individual building's timeseries parquet files. Default is false.
 
 .. _aws-config:
 
@@ -222,10 +219,11 @@ follows:
    fewer larger parquet files that are better suited for querying using big data
    analysis tools.
 
-   For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
-   are horizontally concatenated with the time series files before aggregation,
-   making sure the schedule values are properly lined up with the timestamps in the
-   `same way that Energeyplus handles ScheduleFiles <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
+For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
+are horizontally concatenated with the time series files before aggregation,
+making sure the schedule values are properly lined up with the timestamps in the
+`same way that Energeyplus handles ScheduleFiles
+<https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
    
 
 Uploading to AWS Athena
@@ -254,6 +252,10 @@ Postprocessing Configuration Options
 The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
+
+    * ``keep_individual_timeseries``: For some use cases it is useful to keep
+      the timeseries output for each simulation as a separate parquet file.
+      Setting this option to ``true`` allows that. Default is ``false``.
 
     *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
        `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_

@@ -80,12 +80,7 @@ def test_large_parquet_combine(basic_residential_project_file):
     # Test a simulated scenario where the individual timeseries parquet are larger than the max memory per partition
     # allocated for the parquet file combining.
 
-    post_process_config = {
-        'postprocessing': {
-            'aggregate_timeseries': True
-        }
-    }
-    project_filename, results_dir = basic_residential_project_file(post_process_config)
+    project_filename, results_dir = basic_residential_project_file()
 
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client'), \
@@ -93,3 +88,25 @@ def test_large_parquet_combine(basic_residential_project_file):
             patch.object(postprocessing, 'MAX_PARQUET_MEMORY', 1e6):  # set the max memory to just 1MB
         bsb = BuildStockBatchBase(project_filename)
         bsb.process_results()  # this would raise exception if the postprocessing could not handle the situation
+
+
+@pytest.mark.parametrize('keep_individual_timeseries', [True, False])
+def test_keep_individual_timeseries(keep_individual_timeseries, basic_residential_project_file, mocker):
+    project_filename, results_dir = basic_residential_project_file({
+        'postprocessing': {
+            'keep_individual_timeseries': keep_individual_timeseries
+        }
+    })
+
+    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
+    mocker.patch.object(BuildStockBatchBase, 'get_dask_client')
+    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
+    bsb = BuildStockBatchBase(project_filename)
+    bsb.process_results()
+
+    results_path = pathlib.Path(results_dir)
+    simout_path = results_path / 'simulation_output'
+    assert len(list(simout_path.glob('results_job*.json.gz'))) == 0
+
+    ts_path = simout_path / 'timeseries'
+    assert ts_path.exists() == keep_individual_timeseries
