@@ -42,14 +42,20 @@ def read_data_point_out_json(fs, reporting_measures, filename):
         with fs.open(filename, 'r') as f:
             d = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return None
+        try:
+            with fs.open(filename.replace('data_point_out', 'results'), 'r') as f:
+                d = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return None
+
+    if 'SimulationOutputReport' not in d:
+        d['SimulationOutputReport'] = {'applicable': False, 'completed_status': 'Invalid'}
     else:
-        if 'SimulationOutputReport' not in d:
-            d['SimulationOutputReport'] = {'applicable': False}
-        for reporting_measure in reporting_measures:
-            if reporting_measure not in d:
-                d[reporting_measure] = {'applicable': False}
-        return d
+        d['SimulationOutputReport']['completed_status'] = 'Fail'
+    for reporting_measure in reporting_measures:
+        if reporting_measure not in d:
+            d[reporting_measure] = {'applicable': False}
+    return d
 
 
 def to_camelcase(x):
@@ -90,6 +96,9 @@ def flatten_datapoint_json(reporting_measures, d):
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
+    new_d['completed_status'] = new_d['SimulationOutputReport.completed_status']
+    del new_d['SimulationOutputReport.completed_status']
+
     return new_d
 
 
@@ -108,10 +117,28 @@ def read_out_osw(fs, filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
-        for step in d.get('steps', []):
-            if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_id'] = step['arguments']['building_id']
         return out_d
+
+
+def read_job_files(fs, dpout, started, finished):
+    try:
+        with fs.open(started, 'r') as f:
+            started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
+            started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
+            dpout['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
+    except (FileNotFoundError):
+        return dpout
+    try:
+        with fs.open(finished, 'r') as f:
+            completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
+            completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
+            dpout['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
+    except (FileNotFoundError):
+        return dpout
+    else:
+        if dpout['completed_status'] != 'Invalid':
+            dpout['completed_status'] = 'Success'
+    return dpout
 
 
 def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
@@ -140,6 +167,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
     if out_osw:
         dpout.update(out_osw)
+    else:  # for when run_options: fast=true
+        dpout = read_job_files(fs, dpout, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
     dpout['upgrade'] = upgrade_id
     dpout['building_id'] = building_id
     return dpout

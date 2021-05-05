@@ -237,7 +237,12 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
-            'weather_file': 'weather/empty.epw'
+            'weather_file': 'weather/empty.epw',
+            'run_options': {
+                'fast': True,
+                'skip_expand_objects': True,
+                'skip_energyplus_preprocess': True
+            }
         }
 
         # Baseline measures (not typically used in ComStock)
