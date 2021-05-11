@@ -169,37 +169,6 @@ New Spec:
           reporting_frequency: Hourly
           include_enduse_subcategories: true
 
-Commercial Workflw Generator Hard-Coded Measures
-------------------------------------------------
-
-The commercial workflow generator has changed to remove most of the hard-coded
-reporting measures, allowing them to be added to the config file as-needed.
-This should avoid the need to create custom BuildStockBatch environments
-for each project that needs to add/remove/modify reporting measures.
-
-Old hard-coded reporting measures:
-
-- SimulationOutputReport
-- OpenStudio Results (measure_dir_name: f8e23017-894d-4bdf-977f-37e3961e6f42)
-- TimeseriesCSVExport
-- comstock_sensitivity_reports
-- qoi_report
-- la_100_qaqc (if include_qaqc = true in config)
-- simulation_settings_check (if include_qaqc = true in config)
-
-New hard-coded reporting measures:
-
-- SimulationOutputReport (reports annual totals in results.csv)
-- TimeseriesCSVExport (generates timeseries results at Timestep frequency)
-
-Two other hard-coded model measures were removed from the workflow.  These will
-be added to the workflow via the options-lookup.tsv in ComStock instead.
-
-Removed hard-coded model measures:
-
-- add_blinds_to_selected_windows
-- set_space_type_load_subcategories
-
 Reporting Measures in Workflows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -231,6 +200,37 @@ New Spec:
           - measure_dir_name: ReportingMeasure2
 
 
+Commercial Workflow Generator Hard-Coded Measures
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The commercial workflow generator has changed to remove most of the hard-coded
+reporting measures, allowing them to be added to the config file as-needed.
+This should avoid the need to create custom BuildStockBatch environments
+for each project that needs to add/remove/modify reporting measures.
+
+Old hard-coded reporting measures:
+
+- ``SimulationOutputReport``
+- OpenStudio Results (measure_dir_name: ``f8e23017-894d-4bdf-977f-37e3961e6f42``)
+- ``TimeseriesCSVExport``
+- ``comstock_sensitivity_reports``
+- ``qoi_report``
+- ``la_100_qaqc`` (if include_qaqc = true in config)
+- ``simulation_settings_check`` (if include_qaqc = true in config)
+
+New hard-coded reporting measures:
+
+- ``SimulationOutputReport`` (reports annual totals in results.csv)
+- ``TimeseriesCSVExport`` (generates timeseries results at Timestep frequency)
+
+Two other hard-coded model measures were removed from the workflow.  These will
+be added to the workflow via the options-lookup.tsv in ComStock instead.
+
+Removed hard-coded model measures:
+
+- ``add_blinds_to_selected_windows``
+- ``set_space_type_load_subcategories``
+
 AWS EMR Configuration Name Changes
 ----------------------------------
 
@@ -246,3 +246,29 @@ renamed the following keys under ``aws.emr``:
 +----------------------+-----------------------+
 | slave_instance_count | worker_instance_count |
 +----------------------+-----------------------+
+
+
+Keep Individual Timeseries
+--------------------------
+
+For some applications it is helpful to keep the timeseries parquet files for
+each simulation. Normally, they are aggregated into fewer, larger files. There
+was a key introduced in v0.19.1 that enabled this. We moved it to a new home
+place in the config file.
+
+Old Spec:
+
+.. code-block:: yaml
+
+    schema_version: 0.2
+    eagle:
+      postprocessing:
+        keep_intermediate_files: true  # default false if omitted
+
+New Spec:
+
+.. code-block:: yaml
+
+    schema_version: '0.3'
+    postprocessing:
+      keep_individual_timeseries: true  # default false if omitted

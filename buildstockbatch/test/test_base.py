@@ -62,12 +62,7 @@ def test_combine_files_flexible(basic_residential_project_file, mocker):
     # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
     # removed/renamed.
 
-    post_process_config = {
-        'postprocessing': {
-            'aggregate_timeseries': True
-        }
-    }
-    project_filename, results_dir = basic_residential_project_file(post_process_config)
+    project_filename, results_dir = basic_residential_project_file()
 
     mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
     get_dask_client_mock = mocker.patch.object(BuildStockBatchBase, 'get_dask_client')
@@ -178,12 +173,7 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
 
 def test_combine_files(basic_residential_project_file):
 
-    post_process_config = {
-        'postprocessing': {
-            'aggregate_timeseries': True
-        }
-    }
-    project_filename, results_dir = basic_residential_project_file(post_process_config)
+    project_filename, results_dir = basic_residential_project_file()
 
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \

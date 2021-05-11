@@ -77,6 +77,41 @@ Development Changelog
         Adding measure arguments for reporting measures in the workflow generator.
 
     .. change::
+        :tags: general, eagle
+        :pullreq: 226
+        :tickets:
+
+        Fix for create_eagle_env.sh not creating environment.
+
+    .. change::
+        :tags: postprocessing
+        :pullreq: 228
+        :tickets: 182
+
+        Moves the ``eagle.postprocessing.keep_intermediate_files`` to
+        ``postprocessing.keep_individual_timeseries`` and changes behavior to
+        keep only the timeseries parquet files. Also, removes the deprecated
+        ``aggregate_timeseries`` key as that aggregation always happens.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 229
+        :tickets: 225
+
+        Modifies docs to specify that the ``eagle.postprocessing.n_workers`` key
+        is for how many Eagle nodes are used and indicates the default of 2.
+
+    .. change::
+        :tags: postprocessing, bugfix
+        :pullreq: 230
+        :tickets: 199
+
+        Previously the postprocessing would fail if an upgrade scenario didn't
+        have any timeseries simulation output. Now it will skip it and post a
+        warning message. This was fixed previously, but now we have tests for
+        it.
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 
