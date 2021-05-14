@@ -71,7 +71,6 @@ setuptools.setup(
         'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
-        'click<8.0'  # remove this after this bug is fixed in dask https://github.com/dask/distributed/issues/4817
     ],
     extras_require={
         'dev': [
