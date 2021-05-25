@@ -61,7 +61,7 @@ setuptools.setup(
         'pandas>=1.0.0,!=1.0.4',
         'joblib',
         'pyarrow>=3.0.0',
-        'dask[complete]>=2.1.0',
+        'dask[complete]>=2021.5',
         'docker',
         'boto3>=1.10.44',
         's3fs>=0.4.0,<0.5.0',
@@ -71,7 +71,6 @@ setuptools.setup(
         'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
-        'click<8.0'  # remove this after this bug is fixed in dask https://github.com/dask/distributed/issues/4817
     ],
     extras_require={
         'dev': [
