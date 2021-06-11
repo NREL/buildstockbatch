@@ -1,6 +1,7 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
+import pytest
 
 
 def test_apply_logic_recursion():
@@ -119,6 +120,25 @@ def test_residential_simulation_controls_config(mocker):
     assert(args['begin_month'] == 7)
     for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month', 'calendar_year'):
         assert(args[argname] == default_args[argname])
+
+
+def test_residential_simulation_weight(mocker):
+    cfg = {
+        'baseline': {
+            'n_buildings_represented': 1000
+        },
+        'workflow_generator': {
+            'type': 'residential_default',
+            'args': {}
+        }
+    }
+    n_datapoints = 10
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = None
+    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+    assert(osw['steps'][1]['arguments']['sample_weight'] == pytest.approx(100, abs=1e-6))
 
 
 def test_timeseries_csv_export(mocker):
