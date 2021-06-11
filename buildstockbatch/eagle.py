@@ -340,7 +340,7 @@ class EagleBatch(BuildStockBatchBase):
             # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
             cli_cmd = 'openstudio run -w in.osw'
             if cfg.get('baseline', dict()).get('custom_gems', False):
-                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems --bundle_without native_ext run -w in.osw --debug'
             if get_bool_env_var('MEASURESONLY'):
                 cli_cmd += ' --measures_only'
             runscript.append(cli_cmd)
