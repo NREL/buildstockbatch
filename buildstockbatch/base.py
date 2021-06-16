@@ -543,6 +543,11 @@ class BuildStockBatchBase(object):
         self.get_dask_client()  # noqa: F841
 
         do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
+        # This very suboptimal workaround is nessecary because the com workflow generator args implementation
+        # is pretty completly different from the res implementation, which is a larger issue for @asparke and
+        # @nmerket to figure out at some other time
+        if not do_timeseries and self.cfg.get('postprocessing', {}).get('do_timeseries', False):
+            do_timeseries = True
 
         fs = LocalFileSystem()
         if not skip_combine:
