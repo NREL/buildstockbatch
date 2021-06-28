@@ -19,6 +19,7 @@ Change logs
 .. toctree::
    :titlesonly:
 
+   changelog_0_20_1
    changelog_0_20
    changelog_0_19_2
    changelog_0_19_1
