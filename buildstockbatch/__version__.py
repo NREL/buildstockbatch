@@ -4,7 +4,7 @@ import datetime as dt
 __title__ = 'buildstockbatch'
 __description__ = 'Executing BuildStock projects on batch infrastructure.'
 __url__ = 'http://github.com/NREL/buildstockbatch'
-__version__ = '0.20'
+__version__ = '0.20.1'
 __schema_version__ = '0.3'
 __author__ = 'Noel Merket'
 __author_email__ = 'noel.merket@nrel.gov'
