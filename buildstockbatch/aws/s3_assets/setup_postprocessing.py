@@ -6,7 +6,7 @@ setup(
     description='Just the stand alone postprocessing functions from Buildstock-Batch',
     py_modules=['postprocessing'],
     install_requires=[
-        'dask[complete]',
+        'dask[complete]>=2021.5',
         's3fs>=0.4.2,<0.5.0',
         'boto3',
         'pandas>=1.0.0,!=1.0.4',
