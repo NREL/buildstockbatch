@@ -39,10 +39,9 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    # OpenStudio-3.2.0.3674123721-flex-Singularity.simg
-    # DEFAULT_OS_VERSION = '3.2.0'  # eagle
-    DEFAULT_OS_VERSION = 'flex'  # localdocker
-    DEFAULT_OS_SHA = '3674123721-flex'
+    # DEFAULT_OS_VERSION = '3.2.2'  # eagle
+    DEFAULT_OS_VERSION = 'flex-2'  # localdocker
+    DEFAULT_OS_SHA = 'dd31fc16e4-flex-2' # OpenStudio-3.2.2.dd31fc16e4-flex-2-Singularity.simg
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
