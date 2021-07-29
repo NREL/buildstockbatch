@@ -234,7 +234,8 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         workflow_args = {
             'residential_simulation_controls': {},
             'measures': [],
-            'simulation_output': {}
+            'simulation_output': {},
+            'server_directory_cleanup': {}
         }
         workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
 
@@ -263,7 +264,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'steps': [
                 {
                     'measure_dir_name': 'ResidentialSimulationControls',
-                    'arguments': res_sim_ctl_args,
+                    'arguments': res_sim_ctl_args
                 },
                 {
                     'measure_dir_name': 'BuildExistingModel',
@@ -281,6 +282,29 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend(workflow_args['measures'])
 
+        server_dir_cleanup_args = {
+          'in_osm': False,
+          'in_idf': True,
+          'pre_process_idf': False,
+          'eplusout_audit': False,
+          'eplusout_bnd': False,
+          'eplusout_eio': False,
+          'eplusout_end': False,
+          'eplusout_err': False,
+          'eplusout_eso': False,
+          'eplusout_mdd': False,
+          'eplusout_mtd': False,
+          'eplusout_rdd': False,
+          'eplusout_shd': False,
+          'eplusout_sql': False,
+          'eplustbl_htm': False,
+          'sqlite_err': False,
+          'stdout_energyplus': False,
+          'stdout_expandobject': False,
+          'schedules_csv': True
+        }
+        server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
+
         osw['steps'].extend([
             {
                 'measure_dir_name': 'SimulationOutputReport',
@@ -288,7 +312,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
-                'arguments': {}
+                'arguments': server_dir_cleanup_args
             }
         ])
 
