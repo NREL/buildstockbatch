@@ -274,6 +274,9 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
+            'run_options': {
+                'skip_zip_results': True
+            }
         }
 
         osw['steps'].extend(workflow_args['measures'])
