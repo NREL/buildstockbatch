@@ -283,25 +283,25 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         osw['steps'].extend(workflow_args['measures'])
 
         server_dir_cleanup_args = {
-          'in_osm': False,
-          'in_idf': True,
-          'pre_process_idf': False,
-          'eplusout_audit': False,
-          'eplusout_bnd': False,
-          'eplusout_eio': False,
-          'eplusout_end': False,
-          'eplusout_err': False,
-          'eplusout_eso': False,
-          'eplusout_mdd': False,
-          'eplusout_mtd': False,
-          'eplusout_rdd': False,
-          'eplusout_shd': False,
-          'eplusout_sql': False,
-          'eplustbl_htm': False,
-          'sqlite_err': False,
-          'stdout_energyplus': False,
-          'stdout_expandobject': False,
-          'schedules_csv': True
+          'retain_in_osm': False,
+          'retain_in_idf': True,
+          'retain_pre_process_idf': False,
+          'retain_eplusout_audit': False,
+          'retain_eplusout_bnd': False,
+          'retain_eplusout_eio': False,
+          'retain_eplusout_end': False,
+          'retain_eplusout_err': False,
+          'retain_eplusout_eso': False,
+          'retain_eplusout_mdd': False,
+          'retain_eplusout_mtd': False,
+          'retain_eplusout_rdd': False,
+          'retain_eplusout_shd': False,
+          'retain_eplusout_sql': False,
+          'retain_eplustbl_htm': False,
+          'retain_sqlite_err': False,
+          'retain_stdout_energyplus': False,
+          'retain_stdout_expandobject': False,
+          'retain_schedules_csv': True
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
