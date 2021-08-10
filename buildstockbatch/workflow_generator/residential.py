@@ -47,6 +47,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output: map(required=False)
         timeseries_csv_export: map(required=False)
+        server_directory_cleanup: map(required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
