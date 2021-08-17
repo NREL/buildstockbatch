@@ -222,7 +222,7 @@ follows:
 For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
 are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
-`same way that Energeyplus handles ScheduleFiles
+`same way that EnergyPlus handles ScheduleFiles
 <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
    
 
