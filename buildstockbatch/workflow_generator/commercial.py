@@ -42,6 +42,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
+        timeseries_csv_export: map(required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -281,16 +282,21 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 "measure_dir_name": "SimulationOutputReport",
                 "arguments": {},
                 "measure_type": "ReportingMeasure"
-            },
-            {
-                "measure_dir_name": "TimeseriesCSVExport",
-                "arguments": {
-                    "reporting_frequency": "Timestep",
-                    "inc_output_variables": False
-                },
-                "measure_type": "ReportingMeasure"
             }
         ])
+
+        if 'timeseries_csv_export' in workflow_args:
+            timeseries_csv_export_args = {
+                'reporting_frequency': 'Timestep',
+                'inc_output_variables': False
+            }
+            timeseries_csv_export_args.update(workflow_args['timeseries_csv_export'])
+            timeseries_measure = [{
+                'measure_dir_name': 'TimeseriesCSVExport',
+                'arguments': timeseries_csv_export_args,
+                "measure_type": "ReportingMeasure"
+            }]
+            osw['steps'].extend(timeseries_measure)
 
         # User-specified reporting measures
         if 'reporting_measures' in workflow_args:

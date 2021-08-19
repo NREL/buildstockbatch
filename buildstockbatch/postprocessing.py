@@ -337,7 +337,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             total_mem = mean_mem * len(ts_filenames) / 1e6  # total_mem in MB
 
             # Determine how many files should be in each partition and group the files
-            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            parquet_memory = int(cfg.get('eagle', {}).get('postprocessing', {}
+                                                          ).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
             npartitions = math.ceil(total_mem / parquet_memory)
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
