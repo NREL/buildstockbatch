@@ -1729,11 +1729,41 @@ class AwsBatch(DockerBatchBase):
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
+
+        # Determine whether or not to build the image with custom gems bundled in
+        if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            # Ensure the custom Gemfile exists in the buildstock dir
+            orig_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
+            if not os.path.exists(orig_gemfile_path):
+                raise AttributeError(f'baseline:custom_gems: True, expected Gemfile at: {orig_gemfile_path}')
+
+            # Copy the custom Gemfile into the buildstockbatch repo
+            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
+            new_gemfile_path = os.path.join(bsb_root, 'Gemfile')
+            shutil.copyfile(orig_gemfile_path, new_gemfile_path)
+            logger.info(f'Copying custom Gemfile from {orig_gemfile_path}')
+
+            # Comment out the `gemspec` line in the custom Gemfile
+            with open(new_gemfile_path, 'r') as file :
+                gemfile = file.read()
+            gemfile = gemfile.replace('gemspec', '# gemspec')
+            with open(new_gemfile_path, 'w') as file:
+                file.write(gemfile)
+
+            # Choose the custom-gems stage in the Dockerfile,
+            # which runs bundle install to build custom gems into the image
+            stage = 'custom-gems'
+        else:
+            # Choose the base stage in the Dockerfile,
+            # which stops before bundling custom gems into the image
+            stage = 'base'
+
         logger.debug('Building docker image')
         self.docker_client.images.build(
             path=str(root_path),
             tag=self.docker_image,
-            rm=True
+            rm=True,
+            target=stage
         )
 
     def push_image(self):
