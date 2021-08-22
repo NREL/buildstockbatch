@@ -66,7 +66,12 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         for m in workflow_args.get('reporting_measures', []):
             measure_dir_name = m['measure_dir_name']
             measure_path = os.path.join(measures_dir, measure_dir_name)
-            root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+            if os.path.exists(measure_path):
+                root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+            else:
+                # When running on AWS, measures are in a different location
+                aws_measure_path = os.path.join('/var/simdata/openstudio', 'measures', measure_dir_name)
+                root = get_measure_xml(os.path.join(aws_measure_path, 'measure.xml'))
             measure_class_name = root.find('./class_name').text
             # Don't include OpenStudioResults, it has too many registerValues for ComStock
             if measure_class_name == 'OpenStudioResults':
