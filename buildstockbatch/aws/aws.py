@@ -1839,6 +1839,8 @@ class AwsBatch(DockerBatchBase):
 
             # Determine the unique weather files
             epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            epw_filenames += list(filter(lambda x: x.endswith('.ddy'), os.listdir(self.weather_dir)))
+            epw_filenames += list(filter(lambda x: x.endswith('.stat'), os.listdir(self.weather_dir)))
             logger.debug('Calculating hashes for weather files')
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
                 delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
@@ -1952,6 +1954,10 @@ class AwsBatch(DockerBatchBase):
         env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier,
                         REGION=self.region)
 
+        # If custom gems are specified, pass through to job via environment variable
+        if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            env_vars['USE_CUSTOM_GEMS'] = 'yes'
+
         image_url = '{}:{}'.format(
             self.container_repo['repositoryUri'],
             self.job_identifier
@@ -1988,7 +1994,7 @@ class AwsBatch(DockerBatchBase):
         logger.info('Batch job submitted. Check your email to subscribe to notifications.')
 
     @classmethod
-    def run_job(cls, job_id, bucket, prefix, job_name, region):
+    def run_job(cls, job_id, bucket, prefix, job_name, region, use_custom_gems):
         """
         Run a few simulations inside a container.
 
@@ -2049,6 +2055,10 @@ class AwsBatch(DockerBatchBase):
             for row in csv_reader:
                 if int(row['Building']) in building_ids:
                     epws_to_download.add(epws_by_option[row[param_name]])
+                    epws_to_download.add(epws_by_option[row[param_name]].replace('.epw', '.ddy'))
+                    epws_to_download.add(epws_by_option[row[param_name]].replace('.epw', '.stat'))
+        # Copy the empty.epw file in order for OS CLI to start running osw correctly
+        epws_to_download.add('empty.epw')
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
@@ -2078,14 +2088,26 @@ class AwsBatch(DockerBatchBase):
                 # Run Simulation
                 with open(sim_dir / 'os_stdout.log', 'w') as f_out:
                     try:
-                        logger.debug('Running {}'.format(sim_id))
-                        subprocess.run(
-                            ['openstudio', 'run', '-w', 'in.osw'],
-                            check=True,
-                            stdout=f_out,
-                            stderr=subprocess.STDOUT,
-                            cwd=str(sim_dir)
-                        )
+                        if use_custom_gems:
+                            logger.debug('Running {} using custom gems'.format(sim_id))
+                            subprocess.run(
+                                ['openstudio', '--bundle', '/var/simdata/Gemfile',
+                                '--bundle_path', '/var/simdata/.custom_gems/',
+                                'run', '-w', 'in.osw'],
+                                check=True,
+                                stdout=f_out,
+                                stderr=subprocess.STDOUT,
+                                cwd=str(sim_dir)
+                            )
+                        else:
+                            logger.debug('Running {}'.format(sim_id))
+                            subprocess.run(
+                                ['openstudio', 'run', '-w', 'in.osw'],
+                                check=True,
+                                stdout=f_out,
+                                stderr=subprocess.STDOUT,
+                                cwd=str(sim_dir)
+                            )
                     except subprocess.CalledProcessError:
                         logger.debug(f'Simulation failed: see {sim_id}/os_stdout.log')
 
@@ -2182,7 +2204,11 @@ def main():
         s3_prefix = os.environ['S3_PREFIX']
         job_name = os.environ['JOB_NAME']
         region = os.environ['REGION']
-        AwsBatch.run_job(job_id, s3_bucket, s3_prefix, job_name, region)
+        if 'USE_CUSTOM_GEMS' in os.environ:
+            use_custom_gems = True
+        else:
+            use_custom_gems = False
+        AwsBatch.run_job(job_id, s3_bucket, s3_prefix, job_name, region, use_custom_gems)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
