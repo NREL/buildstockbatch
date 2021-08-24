@@ -1464,6 +1464,10 @@ class AwsBatchEnv(AwsJobBase):
         emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
         fs.makedirs(emr_folder)
 
+        # Line endings
+        WINDOWS_LINE_ENDING = b'\r\n'
+        UNIX_LINE_ENDING = b'\n'
+
         # bsb_post.sh
         bsb_post_bash = f'''#!/bin/bash
 
@@ -1471,14 +1475,19 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
 /home/hadoop/miniconda/bin/python bsb_post.py "{self.s3_bucket}" "{self.s3_bucket_prefix}"
 
         '''
-        with fs.open(f'{emr_folder}/bsb_post.sh', 'w', encoding='utf-8') as f:
-            f.write(bsb_post_bash)
+        bsb_post_bash = str.encode(bsb_post_bash)
+        with fs.open(f'{emr_folder}/bsb_post.sh', 'wb') as f:
+            f.write(bsb_post_bash.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING))
 
         # bsb_post.py
         fs.put(os.path.join(here, 's3_assets', 'bsb_post.py'), f'{emr_folder}/bsb_post.py')
 
         # bootstrap-dask-custom
-        fs.put(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), f'{emr_folder}/bootstrap-dask-custom')
+        with open(os.path.join(here, 's3_assets', 'bootstrap-dask-custom'), 'rb') as f:
+            bootstrap_dask_custom = f.read()
+
+        with fs.open(f'{emr_folder}/bootstrap-dask-custom', 'wb') as f:
+            f.write(bootstrap_dask_custom.replace(WINDOWS_LINE_ENDING, UNIX_LINE_ENDING))
 
         # postprocessing.py
         with fs.open(f'{emr_folder}/postprocessing.tar.gz', 'wb') as f:
