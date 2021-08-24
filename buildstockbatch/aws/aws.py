@@ -1837,10 +1837,37 @@ class AwsBatch(DockerBatchBase):
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
 
+            # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+            logger.debug('Determining weather files to upload based on options_lookup.tsv and buildstock.csv')
+            with open(buildstock_path / 'resources' / 'options_lookup.tsv', 'r', encoding='utf-8') as f:
+                tsv_reader = csv.reader(f, delimiter='\t')
+                next(tsv_reader)  # skip headers
+                param_name = None
+                epws_by_option = {}
+                for row in tsv_reader:
+                    row_has_epw = [x.endswith('.epw') for x in row[2:]]
+                    if sum(row_has_epw):
+                        if row[0] != param_name and param_name is not None:
+                            raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')  # noqa: E501
+                        epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                        param_name = row[0]
+                        option_name = row[1]
+                        epws_by_option[option_name] = epw_filename
+
+            # Look through the buildstock.csv to find the appropriate location and epw
+            epw_filenames = set()
+            with open(project_path / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
+                csv_reader = csv.DictReader(f)
+                for row in csv_reader:
+                    epw_filenames.add(epws_by_option[row[param_name]])
+                    epw_filenames.add(epws_by_option[row[param_name]].replace('.epw', '.ddy'))
+                    epw_filenames.add(epws_by_option[row[param_name]].replace('.epw', '.stat'))
+            # Upload the empty.epw file in order for OS CLI to start running osw correctly
+            epw_filenames.add('empty.epw')
+            epw_filenames.add('empty.ddy')
+            epw_filenames.add('empty.stat')
+
             # Determine the unique weather files
-            epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
-            epw_filenames += list(filter(lambda x: x.endswith('.ddy'), os.listdir(self.weather_dir)))
-            epw_filenames += list(filter(lambda x: x.endswith('.stat'), os.listdir(self.weather_dir)))
             logger.debug('Calculating hashes for weather files')
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
                 delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
