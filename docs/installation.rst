@@ -18,7 +18,7 @@ computationally intensive. Local use is only recommended for very small testing 
 
 .. note::
 
-   Users using a Windows operating system should install 
+   Users using a Windows operating system should install
    `Docker Desktop Community 2.1.0.5 <https://docs.docker.com/docker-for-windows/release-notes/#docker-desktop-community-2105>`_
    or below.
 
@@ -31,7 +31,7 @@ Get a copy of this code either by downloading the zip file from GitHub or
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
-environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.6 or greater. Then activate your environment. 
+environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.6 or greater. Then activate your environment.
 
 .. _python virtual environment: https://docs.python.org/3/library/venv.html
 .. _conda environment: https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
@@ -157,3 +157,39 @@ The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
 The first time you run ``buildstock_aws`` it may take several minutes,
 especially over a slower internet connection as it is downloading and building a docker image.
+
+.. note::
+
+   After installation, users using a Windows operating system may need to
+   monkey patch the `awsretry` library to use a logging method that works on Windows.
+   See `proposed patch here <https://github.com/jhart-r7/awsretry/commit/ddd98a2797b8ef1f6d6311edfc71e2b7fc631877>`_.
+
+   Modify: `C:\Users\aparker\Anaconda3\envs\bsb\Lib\site-packages\awsretry\__init__.py`
+
+   Line 7 from:
+
+   ::
+
+      import syslog
+
+   to:
+
+   ::
+
+      import logging
+
+   Line 77-81 from:
+
+   ::
+
+      msg = (
+         "{0}: Retrying in {1} seconds..."
+         .format(str(e), max_delay)
+      )
+      syslog.syslog(syslog.LOG_INFO, msg)
+
+   to:
+
+   ::
+
+      logging.info("%s: Retrying in %d seconds..." % (str(e), max_delay))
