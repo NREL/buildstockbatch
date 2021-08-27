@@ -664,6 +664,11 @@ class AwsBatchEnv(AwsJobBase):
 
         """
 
+        tag_dict = {
+            'job': self.job_identifier
+        }
+        tag_dict.update(self.tags)
+
         try:
             compute_resources = {
                 'minvCpus': 0,
@@ -675,7 +680,8 @@ class AwsBatchEnv(AwsJobBase):
                 'imageId': self.batch_compute_environment_ami,
                 'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                 'securityGroupIds': [self.batch_security_group],
-                'instanceRole': self.instance_profile_arn
+                'instanceRole': self.instance_profile_arn,
+                'tags': tag_dict
             }
 
             if self.batch_use_spot:
@@ -692,7 +698,8 @@ class AwsBatchEnv(AwsJobBase):
                 type='MANAGED',
                 state='ENABLED',
                 computeResources=compute_resources,
-                serviceRole=self.service_role_arn
+                serviceRole=self.service_role_arn,
+                tags=tag_dict
             )
 
             logger.info(f'Compute environment {self.batch_compute_environment_name} created.')
@@ -1501,6 +1508,21 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
         script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
         bootstrap_action = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom'  # noqa E501
 
+        tag_list = []
+        tag_list.append(
+                {
+                    'Key': 'org',
+                    'Value': 'ops'
+                }
+        )
+        for tag_name, tag_value in self.tags.items():
+            tag_list.append(
+                {
+                    'Key': tag_name,
+                    'Value': tag_value
+                }
+            )
+
         run_job_flow_args = dict(
             Name=self.emr_cluster_name,
             LogUri=self.emr_log_uri,
@@ -1559,12 +1581,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
             VisibleToAllUsers=True,
             JobFlowRole=self.emr_instance_profile_name,
             ServiceRole=self.emr_service_role_name,
-            Tags=[
-                {
-                    'Key': 'org',
-                    'Value': 'ops'
-                },
-            ],
+            Tags=tag_list,
             AutoScalingRole='EMR_AutoScaling_DefaultRole',
             ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
             EbsRootVolumeSize=100
@@ -1589,6 +1606,8 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
 
         while True:
             try:
+                tag_dict = {'job': self.job_identifier}
+                tag_dict.update(self.tags)
                 self.aws_lambda.create_function(
                     FunctionName=self.lambda_emr_job_step_function_name,
                     Runtime='python3.7',
@@ -1609,9 +1628,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                             'EMR_CONFIG_JSON_KEY': self.s3_lambda_emr_config_key
                         }
                     },
-                    Tags={
-                        'job': self.job_identifier
-                    }
+                    Tags=tag_dict
                 )
 
                 logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")

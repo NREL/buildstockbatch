@@ -166,6 +166,7 @@ class AwsJobBase():
         self.account = self.session.client('sts').get_caller_identity().get('Account')
         self.region = aws_config['region']
         self.operator_email = aws_config['notifications_email']
+        self.tags = aws_config.get('tags', dict())
 
         # S3
         self.s3_bucket = aws_config['s3']['bucket']
