@@ -1,4 +1,5 @@
-FROM nrel/openstudio:2.9.1 as base
+# OpenStudio 2.9.1 base image
+FROM nrel/openstudio:2.9.1 as os-291
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 
@@ -22,7 +23,8 @@ RUN python3.8 -m pip install pyarrow
 COPY . /buildstock-batch/
 RUN python3.8 -m pip install /buildstock-batch
 
-FROM base as custom-gems
+# OpenStudio 2.9.1 plus custom gems
+FROM os-291 as os-291-custom-gems
 RUN sudo cp /buildstock-batch/Gemfile /var/simdata/
 RUN bundle config path /var/simdata/.custom_gems/
 RUN bundle config without 'test development'
