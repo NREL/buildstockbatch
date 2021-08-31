@@ -1756,6 +1756,15 @@ class AwsBatch(DockerBatchBase):
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
 
+        # Determine the OpenStudio docker image to use as a base
+        if self.os_version == '2.9.1':
+            base_stage = 'os-291'
+        elif self.os_version == '3.2.1':
+            base_stage = 'os-321'
+        else:
+            raise AttributeError(f'You selected OpenStudio {self.os_version}.  Only OpenStudio 2.9.1 and 3.2.1 are supported on AWS, modify Dockerfile to add others')
+        dockerfile = f'{base_stage}.Dockerfile'
+
         # Determine whether or not to build the image with custom gems bundled in
         if self.cfg.get('baseline', dict()).get('custom_gems', False):
             # Ensure the custom Gemfile exists in the buildstock dir
@@ -1778,19 +1787,21 @@ class AwsBatch(DockerBatchBase):
 
             # Choose the custom-gems stage in the Dockerfile,
             # which runs bundle install to build custom gems into the image
-            stage = 'custom-gems'
+            stage = f'{base_stage}-custom-gems'
         else:
             # Choose the base stage in the Dockerfile,
             # which stops before bundling custom gems into the image
-            stage = 'base'
+            stage = base_stage
 
-        logger.debug('Building docker image')
+        logger.debug(f'Building docker image {stage}')
         self.docker_client.images.build(
-            path=str(root_path),
+            path=os.path.join(root_path, dockerfile),
             tag=self.docker_image,
             rm=True,
             target=stage
         )
+
+        raise Exception
 
     def push_image(self):
         """
