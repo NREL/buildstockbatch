@@ -34,6 +34,15 @@ Development Changelog
         identified in the residential workflow generator.
 
     .. change::
+        :tags: general, feature
+        :pullreq: 240
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.2.1. Also, the residential workflow generator has changed
+        slightly. Simulation output files retention and deletion can be controlled through arguments to the
+        ServerDirectoryCleanup measure.
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 
