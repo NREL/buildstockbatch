@@ -1795,13 +1795,11 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f'Building docker image {stage}')
         self.docker_client.images.build(
-            path=os.path.join(root_path, dockerfile),
+            path=str(root_path),
             tag=self.docker_image,
             rm=True,
             target=stage
         )
-
-        raise Exception
 
     def push_image(self):
         """
