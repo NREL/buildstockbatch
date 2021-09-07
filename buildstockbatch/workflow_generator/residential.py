@@ -47,6 +47,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output: map(required=False)
         timeseries_csv_export: map(required=False)
+        server_directory_cleanup: map(required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -234,7 +235,8 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         workflow_args = {
             'residential_simulation_controls': {},
             'measures': [],
-            'simulation_output': {}
+            'simulation_output': {},
+            'server_directory_cleanup': {}
         }
         workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
 
@@ -253,7 +255,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args = {
             'building_id': building_id,
             'workflow_json': 'measure-info.json',
-            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
+            'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints,
         }
         if 'measures_to_ignore' in workflow_args:
             bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
@@ -263,7 +265,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'steps': [
                 {
                     'measure_dir_name': 'ResidentialSimulationControls',
-                    'arguments': res_sim_ctl_args,
+                    'arguments': res_sim_ctl_args
                 },
                 {
                     'measure_dir_name': 'BuildExistingModel',
@@ -274,9 +276,35 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             'measure_paths': [
                 'measures'
             ],
+            'run_options': {
+                'skip_zip_results': True
+            }
         }
 
         osw['steps'].extend(workflow_args['measures'])
+
+        server_dir_cleanup_args = {
+          'retain_in_osm': False,
+          'retain_in_idf': True,
+          'retain_pre_process_idf': False,
+          'retain_eplusout_audit': False,
+          'retain_eplusout_bnd': False,
+          'retain_eplusout_eio': False,
+          'retain_eplusout_end': False,
+          'retain_eplusout_err': False,
+          'retain_eplusout_eso': False,
+          'retain_eplusout_mdd': False,
+          'retain_eplusout_mtd': False,
+          'retain_eplusout_rdd': False,
+          'retain_eplusout_shd': False,
+          'retain_eplusout_sql': False,
+          'retain_eplustbl_htm': False,
+          'retain_sqlite_err': False,
+          'retain_stdout_energyplus': False,
+          'retain_stdout_expandobject': False,
+          'retain_schedules_csv': True
+        }
+        server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
         osw['steps'].extend([
             {
@@ -285,7 +313,7 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
-                'arguments': {}
+                'arguments': server_dir_cleanup_args
             }
         ])
 
