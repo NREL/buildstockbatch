@@ -32,6 +32,7 @@ import subprocess
 import sys
 import time
 import yaml
+import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
@@ -245,6 +246,20 @@ class EagleBatch(BuildStockBatchBase):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
+
+        # trim the buildstock.csv file to only include rows for current batch. Helps speed up simulation
+        logger.debug("Trimming buildstock.csv")
+        building_ids = {x[0] for x in args['batch']}
+        buildstock_csv_path = self.local_housing_characteristics_dir / 'buildstock.csv'
+        valid_rows = []
+        with open(buildstock_csv_path, 'r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            for row in csv_reader:
+                if int(row['Building']) in building_ids:
+                    valid_rows.append(row)
+        df = pd.DataFrame.from_records(valid_rows)
+        df.to_csv(buildstock_csv_path, index=False)
+        logger.debug(f"Buildstock.csv trimmed to {len(df)} rows.")
 
         traceback_file_path = self.local_output_dir / 'simulation_output' / f'traceback{job_array_number}.out'
 
