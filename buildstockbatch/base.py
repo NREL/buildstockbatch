@@ -55,7 +55,6 @@ class BuildStockBatchBase(object):
 
         # Load project file to self.cfg
         self.cfg = get_project_configuration(project_filename)
-
         self.buildstock_dir = self.cfg['buildstock_directory']
         if not os.path.isdir(self.buildstock_dir):
             raise FileNotFoundError(f'buildstock_directory = {self.buildstock_dir} is not a directory.')

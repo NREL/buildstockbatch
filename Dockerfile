@@ -23,13 +23,6 @@ RUN python3.8 -m pip install pyarrow
 COPY . /buildstock-batch/
 RUN python3.8 -m pip install /buildstock-batch
 
-# OpenStudio 2.9.1 plus custom gems
-FROM os-291 as os-291-custom-gems
-RUN sudo cp /buildstock-batch/Gemfile /var/simdata/
-RUN bundle config path /var/simdata/.custom_gems/
-RUN bundle config without 'test development'
-RUN bundle install --gemfile /var/simdata/Gemfile
-
 # OpenStudio 3.2.1 base image
 FROM nrel/openstudio:3.2.1 as os-321
 
@@ -54,6 +47,13 @@ RUN python3.8 -m pip install pyarrow
 
 COPY . /buildstock-batch/
 RUN python3.8 -m pip install /buildstock-batch
+
+# OpenStudio 2.9.1 plus custom gems
+FROM os-291 as os-291-custom-gems
+RUN sudo cp /buildstock-batch/Gemfile /var/simdata/
+RUN bundle config path /var/simdata/.custom_gems/
+RUN bundle config without 'test development'
+RUN bundle install --gemfile /var/simdata/Gemfile
 
 # OpenStudio 3.2.1 plus custom gems
 FROM os-321 as os-321-custom-gems

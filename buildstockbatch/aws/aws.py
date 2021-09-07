@@ -1690,7 +1690,6 @@ class AwsBatch(DockerBatchBase):
         super().__init__(project_filename)
 
         self.job_identifier = re.sub('[^0-9a-zA-Z]+', '_', self.cfg['aws']['job_identifier'])[:10]
-
         self.project_filename = project_filename
         self.region = self.cfg['aws']['region']
         self.ecr = boto3.client('ecr', region_name=self.region)
@@ -1753,6 +1752,7 @@ class AwsBatch(DockerBatchBase):
         Build the docker image to use in the batch simulation
         """
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
+        logger.debug(f"Docker image root path: {root_path}")
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
 
@@ -1762,8 +1762,10 @@ class AwsBatch(DockerBatchBase):
         elif self.os_version == '3.2.1':
             base_stage = 'os-321'
         else:
-            raise AttributeError(f'You selected OpenStudio {self.os_version}.  Only OpenStudio 2.9.1 and 3.2.1 are supported on AWS, modify Dockerfile to add others')
-        dockerfile = f'{base_stage}.Dockerfile'
+            raise AttributeError(f'You selected OpenStudio {self.os_version}. '
+                                 f'Only OpenStudio 2.9.1 and 3.2.1 are supported on AWS, '
+                                 f'modify Dockerfile to add others')
+        # dockerfile = f'{base_stage}.Dockerfile'
 
         # Determine whether or not to build the image with custom gems bundled in
         if self.cfg.get('baseline', dict()).get('custom_gems', False):
@@ -1779,7 +1781,7 @@ class AwsBatch(DockerBatchBase):
             logger.info(f'Copying custom Gemfile from {orig_gemfile_path}')
 
             # Comment out the `gemspec` line in the custom Gemfile
-            with open(new_gemfile_path, 'r') as file :
+            with open(new_gemfile_path, 'r') as file:
                 gemfile = file.read()
             gemfile = gemfile.replace('gemspec', '# gemspec')
             with open(new_gemfile_path, 'w') as file:
@@ -1795,13 +1797,11 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug(f'Building docker image {stage}')
         self.docker_client.images.build(
-            path=os.path.join(root_path, dockerfile),
+            path=str(root_path),
             tag=self.docker_image,
             rm=True,
             target=stage
         )
-
-        raise Exception
 
     def push_image(self):
         """
@@ -1830,6 +1830,7 @@ class AwsBatch(DockerBatchBase):
                 if y.get('status') is not None and y.get('status') != last_status:
                     logger.debug(y['status'])
                     last_status = y['status']
+        logger.debug("Push Completed.")
 
     def clean(self):
         """
@@ -2111,9 +2112,21 @@ class AwsBatch(DockerBatchBase):
                     option_name = row[1]
                     epws_by_option[option_name] = epw_filename
 
+        building_ids = {x[0] for x in jobs_d['batch']}
+
+        # Trim buildstock.csv to only the buildings we are simulating
+        valid_rows = []
+        with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            for row in csv_reader:
+                if int(row['Building']) in building_ids:
+                    valid_rows.append(row)
+        df = pd.DataFrame.from_records(valid_rows)
+        df.to_csv(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv')
+        logger.debug(f"Buildstock csv trimmed to {len(df)} rows.")
+
         # Look through the buildstock.csv to find the appropriate location and epw
         epws_to_download = set()
-        building_ids = [x[0] for x in jobs_d['batch']]
         with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
             csv_reader = csv.DictReader(f)
             for row in csv_reader:
@@ -2156,8 +2169,8 @@ class AwsBatch(DockerBatchBase):
                             logger.debug('Running {} using custom gems'.format(sim_id))
                             subprocess.run(
                                 ['openstudio', '--bundle', '/var/simdata/Gemfile',
-                                '--bundle_path', '/var/simdata/.custom_gems/',
-                                'run', '-w', 'in.osw'],
+                                 '--bundle_path', '/var/simdata/.custom_gems/',
+                                 'run', '-w', 'in.osw'],
                                 check=True,
                                 stdout=f_out,
                                 stderr=subprocess.STDOUT,
