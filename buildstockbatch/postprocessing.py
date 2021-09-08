@@ -34,7 +34,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
-MAX_PARQUET_MEMORY = 4000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
+MAX_PARQUET_MEMORY = 1000  # maximum size (MB) of the parquet file in memory when combining multiple parquets
 
 
 def read_data_point_out_json(fs, reporting_measures, filename):
