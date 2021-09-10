@@ -38,8 +38,8 @@ logger = logging.getLogger(__name__)
 
 class BuildStockBatchBase(object):
 
-    DEFAULT_OS_VERSION = '2.9.1'
-    DEFAULT_OS_SHA = '3472e8b799'
+    DEFAULT_OS_VERSION = '3.2.1'
+    DEFAULT_OS_SHA = 'bdbdbc9da6'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
