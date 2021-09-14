@@ -43,6 +43,23 @@ Development Changelog
         ServerDirectoryCleanup measure.
 
     .. change::
+        :tags: general, feature, eagle
+        :pullreq: 246
+        :tickets:
+
+        The buildstock.csv is trimmed for each batch job to hold only the rows corresponding to buildings in the batch.
+        This improves speed and memory consumption when the file is loaded in ResStock.
+
+    .. change:
+        :tags: general, postprocessing
+        :pullreq: 247
+
+        The output partition size of 4GB was making downstream data processing
+        difficult. Both spark and dask clusters were failing due to out of
+        memory errors. I'm changing it back to 1GB, which will make more files,
+        but each will be more manageable.
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 

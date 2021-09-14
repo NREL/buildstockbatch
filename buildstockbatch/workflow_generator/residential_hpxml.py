@@ -88,7 +88,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': False,
             'include_timeseries_component_loads': False,
-            'include_timeseries_unmet_loads': False,
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
