@@ -31,8 +31,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
+        measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
+        reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
+        server_directory_cleanup: map(required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -44,6 +47,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         yamale.validate(schema, data, strict=True)
         return True
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        workflow_args = self.cfg['workflow_generator'].get('args', {})
+        return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
