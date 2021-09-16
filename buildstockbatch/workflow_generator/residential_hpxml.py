@@ -150,8 +150,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend([
             {
-                'measure_dir_name': 'SimulationOutputReport',
+                'measure_dir_name': 'ReportSimulationOutput',
                 'arguments': sim_out_rep_args
+            },
+            {
+                'measure_dir_name': 'ReportHPXMLOutput',
+                'arguments': {}
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
