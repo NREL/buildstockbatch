@@ -387,6 +387,7 @@ def test_residential_hpxml(mocker):
     server_dir_cleanup_step = steps[5]
     assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
 
+
 def test_com_default_workflow_generator(mocker):
     mocker.patch.object(CommercialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
