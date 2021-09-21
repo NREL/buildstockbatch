@@ -561,10 +561,10 @@ class BuildStockBatchBase(object):
 
         do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
         if not do_timeseries:
-            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
-                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+            if 'report_simulation_output' in self.cfg['workflow_generator']['args'].keys():
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['report_simulation_output'].keys():
                     do_timeseries = \
-                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
+                        (self.cfg['workflow_generator']['args']['report_simulation_output']['timeseries_frequency'] !=
                             'none')
 
         fs = LocalFileSystem()
