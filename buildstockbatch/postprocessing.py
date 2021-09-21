@@ -183,10 +183,7 @@ def write_dataframe_as_parquet(df, fs, filename):
 def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     results_df = df.copy()
     cols_to_remove = (
-        'build_existing_model.weight',
-        'simulation_output_report.weight',
-        'build_existing_model.workflow_json',
-        'simulation_output_report.upgrade_name'
+        'build_existing_model.weight'
     )
     for col in cols_to_remove:
         if col in results_df.columns:
@@ -216,9 +213,10 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         first_few_cols.insert(2, 'job_id')
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
-    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
+    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
+    hpxml_output_cols = sorted([col for col in results_df.columns if col.startswith('report_hpxml_output')])
     upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
+    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + hpxml_output_cols + upgrade_costs_cols
 
     remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
     sorted_cols += remaining_cols
