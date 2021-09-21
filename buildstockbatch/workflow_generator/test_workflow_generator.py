@@ -358,7 +358,7 @@ def test_residential_hpxml(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw['steps']
-    assert(len(steps) == 5)
+    assert(len(steps) == 6)
 
     build_existing_model_step = steps[0]
     assert(build_existing_model_step['measure_dir_name'] == 'BuildExistingModel')
@@ -372,14 +372,20 @@ def test_residential_hpxml(mocker):
     assert(apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade')
 
     simulation_output_step = steps[2]
-    assert(simulation_output_step['measure_dir_name'] == 'SimulationOutputReport')
+    assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
     assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
     assert(simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True)
     assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
     assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
 
-    upgrade_costs_step = steps[3]
+    hpxml_output_step = steps[3]
+    assert(hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput')
+
+    upgrade_costs_step = steps[4]
     assert(upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts')
+
+    server_dir_cleanup_step = steps[5]
+    assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
 
 
 def test_com_default_workflow_generator(mocker):

@@ -31,8 +31,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
+        measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
+        reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
+        server_directory_cleanup: map(required=False)
         ---
         measure-spec:
             measure_dir_name: str(required=True)
@@ -44,6 +47,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         yamale.validate(schema, data, strict=True)
         return True
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        workflow_args = self.cfg['workflow_generator'].get('args', {})
+        return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
@@ -58,6 +66,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'build_existing_model': {},
             'measures': [],
             'simulation_output_report': {},
+            'server_directory_cleanup': {}
         }
         workflow_args.update(self.cfg['workflow_generator'].get('args', {}))
 
@@ -70,14 +79,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_end_month': 12,
             'simulation_control_run_period_end_day_of_month': 31,
             'simulation_control_run_period_calendar_year': 2007,
-            'debug': False
+            'debug': False,
+            'add_component_loads': False
         }
 
         bld_exist_model_args = {
             'building_id': building_id,
-            'workflow_json': 'measure-info.json',
             'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented']
         }
+        if 'measures_to_ignore' in workflow_args:
+            bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
@@ -88,7 +99,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': False,
             'include_timeseries_component_loads': False,
-            'include_timeseries_unmet_loads': False,
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
@@ -109,22 +119,51 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'resources/hpxml-measures'
             ],
             'run_options': {
-                'fast': True,
-                'skip_expand_objects': True,
-                'skip_energyplus_preprocess': True
+                'skip_zip_results': True
             }
         }
 
         osw['steps'].extend(workflow_args['measures'])
 
+        server_dir_cleanup_args = {
+          'retain_in_osm': False,
+          'retain_in_idf': True,
+          'retain_pre_process_idf': False,
+          'retain_eplusout_audit': False,
+          'retain_eplusout_bnd': False,
+          'retain_eplusout_eio': False,
+          'retain_eplusout_end': False,
+          'retain_eplusout_err': False,
+          'retain_eplusout_eso': False,
+          'retain_eplusout_mdd': False,
+          'retain_eplusout_mtd': False,
+          'retain_eplusout_rdd': False,
+          'retain_eplusout_shd': False,
+          'retain_eplusout_sql': False,
+          'retain_eplustbl_htm': False,
+          'retain_sqlite_err': False,
+          'retain_stdout_energyplus': False,
+          'retain_stdout_expandobject': False,
+          'retain_schedules_csv': True
+        }
+        server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
+
         osw['steps'].extend([
             {
-                'measure_dir_name': 'SimulationOutputReport',
+                'measure_dir_name': 'ReportSimulationOutput',
                 'arguments': sim_out_rep_args
+            },
+            {
+                'measure_dir_name': 'ReportHPXMLOutput',
+                'arguments': {}
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
                 'arguments': {}
+            },
+            {
+                'measure_dir_name': 'ServerDirectoryCleanup',
+                'arguments': server_dir_cleanup_args
             }
         ])
 
@@ -160,19 +199,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if 'reporting_measures' in workflow_args:
-            for measure_dir_name in workflow_args['reporting_measures']:
-                reporting_measure = {
-                    'measure_dir_name': measure_dir_name,
-                    'arguments': {}
-                }
+            for reporting_measure in workflow_args['reporting_measures']:
+                if 'arguments' not in reporting_measure:
+                    reporting_measure['arguments'] = {}
+                reporting_measure['measure_type'] = 'ReportingMeasure'
                 osw['steps'].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
-
-        if not bld_exist_model_args['debug']:
-            osw['steps'].extend([
-                {
-                    'measure_dir_name': 'ServerDirectoryCleanup',
-                    'arguments': {}
-                }
-            ])
 
         return osw
