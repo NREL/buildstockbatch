@@ -48,10 +48,10 @@ def read_data_point_out_json(fs, reporting_measures, filename):
         except (FileNotFoundError, json.JSONDecodeError):
             return None
 
-    if 'SimulationOutputReport' not in d:
-        d['SimulationOutputReport'] = {'applicable': False, 'completed_status': 'Invalid'}
+    if 'ReportSimulationOutput' not in d:
+        d['ReportSimulationOutput'] = {'applicable': False, 'completed_status': 'Invalid'}
     else:
-        d['SimulationOutputReport']['completed_status'] = 'Fail'
+        d['ReportSimulationOutput']['completed_status'] = 'Fail'
     for reporting_measure in reporting_measures:
         if reporting_measure not in d:
             d[reporting_measure] = {'applicable': False}
@@ -84,7 +84,7 @@ def flatten_datapoint_json(reporting_measures, d):
     # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
-    col2 = 'SimulationOutputReport'
+    col2 = 'ReportSimulationOutput'
     for k, v in d.get(col2, {}).items():
         new_d[f'{col2}.{k}'] = v
 
@@ -96,8 +96,8 @@ def flatten_datapoint_json(reporting_measures, d):
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
-    new_d['completed_status'] = new_d['SimulationOutputReport.completed_status']
-    del new_d['SimulationOutputReport.completed_status']
+    new_d['completed_status'] = new_d['ReportSimulationOutput.completed_status']
+    del new_d['ReportSimulationOutput.completed_status']
 
     return new_d
 
@@ -214,9 +214,8 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
-    hpxml_output_cols = sorted([col for col in results_df.columns if col.startswith('report_hpxml_output')])
     upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + hpxml_output_cols + upgrade_costs_cols
+    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
 
     remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
     sorted_cols += remaining_cols
