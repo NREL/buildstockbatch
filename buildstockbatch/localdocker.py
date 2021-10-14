@@ -58,7 +58,9 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
-        return 'nrel/openstudio:{}'.format(self.os_version)
+        # Do this first
+        # docker build -t nrel/hescore-hpxml-openstudio .
+        return 'nrel/hescore-hpxml-openstudio:latest'
 
 
 class LocalDockerBatch(DockerBatchBase):
@@ -102,7 +104,8 @@ class LocalDockerBatch(DockerBatchBase):
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
             (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
-            (weather_dir, 'weather', 'ro')
+            (weather_dir, 'weather', 'ro'),
+            ('/path/to/OpenStudio-HEScore', '/opt/OpenStudio-HEScore', 'ro')
         ]
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
