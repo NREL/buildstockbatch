@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.2.1'
-    DEFAULT_OS_SHA = 'bdbdbc9da6'
+    DEFAULT_OS_VERSION = 'dev-3.3.0-rc2'
+    DEFAULT_OS_SHA = '45b36b8d4c'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
