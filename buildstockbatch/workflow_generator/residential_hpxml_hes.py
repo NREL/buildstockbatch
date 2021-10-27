@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-buildstockbatch.workflow_generator.residential_hpxml
+buildstockbatch.workflow_generator.residential_hpxml_hes
 ~~~~~~~~~~~~~~~
 This object contains the residential classes for generating OSW files from individual samples
 
@@ -15,13 +15,14 @@ import json
 import logging
 import re
 import yamale
+import os
 
 from .base import WorkflowGeneratorBase
 
 logger = logging.getLogger(__name__)
 
 
-class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
+class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
     def validate(cls, cfg):
@@ -33,6 +34,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
+        hescore_hpxml: map(required=True)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
@@ -64,6 +66,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         # Default argument values
         workflow_args = {
             'build_existing_model': {},
+            'hescore_hpxml': {},
             'measures': [],
             'simulation_output_report': {},
             'server_directory_cleanup': {}
@@ -92,6 +95,21 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
+        os_to_hpxml_args = {
+            'hpxml_path': 'fixme',
+            'output_dir': 'fixme',
+            'debug': 'fixme',
+            'add_component_loads': 'fixme',
+            'skip_validation': 'fixme',
+            'building_id': 'fixme'
+        }
+
+        hes_ruleset_args = {
+            'json_path': 'fixme',
+            'hpxml_output_path': 'fixme'
+        }
+
+        ## FIXME: update for OS-HEScore
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
@@ -109,12 +127,26 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'id': sim_id,
             'steps': [
                 {
-                    'measure_dir_name': 'BuildExistingModel',
+                    'measure_dir_name': 'BuildExistingModel',  #(resstock)
                     'arguments': bld_exist_model_args
+                },
+                {
+                    'measure_dir_name': 'HEScoreHPXML', #(resstock)
+                    'arguments': workflow_args['hescore_hpxml']
+                },
+                {
+                    'measure_dir_name': 'HEScoreRuleset',  #(OS-HEScore)
+                    'arguments': hes_ruleset_args
+                },
+                {
+                    'measure_dir_name': 'HPXMLtoOpenStudio',  #(OS-HEScore)
+                    'arguments': os_to_hpxml_args
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
             'measure_paths': [
+                'OpenStudio-HEScore/rulesets',
+                'OpenStudio-HEScore/hpxml-measures',
                 'measures',
                 'resources/hpxml-measures'
             ],
@@ -150,7 +182,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend([
             {
-                'measure_dir_name': 'ReportSimulationOutput',
+                'measure_dir_name': 'SimulationOutputReport',  #(OS-HEScore)
                 'arguments': sim_out_rep_args
             },
             {

@@ -63,7 +63,11 @@ class BuildStockBatchBase(object):
         self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
-
+        if 'hescore_hpxml' in self.cfg['workflow_generator']['args']:
+            self.os_hescore_dir = self.cfg['workflow_generator']['args']['hescore_hpxml']['os_hescore_directory']
+        else:
+            self.os_hescore_dir = None
+        
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)

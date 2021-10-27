@@ -58,8 +58,8 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
+        # return 'nrel/hescore-hpxml-openstudio:latest'
         return 'nrel/openstudio:{}'.format(self.os_version)
-
 
 class LocalDockerBatch(DockerBatchBase):
 
@@ -87,7 +87,7 @@ class LocalDockerBatch(DockerBatchBase):
         return self._weather_dir.name
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, os_hescore_dir, docker_image, results_dir, measures_only,
                      n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -96,7 +96,6 @@ class LocalDockerBatch(DockerBatchBase):
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
         except SimulationExists:
             return
-
         bind_mounts = [
             (sim_dir, '', 'rw'),
             (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
@@ -104,9 +103,17 @@ class LocalDockerBatch(DockerBatchBase):
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
+
+        # ResStock-hpxml measure directory
         if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
             bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
                             'resources/hpxml-measures', 'ro')]
+        
+        # OS-HEScore measure directories
+        if os_hescore_dir and os.path.exists(os_hescore_dir):
+            bind_mounts += [(os.path.join(os_hescore_dir, 'rulesets'), 'OpenStudio-HEScore/rulesets', 'ro'),
+                            (os.path.join(os_hescore_dir, 'hpxml-measures'), 'OpenStudio-HEScore/hpxml-measures', 'ro')]
+
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
@@ -172,6 +179,7 @@ class LocalDockerBatch(DockerBatchBase):
             self.project_dir,
             self.buildstock_dir,
             self.weather_dir,
+            self.os_hescore_dir,
             self.docker_image,
             self.results_dir,
             measures_only,
