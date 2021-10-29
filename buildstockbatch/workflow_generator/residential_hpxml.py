@@ -93,7 +93,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         sim_out_rep_args = {
-            'timeseries_frequency': 'hourly',
+            'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
             'include_timeseries_hot_water_uses': False,
