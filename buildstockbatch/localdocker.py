@@ -31,6 +31,7 @@ import tempfile
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
 from .utils import log_error_details, ContainerRuntime
+from docker.errors import ImageNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
-        # return 'nrel/hescore-hpxml-openstudio:latest'
+        # return 'nrel/hescore-hpxml-openstudio'
         return 'nrel/openstudio:{}'.format(self.os_version)
 
 class LocalDockerBatch(DockerBatchBase):
@@ -66,7 +67,11 @@ class LocalDockerBatch(DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         logger.debug(f'Pulling docker image: {self.docker_image}')
-        self.docker_client.images.pull(self.docker_image)
+           
+        try:
+            self.docker_client.images.get(self.docker_image)
+        except ImageNotFound:
+            self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
