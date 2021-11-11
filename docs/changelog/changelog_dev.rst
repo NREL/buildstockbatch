@@ -58,3 +58,10 @@ Development Changelog
         difficult. Both spark and dask clusters were failing due to out of
         memory errors. I'm changing it back to 1GB, which will make more files,
         but each will be more manageable.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 251
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.3.0.
