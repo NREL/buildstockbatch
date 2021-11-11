@@ -34,7 +34,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
-        hescore_hpxml: map(required=True)
+        openstudio_hescore: map(required=True)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
@@ -66,7 +66,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         # Default argument values
         workflow_args = {
             'build_existing_model': {},
-            'hescore_hpxml': {},
+            'openstudio_hescore': {},
             'measures': [],
             'simulation_output_report': {},
             'server_directory_cleanup': {}
@@ -95,18 +95,21 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
-        os_to_hpxml_args = {
-            'hpxml_path': 'fixme',
+        hes_ruleset_args = {
+            'json_path': '/var/simdata/openstudio/run/testingout.json',
+            'hpxml_output_path': 'fixme'
+        }
+        
+        if not os.path.exists('testing'):
+            os.makedirs(os.path.join('testing'))
+
+        hpxml_to_os_args = {
+            'hpxml_path': 'in.xml',
             'output_dir': 'fixme',
             'debug': 'fixme',
             'add_component_loads': 'fixme',
             'skip_validation': 'fixme',
             'building_id': 'fixme'
-        }
-
-        hes_ruleset_args = {
-            'json_path': 'fixme',
-            'hpxml_output_path': 'fixme'
         }
 
         ## FIXME: update for OS-HEScore
@@ -132,7 +135,6 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
                 },
                 {
                     'measure_dir_name': 'HEScoreHPXML', #(resstock)
-                    'arguments': workflow_args['hescore_hpxml']
                 },
                 {
                     'measure_dir_name': 'HEScoreRuleset',  #(OS-HEScore)
@@ -140,7 +142,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
                 },
                 {
                     'measure_dir_name': 'HPXMLtoOpenStudio',  #(OS-HEScore)
-                    'arguments': os_to_hpxml_args
+                    'arguments': hpxml_to_os_args
                 }
             ],
             'created_at': dt.datetime.now().isoformat(),
