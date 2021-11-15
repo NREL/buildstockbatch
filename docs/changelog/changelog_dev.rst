@@ -60,6 +60,13 @@ Development Changelog
         but each will be more manageable.
 
     .. change::
+        :tags: general, feature
+        :pullreq: 251
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.3.0.
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 
