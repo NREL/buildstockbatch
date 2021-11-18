@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    # DEFAULT_OS_VERSION = '3.2.2'  # eagle
-    DEFAULT_OS_VERSION = 'flex-2'  # localdocker
+    DEFAULT_OS_VERSION = '3.2.2'  # eagle
+    # DEFAULT_OS_VERSION = 'flex-2'  # localdocker
     DEFAULT_OS_SHA = 'dd31fc16e4-flex-2' # OpenStudio-3.2.2.dd31fc16e4-flex-2-Singularity.simg
     CONTAINER_RUNTIME = None
     LOGO = '''
@@ -561,10 +561,10 @@ class BuildStockBatchBase(object):
 
         do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
         if not do_timeseries:
-            if 'report_simulation_output' in self.cfg['workflow_generator']['args'].keys():
-                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['report_simulation_output'].keys():
+            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
                     do_timeseries = \
-                        (self.cfg['workflow_generator']['args']['report_simulation_output']['timeseries_frequency'] !=
+                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
                             'none')
 
         fs = LocalFileSystem()
