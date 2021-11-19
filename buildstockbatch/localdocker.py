@@ -59,8 +59,8 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
-        # return 'nrel/hescore-hpxml-openstudio'
-        return 'nrel/openstudio:{}'.format(self.os_version)
+        #FIXME temporary docker image for testing
+        return 'nrel/hescore-hpxml-openstudio'
 
 class LocalDockerBatch(DockerBatchBase):
 
@@ -211,13 +211,14 @@ class LocalDockerBatch(DockerBatchBase):
             json.dump(dpouts, f)
         del dpouts
 
-        sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
-        logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
-        with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:
-            for dirname in os.listdir(sim_out_dir):
-                if re.match(r'up\d+', dirname) and os.path.isdir(os.path.join(sim_out_dir, dirname)):
-                    tarf.add(os.path.join(sim_out_dir, dirname), arcname=dirname)
-                    shutil.rmtree(os.path.join(sim_out_dir, dirname))
+        #FIXME temporarily comment out for testing
+        # sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
+        # logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
+        # with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:
+        #     for dirname in os.listdir(sim_out_dir):
+        #         if re.match(r'up\d+', dirname) and os.path.isdir(os.path.join(sim_out_dir, dirname)):
+        #             tarf.add(os.path.join(sim_out_dir, dirname), arcname=dirname)
+        #             shutil.rmtree(os.path.join(sim_out_dir, dirname))
 
     @property
     def output_dir(self):

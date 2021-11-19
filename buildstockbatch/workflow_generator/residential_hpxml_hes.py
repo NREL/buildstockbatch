@@ -97,14 +97,14 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
 
         hes_ruleset_args = {
             'json_path': '/var/simdata/openstudio/run/testingout.json',
-            'hpxml_output_path': 'fixme'
+            'hpxml_output_path': '/var/simdata/openstudio/run/hes.xml'
         }
         
         if not os.path.exists('testing'):
             os.makedirs(os.path.join('testing'))
 
         hpxml_to_os_args = {
-            'hpxml_path': 'in.xml',
+            'hpxml_path': '/var/simdata/openstudio/run/hes.xml',
             'output_dir': 'fixme',
             'debug': 'fixme',
             'add_component_loads': 'fixme',
@@ -184,7 +184,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend([
             {
-                'measure_dir_name': 'SimulationOutputReport',  #(OS-HEScore)
+                'measure_dir_name': 'ReportSimulationOutput',  #(OS-HEScore)
                 'arguments': sim_out_rep_args
             },
             {
