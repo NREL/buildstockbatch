@@ -558,13 +558,14 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
-        if not do_timeseries:
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
             if 'report_simulation_output' in self.cfg['workflow_generator']['args'].keys():
                 if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['report_simulation_output'].keys():
                     do_timeseries = \
                         (self.cfg['workflow_generator']['args']['report_simulation_output']['timeseries_frequency'] !=
                             'none')
+        else:
+            do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
         fs = LocalFileSystem()
         if not skip_combine:
