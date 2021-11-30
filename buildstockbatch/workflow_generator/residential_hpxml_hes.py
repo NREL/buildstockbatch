@@ -105,11 +105,10 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
 
         hpxml_to_os_args = {
             'hpxml_path': '/var/simdata/openstudio/run/hes.xml',
-            'output_dir': 'fixme',
-            'debug': 'fixme',
-            'add_component_loads': 'fixme',
-            'skip_validation': 'fixme',
-            'building_id': 'fixme'
+            'output_dir': '/var/simdata/openstudio/run',
+            'debug': 'false',
+            'add_component_loads': 'false',
+            'skip_validation': 'false'
         }
 
         ## FIXME: update for OS-HEScore
