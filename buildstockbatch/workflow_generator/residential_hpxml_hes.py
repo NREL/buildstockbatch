@@ -88,7 +88,8 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
 
         bld_exist_model_args = {
             'building_id': building_id,
-            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented']
+            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented'],
+            'build_hpxml_only': True
         }
         if 'measures_to_ignore' in workflow_args:
             bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
@@ -96,7 +97,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         hes_ruleset_args = {
-            'json_path': '/var/simdata/openstudio/run/testingout.json',
+            'json_path': '/var/simdata/openstudio/run/hes.json',
             'hpxml_output_path': '/var/simdata/openstudio/run/hes.xml'
         }
         
@@ -111,7 +112,6 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
             'skip_validation': 'false'
         }
 
-        ## FIXME: update for OS-HEScore
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
