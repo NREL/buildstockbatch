@@ -562,7 +562,7 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+        if 'residential_hpxml' in self.cfg['workflow_generator']['type']:
             if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
                 if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
                     do_timeseries = \
