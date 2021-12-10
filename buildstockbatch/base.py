@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.2.1'
-    DEFAULT_OS_SHA = 'bdbdbc9da6'
+    DEFAULT_OS_VERSION = '3.3.0'
+    DEFAULT_OS_SHA = 'ad235ff36e'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -562,13 +562,14 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
-        if not do_timeseries:
-            if 'report_simulation_output' in self.cfg['workflow_generator']['args'].keys():
-                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['report_simulation_output'].keys():
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
                     do_timeseries = \
-                        (self.cfg['workflow_generator']['args']['report_simulation_output']['timeseries_frequency'] !=
+                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
                             'none')
+        else:
+            do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
         fs = LocalFileSystem()
         if not skip_combine:

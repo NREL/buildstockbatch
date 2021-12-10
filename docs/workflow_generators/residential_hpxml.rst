@@ -38,7 +38,7 @@ Arguments
   ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
 
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/restructure-v3/measures/BuildExistingModel/measure.xml
-.. _SimulationOutputReport: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/SimulationOutputReport/measure.xml
+.. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/ReportSimulationOutput/measure.xml
 
 .. _build-existing-model-defaults:
 

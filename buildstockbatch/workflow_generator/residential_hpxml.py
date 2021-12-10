@@ -95,9 +95,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
-            'include_timeseries_end_use_consumptions': False,
+            'include_timeseries_end_use_consumptions': True,
             'include_timeseries_hot_water_uses': False,
-            'include_timeseries_total_loads': False,
+            'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
