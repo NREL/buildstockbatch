@@ -30,10 +30,6 @@ def get_project_configuration(project_file):
 
     # Set absolute paths
     cfg['buildstock_directory'] = path_rel_to_file(project_file, cfg['buildstock_directory'])
-    if 'openstudio_hescore' in cfg['workflow_generator']['args']:
-        cfg['workflow_generator']['args']['openstudio_hescore']['os_hescore_directory'] = \
-            path_rel_to_file('', cfg['workflow_generator']['args']['openstudio_hescore']['os_hescore_directory'])
-
     # if 'precomputed_sample' in cfg.get('baseline', {}):
     #     cfg['baseline']['precomputed_sample'] = \
     #         path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])

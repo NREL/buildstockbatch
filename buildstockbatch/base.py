@@ -63,8 +63,8 @@ class BuildStockBatchBase(object):
         self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
-        if 'openstudio_hescore' in self.cfg['workflow_generator']['args']:
-            self.os_hescore_dir = self.cfg['workflow_generator']['args']['openstudio_hescore']['os_hescore_directory']
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml_hes':
+            self.os_hescore_dir = path_rel_to_file('',self.cfg['workflow_generator']['args']['openstudio_hescore']['os_hescore_directory'])
         else:
             self.os_hescore_dir = None
 
