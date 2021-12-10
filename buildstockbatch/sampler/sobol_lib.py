@@ -8,7 +8,7 @@ from numpy import *
 def i4_bit_hi1(n):
     # *****************************************************************************80
     #
-    ## I4_BIT_HI1 returns the position of the high 1 bit base 2 in an integer.
+    # I4_BIT_HI1 returns the position of the high 1 bit base 2 in an integer.
     #
     #  Example:
     #
@@ -69,7 +69,7 @@ def i4_bit_hi1(n):
 def i4_bit_lo0(n):
     # *****************************************************************************80
     #
-    ## I4_BIT_LO0 returns the position of the low 0 bit base 2 in an integer.
+    # I4_BIT_LO0 returns the position of the low 0 bit base 2 in an integer.
     #
     #  Example:
     #
@@ -132,7 +132,7 @@ def i4_bit_lo0(n):
 def i4_sobol_generate(m, n, skip):
     # *****************************************************************************80
     #
-    ## I4_SOBOL_GENERATE generates a Sobol dataset.
+    # I4_SOBOL_GENERATE generates a Sobol dataset.
     #
     #  Licensing:
     #
@@ -167,7 +167,7 @@ def i4_sobol_generate(m, n, skip):
 def i4_sobol(dim_num, seed):
     # *****************************************************************************80
     #
-    ## I4_SOBOL generates a new quasirandom Sobol vector with each call.
+    # I4_SOBOL generates a new quasirandom Sobol vector with each call.
     #
     #  Discussion:
     #
@@ -256,55 +256,55 @@ def i4_sobol(dim_num, seed):
         #	Initialize (part of) V.
         #
         v = zeros((dim_max, log_max))
-        v[0:40, 0] = transpose([ \
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
-            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, \
+        v[0:40, 0] = transpose([
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
             1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
-        v[2:40, 1] = transpose([ \
-            1, 3, 1, 3, 1, 3, 3, 1, \
-            3, 1, 3, 1, 3, 1, 1, 3, 1, 3, \
-            1, 3, 1, 3, 3, 1, 3, 1, 3, 1, \
+        v[2:40, 1] = transpose([
+            1, 3, 1, 3, 1, 3, 3, 1,
+            3, 1, 3, 1, 3, 1, 1, 3, 1, 3,
+            1, 3, 1, 3, 3, 1, 3, 1, 3, 1,
             3, 1, 1, 3, 1, 3, 1, 3, 1, 3])
 
-        v[3:40, 2] = transpose([ \
-            7, 5, 1, 3, 3, 7, 5, \
-            5, 7, 7, 1, 3, 3, 7, 5, 1, 1, \
-            5, 3, 3, 1, 7, 5, 1, 3, 3, 7, \
+        v[3:40, 2] = transpose([
+            7, 5, 1, 3, 3, 7, 5,
+            5, 7, 7, 1, 3, 3, 7, 5, 1, 1,
+            5, 3, 3, 1, 7, 5, 1, 3, 3, 7,
             5, 1, 1, 5, 7, 7, 5, 1, 3, 3])
 
-        v[5:40, 3] = transpose([ \
-            1, 7, 9, 13, 11, \
-            1, 3, 7, 9, 5, 13, 13, 11, 3, 15, \
-            5, 3, 15, 7, 9, 13, 9, 1, 11, 7, \
+        v[5:40, 3] = transpose([
+            1, 7, 9, 13, 11,
+            1, 3, 7, 9, 5, 13, 13, 11, 3, 15,
+            5, 3, 15, 7, 9, 13, 9, 1, 11, 7,
             5, 15, 1, 15, 11, 5, 3, 1, 7, 9])
 
-        v[7:40, 4] = transpose([ \
-            9, 3, 27, \
-            15, 29, 21, 23, 19, 11, 25, 7, 13, 17, \
-            1, 25, 29, 3, 31, 11, 5, 23, 27, 19, \
+        v[7:40, 4] = transpose([
+            9, 3, 27,
+            15, 29, 21, 23, 19, 11, 25, 7, 13, 17,
+            1, 25, 29, 3, 31, 11, 5, 23, 27, 19,
             21, 5, 1, 17, 13, 7, 15, 9, 31, 9])
 
-        v[13:40, 5] = transpose([ \
-            37, 33, 7, 5, 11, 39, 63, \
-            27, 17, 15, 23, 29, 3, 21, 13, 31, 25, \
+        v[13:40, 5] = transpose([
+            37, 33, 7, 5, 11, 39, 63,
+            27, 17, 15, 23, 29, 3, 21, 13, 31, 25,
             9, 49, 33, 19, 29, 11, 19, 27, 15, 25])
 
-        v[19:40, 6] = transpose([ \
-            13, \
-            33, 115, 41, 79, 17, 29, 119, 75, 73, 105, \
+        v[19:40, 6] = transpose([
+            13,
+            33, 115, 41, 79, 17, 29, 119, 75, 73, 105,
             7, 59, 65, 21, 3, 113, 61, 89, 45, 107])
 
-        v[37:40, 7] = transpose([ \
+        v[37:40, 7] = transpose([
             7, 23, 39])
         #
         #	Set POLY.
         #
-        poly = [ \
-            1, 3, 7, 11, 13, 19, 25, 37, 59, 47, \
-            61, 55, 41, 67, 97, 91, 109, 103, 115, 131, \
-            193, 137, 145, 143, 241, 157, 185, 167, 229, 171, \
+        poly = [
+            1, 3, 7, 11, 13, 19, 25, 37, 59, 47,
+            61, 55, 41, 67, 97, 91, 109, 103, 115, 131,
+            193, 137, 145, 143, 241, 157, 185, 167, 229, 171,
             213, 191, 253, 203, 211, 239, 247, 285, 369, 299]
 
         atmost = 2 ** log_max - 1
@@ -444,7 +444,7 @@ def i4_sobol(dim_num, seed):
 def i4_uniform(a, b, seed):
     # *****************************************************************************80
     #
-    ## I4_UNIFORM returns a scaled pseudorandom I4.
+    # I4_UNIFORM returns a scaled pseudorandom I4.
     #
     #  Discussion:
     #
@@ -539,7 +539,7 @@ def i4_uniform(a, b, seed):
 def prime_ge(n):
     # *****************************************************************************80
     #
-    ## PRIME_GE returns the smallest prime greater than or equal to N.
+    # PRIME_GE returns the smallest prime greater than or equal to N.
     #
     #  Example:
     #
@@ -587,7 +587,7 @@ def prime_ge(n):
 def isprime(n):
     # *****************************************************************************80
     #
-    ## IS_PRIME returns True if N is a prime number, False otherwise
+    # IS_PRIME returns True if N is a prime number, False otherwise
     #
     #  Licensing:
     #

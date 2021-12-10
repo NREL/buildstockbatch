@@ -238,21 +238,21 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     region = 'test_region'
 
     upload_config = {
-                    'postprocessing': {
-                        'aws': {
-                            'region_name': region,
-                            's3': {
-                                'bucket': s3_bucket,
-                                'prefix': s3_prefix,
-                                    },
-                            'athena': {
-                                'glue_service_role': role,
-                                'database_name': db_name,
-                                'max_crawling_time': 250
-                                    }
-                            }
-                        }
-                    }
+        'postprocessing': {
+            'aws': {
+                'region_name': region,
+                's3': {
+                    'bucket': s3_bucket,
+                    'prefix': s3_prefix,
+                },
+                'athena': {
+                    'glue_service_role': role,
+                    'database_name': db_name,
+                    'max_crawling_time': 250
+                }
+            }
+        }
+    }
     mocked_glueclient = MagicMock()
     mocked_glueclient.get_crawler = MagicMock(return_value={'Crawler': {'State': 'READY'}})
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)

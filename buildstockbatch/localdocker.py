@@ -59,15 +59,16 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
-        #FIXME temporary docker image for testing
+        # FIXME temporary docker image for testing
         return 'nrel/hescore-hpxml-openstudio'
+
 
 class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
         logger.debug(f'Pulling docker image: {self.docker_image}')
-           
+
         try:
             self.docker_client.images.get(self.docker_image)
         except ImageNotFound:
@@ -92,8 +93,8 @@ class LocalDockerBatch(DockerBatchBase):
         return self._weather_dir.name
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, os_hescore_dir, docker_image, results_dir, measures_only,
-                     n_datapoints, cfg, i, upgrade_idx=None):
+    def run_building(cls, project_dir, buildstock_dir, weather_dir, os_hescore_dir, docker_image, results_dir,
+                     measures_only, n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
@@ -112,8 +113,8 @@ class LocalDockerBatch(DockerBatchBase):
         # ResStock-hpxml measure directory
         if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
             bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
-                            'resources/hpxml-measures', 'ro')]
-        
+                             'resources/hpxml-measures', 'ro')]
+
         # OS-HEScore measure directories
         if os_hescore_dir and os.path.exists(os_hescore_dir):
             bind_mounts += [(os.path.join(os_hescore_dir, 'rulesets'), 'OpenStudio-HEScore/rulesets', 'ro'),
@@ -212,7 +213,7 @@ class LocalDockerBatch(DockerBatchBase):
             json.dump(dpouts, f)
         del dpouts
 
-        #FIXME temporarily comment out for testing
+        # FIXME temporarily comment out for testing
         # sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
         # logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
         # with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:

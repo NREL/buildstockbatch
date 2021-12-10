@@ -104,9 +104,9 @@ class AWSIAMHelper():
 
             for policy in response['AttachedPolicies']:
                 self.iam.detach_role_policy(
-                        RoleName=role_name,
-                        PolicyArn=policy['PolicyArn']
-                    )
+                    RoleName=role_name,
+                    PolicyArn=policy['PolicyArn']
+                )
 
             logger.info(f'Policies detached from role {role_name}.')
 

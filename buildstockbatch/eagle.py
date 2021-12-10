@@ -97,9 +97,9 @@ class EagleBatch(BuildStockBatchBase):
     @property
     def singularity_image_url(self):
         return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    ver=self.os_version,
-                    sha=self.os_sha
-                )
+            ver=self.os_version,
+            sha=self.os_sha
+        )
 
     @property
     def singularity_image(self):
@@ -549,35 +549,35 @@ class EagleBatch(BuildStockBatchBase):
 
 
 logging_config = {
-        'version': 1,
-        'disable_existing_loggers': True,
-        'formatters': {
-            'defaultfmt': {
-                'format': '%(levelname)s:%(asctime)s:%(name)s:%(message)s',
-                'datefmt': '%Y-%m-%d %H:%M:%S'
-            }
+    'version': 1,
+    'disable_existing_loggers': True,
+    'formatters': {
+        'defaultfmt': {
+            'format': '%(levelname)s:%(asctime)s:%(name)s:%(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'defaultfmt',
+            'level': 'DEBUG',
+            'stream': 'ext://sys.stdout',
+        }
+    },
+    'loggers': {
+        '__main__': {
+            'level': 'DEBUG',
+            'propagate': True,
+            'handlers': ['console']
         },
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'defaultfmt',
-                'level': 'DEBUG',
-                'stream': 'ext://sys.stdout',
-            }
-        },
-        'loggers': {
-            '__main__': {
-                'level': 'DEBUG',
-                'propagate': True,
-                'handlers': ['console']
-            },
-            'buildstockbatch': {
-                'level': 'DEBUG',
-                'propagate': True,
-                'handlers': ['console']
-            }
-        },
-    }
+        'buildstockbatch': {
+            'level': 'DEBUG',
+            'propagate': True,
+            'handlers': ['console']
+        }
+    },
+}
 
 
 def user_cli(argv=sys.argv[1:]):

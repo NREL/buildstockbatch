@@ -180,11 +180,11 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                         if actual_argument_value not in expected_argument_type:
                             error_msgs += f"* Found unexpected argument value {actual_argument_value} for "\
                                           f"{measure_names[measure_name]} in yaml file. Valid values are " \
-                                           f"{expected_argument_type}.\n"
+                                f"{expected_argument_type}.\n"
 
                 for arg, default in required_args_no_default.items():
                     error_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
-                                    f"There is no default for this argument.\n"
+                        f"There is no default for this argument.\n"
 
                 for arg, default in required_args_with_default.items():
                     warning_msgs += f"* Required argument {arg} for measure {measure_name} wasn't supplied. " \
@@ -284,25 +284,25 @@ class ResidentialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         osw['steps'].extend(workflow_args['measures'])
 
         server_dir_cleanup_args = {
-          'retain_in_osm': False,
-          'retain_in_idf': True,
-          'retain_pre_process_idf': False,
-          'retain_eplusout_audit': False,
-          'retain_eplusout_bnd': False,
-          'retain_eplusout_eio': False,
-          'retain_eplusout_end': False,
-          'retain_eplusout_err': False,
-          'retain_eplusout_eso': False,
-          'retain_eplusout_mdd': False,
-          'retain_eplusout_mtd': False,
-          'retain_eplusout_rdd': False,
-          'retain_eplusout_shd': False,
-          'retain_eplusout_sql': False,
-          'retain_eplustbl_htm': False,
-          'retain_sqlite_err': False,
-          'retain_stdout_energyplus': False,
-          'retain_stdout_expandobject': False,
-          'retain_schedules_csv': True
+            'retain_in_osm': False,
+            'retain_in_idf': True,
+            'retain_pre_process_idf': False,
+            'retain_eplusout_audit': False,
+            'retain_eplusout_bnd': False,
+            'retain_eplusout_eio': False,
+            'retain_eplusout_end': False,
+            'retain_eplusout_err': False,
+            'retain_eplusout_eso': False,
+            'retain_eplusout_mdd': False,
+            'retain_eplusout_mtd': False,
+            'retain_eplusout_rdd': False,
+            'retain_eplusout_shd': False,
+            'retain_eplusout_sql': False,
+            'retain_eplustbl_htm': False,
+            'retain_sqlite_err': False,
+            'retain_stdout_energyplus': False,
+            'retain_stdout_expandobject': False,
+            'retain_schedules_csv': True
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 

@@ -57,7 +57,7 @@ def basic_residential_project_file():
                     'options': [
                         {'option': 'Infiltration|11.25 ACH50'}
                     ]
-                            }],
+                }],
                 'eagle': {
                     'sampling': {
                         'time': 20

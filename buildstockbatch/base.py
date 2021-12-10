@@ -67,7 +67,7 @@ class BuildStockBatchBase(object):
             self.os_hescore_dir = self.cfg['workflow_generator']['args']['openstudio_hescore']['os_hescore_directory']
         else:
             self.os_hescore_dir = None
-                    
+
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)

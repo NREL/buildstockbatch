@@ -100,7 +100,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
             'json_path': '/var/simdata/openstudio/run/hes.json',
             'hpxml_output_path': '/var/simdata/openstudio/run/hes.xml'
         }
-        
+
         if not os.path.exists('testing'):
             os.makedirs(os.path.join('testing'))
 
@@ -129,18 +129,18 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
             'id': sim_id,
             'steps': [
                 {
-                    'measure_dir_name': 'BuildExistingModel',  #(resstock)
+                    'measure_dir_name': 'BuildExistingModel',  # (resstock)
                     'arguments': bld_exist_model_args
                 },
                 {
-                    'measure_dir_name': 'HEScoreHPXML', #(resstock)
+                    'measure_dir_name': 'HEScoreHPXML',  # (resstock)
                 },
                 {
-                    'measure_dir_name': 'HEScoreRuleset',  #(OS-HEScore)
+                    'measure_dir_name': 'HEScoreRuleset',  # (OS-HEScore)
                     'arguments': hes_ruleset_args
                 },
                 {
-                    'measure_dir_name': 'HPXMLtoOpenStudio',  #(OS-HEScore)
+                    'measure_dir_name': 'HPXMLtoOpenStudio',  # (OS-HEScore)
                     'arguments': hpxml_to_os_args
                 }
             ],
@@ -159,31 +159,31 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         osw['steps'].extend(workflow_args['measures'])
 
         server_dir_cleanup_args = {
-          'retain_in_osm': False,
-          'retain_in_idf': True,
-          'retain_pre_process_idf': False,
-          'retain_eplusout_audit': False,
-          'retain_eplusout_bnd': False,
-          'retain_eplusout_eio': False,
-          'retain_eplusout_end': False,
-          'retain_eplusout_err': False,
-          'retain_eplusout_eso': False,
-          'retain_eplusout_mdd': False,
-          'retain_eplusout_mtd': False,
-          'retain_eplusout_rdd': False,
-          'retain_eplusout_shd': False,
-          'retain_eplusout_sql': False,
-          'retain_eplustbl_htm': False,
-          'retain_sqlite_err': False,
-          'retain_stdout_energyplus': False,
-          'retain_stdout_expandobject': False,
-          'retain_schedules_csv': True
+            'retain_in_osm': False,
+            'retain_in_idf': True,
+            'retain_pre_process_idf': False,
+            'retain_eplusout_audit': False,
+            'retain_eplusout_bnd': False,
+            'retain_eplusout_eio': False,
+            'retain_eplusout_end': False,
+            'retain_eplusout_err': False,
+            'retain_eplusout_eso': False,
+            'retain_eplusout_mdd': False,
+            'retain_eplusout_mtd': False,
+            'retain_eplusout_rdd': False,
+            'retain_eplusout_shd': False,
+            'retain_eplusout_sql': False,
+            'retain_eplustbl_htm': False,
+            'retain_sqlite_err': False,
+            'retain_stdout_energyplus': False,
+            'retain_stdout_expandobject': False,
+            'retain_schedules_csv': True
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
         osw['steps'].extend([
             {
-                'measure_dir_name': 'ReportSimulationOutput',  #(OS-HEScore)
+                'measure_dir_name': 'ReportSimulationOutput',  # (OS-HEScore)
                 'arguments': sim_out_rep_args
             },
             {
