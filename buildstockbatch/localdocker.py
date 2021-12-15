@@ -60,8 +60,8 @@ class DockerBatchBase(BuildStockBatchBase):
     @property
     def docker_image(self):
         # FIXME temporary docker image for testing
-        # return 'nrel/hescore-hpxml-openstudio'
-        return 'nrel/openstudio:{}'.format(self.os_version)
+        return 'nrel/hescore-hpxml-openstudio'
+        # return 'nrel/openstudio:{}'.format(self.os_version)
 
 
 class LocalDockerBatch(DockerBatchBase):
