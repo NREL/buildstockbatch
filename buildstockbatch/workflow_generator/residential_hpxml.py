@@ -80,7 +80,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_end_day_of_month': 31,
             'simulation_control_run_period_calendar_year': 2007,
             'debug': False,
-            'add_component_loads': False
+            'add_component_loads': False,
+            'co2_emissions': False
         }
 
         bld_exist_model_args = {
