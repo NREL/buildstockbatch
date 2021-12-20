@@ -96,6 +96,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
+            'include_timeseries_co2_emissions': False,
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
