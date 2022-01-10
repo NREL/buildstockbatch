@@ -80,8 +80,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_end_day_of_month': 31,
             'simulation_control_run_period_calendar_year': 2007,
             'debug': False,
-            'add_component_loads': False,
-            'co2_emissions': False
+            'add_component_loads': False
         }
 
         bld_exist_model_args = {
@@ -100,7 +99,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
-            'include_timeseries_co2_emissions': False,
+            'include_timeseries_emissions': False,
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
