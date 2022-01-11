@@ -92,8 +92,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
-        if 'co2_emissions' in bld_exist_model_args:
-            bld_exist_model_args['co2_emissions'] = ','.join([s.get('scenario') for s in bld_exist_model_args['co2_emissions']])
+        if 'emissions' in bld_exist_model_args:
+            bld_exist_model_args['emissions_scenario_names'] = ','.join([s.get('scenario_name') for s in bld_exist_model_args['emissions']])
+            bld_exist_model_args['emissions_folders'] = ','.join([s.get('folder') for s in bld_exist_model_args['emissions']])
+            bld_exist_model_args['emissions_types'] = ','.join([s.get('type') for s in bld_exist_model_args['emissions']])
+            bld_exist_model_args.pop('emissions')
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
