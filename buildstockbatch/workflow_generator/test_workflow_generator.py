@@ -389,6 +389,102 @@ def test_residential_hpxml(mocker):
     assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
 
 
+def test_residential_hpxml_hes(mocker):
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = 0
+    cfg = {
+        'baseline': {
+            'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'residential_hpxml',
+            'args': {
+                'build_existing_model': {
+                    'simulation_control_run_period_begin_month': 2,
+                    'simulation_control_run_period_begin_day_of_month': 1,
+                    'simulation_control_run_period_end_month': 2,
+                    'simulation_control_run_period_end_day_of_month': 28,
+                    'simulation_control_run_period_calendar_year': 2010,
+                    'apply_hpxml_defaults': True,
+                    'build_hpxml_only': True,
+                },
+
+                'openstudio_hescore': {
+                    'os_hescore_directory': '../OpenStudio-HEScore'
+                },
+
+                'simulation_output_report': {
+                    'timeseries_frequency': 'hourly',
+                    'include_timeseries_end_use_consumptions': True,
+                    'include_timeseries_total_loads': True,
+                    'include_timeseries_zone_temperatures': False,
+                }
+            }
+        },
+        'upgrades': [
+            {
+                'options': [
+                    {
+                        'option': 'Parameter|Option',
+                    }
+                ],
+            }
+        ]
+    }
+    n_datapoints = 10
+    osw_gen = ResidentialHpxmlHesWorkflowGenerator(cfg, n_datapoints)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+
+    steps = osw['steps']
+    assert(len(steps) == 9)
+
+    build_existing_model_step = steps[0]
+    assert(build_existing_model_step['measure_dir_name'] == 'BuildExistingModel')
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_month'] == 2)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_day_of_month'] == 1)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_month'] == 2)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_day_of_month'] == 28)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_calendar_year'] == 2010)
+
+    apply_upgrade_step = steps[1]
+    assert(apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade')
+
+    hescore_hpxml_step = steps[2]
+    assert(hescore_hpxml_step['measure_dir_name'] == 'HEScoreHPXML')
+    assert(hescore_hpxml_step['arguments']['hpxml_path'] == '../existing.xml')
+    assert(hescore_hpxml_step['arguments']['output_path'] == '../hes.json')
+
+    hescore_ruleset_step = steps[3]
+    assert(hescore_ruleset_step['measure_dir_name'] == 'HEScoreRuleset')
+    assert(hescore_ruleset_step['arguments']['json_path'] == '/var/simdata/openstudio/run/hes.json')  #FIXME temporary filepath
+    assert(hescore_ruleset_step['arguments']['hpxml_output_path'] == '/var/simdata/openstudio/run/hes.xml') #FIXME temporary filepath
+
+    hpxml_to_os_step = steps[4]
+    assert(hpxml_to_os_step['measure_dir_name'] == 'HPXMLtoOpenStudio')
+    assert(hpxml_to_os_step['arguments']['hpxml_path'] == '/var/simdata/openstudio/run/hes.xml')  #FIXME temporary filepath
+    assert(hpxml_to_os_step['arguments']['output_dir'] == '/var/simdata/openstudio/run') #FIXME temporary filepath
+    assert(hpxml_to_os_step['arguments']['debug'] is False)
+    assert(hpxml_to_os_step['arguments']['add_component_loads'] is False)
+    assert(hpxml_to_os_step['arguments']['skip_validation'] is False)
+
+    simulation_output_step = steps[5]
+    assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
+    assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
+    assert(simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True)
+    assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
+    assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
+
+    hpxml_output_step = steps[6]
+    assert(hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput')
+
+    upgrade_costs_step = steps[7]
+    assert(upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts')
+
+    server_dir_cleanup_step = steps[8]
+    assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
+
+
 def test_com_default_workflow_generator(mocker):
     mocker.patch.object(CommercialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
     sim_id = 'bldb1up1'
