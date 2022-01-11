@@ -113,9 +113,9 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
         hpxml_to_os_args = {
             'hpxml_path': '/var/simdata/openstudio/run/hes.xml',
             'output_dir': '/var/simdata/openstudio/run',
-            'debug': 'false',
-            'add_component_loads': 'false',
-            'skip_validation': 'false'
+            'debug': False,
+            'add_component_loads': False,
+            'skip_validation': False
         }
 
         sim_out_rep_args = {
