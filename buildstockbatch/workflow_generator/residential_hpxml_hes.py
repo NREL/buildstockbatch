@@ -95,11 +95,16 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
             bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
-        bld_exist_model_args.update({'apply_defaults':True})
+        bld_exist_model_args.update({'apply_hpxml_defaults':True})
+
+        hes_to_hpxml_args = {
+            'hpxml_path': '../existing.xml',
+            'output_path': '../hes.json'
+        }
 
         hes_ruleset_args = {
-            'json_path': '/var/simdata/openstudio/run/hes.json',
-            'hpxml_output_path': '/var/simdata/openstudio/run/hes.xml'
+            'json_path': '/var/simdata/openstudio/run/hes.json',  ## FIXME - generic path
+            'hpxml_output_path': '/var/simdata/openstudio/run/hes.xml' ## FIXME - generic path
         }
 
         if not os.path.exists('testing'):
@@ -135,6 +140,7 @@ class ResidentialHpxmlHesWorkflowGenerator(WorkflowGeneratorBase):
                 },
                 {
                     'measure_dir_name': 'HEScoreHPXML',  # (resstock)
+                    'arguments': hes_to_hpxml_args
                 },
                 {
                     'measure_dir_name': 'HEScoreRuleset',  # (OS-HEScore)
