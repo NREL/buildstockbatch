@@ -18,7 +18,6 @@ import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
-import itertools
 import json
 import logging
 import math
@@ -258,13 +257,13 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     logger.info("Creating results_df.")
-    job_map = defaultdict(dict) # job_map[upgrade][building_id] = job_num
+    job_map = defaultdict(dict)  # job_map[upgrade][building_id] = job_num
     for job_json in fs.glob(f'{sim_output_dir}/job*.json'):
         with open(job_json, 'r') as f:
             job_json_dict = json.load(f)
         for building_id, upgrade in job_json_dict['batch']:
             upgrade = 0 if upgrade is None else upgrade+1
-            job_map[upgrade][building_id]=job_json_dict['job_num']
+            job_map[upgrade][building_id] = job_json_dict['job_num']
 
     results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns')
 
