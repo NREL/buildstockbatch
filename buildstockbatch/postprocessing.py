@@ -13,6 +13,7 @@ import boto3
 import dask.bag as db
 from dask.distributed import performance_report
 import dask
+import dask.dataframe as dd
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
@@ -31,6 +32,7 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -256,22 +258,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     logger.info("Creating results_df.")
-    results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
-    results_jsons = fs.glob(results_job_json_glob)
-    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
-    dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
-    for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
-        for dpout in dpouts_for_this_job:
-            dpout['job_id'] = job_id
-    dpouts = itertools.chain.from_iterable(dpouts_by_job)
-    results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
+    job_map = defaultdict(dict) # job_map[upgrade][building_id] = job_num
+    for job_json in fs.glob(f'{sim_output_dir}/job*.json'):
+        with open(job_json, 'r') as f:
+            job_json_dict = json.load(f)
+        for building_id, upgrade in job_json_dict['batch']:
+            upgrade = 0 if upgrade is None else upgrade+1
+            job_map[upgrade][building_id]=job_json_dict['job_num']
 
-    del dpouts
+    results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns')
 
-    if results_df.empty:
+    if len(results_df) == 0:
         raise ValueError("No simulation results found to post-process")
-
-    results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
 
     if do_timeseries:
 
@@ -288,11 +286,17 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
 
-    for upgrade_id, df in results_df.groupby('upgrade'):
+    upgrades = job_map.keys()
+    results_df_groups = results_df.groupby('upgrade')
+    for upgrade_id in upgrades:
+        df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
+        df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
+        df['job_id'] = df['building_id'].map(job_map[upgrade_id])
+
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
             cols_to_keep = list(
-                filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
+                filter(lambda x: not x.startswith('build_existing_model.'), df.columns)
             )
             df = df[cols_to_keep]
         df = df.copy()
