@@ -265,7 +265,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             upgrade = 0 if upgrade is None else upgrade+1
             job_map[upgrade][building_id] = job_json_dict['job_num']
 
-    results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns')
+    results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns',
+                              convert_dates=False, dtype=False)
 
     if len(results_df) == 0:
         raise ValueError("No simulation results found to post-process")
@@ -289,8 +290,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     results_df_groups = results_df.groupby('upgrade')
     for upgrade_id in upgrades:
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
-        df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
+        df.rename(columns=to_camelcase, inplace=True)
         df['job_id'] = df['building_id'].map(job_map[upgrade_id])
+        df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
 
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
