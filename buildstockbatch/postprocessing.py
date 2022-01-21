@@ -265,11 +265,13 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             upgrade = 0 if upgrade is None else upgrade+1
             job_map[upgrade][building_id] = job_json_dict['job_num']
 
-    results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns',
-                              convert_dates=False, dtype=False)
+    files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    if files:
+        results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns',
+                                  convert_dates=False, dtype=False)
 
-    if len(results_df) == 0:
-        raise ValueError("No simulation results found to post-process")
+    if len(files) == 0 or len(results_df) == 0:
+        raise ValueError("No simulation results found to post-process.")
 
     if do_timeseries:
 

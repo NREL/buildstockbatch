@@ -344,7 +344,9 @@ def test_skipping_baseline(basic_residential_project_file):
     })
 
     sim_output_path = os.path.join(results_dir, 'simulation_output')
-    shutil.rmtree(os.path.join(sim_output_path, 'timeseries', 'up00'))
+    shutil.rmtree(os.path.join(sim_output_path, 'timeseries', 'up00'))  # remove timeseries results for baseline
+
+    # remove results.csv data for baseline from results_jobx.json.gz
     results_json_filename = os.path.join(sim_output_path, 'results_job0.json.gz')
     with gzip.open(results_json_filename, 'rt', encoding='utf-8') as f:
         dpouts = json.load(f)
@@ -352,6 +354,14 @@ def test_skipping_baseline(basic_residential_project_file):
     with gzip.open(results_json_filename, 'wt', encoding='utf-8') as f:
         json.dump(dpouts2, f)
 
+    # remove jobs for baseline from jobx.json
+    with open(os.path.join(sim_output_path, 'job0.json'), 'rt') as f:
+        job_json = json.load(f)
+    job_json['batch'] = list(filter(lambda job: job[1] is not None, job_json['batch']))
+    with open(os.path.join(sim_output_path, 'job0.json'), 'wt') as f:
+        json.dump(job_json, f)
+
+    # run postprocessing
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
             patch.object(BuildStockBatchBase, 'results_dir', results_dir):
