@@ -33,10 +33,15 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
+        emissions: list(include('scenario-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
         ---
+        scenario-spec:
+            scenario_name: str(required=True)
+            folder: str(required=True)
+            type: str(required=True)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
