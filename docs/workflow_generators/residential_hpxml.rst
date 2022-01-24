@@ -28,11 +28,6 @@ Configuration Example
           retain_in_idf: false
           retain_eplusout_rdd: true
 
-        server_directory_cleanup:
-          retain_in_osm: true
-          retain_in_idf: false
-          retain_eplusout_rdd: true
-
 Arguments
 ~~~~~~~~~
 
