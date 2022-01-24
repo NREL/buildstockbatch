@@ -28,6 +28,11 @@ Configuration Example
           retain_in_idf: false
           retain_eplusout_rdd: true
 
+        server_directory_cleanup:
+          retain_in_osm: true
+          retain_in_idf: false
+          retain_eplusout_rdd: true
+
 Arguments
 ~~~~~~~~~
 
@@ -64,7 +69,7 @@ Arguments
 
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/restructure-v3/measures/BuildExistingModel/measure.xml
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/ReportSimulationOutput/measure.xml
-.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/ServerDirectoryCleanup/measure.xml
+.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/restructure-v3/measures/ServerDirectoryCleanup/measure.xml
 
 .. _build-existing-model-defaults:
 
