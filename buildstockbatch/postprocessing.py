@@ -258,23 +258,23 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     # Results "CSV"
     logger.info("Creating results_df.")
     job_map = defaultdict(dict)  # job_map[upgrade][building_id] = job_num
-    for job_json in fs.glob(f'{sim_output_dir}/job*.json'):
+    jobs_json_files = fs.glob(f'{results_dir}/../job*.json')
+    for job_json in jobs_json_files:
         with open(job_json, 'r') as f:
             job_json_dict = json.load(f)
         for building_id, upgrade in job_json_dict['batch']:
             upgrade = 0 if upgrade is None else upgrade+1
             job_map[upgrade][building_id] = job_json_dict['job_num']
+    logger.info(f"{len(jobs_json_files)} jobs json files gave {len(job_map)} job_map keys.")
 
     files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
     if files:
         results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns',
                                   convert_dates=False, dtype=False)
-
-    if len(files) == 0 or len(results_df) == 0:
+    else:
         raise ValueError("No simulation results found to post-process.")
 
     if do_timeseries:
-
         # Look at all the parquet files to see what columns are in all of them.
         logger.info("Collecting all the columns in timeseries parquet files.")
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
@@ -291,7 +291,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     upgrades = job_map.keys()
     results_df_groups = results_df.groupby('upgrade')
     for upgrade_id in upgrades:
+        logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
+        logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
         df.rename(columns=to_camelcase, inplace=True)
         df['job_id'] = df['building_id'].map(job_map[upgrade_id])
         df = clean_up_results_df(df, cfg, keep_upgrade_id=True)

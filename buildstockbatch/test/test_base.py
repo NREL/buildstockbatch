@@ -355,10 +355,10 @@ def test_skipping_baseline(basic_residential_project_file):
         json.dump(dpouts2, f)
 
     # remove jobs for baseline from jobx.json
-    with open(os.path.join(sim_output_path, 'job0.json'), 'rt') as f:
+    with open(os.path.join(results_dir, '..', 'job0.json'), 'rt') as f:
         job_json = json.load(f)
     job_json['batch'] = list(filter(lambda job: job[1] is not None, job_json['batch']))
-    with open(os.path.join(sim_output_path, 'job0.json'), 'wt') as f:
+    with open(os.path.join(results_dir, '..', 'job0.json'), 'wt') as f:
         json.dump(job_json, f)
 
     # run postprocessing
