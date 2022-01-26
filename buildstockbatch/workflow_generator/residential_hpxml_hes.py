@@ -12,8 +12,9 @@ This object contains the residential classes for generating OSW files from indiv
 
 from .residential_hpxml import ResidentialHpxmlWorkflowGenerator  # noqa F041
 
+
 class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
-    
+
     def create_osw(self, sim_id, building_id, upgrade_idx):
         osw = super().create_osw(sim_id, building_id, upgrade_idx)
         if 'os_hescore_directory' in osw['steps'][0]['arguments']:
@@ -21,4 +22,5 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
         # Add measure path for reporting measure
         osw['measure_paths'] = ['OpenStudio-HEScore/hpxml-measures'] + osw['measure_paths']
+        
         return osw
