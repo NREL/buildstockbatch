@@ -209,7 +209,10 @@ def read_results_json(fs, filename):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
-    return dpouts
+    df = pd.DataFrame(dpouts)
+    # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
+    df = df.reindex(sorted(df.columns), axis=1)
+    return df
 
 
 def read_enduse_timeseries_parquet(fs, filename, all_cols):
@@ -267,10 +270,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             job_map[upgrade][building_id] = job_json_dict['job_num']
     logger.info(f"{len(jobs_json_files)} jobs json files gave {len(job_map)} job_map keys.")
 
-    files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
-    if files:
-        results_df = dd.read_json(f'{sim_output_dir}/results_job*.json.gz', orient='columns',
-                                  convert_dates=False, dtype=False)
+    results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    if results_json_files:
+        delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
+        results_df = dd.from_delayed(delayed_results_dfs)
     else:
         raise ValueError("No simulation results found to post-process.")
 
