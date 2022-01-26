@@ -19,4 +19,6 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
         if 'os_hescore_directory' in osw['steps'][0]['arguments']:
             osw['steps'][0]['arguments']['os_hescore_directory'] = '../../OpenStudio-HEScore'
 
+        # Add measure path for reporting measure
+        osw['measure_paths'] = ['OpenStudio-HEScore/hpxml-measures'] + osw['measure_paths']
         return osw
