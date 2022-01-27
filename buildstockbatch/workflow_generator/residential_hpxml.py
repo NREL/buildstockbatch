@@ -40,8 +40,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         ---
         scenario-spec:
             scenario_name: str(required=True)
-            folder: str(required=True)
             type: str(required=True)
+            elec_folder: str(required=True)
+            gas_value: str(required=False)
+            propane_value: str(required=False)
+            oil_value: str(required=False)
+            wood_value: str(required=False)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
