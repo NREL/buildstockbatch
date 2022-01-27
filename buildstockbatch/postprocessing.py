@@ -13,11 +13,11 @@ import boto3
 import dask.bag as db
 from dask.distributed import performance_report
 import dask
+import dask.dataframe as dd
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
-import itertools
 import json
 import logging
 import math
@@ -31,6 +31,7 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
+from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +209,10 @@ def read_results_json(fs, filename):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
-    return dpouts
+    df = pd.DataFrame(dpouts)
+    # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
+    df = df.reindex(sorted(df.columns), axis=1)
+    return df
 
 
 def read_enduse_timeseries_parquet(fs, filename, all_cols):
@@ -256,25 +260,24 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     logger.info("Creating results_df.")
-    results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
-    results_jsons = fs.glob(results_job_json_glob)
-    results_json_job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_jsons]
-    dpouts_by_job = dask.compute([dask.delayed(read_results_json)(fs, x) for x in results_jsons])[0]
-    for job_id, dpouts_for_this_job in zip(results_json_job_ids, dpouts_by_job):
-        for dpout in dpouts_for_this_job:
-            dpout['job_id'] = job_id
-    dpouts = itertools.chain.from_iterable(dpouts_by_job)
-    results_df = pd.DataFrame(dpouts).rename(columns=to_camelcase)
+    job_map = defaultdict(dict)  # job_map[upgrade][building_id] = job_num
+    jobs_json_files = fs.glob(f'{results_dir}/../job*.json')
+    for job_json in jobs_json_files:
+        with open(job_json, 'r') as f:
+            job_json_dict = json.load(f)
+        for building_id, upgrade in job_json_dict['batch']:
+            upgrade = 0 if upgrade is None else upgrade+1
+            job_map[upgrade][building_id] = job_json_dict['job_num']
+    logger.info(f"{len(jobs_json_files)} jobs json files gave {len(job_map)} job_map keys.")
 
-    del dpouts
-
-    if results_df.empty:
-        raise ValueError("No simulation results found to post-process")
-
-    results_df = clean_up_results_df(results_df, cfg, keep_upgrade_id=True)
+    results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    if results_json_files:
+        delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
+        results_df = dd.from_delayed(delayed_results_dfs)
+    else:
+        raise ValueError("No simulation results found to post-process.")
 
     if do_timeseries:
-
         # Look at all the parquet files to see what columns are in all of them.
         logger.info("Collecting all the columns in timeseries parquet files.")
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
@@ -288,11 +291,20 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
 
-    for upgrade_id, df in results_df.groupby('upgrade'):
+    upgrades = job_map.keys()
+    results_df_groups = results_df.groupby('upgrade')
+    for upgrade_id in upgrades:
+        logger.info(f"Processing upgrade {upgrade_id}. ")
+        df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
+        logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
+        df.rename(columns=to_camelcase, inplace=True)
+        df['job_id'] = df['building_id'].map(job_map[upgrade_id])
+        df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
+
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
             cols_to_keep = list(
-                filter(lambda x: not x.startswith('build_existing_model.'), results_df.columns)
+                filter(lambda x: not x.startswith('build_existing_model.'), df.columns)
             )
             df = df[cols_to_keep]
         df = df.copy()
