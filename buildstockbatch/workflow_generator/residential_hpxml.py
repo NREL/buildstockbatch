@@ -105,10 +105,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             bld_exist_model_args['emissions_scenario_names'] = ','.join([s.get('scenario_name') for s in workflow_args['emissions']])
             bld_exist_model_args['emissions_types'] = ','.join([s.get('type') for s in workflow_args['emissions']])
             bld_exist_model_args['emissions_electricity_folders'] = ','.join([s.get('elec_folder') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_natural_gas_values'] = ','.join([s.get('gas_value') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_propane_values'] = ','.join([s.get('propane_value') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_fuel_oil_values'] = ','.join([s.get('oil_value') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_wood_values'] = ','.join([s.get('wood_value') for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_natural_gas_values'] = ','.join([str(s.get('gas_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_propane_values'] = ','.join([str(s.get('propane_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_fuel_oil_values'] = ','.join([str(s.get('oil_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_wood_values'] = ','.join([str(s.get('wood_value')) for s in workflow_args['emissions']])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
