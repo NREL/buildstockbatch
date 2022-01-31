@@ -31,7 +31,6 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
-from collections import defaultdict
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +209,7 @@ def read_results_json(fs, filename):
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
     df = pd.DataFrame(dpouts)
+    df['job_id'] = int(re.search(r'results_job(\d+)\.json\.gz', filename).group(1))
     # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
     df = df.reindex(sorted(df.columns), axis=1)
     return df
@@ -259,17 +259,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         fs.makedirs(dr)
 
     # Results "CSV"
-    logger.info("Creating results_df.")
-    job_map = defaultdict(dict)  # job_map[upgrade][building_id] = job_num
-    jobs_json_files = fs.glob(f'{results_dir}/../job*.json')
-    for job_json in jobs_json_files:
-        with open(job_json, 'r') as f:
-            job_json_dict = json.load(f)
-        for building_id, upgrade in job_json_dict['batch']:
-            upgrade = 0 if upgrade is None else upgrade+1
-            job_map[upgrade][building_id] = job_json_dict['job_num']
-    logger.info(f"{len(jobs_json_files)} jobs json files gave {len(job_map)} job_map keys.")
-
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
     if results_json_files:
         delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
@@ -291,14 +280,14 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
 
-    upgrades = job_map.keys()
     results_df_groups = results_df.groupby('upgrade')
-    for upgrade_id in upgrades:
+    upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
+    upgrade_end = len(cfg.get('upgrades', [])) + 1
+    for upgrade_id in range(upgrade_start, upgrade_end):
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
         df.rename(columns=to_camelcase, inplace=True)
-        df['job_id'] = df['building_id'].map(job_map[upgrade_id])
         df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
 
         if upgrade_id > 0:
