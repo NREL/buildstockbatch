@@ -204,13 +204,13 @@ def get_cols(fs, filename):
     return schema.names
 
 
-def read_results_json(fs, filename, job_id):
+def read_results_json(fs, filename):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
     df = pd.DataFrame(dpouts)
+    df['job_id'] = int(re.search(r'results_job(\d+)\.json\.gz', filename).group(1))
     # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
-    df['job_id'] = job_id
     df = df.reindex(sorted(df.columns), axis=1)
     return df
 
@@ -260,10 +260,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
-    job_ids = [int(re.search(r'results_job(\d+)\.json\.gz', x).group(1)) for x in results_json_files]
     if results_json_files:
-        delayed_results_dfs = [dask.delayed(read_results_json)(fs, x, job_id)
-                               for x, job_id in zip(results_json_files, job_ids)]
+        delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
         results_df = dd.from_delayed(delayed_results_dfs)
     else:
         raise ValueError("No simulation results found to post-process.")
