@@ -102,6 +102,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
+            'add_timeseries_dst_column': True,
+            'add_timeseries_utc_column': True
         }
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
