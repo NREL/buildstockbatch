@@ -201,7 +201,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
 def get_cols(fs, filename):
     with fs.open(filename, 'rb') as f:
         schema = parquet.read_schema(f)
-    return schema.names
+    return set(schema.names)
 
 
 def read_results_json(fs, filename):
@@ -271,7 +271,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info("Collecting all the columns in timeseries parquet files.")
         ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
         all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
-            fold(lambda x, y: set(x).union(y)).compute()
+            fold(lambda x, y: x.union(y)).compute()
 
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
