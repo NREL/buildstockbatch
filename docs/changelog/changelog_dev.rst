@@ -67,6 +67,20 @@ Development Changelog
         For ResStock the OpenStudio version has changed to v3.3.0.
 
     .. change::
+        :tags: bugfix
+        :pullreq: 258, 262
+        :tickets: 253
+
+        Fixes an issue that caused out of memory error when postprocessing large run with many upgrades.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 263
+        :tickets: 261
+
+        Fixes a bug that caused postprocessing to crash when there is only one datapoint.
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 

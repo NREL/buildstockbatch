@@ -24,6 +24,12 @@ def basic_residential_project_file():
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', output_dir),
                 os.path.join(output_directory, 'simulation_output')
             )
+
+            # move the job*.json file to appropriate location
+            if os.path.exists(os.path.join(output_directory, 'simulation_output', 'job0.json')):
+                shutil.move(os.path.join(output_directory, 'simulation_output', 'job0.json'),
+                            os.path.join(output_directory, 'simulation_output', '..', '..', 'job0.json'))
+
             os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
             os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
             cfg = {

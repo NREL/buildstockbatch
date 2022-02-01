@@ -33,10 +33,19 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
+        emissions: list(include('scenario-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
         ---
+        scenario-spec:
+            scenario_name: str(required=True)
+            type: str(required=True)
+            elec_folder: str(required=True)
+            gas_value: num(required=False)
+            propane_value: num(required=False)
+            oil_value: num(required=False)
+            wood_value: num(required=False)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
@@ -72,16 +81,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
-        sim_ctl_args = {
-            'simulation_control_timestep': 60,
-            'simulation_control_run_period_begin_month': 1,
-            'simulation_control_run_period_begin_day_of_month': 1,
-            'simulation_control_run_period_end_month': 12,
-            'simulation_control_run_period_end_day_of_month': 31,
-            'simulation_control_run_period_calendar_year': 2007,
-            'debug': False,
-            'add_component_loads': False
-        }
+        sim_ctl_args = {}
 
         bld_exist_model_args = {
             'building_id': building_id,
@@ -92,16 +92,28 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
+        if 'emissions' in workflow_args:
+            bld_exist_model_args['emissions_scenario_names'] = ','.join([s.get('scenario_name') for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_types'] = ','.join([s.get('type') for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_electricity_folders'] = ','.join([s.get('elec_folder') for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_natural_gas_values'] = ','.join([str(s.get('gas_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_propane_values'] = ','.join([str(s.get('propane_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_fuel_oil_values'] = ','.join([str(s.get('oil_value')) for s in workflow_args['emissions']])
+            bld_exist_model_args['emissions_wood_values'] = ','.join([str(s.get('wood_value')) for s in workflow_args['emissions']])
+
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
+            'include_timeseries_emissions': False,
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
+            'add_timeseries_dst_column': True,
+            'add_timeseries_utc_column': True
         }
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
