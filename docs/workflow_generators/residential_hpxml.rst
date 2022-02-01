@@ -15,11 +15,11 @@ Configuration Example
         emissions:
           - scenario_name: Scenario1
             type: CO2
-            elec_folder: data/cambium/LRMER_MidCase_15 # kg/MWh, relative to buildstock_directory's resources folder
-            gas_value: 117.6 # lb/MBtu (million Btu)
-            propane_value: 136.6 # lb/MBtu (million Btu)
-            oil_value: 161.0 # lb/MBtu (million Btu)
-            wood_value: 200.0 # lb/MBtu (million Btu)
+            elec_folder: data/cambium/LRMER_MidCase_15
+            gas_value: 117.6
+            propane_value: 136.6
+            oil_value: 161.0
+            wood_value: 200.0
 
         simulation_output_report:
           timeseries_frequency: hourly
@@ -42,11 +42,11 @@ Arguments
 
     - ``scenario_name``: Name of the emission scenario.
     - ``type``: Type of emission (e.g., CO2, NOx, etc.).
-    - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values (kg/MWh). File names must contain appropriate GEA region.
-    - ``gas_value``: Annual emissions factor for natural gas (million Btu).
-    - ``propane_value``: Annual emissions factor for propane (million Btu).
-    - ``oil_value``: Annual emissions factor for fuel oil (million Btu).
-    - ``wood_value``: Annual emissions factor for wood (million Btu).
+    - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Path is relative to buildstock_directory's resources folder. File names must contain GEA region names.
+    - ``gas_value``: Annual emissions factor for natural gas. Units are lb/MBtu (million Btu).
+    - ``propane_value``: Annual emissions factor for propane. Units are lb/MBtu (million Btu).
+    - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
+    - ``wood_value``: Annual emissions factor for wood. Units are lb/MBtu (million Btu).
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
