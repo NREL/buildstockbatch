@@ -12,10 +12,20 @@ Configuration Example
         build_existing_model:
           simulation_control_run_period_calendar_year: 2010
 
+        emissions:
+          - scenario_name: Scenario1
+            type: CO2
+            elec_folder: data/cambium/LRMER_MidCase_15
+            gas_value: 117.6
+            propane_value: 136.6
+            oil_value: 161.0
+            wood_value: 200.0
+
         simulation_output_report:
           timeseries_frequency: hourly
           include_timeseries_fuel_consumptions: true
           include_timeseries_end_use_consumptions: true
+          include_timeseries_emissions: true
 
         server_directory_cleanup:
           retain_in_osm: true
@@ -27,6 +37,16 @@ Arguments
 
 - ``build_existing_model``: Update the simulation control arguments to the `BuildExistingModel`_ measure. See
   :ref:`build-existing-model-defaults` for current defaults.
+
+- ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
+
+    - ``scenario_name``: Name of the emission scenario.
+    - ``type``: Type of emission (e.g., CO2, NOx, etc.).
+    - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Path is relative to buildstock_directory's resources folder. File names must contain GEA region names.
+    - ``gas_value``: Annual emissions factor for natural gas. Units are lb/MBtu (million Btu).
+    - ``propane_value``: Annual emissions factor for propane. Units are lb/MBtu (million Btu).
+    - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
+    - ``wood_value``: Annual emissions factor for wood. Units are lb/MBtu (million Btu).
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
