@@ -14,8 +14,12 @@ Configuration Example
 
         emissions:
           - scenario_name: Scenario1
-            folder: hpxml-measures/HPXMLtoOpenStudio/resources/data/cambium
             type: CO2
+            elec_folder: data/cambium/LRMER_MidCase_15 # kg/MWh, relative to buildstock_directory's resources folder
+            gas_value: 117.6 # lb/MBtu (million Btu)
+            propane_value: 136.6 # lb/MBtu (million Btu)
+            oil_value: 161.0 # lb/MBtu (million Btu)
+            wood_value: 200.0 # lb/MBtu (million Btu)
 
         simulation_output_report:
           timeseries_frequency: hourly
@@ -37,8 +41,12 @@ Arguments
 - ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
 
     - ``scenario_name``: Name of the emission scenario.
-    - ``folder``: Folder of schedule files with hourly electricity emissions factors values.
     - ``type``: Type of emission (e.g., CO2, NOx, etc.).
+    - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values (kg/MWh). File names must contain appropriate GEA region.
+    - ``gas_value``: Annual emissions factor for natural gas (million Btu).
+    - ``propane_value``: Annual emissions factor for propane (million Btu).
+    - ``oil_value``: Annual emissions factor for fuel oil (million Btu).
+    - ``wood_value``: Annual emissions factor for wood (million Btu).
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
