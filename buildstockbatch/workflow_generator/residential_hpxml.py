@@ -72,16 +72,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
-        sim_ctl_args = {
-            'simulation_control_timestep': 60,
-            'simulation_control_run_period_begin_month': 1,
-            'simulation_control_run_period_begin_day_of_month': 1,
-            'simulation_control_run_period_end_month': 12,
-            'simulation_control_run_period_end_day_of_month': 31,
-            'simulation_control_run_period_calendar_year': 2007,
-            'debug': False,
-            'add_component_loads': False
-        }
+        sim_ctl_args = {}
 
         bld_exist_model_args = {
             'building_id': building_id,
