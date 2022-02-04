@@ -202,7 +202,6 @@ class BuildStockBatchBase(object):
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
             if skiprows:
                 tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
-                tsdf['TimeDST'] = tsdf['Time']  # FIXME: Actually write TimeDST to results_timeseries.csv?
             else:
                 tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
             if os.path.isfile(schedules_filepath):
