@@ -50,7 +50,7 @@ Development Changelog
         The buildstock.csv is trimmed for each batch job to hold only the rows corresponding to buildings in the batch.
         This improves speed and memory consumption when the file is loaded in ResStock.
 
-    .. change:
+    .. change::
         :tags: general, postprocessing
         :pullreq: 247
 
@@ -79,3 +79,10 @@ Development Changelog
         :tickets: 261
 
         Fixes a bug that caused postprocessing to crash when there is only one datapoint.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 266
+        :tickets: 265
+
+        Fixes a bug that caused postprocessing to crash on small runs where some jobs have failed sims.
