@@ -262,7 +262,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
     if results_json_files:
         delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
-        results_df = dd.from_delayed(delayed_results_dfs)
+        results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
     else:
         raise ValueError("No simulation results found to post-process.")
 
