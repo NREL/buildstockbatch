@@ -6,7 +6,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.6', '3.7', '3.8', '3.9']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
     name: Tests - Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v2
@@ -27,7 +27,7 @@ jobs:
         run: |
           pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport
       - name: Test Report
-        uses: mikepenz/action-junit-report@v2.4.3
+        uses: mikepenz/action-junit-report@v2.9.1
         if: ${{ matrix.python-version == '3.9' }}
         with:
           report_paths: coverage/junit.xml
@@ -40,11 +40,12 @@ jobs:
           name: coverage-report-html
           path: coverage/htmlreport/
       - name: Report coverage to PR
-        uses: 5monkeys/cobertura-action@v9
+        uses: 5monkeys/cobertura-action@v12
         if: ${{ matrix.python-version == '3.9' }}
         with:
           path: coverage/coverage.xml
           repo_token: ${{ secrets.GITHUB_TOKEN }}
+          minimum_coverage: 80
       - name: Build documentation
         if: ${{ matrix.python-version == '3.9' }}
         run: |

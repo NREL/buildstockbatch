@@ -49,7 +49,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=metadata['__url__'],
     packages=setuptools.find_packages(),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     package_data={
         'buildstockbatch': ['*.sh', 'schemas/*.yaml'],
         '': ['LICENSE']
@@ -105,7 +105,9 @@ setuptools.setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.6',
-        'Programming Language :: Python :: 3.7'
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ]
 )
