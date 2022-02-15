@@ -1,6 +1,6 @@
 # BuildStock Batch
 
-![GitHub Actions Status](https://github.com/NREL/buildstockbatch/actions/workflows/ci.yml/badge.svg?branch=github_actions)
+![GitHub Actions Status](https://github.com/NREL/buildstockbatch/actions/workflows/ci.yml/badge.svg)
 
 This set of tools provides a means to run and manage batch simulations for the
 [ResStock](https://github.com/NREL/resstock) and
