@@ -1,6 +1,6 @@
 # BuildStock Batch
 
-[![CircleCI](https://circleci.com/gh/NREL/buildstockbatch.svg?style=svg&circle-token=4333c59c1b03b3461dfd16798ba04cb26bede4c0)](https://circleci.com/gh/NREL/buildstockbatch)
+![GitHub Actions Status](https://github.com/NREL/buildstockbatch/actions/workflows/ci.yml/badge.svg?branch=github_actions)
 
 This set of tools provides a means to run and manage batch simulations for the
 [ResStock](https://github.com/NREL/resstock) and
