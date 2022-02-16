@@ -102,7 +102,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                              ['emissions_fuel_oil_values', 'oil_value'],
                              ['emissions_wood_values', 'wood_value']]
             for arg, item in emissions_map:
-                bld_exist_model_args[arg] = ','.join([s.get(item) for s in emissions])
+                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in emissions])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
