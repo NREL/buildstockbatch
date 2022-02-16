@@ -120,6 +120,7 @@ class LocalDockerBatch(DockerBatchBase):
         if os_hescore_dir and os.path.exists(os_hescore_dir):
             bind_mounts += [(os.path.join(os_hescore_dir, 'rulesets'), 'OpenStudio-HEScore/rulesets', 'ro'),
                             (os.path.join(os_hescore_dir, 'hpxml-measures'), 'OpenStudio-HEScore/hpxml-measures', 'ro'),
+                            (os.path.join(os_hescore_dir, 'hescore-hpxml'), 'OpenStudio-HEScore/hescore-hpxml', 'ro'),
                             (os.path.join(os_hescore_dir, 'weather'), 'OpenStudio-HEScore/weather', 'ro')]
 
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
