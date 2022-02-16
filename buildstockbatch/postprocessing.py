@@ -48,13 +48,21 @@ def read_data_point_out_json(fs, reporting_measures, filename):
         except (FileNotFoundError, json.JSONDecodeError):
             return None
 
-    if 'ReportSimulationOutput' not in d:
-        d['ReportSimulationOutput'] = {'applicable': False, 'completed_status': 'Invalid'}
+    sim_out_report = 'SimulationOutputReport'
+    if 'ReportSimulationOutput' in reporting_measures:
+        sim_out_report = 'ReportSimulationOutput'
+
+    if sim_out_report not in d:
+        d[sim_out_report] = {'applicable': False}
+        if sim_out_report == 'ReportSimulationOutput':
+            d[sim_out_report]['completed_status'] = 'Invalid'
     else:
-        d['ReportSimulationOutput']['completed_status'] = 'Fail'
+        if sim_out_report == 'ReportSimulationOutput':
+            d[sim_out_report]['completed_status'] = 'Fail'
     for reporting_measure in reporting_measures:
         if reporting_measure not in d:
             d[reporting_measure] = {'applicable': False}
+
     return d
 
 
@@ -84,20 +92,26 @@ def flatten_datapoint_json(reporting_measures, d):
     # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
-    col2 = 'ReportSimulationOutput'
+    sim_out_report = 'SimulationOutputReport'
+    if 'ReportSimulationOutput' in reporting_measures:
+        sim_out_report = 'ReportSimulationOutput'
+    col2 = sim_out_report
     for k, v in d.get(col2, {}).items():
         new_d[f'{col2}.{k}'] = v
 
     # additional reporting measures
-    for col in reporting_measures + ['UpgradeCosts']:
+    if sim_out_report == 'ReportSimulationOutput':
+        reporting_measures += ['UpgradeCosts']
+    for col in reporting_measures:
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
 
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
 
-    new_d['completed_status'] = new_d['ReportSimulationOutput.completed_status']
-    del new_d['ReportSimulationOutput.completed_status']
+    if sim_out_report == 'ReportSimulationOutput':
+        new_d['completed_status'] = new_d['ReportSimulationOutput.completed_status']
+        del new_d['ReportSimulationOutput.completed_status']
 
     return new_d
 
@@ -117,6 +131,9 @@ def read_out_osw(fs, filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
+        for step in d.get('steps', []):
+            if step['measure_dir_name'] == 'BuildExistingModel':
+                out_d['building_id'] = step['arguments']['building_id']
         return out_d
 
 
@@ -183,7 +200,10 @@ def write_dataframe_as_parquet(df, fs, filename):
 def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     results_df = df.copy()
     cols_to_remove = (
-        'build_existing_model.weight'
+        'build_existing_model.weight',
+        'simulation_output_report.weight',
+        'build_existing_model.workflow_json',
+        'simulation_output_report.upgrade_name'
     )
     for col in cols_to_remove:
         if col in results_df.columns:
