@@ -11,3 +11,6 @@ venv/*
 *.pyc
 .python-version
 buildstockbatch_crash_details.log
+coverage/
+.coverage
+build/

@@ -93,13 +93,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
         if 'emissions' in workflow_args:
-            bld_exist_model_args['emissions_scenario_names'] = ','.join([s.get('scenario_name') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_types'] = ','.join([s.get('type') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_electricity_folders'] = ','.join([s.get('elec_folder') for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_natural_gas_values'] = ','.join([str(s.get('gas_value')) for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_propane_values'] = ','.join([str(s.get('propane_value')) for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_fuel_oil_values'] = ','.join([str(s.get('oil_value')) for s in workflow_args['emissions']])
-            bld_exist_model_args['emissions_wood_values'] = ','.join([str(s.get('wood_value')) for s in workflow_args['emissions']])
+            emissions = workflow_args['emissions']
+            emissions_map = [['emissions_scenario_names', 'scenario_name'],
+                             ['emissions_types', 'type'],
+                             ['emissions_electricity_folders', 'elec_folder'],
+                             ['emissions_natural_gas_values', 'gas_value'],
+                             ['emissions_propane_values', 'propane_value'],
+                             ['emissions_fuel_oil_values', 'oil_value'],
+                             ['emissions_wood_values', 'wood_value']]
+            for arg, item in emissions_map:
+                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in emissions])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
