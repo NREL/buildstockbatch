@@ -9,7 +9,8 @@ description here
 Not all may apply
 
 - [ ] Code changes (must work)
-- [ ] Tests exercising your feature/bug fix (check coverage report on CircleCI build -> Artifacts)
+- [ ] Tests exercising your feature/bug fix (check coverage report on Checks -> BuildStockBatch Tests -> Artifacts)
+- [ ] Coverage has increased or at least not decreased. Update `minimum_coverage` in `.github/workflows/ci.yml` as necessary.
 - [ ] All other unit tests passing
 - [ ] Update validation for project config yaml file changes
 - [ ] Update existing documentation
