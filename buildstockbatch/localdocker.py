@@ -22,10 +22,10 @@ import json
 import logging
 import os
 import pandas as pd
-import re
+# import re
 import shutil
 import sys
-import tarfile
+# import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
