@@ -131,9 +131,9 @@ def read_out_osw(fs, filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
-        for step in d.get('steps', []):
-            if step['measure_dir_name'] == 'BuildExistingModel':
-                out_d['building_id'] = step['arguments']['building_id']
+        # for step in d.get('steps', []):
+            # if step['measure_dir_name'] == 'BuildExistingModel':
+                # out_d['building_id'] = step['arguments']['building_id']
         return out_d
 
 
@@ -201,9 +201,9 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     results_df = df.copy()
     cols_to_remove = (
         'build_existing_model.weight',
-        'simulation_output_report.weight',
-        'build_existing_model.workflow_json',
-        'simulation_output_report.upgrade_name'
+        # 'simulation_output_report.weight',
+        # 'build_existing_model.workflow_json',
+        # 'simulation_output_report.upgrade_name'
     )
     for col in cols_to_remove:
         if col in results_df.columns:
@@ -233,6 +233,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         first_few_cols.insert(2, 'job_id')
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
+    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
     simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
     upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
     sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
