@@ -42,28 +42,18 @@ def read_data_point_out_json(fs, reporting_measures, filename):
         with fs.open(filename, 'r') as f:
             d = json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        try:
-            with fs.open(filename.replace('data_point_out', 'results'), 'r') as f:
-                d = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
-            return None
-
-    sim_out_report = 'SimulationOutputReport'
-    if 'ReportSimulationOutput' in reporting_measures:
-        sim_out_report = 'ReportSimulationOutput'
-
-    if sim_out_report not in d:
-        d[sim_out_report] = {'applicable': False}
-        if sim_out_report == 'ReportSimulationOutput':
-            d[sim_out_report]['completed_status'] = 'Invalid'
+        return None
     else:
-        if sim_out_report == 'ReportSimulationOutput':
-            d[sim_out_report]['completed_status'] = 'Fail'
-    for reporting_measure in reporting_measures:
-        if reporting_measure not in d:
-            d[reporting_measure] = {'applicable': False}
+        sim_out_report = 'SimulationOutputReport'
+        if 'ReportSimulationOutput' in d:
+            sim_out_report = 'ReportSimulationOutput'
 
-    return d
+        if sim_out_report not in d:
+            d[sim_out_report] = {'applicable': False}
+        for reporting_measure in reporting_measures:
+            if reporting_measure not in d:
+                d[reporting_measure] = {'applicable': False}
+        return d
 
 
 def to_camelcase(x):
@@ -93,7 +83,7 @@ def flatten_datapoint_json(reporting_measures, d):
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
     sim_out_report = 'SimulationOutputReport'
-    if 'ReportSimulationOutput' in reporting_measures:
+    if 'ReportSimulationOutput' in d:
         sim_out_report = 'ReportSimulationOutput'
     col2 = sim_out_report
     for k, v in d.get(col2, {}).items():
@@ -108,10 +98,6 @@ def flatten_datapoint_json(reporting_measures, d):
 
     new_d['building_id'] = new_d['BuildExistingModel.building_id']
     del new_d['BuildExistingModel.building_id']
-
-    if sim_out_report == 'ReportSimulationOutput':
-        new_d['completed_status'] = new_d['ReportSimulationOutput.completed_status']
-        del new_d['ReportSimulationOutput.completed_status']
 
     return new_d
 
@@ -131,31 +117,10 @@ def read_out_osw(fs, filename):
         ]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
-        # for step in d.get('steps', []):
-            # if step['measure_dir_name'] == 'BuildExistingModel':
-                # out_d['building_id'] = step['arguments']['building_id']
+        for step in d.get('steps', []):
+            if step['measure_dir_name'] == 'BuildExistingModel':
+                out_d['building_id'] = step['arguments']['building_id']
         return out_d
-
-
-def read_job_files(fs, dpout, started, finished):
-    try:
-        with fs.open(started, 'r') as f:
-            started_at = re.search(r'Started Workflow (.*\s.*?)\s', f.readline()).group(1)
-            started_at = dt.datetime.strptime(started_at, '%Y-%m-%d %H:%M:%S')
-            dpout['started_at'] = started_at.strftime('%Y%m%dT%H%M%SZ')
-    except (FileNotFoundError):
-        return dpout
-    try:
-        with fs.open(finished, 'r') as f:
-            completed_at = re.search(r'Finished Workflow (.*\s.*?)\s', f.readline()).group(1)
-            completed_at = dt.datetime.strptime(completed_at, '%Y-%m-%d %H:%M:%S')
-            dpout['completed_at'] = completed_at.strftime('%Y%m%dT%H%M%SZ')
-    except (FileNotFoundError):
-        return dpout
-    else:
-        if dpout['completed_status'] != 'Invalid':
-            dpout['completed_status'] = 'Success'
-    return dpout
 
 
 def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id):
@@ -184,8 +149,6 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     out_osw = read_out_osw(fs, f'{sim_dir}/out.osw')
     if out_osw:
         dpout.update(out_osw)
-    else:  # for when run_options: fast=true
-        dpout = read_job_files(fs, dpout, f'{sim_dir}/run/started.job', f'{sim_dir}/run/finished.job')
     dpout['upgrade'] = upgrade_id
     dpout['building_id'] = building_id
     return dpout
@@ -201,9 +164,9 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     results_df = df.copy()
     cols_to_remove = (
         'build_existing_model.weight',
-        # 'simulation_output_report.weight',
-        # 'build_existing_model.workflow_json',
-        # 'simulation_output_report.upgrade_name'
+        'simulation_output_report.weight',
+        'build_existing_model.workflow_json',
+        'simulation_output_report.upgrade_name'
     )
     for col in cols_to_remove:
         if col in results_df.columns:
@@ -233,10 +196,15 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         first_few_cols.insert(2, 'job_id')
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
-    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
-    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
+    sim_output_report_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
+    report_sim_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
     upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols + upgrade_costs_cols
+    sorted_cols = \
+        first_few_cols + \
+        build_existing_model_cols + \
+        sim_output_report_cols + \
+        report_sim_output_cols + \
+        upgrade_costs_cols
 
     remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
     sorted_cols += remaining_cols
