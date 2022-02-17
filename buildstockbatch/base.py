@@ -66,7 +66,7 @@ class BuildStockBatchBase(object):
         if 'build_existing_model' in self.cfg['workflow_generator']['args']:
             if 'os_hescore_directory' in self.cfg['workflow_generator']['args']['build_existing_model']:
                 self.os_hescore_dir = path_rel_to_file(
-                    '', self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory'])
+                    project_filename, self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory'])
             else:
                 self.os_hescore_dir = None
 
