@@ -113,18 +113,28 @@ class LocalDockerBatch(DockerBatchBase):
 
         # ResStock-hpxml measure directory
         if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
-            bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
-                             'resources/hpxml-measures', 'ro')]
+            bind_mounts.append(
+                (os.path.join(buildstock_dir, 'resources', 'hpxml-measures'), 'resources/hpxml-measures', 'ro')
+            )
 
         # OS-HEScore measure directories
         if os_hescore_dir and os.path.exists(os_hescore_dir):
-            bind_mounts += [(os.path.join(os_hescore_dir, 'rulesets'), 'OpenStudio-HEScore/rulesets', 'ro'),
-                            (os.path.join(os_hescore_dir, 'hpxml-measures'), 'OpenStudio-HEScore/hpxml-measures', 'ro'),
-                            (os.path.join(os_hescore_dir, 'hescore-hpxml'), 'OpenStudio-HEScore/hescore-hpxml', 'ro'),
-                            (os.path.join(os_hescore_dir, 'weather'), 'OpenStudio-HEScore/weather', 'ro')]
+            bind_mounts.extend([
+                (os.path.join(os_hescore_dir), 'OpenStudio-HEScore', 'ro'),
+                (os.path.join(os_hescore_dir, 'hescore-hpxml'), '/opt/hescore-hpxml', 'ro')
+            ])
 
-        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
+        docker_volume_mounts = {
+            key: {
+                'bind': bind if bind.startswith('/') else f'/var/simdata/openstudio/{bind}',
+                'mode': mode
+            }
+            for key, bind, mode in bind_mounts
+        }
+
         for bind in bind_mounts:
+            if bind[1].startswith('/'):
+                continue
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
