@@ -22,10 +22,10 @@ import json
 import logging
 import os
 import pandas as pd
-# import re
+import re
 import shutil
 import sys
-# import tarfile
+import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
@@ -155,16 +155,19 @@ class LocalDockerBatch(DockerBatchBase):
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
-        container_output = docker_client.containers.run(
+
+        container = docker_client.containers.run(
             docker_image,
             args,
             remove=True,
+            detach=True,
             volumes=docker_volume_mounts,
             name=sim_id,
             **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
-            f_out.write(container_output)
+            for x in container.logs(stream=True):
+                f_out.write(x)
 
         # Clean up directories created with the docker mounts
         for dirname in ('lib', 'measures', 'weather'):
@@ -226,13 +229,13 @@ class LocalDockerBatch(DockerBatchBase):
         del dpouts
 
         # FIXME temporarily comment out for testing
-        # sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
-        # logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
-        # with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:
-        #     for dirname in os.listdir(sim_out_dir):
-        #         if re.match(r'up\d+', dirname) and os.path.isdir(os.path.join(sim_out_dir, dirname)):
-        #             tarf.add(os.path.join(sim_out_dir, dirname), arcname=dirname)
-        #             shutil.rmtree(os.path.join(sim_out_dir, dirname))
+        sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
+        logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
+        with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:
+            for dirname in os.listdir(sim_out_dir):
+                if re.match(r'up\d+', dirname) and os.path.isdir(os.path.join(sim_out_dir, dirname)):
+                    tarf.add(os.path.join(sim_out_dir, dirname), arcname=dirname)
+                    shutil.rmtree(os.path.join(sim_out_dir, dirname))
 
     @property
     def output_dir(self):
