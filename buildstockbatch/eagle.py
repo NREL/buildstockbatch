@@ -230,6 +230,11 @@ class EagleBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / 'measures',
             self.local_buildstock_dir / 'measures'
         )
+        if os.path.exists(pathlib.Path(self.buildstock_dir) / 'resources/hpxml-measures'):
+            self.clear_and_copy_dir(
+                pathlib.Path(self.buildstock_dir) / 'resources/hpxml-measures',
+                self.local_buildstock_dir / 'resources/hpxml-measures'
+            )
         self.clear_and_copy_dir(
             self.weather_dir,
             self.local_weather_dir
@@ -350,6 +355,12 @@ class EagleBatch(BuildStockBatchBase):
                 args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
                 container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
                 runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+
+            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+                runscript.append('ln -s /resources /var/simdata/openstudio/resources')
+                src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
+                container_mount = '/resources/hpxml-measures'
+                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
 
             # Build the openstudio command that will be issued within the singularity container
             # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command

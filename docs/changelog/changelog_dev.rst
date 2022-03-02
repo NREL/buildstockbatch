@@ -21,3 +21,10 @@ Development Changelog
         :tickets: 223
 
         Migrated CI to GitHub Actions. 
+
+    .. change::
+        :tags: workflow
+        :pullreq: 208
+        :tickets: 
+
+        Add ``residential_hpxml`` workflow generator.

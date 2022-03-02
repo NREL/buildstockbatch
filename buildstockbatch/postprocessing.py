@@ -44,8 +44,12 @@ def read_data_point_out_json(fs, reporting_measures, filename):
     except (FileNotFoundError, json.JSONDecodeError):
         return None
     else:
-        if 'SimulationOutputReport' not in d:
-            d['SimulationOutputReport'] = {'applicable': False}
+        sim_out_report = 'SimulationOutputReport'
+        if 'ReportSimulationOutput' in d:
+            sim_out_report = 'ReportSimulationOutput'
+
+        if sim_out_report not in d:
+            d[sim_out_report] = {'applicable': False}
         for reporting_measure in reporting_measures:
             if reporting_measure not in d:
                 d[reporting_measure] = {'applicable': False}
@@ -78,11 +82,16 @@ def flatten_datapoint_json(reporting_measures, d):
     # TODO @nmerket @rajeee is there a way to not apply this to Commercial jobs? It doesn't hurt, but it is weird for us
     units = int(new_d.get(f'{col1}.units_represented', 1))
     new_d[f'{col1}.units_represented'] = units
-    col2 = 'SimulationOutputReport'
+    sim_out_report = 'SimulationOutputReport'
+    if 'ReportSimulationOutput' in d:
+        sim_out_report = 'ReportSimulationOutput'
+    col2 = sim_out_report
     for k, v in d.get(col2, {}).items():
         new_d[f'{col2}.{k}'] = v
 
     # additional reporting measures
+    if sim_out_report == 'ReportSimulationOutput':
+        reporting_measures += ['UpgradeCosts']
     for col in reporting_measures:
         for k, v in d.get(col, {}).items():
             new_d[f'{col}.{k}'] = v
@@ -187,8 +196,15 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
         first_few_cols.insert(2, 'job_id')
 
     build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith('build_existing_model')])
-    simulation_output_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
-    sorted_cols = first_few_cols + build_existing_model_cols + simulation_output_cols
+    sim_output_report_cols = sorted([col for col in results_df.columns if col.startswith('simulation_output_report')])
+    report_sim_output_cols = sorted([col for col in results_df.columns if col.startswith('report_simulation_output')])
+    upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith('upgrade_costs')])
+    sorted_cols = \
+        first_few_cols + \
+        build_existing_model_cols + \
+        sim_output_report_cols + \
+        report_sim_output_cols + \
+        upgrade_costs_cols
 
     remaining_cols = sorted(set(results_df.columns.values).difference(sorted_cols))
     sorted_cols += remaining_cols

@@ -38,6 +38,7 @@ logger = logging.getLogger(__name__)
 
 class BuildStockBatchBase(object):
 
+    # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
     DEFAULT_OS_VERSION = '3.3.0'
     DEFAULT_OS_SHA = 'ad235ff36e'
     CONTAINER_RUNTIME = None
@@ -178,17 +179,31 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
+        results_timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
+        timeseries_filepath = results_timeseries_filepath
+        skiprows = [1]
+        # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
+        if not os.path.isfile(results_timeseries_filepath):
+            enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            timeseries_filepath = enduse_timeseries_filepath
+            skiprows = False
+        schedules_filepath = ''
+        if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
+            for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
+                if file.endswith('schedules.csv'):
+                    schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
             cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
-                logger.error(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
-                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
+                logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
+                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
+            if skiprows:
+                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            else:
+                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
@@ -542,7 +557,14 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+                    do_timeseries = \
+                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
+                            'none')
+        else:
+            do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
         fs = LocalFileSystem()
         if not skip_combine:

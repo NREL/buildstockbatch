@@ -1,5 +1,6 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
+from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
 import pytest
 
@@ -314,6 +315,77 @@ def test_simulation_output(mocker):
     args = osw['steps'][-2]['arguments']
     for argname in ('include_enduse_subcategories',):
         assert(args[argname] != default_args[argname])
+
+
+def test_residential_hpxml(mocker):
+    sim_id = 'bldb1up1'
+    building_id = 1
+    upgrade_idx = 0
+    cfg = {
+        'baseline': {
+            'n_buildings_represented': 100
+        },
+        'workflow_generator': {
+            'type': 'residential_hpxml',
+            'args': {
+                'build_existing_model': {
+                    'simulation_control_run_period_begin_month': 2,
+                    'simulation_control_run_period_begin_day_of_month': 1,
+                    'simulation_control_run_period_end_month': 2,
+                    'simulation_control_run_period_end_day_of_month': 28,
+                    'simulation_control_run_period_calendar_year': 2010,
+                },
+                'simulation_output_report': {
+                    'timeseries_frequency': 'hourly',
+                    'include_timeseries_end_use_consumptions': True,
+                    'include_timeseries_total_loads': True,
+                    'include_timeseries_zone_temperatures': False,
+                }
+            }
+        },
+        'upgrades': [
+            {
+                'options': [
+                    {
+                        'option': 'Parameter|Option',
+                    }
+                ],
+            }
+        ]
+    }
+    n_datapoints = 10
+    osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
+
+    steps = osw['steps']
+    assert(len(steps) == 6)
+
+    build_existing_model_step = steps[0]
+    assert(build_existing_model_step['measure_dir_name'] == 'BuildExistingModel')
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_month'] == 2)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_day_of_month'] == 1)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_month'] == 2)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_day_of_month'] == 28)
+    assert(build_existing_model_step['arguments']['simulation_control_run_period_calendar_year'] == 2010)
+
+    apply_upgrade_step = steps[1]
+    assert(apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade')
+
+    simulation_output_step = steps[2]
+    assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
+    assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
+    assert(simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True)
+    assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
+    assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
+
+    hpxml_output_step = steps[3]
+    assert(hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput')
+
+    upgrade_costs_step = steps[4]
+    assert(upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts')
+
+    server_dir_cleanup_step = steps[5]
+    assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
 
 
 def test_com_default_workflow_generator(mocker):
