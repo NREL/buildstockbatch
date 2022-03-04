@@ -21,6 +21,6 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
             osw['steps'][0]['arguments']['os_hescore_directory'] = '../../OpenStudio-HEScore'
 
         # Add measure path for reporting measure
-        osw['measure_paths'] = ['OpenStudio-HEScore/hpxml-measures'] + osw['measure_paths']
+        osw['measure_paths'].insert(0, 'OpenStudio-HEScore/hpxml-measures')
 
         return osw
