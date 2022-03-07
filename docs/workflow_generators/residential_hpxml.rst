@@ -48,13 +48,13 @@ Arguments
     - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
     - ``wood_value``: Annual emissions factor for wood. Units are lb/MBtu (million Btu).
 
-- ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
-  :ref:`sim-output-report-defaults` for current defaults.
-
 - ``measures`` (optional): Add these optional measures to the end of your workflow.
 
     - ``measure_dir_name``: Name of measure directory.
     - ``arguments``: map of key, value arguments to pass to the measure.
+
+- ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
+  :ref:`sim-output-report-defaults` for current defaults.
 
 - ``reporting_measures`` (optional): a list of reporting measure names to apply
   additional reporting measures (that require no arguments) to the workflow. Any
