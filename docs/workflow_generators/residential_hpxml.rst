@@ -56,12 +56,15 @@ Arguments
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
 
-- ``reporting_measures`` (optional): a list of reporting measure names to apply
-  additional reporting measures (that require no arguments) to the workflow. Any
-  columns reported by these additional measures will be appended to the results
-  csv. Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of
-  reporting measures, doing so will cause run to fail prematurely.
-  ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
+- ``reporting_measures`` (optional): a list of reporting measures to apply
+  to the workflow. Any columns reported by these additional measures will be
+  appended to the results csv. Note: For upgrade runs, do not add
+  ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run
+  to fail prematurely. ``ApplyUpgrade`` is applied automatically when the
+  ``upgrades`` key is supplied.
+
+  - ``measure_dir_name``: Name of measure directory.
+  - ``arguments``: map of key, value arguments to pass to the measure.
 
 - ``server_directory_cleanup`` (optional): optionally preserve or delete
   various simulation output files. These arguments are passed directly to
