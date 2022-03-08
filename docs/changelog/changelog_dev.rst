@@ -16,6 +16,13 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
+        :tags: general, housekeeping
+        :pullreq: 267
+        :tickets: 223
+
+        Migrated CI to GitHub Actions. 
+
+    .. change::
         :tags: workflow
         :pullreq: 208
         :tickets: 
