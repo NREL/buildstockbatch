@@ -18,9 +18,9 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
     def create_osw(self, sim_id, building_id, upgrade_idx):
         osw = super().create_osw(sim_id, building_id, upgrade_idx)
         if 'os_hescore_directory' in osw['steps'][0]['arguments']:
-            osw['steps'][0]['arguments']['os_hescore_directory'] = '../../OpenStudio-HEScore'
+            osw['steps'][0]['arguments']['os_hescore_directory'] = '/opt/OpenStudio-HEScore'
 
         # Add measure path for reporting measure
-        osw['measure_paths'].insert(0, 'OpenStudio-HEScore/hpxml-measures')
+        osw['measure_paths'].insert(0, '/opt/OpenStudio-HEScore/hpxml-measures')
 
         return osw

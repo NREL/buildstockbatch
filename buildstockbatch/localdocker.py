@@ -52,6 +52,22 @@ class DockerBatchBase(BuildStockBatchBase):
 
         self._weather_dir = None
 
+        # FIXME: something better and more general than os_hescore_dir
+        if self.os_hescore_dir:
+            logger.debug("Building HEScore docker image")
+            self.docker_client.images.build(
+                path=self.os_hescore_dir,
+                tag=self.docker_image,
+                dockerfile="resstock/Dockerfile",
+                rm=True
+            )
+            logger.debug("Docker image built")
+        else:
+            try:
+                self.docker_client.images.get(self.docker_image)
+            except ImageNotFound:
+                self.docker_client.images.pull(self.docker_image)
+
     @staticmethod
     def validate_project(project_file):
         super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
@@ -59,9 +75,10 @@ class DockerBatchBase(BuildStockBatchBase):
 
     @property
     def docker_image(self):
-        # FIXME temporary docker image for testing
-        return 'nrel/hescore-hpxml-openstudio'
-        # return 'nrel/openstudio:{}'.format(self.os_version)
+        if self.os_hescore_dir:
+            return 'nrel/hescore-hpxml-openstudio'
+        else:
+            return 'nrel/openstudio:{}'.format(self.os_version)
 
 
 class LocalDockerBatch(DockerBatchBase):
@@ -69,11 +86,6 @@ class LocalDockerBatch(DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
         logger.debug(f'Pulling docker image: {self.docker_image}')
-
-        try:
-            self.docker_client.images.get(self.docker_image)
-        except ImageNotFound:
-            self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
@@ -117,12 +129,9 @@ class LocalDockerBatch(DockerBatchBase):
                 (os.path.join(buildstock_dir, 'resources', 'hpxml-measures'), 'resources/hpxml-measures', 'ro')
             )
 
-        # OS-HEScore measure directories
+        # OS-HEScore weather directory
         if os_hescore_dir and os.path.exists(os_hescore_dir):
-            bind_mounts.extend([
-                (os.path.join(os_hescore_dir), 'OpenStudio-HEScore', 'ro'),
-                (os.path.join(os_hescore_dir, 'hescore-hpxml'), '/opt/hescore-hpxml', 'ro')
-            ])
+            bind_mounts.append((os.path.join(os_hescore_dir, 'weather'), '/opt/OpenStudio-HEScore/weather', 'ro'))
 
         docker_volume_mounts = {
             key: {
