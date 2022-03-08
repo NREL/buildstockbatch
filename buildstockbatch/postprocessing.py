@@ -236,6 +236,7 @@ def read_results_json(fs, filename, all_cols=None):
 
 def get_schema_dict(fs, filename):
     df = read_results_json(fs, filename)
+    df = df.replace('', np.nan) # required to make pa correctly infer the dtypes
     sch = pa.Schema.from_pandas(df)
     sch_dict = {name: type for name, type in zip(sch.names, sch.types)}
     return sch_dict
@@ -318,19 +319,19 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
+    if not results_json_files:
+        raise ValueError("No simulation results found to post-process.")
+
     logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
     all_schema_dict = db.from_sequence(results_json_files).map(partial(get_schema_dict, fs)).\
         fold(lambda x, y: merge_schema_dicts(x, y)).compute()
     logger.info(f"Got {len(all_schema_dict)} columns")
     all_results_cols = list(all_schema_dict.keys())
     all_schema_dict = {to_camelcase(key): value for key, value in all_schema_dict.items()}
-    logger.info(f"Got {all_schema_dict} schema.\n")
-    if results_json_files:
-        delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
-                               for x in results_json_files]
-        results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
-    else:
-        raise ValueError("No simulation results found to post-process.")
+    logger.info(f"Got this schema: {all_schema_dict}\n")
+    delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
+                           for x in results_json_files]
+    results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
 
     if do_timeseries:
         # Look at all the parquet files to see what columns are in all of them.
