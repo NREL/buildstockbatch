@@ -236,7 +236,7 @@ def read_results_json(fs, filename, all_cols=None):
 
 def get_schema_dict(fs, filename):
     df = read_results_json(fs, filename)
-    df = df.replace('', np.nan) # required to make pa correctly infer the dtypes
+    df = df.replace('', np.nan)  # required to make pa correctly infer the dtypes
     sch = pa.Schema.from_pandas(df)
     sch_dict = {name: type for name, type in zip(sch.names, sch.types)}
     return sch_dict
