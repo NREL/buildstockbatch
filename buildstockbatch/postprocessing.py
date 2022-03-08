@@ -331,7 +331,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
     logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
     all_schema_dict = db.from_sequence(results_json_files).map(partial(get_schema_dict, fs)).\
-                                       fold(lambda x, y: merge_schema_dicts(x, y)).compute()
+        fold(lambda x, y: merge_schema_dicts(x, y)).compute()
     logger.info(f"Got {len(all_schema_dict)} columns")
     all_results_cols = list(all_schema_dict.keys())
     if results_json_files:
