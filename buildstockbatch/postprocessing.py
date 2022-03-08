@@ -334,6 +334,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         fold(lambda x, y: merge_schema_dicts(x, y)).compute()
     logger.info(f"Got {len(all_schema_dict)} columns")
     all_results_cols = list(all_schema_dict.keys())
+    all_schema_dict = {to_camelcase(key): value for key, value in all_schema_dict.items()}
+    logger.info(f"Got {all_schema_dict} schema.\n")
     if results_json_files:
         delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
                                for x in results_json_files]
