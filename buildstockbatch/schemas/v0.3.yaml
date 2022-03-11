@@ -104,6 +104,7 @@ cost-spec:
   multiplier: str(required=True)
 
 postprocessing-spec:
+  partition_columns: list(str(), required=False)
   aws: include('aws-postprocessing-spec', required=False)
   keep_individual_timeseries: bool(required=False)
 

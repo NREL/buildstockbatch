@@ -288,6 +288,16 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
+    def validate_postprocessing_spec(project_file):
+        cfg = get_project_configuration(project_file)  # noqa F841
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        partition_cols = cfg.get('postprocessing',{}).get("partition_columns",[])
+        invalid_cols = [c for c in partition_cols if c not in param_option_dict.keys()]
+        if invalid_cols:
+            raise ValidationError(f"The following partition columns are not valid: {invalid_cols}")
+        return True
+
+    @staticmethod
     def validate_xor_nor_schema_keys(project_file):
         cfg = get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
@@ -301,10 +311,7 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
-    def validate_options_lookup(project_file):
-        """
-        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
-        """
+    def get_param_option_dict(project_file):
         cfg = get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
@@ -326,7 +333,15 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
+        return param_option_dict, invalid_options_lookup_str
 
+    @staticmethod
+    def validate_options_lookup(project_file):
+        """
+        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
+        """
+        cfg = get_project_configuration(project_file)
+        param_option_dict, invalid_options_lookup_str = BuildStockBatchBase.get_param_option_dict(project_file)
         invalid_option_spec_counter = Counter()
         invalid_param_counter = Counter()
         invalid_option_counter_dict = defaultdict(Counter)
@@ -420,10 +435,10 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
-        # FIXME: Get this working in new downselect sampler validation.
-        # if 'downselect' in cfg:
-        #     source_str = "In downselect"
-        #     source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler',{}).get('type'):
+            source_str = "In downselect"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            source_option_str_list += get_all_option_str(source_str, logic)
 
         # Gather all the errors in the option_str, if any
         error_message = ''
