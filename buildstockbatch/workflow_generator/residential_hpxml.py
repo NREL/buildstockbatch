@@ -34,6 +34,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
         emissions: list(include('scenario-spec'), required=False)
+        measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
