@@ -270,6 +270,7 @@ def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filename
     grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
     del grouped_df
 
+
 def read_and_concat_bldg_groups(fs, all_cols, path, bldg_id_list):
     dfs = []
     for bldg_id in bldg_id_list:
@@ -277,6 +278,7 @@ def read_and_concat_bldg_groups(fs, all_cols, path, bldg_id_list):
         dfs.append(read_enduse_timeseries_parquet(fs, all_cols, filename))
     grouped_df = pd.concat(dfs)
     return grouped_df
+
 
 def get_null_cols(df):
     sch = pa.Schema.from_pandas(df)
@@ -300,6 +302,7 @@ def correct_schema(cur_schema_dict, df):
                 unresolved.append(col)
     return sch, unresolved
 
+
 def split_into_groups(total_size, max_group_size):
     if total_size == 0:
         return []
@@ -309,8 +312,9 @@ def split_into_groups(total_size, max_group_size):
     remainder = total_size - min_elements_per_group * total_groups
     assert 0 <= remainder < len(split_array)
     for i in range(remainder):
-        split_array[i]+= 1
+        split_array[i] += 1
     return split_array
+
 
 def get_partitioned_bldg_groups(partition_map, partition_columns, files_per_partition):
     """
@@ -328,7 +332,7 @@ def get_partitioned_bldg_groups(partition_map, partition_columns, files_per_part
     bldg_id_list_df = partition_map.reset_index().groupby(partition_columns)['building_id'].apply(list)
     ngroups = len(bldg_id_list_df)
     bldg_id_list = bldg_id_list_df.sum()
-    nfiles_in_each_group = [l for l in bldg_id_list_df.map(lambda x: len(x))]
+    nfiles_in_each_group = [nfiles for nfiles in bldg_id_list_df.map(lambda x: len(x))]
     files_groups = [split_into_groups(n, files_per_partition) for n in nfiles_in_each_group]
     flat_groups = [n for group in files_groups for n in group]
     cum_files_count = np.cumsum(flat_groups)
@@ -338,8 +342,9 @@ def get_partitioned_bldg_groups(partition_map, partition_columns, files_per_part
     for indx in cum_files_count:
         bldg_id_groups.append(bldg_id_list[cur_index:indx])
         cur_index = indx
-    
+
     return bldg_id_groups, bldg_id_list, ngroups
+
 
 def get_bldg_groups(bldg_id_list, files_per_partition):
     """
@@ -358,6 +363,7 @@ def get_bldg_groups(bldg_id_list, files_per_partition):
         cur_index = indx
 
     return bldg_id_groups, bldg_id_list, 1
+
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
@@ -524,11 +530,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                                                                                    partition_columns,
                                                                                    max_files_per_partition)
             else:
-                logger.info(f"Timeseries is not partitioned.")
+                logger.info("Timeseries is not partitioned.")
                 bldg_id_groups, bldg_id_list, ngroup = get_bldg_groups(ts_bldg_ids, max_files_per_partition)
 
-            ts_filenames = [f'{ts_in_dir}/up{upgrade_id:02d}/bldg{bldg_id:07}.parquet' 
-                                for bldg_id in bldg_id_list]
+            ts_filenames = [f'{ts_in_dir}/up{upgrade_id:02d}/bldg{bldg_id:07}.parquet'
+                            for bldg_id in bldg_id_list]
             path = f'{ts_in_dir}/up{upgrade_id:02d}/'
             read_partial = dask.delayed(
                 partial(read_and_concat_bldg_groups, fs, all_ts_cols_sorted, path)
@@ -554,9 +560,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 tmpfilepath = Path(tmpdir, 'dask-report.html')
                 with performance_report(filename=str(tmpfilepath)):
                     full_df.to_parquet(ts_out_loc,
-                                    partition_on=partition_columns,
-                                    write_index=True,
-                                    name_function=lambda i: f"group{i}.parquet")
+                                       partition_on=partition_columns,
+                                       write_index=True,
+                                       name_function=lambda i: f"group{i}.parquet")
                 if tmpfilepath.exists():
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
