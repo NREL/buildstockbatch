@@ -479,7 +479,8 @@ class EagleBatch(BuildStockBatchBase):
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
         memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
         n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 5)
-        print(f"Submitting job to {memory}MB memory nodes using {n_procs} cores in each.")
+        n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
+        print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
@@ -519,7 +520,7 @@ class EagleBatch(BuildStockBatchBase):
             ':',
             '--mem={}'.format(memory),
             '--output=dask_workers.out',
-            '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
+            '--nodes={}'.format(n_workers),
             eagle_post_sh
         ]
 
