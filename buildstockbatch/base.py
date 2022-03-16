@@ -291,7 +291,7 @@ class BuildStockBatchBase(object):
     def validate_postprocessing_spec(project_file):
         cfg = get_project_configuration(project_file)  # noqa F841
         param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
-        partition_cols = cfg.get('postprocessing',{}).get("partition_columns",[])
+        partition_cols = cfg.get('postprocessing', {}).get("partition_columns", [])
         invalid_cols = [c for c in partition_cols if c not in param_option_dict.keys()]
         if invalid_cols:
             raise ValidationError(f"The following partition columns are not valid: {invalid_cols}")
@@ -435,7 +435,7 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
-        if 'downselect' in cfg or "downselect" in cfg.get('sampler',{}).get('type'):
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
             source_str = "In downselect"
             logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
             source_option_str_list += get_all_option_str(source_str, logic)
