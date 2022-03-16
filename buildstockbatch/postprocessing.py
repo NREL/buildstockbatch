@@ -312,23 +312,52 @@ def split_into_groups(total_size, max_group_size):
         split_array[i]+= 1
     return split_array
 
-def get_buildings_and_divisions(partition_map, partition_columns, files_per_partition):
+def get_partitioned_bldg_groups(partition_map, partition_columns, files_per_partition):
+    """
+        Returns intelligent grouping of building_ids by partition columns.
+        1. Group the building_ids by partition columns. For each group, say (CO, Jefferson), we have a list of building
+           ids. The total number of such groups is ngroups
+        2. Concatenate those list to get bldg_id_list, which will have all the bldg_ids but ordered such that that
+           buildings belonging to the same group are close together.
+        3. Split the list of building in each group in 1 to multiple subgroups so that total number of buildings
+           in each group is less than or equal to files_per_partition. This will give the bldg_id_groups (list of list)
+           used to read the dataframe. The buildings within the inner list will be concatenated. len(bldg_id_groups) is
+           equal to number of such concatenation, and eventually, number of output parquet files.
+    """
+    total_building = len(partition_map)
     bldg_id_list_df = partition_map.reset_index().groupby(partition_columns)['building_id'].apply(list)
+    ngroups = len(bldg_id_list_df)
     bldg_id_list = bldg_id_list_df.sum()
     nfiles_in_each_group = [l for l in bldg_id_list_df.map(lambda x: len(x))]
     files_groups = [split_into_groups(n, files_per_partition) for n in nfiles_in_each_group]
     flat_groups = [n for group in files_groups for n in group]
     cum_files_count = np.cumsum(flat_groups)
-    
+    assert cum_files_count[-1] == total_building
     cur_index = 0
     bldg_id_groups = []
     for indx in cum_files_count:
         bldg_id_groups.append(bldg_id_list[cur_index:indx])
         cur_index = indx
     
-    divisions = [0] + list(cum_files_count * 8760)
-    divisions[-1] -= 1
-    return divisions, bldg_id_groups, bldg_id_list, len(bldg_id_list_df)
+    return bldg_id_groups, bldg_id_list, ngroups
+
+def get_bldg_groups(bldg_id_list, files_per_partition):
+    """
+        Similar to get_partitioned_buildings_groups, but without the partition columns. Groups buildings into sub list
+        of max of files_per_partition per group.
+    """
+    bldg_id_list = list(bldg_id_list)
+    total_building = len(bldg_id_list)
+    nfiles_in_each_group = split_into_groups(total_building, files_per_partition)
+    cum_files_count = np.cumsum(nfiles_in_each_group)
+    assert cum_files_count[-1] == total_building
+    bldg_id_groups = []
+    cur_index = 0
+    for indx in cum_files_count:
+        bldg_id_groups.append(bldg_id_list[cur_index:indx])
+        cur_index = indx
+
+    return bldg_id_groups, bldg_id_list, 1
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
@@ -388,7 +417,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             logger.info(f"Got {len(all_ts_cols_sorted)} columns")
             logger.info(f"The columns are: {all_ts_cols_sorted}")
         else:
-            logger.info("There are no timeseries files.")
+            logger.warning("There are no timeseries files for any upgrades.")
             do_timeseries = False
 
     results_df_groups = results_df.groupby('upgrade')
@@ -472,7 +501,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             if not ts_filenames:
                 logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
                 continue
-            logger.warning(f"There are {len(ts_filenames)} timeseries files for upgrade{upgrade_id}.")
+            logger.info(f"There are {len(ts_filenames)} timeseries files for upgrade{upgrade_id}.")
 
             # Calculate the mean and estimate the total memory usage
             read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_ts_cols_sorted)
@@ -486,34 +515,32 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             logger.info(f"Max parquet memory: {parquet_memory} MB")
             npartitions = math.ceil(total_mem / parquet_memory)
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
-            files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
+            max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             ts_bldg_ids = [int(f[-15:-8]) for f in ts_filenames]
             if cum_partition_df is not None:
                 partition_map_up = cum_partition_df.loc[ts_bldg_ids].copy()
                 logger.info(f"partition_map for the upgrade has {len(partition_map_up)} rows.")
-                divisions, bldg_id_groups, bldg_id_list, ngroup = get_buildings_and_divisions(partition_map_up,
-                                                                              partition_columns,
-                                                                              files_per_partition)
-                ts_filenames = [f'{ts_in_dir}/up{upgrade_id:02d}/bldg{bldg_id:07}.parquet' 
-                                    for bldg_id in bldg_id_list]
-                path = f'{ts_in_dir}/up{upgrade_id:02d}/'
-                read_partial = dask.delayed(
-                    partial(read_and_concat_bldg_groups, fs, all_ts_cols_sorted, path)
-                )  
-                full_df = dask.dataframe.from_delayed([read_partial(bldg_id_list) for bldg_id_list in bldg_id_groups])
-                full_df = full_df.join(partition_map_up)
-                logger.info(f"Processing {len(ts_filenames)} building timeseries by combining max of "
-                            f"{files_per_partition} parquets together. This will create {len(divisions) - 1} parquet "
-                            f"partitions which go into {ngroup} column group(s) of {partition_columns}")
+                bldg_id_groups, bldg_id_list, ngroup = get_partitioned_bldg_groups(partition_map_up,
+                                                                                   partition_columns,
+                                                                                   max_files_per_partition)
             else:
-                read_partial = dask.delayed(
-                    partial(read_enduse_timeseries_parquet, fs, all_ts_cols_sorted)
-                ) 
-                logger.info(f"Processing {len(ts_filenames)} building timeseries by combining max of "
-                            f"{files_per_partition} parquets together into {npartitions} parquet partitions."
-                            )
-                full_df = dask.dataframe.from_delayed([read_partial(file) for file in ts_filenames])
-                full_df.repartition(npartitions)
+                logger.info(f"Timeseries is not partitioned.")
+                bldg_id_groups, bldg_id_list, ngroup = get_bldg_groups(ts_bldg_ids, max_files_per_partition)
+
+            ts_filenames = [f'{ts_in_dir}/up{upgrade_id:02d}/bldg{bldg_id:07}.parquet' 
+                                for bldg_id in bldg_id_list]
+            path = f'{ts_in_dir}/up{upgrade_id:02d}/'
+            read_partial = dask.delayed(
+                partial(read_and_concat_bldg_groups, fs, all_ts_cols_sorted, path)
+            )
+            full_df = dask.dataframe.from_delayed([read_partial(bldg_id_list) for bldg_id_list in bldg_id_groups])
+
+            if cum_partition_df is not None:
+                full_df = full_df.join(partition_map_up)
+
+            logger.info(f"Processing {len(ts_filenames)} building timeseries by combining max of "
+                        f"{max_files_per_partition} parquets together. This will create {len(bldg_id_groups)} parquet "
+                        f"partitions which go into {ngroup} column group(s) of {partition_columns}")
 
             if isinstance(fs, LocalFileSystem):
                 ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
@@ -523,33 +550,21 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             fs.makedirs(ts_out_loc)
             logger.info(f'Created directory {ts_out_loc} for writing.')
-            full_df.to_parquet(ts_out_loc,
-                               partition_on=partition_columns)
-            # full_df = dask.dataframe.from_delayed([read_partial(file) for file in ts_filenames]) 
-            # full_df = full_df.repartition(npartitions)
-            # full_df.to_parquet(ts_out_loc)
-            # dask.DataFrame.read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames
-
-            # # Read the timeseries into a dask dataframe
-            # read_and_concat_ts_pq_d = dask.delayed(
-            #     # fs, all_cols, output_dir, filenames, group_id
-            #     partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
-            # )
-            # group_ids = list(range(npartitions))
-            # with tempfile.TemporaryDirectory() as tmpdir:
-            #     tmpfilepath = Path(tmpdir, 'dask-report.html')
-            #     with performance_report(filename=str(tmpfilepath)):
-            #         dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
-            #     if tmpfilepath.exists():
-            #         fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tmpfilepath = Path(tmpdir, 'dask-report.html')
+                with performance_report(filename=str(tmpfilepath)):
+                    full_df.to_parquet(ts_out_loc,
+                                    partition_on=partition_columns,
+                                    write_index=True,
+                                    name_function=lambda i: f"group{i}.parquet")
+                if tmpfilepath.exists():
+                    fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
 
 
 def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False):
     # Remove aggregated files to save space
-    if keep_individual_timeseries:
-        return
     sim_output_dir = f'{results_dir}/simulation_output'
     results_job_json_glob = f'{sim_output_dir}/results_job*.json.gz'
     logger.info('Removing results_job*.json.gz')
