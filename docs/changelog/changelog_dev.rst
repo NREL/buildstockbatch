@@ -28,3 +28,11 @@ Development Changelog
         :tickets: 
 
         Add ``residential_hpxml`` workflow generator.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 271
+        :tickets:
+
+        Postprocessing can correctly handle assortment of upgrades with overlaping set of columns with missing and
+        non-missing values.
