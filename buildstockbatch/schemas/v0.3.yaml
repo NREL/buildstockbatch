@@ -50,6 +50,7 @@ hpc-postprocessing-spec:
   n_procs: enum(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, required=False)
   parquet_memory_mb: int(required=False)
 
+
 sampler-spec:
   type: str(required=True)
   args: map(key=regex(r'^[a-zA-Z_]\w*$', name='valid variable name'), required=False)
@@ -106,6 +107,7 @@ cost-spec:
 
 postprocessing-spec:
   partition_columns: list(str(), required=False)
+  upgrades: list(int, required=False)
   aws: include('aws-postprocessing-spec', required=False)
   keep_individual_timeseries: bool(required=False)
 

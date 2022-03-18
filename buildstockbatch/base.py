@@ -179,14 +179,16 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        results_timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
-        timeseries_filepath = results_timeseries_filepath
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         skiprows = [1]
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
-        if not os.path.isfile(results_timeseries_filepath):
-            enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-            timeseries_filepath = enduse_timeseries_filepath
-            skiprows = False
+        if not os.path.isfile(timeseries_filepath):
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            skiprows = []
+            units_dict = None
+        else:
+            units_dict = pd.read_csv("results_timeseries.csv", nrows=1, header=[0]).transpose().to_dict()[0]
+
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
@@ -200,10 +202,8 @@ class BuildStockBatchBase(object):
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
-            if skiprows:
-                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
-            else:
-                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
+            
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)

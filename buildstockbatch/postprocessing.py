@@ -365,6 +365,19 @@ def get_bldg_groups(bldg_id_list, files_per_partition):
     return bldg_id_groups, bldg_id_list, 1
 
 
+def get_upgrade_list(cfg):
+    upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
+    upgrade_end = len(cfg.get('upgrades', [])) + 1
+    full_upgrade_list = range(upgrade_start, upgrade_end)
+    upgrade_list = cfg.get('postprocessing', {}).get('upgrades', [])
+    upgrade_list = sorted(upgrade_list) or full_upgrade_list
+    for upgrade in upgrade_list:
+        if upgrade not in full_upgrade_list:
+            logger.warning(f"Upgrade {upgrade} specified in the yaml is not valid")
+    upgrade_list = [upgrade for upgrade in upgrade_list if upgrade in full_upgrade_list]
+    return upgrade_list
+
+
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
 
@@ -388,7 +401,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # create the postprocessing results directories
     for dr in dirs:
-        fs.makedirs(dr)
+        fs.makedirs(dr,exist_ok=True)
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
@@ -427,9 +440,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             do_timeseries = False
 
     results_df_groups = results_df.groupby('upgrade')
-    upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
-    upgrade_end = len(cfg.get('upgrades', [])) + 1
-    cum_partition_df = None  # Cumulative map of building_id to patition columns. Updated with info from each upgrade
+    upgrade_list = get_upgrade_list(cfg)
     partition_columns = cfg.get('postprocessing', {}).get('partition_columns', [])
     partition_columns = [c.lower() for c in partition_columns]
     df_partition_columns = [f'build_existing_model.{c}' for c in partition_columns]
@@ -440,7 +451,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f"The following patition columns are not available on the results.json: {missing_cols}")
         logger.info(f"Only using these as the partition column:s {df_partition_columns}")
 
-    for upgrade_id in range(upgrade_start, upgrade_end):
+    logger.info(f"Will postprocess the following upgrades {upgrade_list}")
+    for upgrade_id in upgrade_list:
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
@@ -453,13 +465,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         partition_df = df[df_partition_columns].copy()
         partition_df.rename(columns={df_c: c for df_c, c in zip(df_partition_columns, partition_columns)},
                             inplace=True)
-        if partition_columns and do_timeseries:
-            logger.info("Will partition the timeseries")
-            if cum_partition_df is None:
-                cum_partition_df = partition_df.copy()
-            else:
-                cum_partition_df.update(partition_df)
-
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
             cols_to_keep = list(
@@ -488,8 +493,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             results_parquet_dir = f"{parquet_dir}/baseline"
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
-        if not fs.exists(results_parquet_dir):
-            fs.makedirs(results_parquet_dir)
+
+        fs.makedirs(results_parquet_dir)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         logger.info(f'Writing {parquet_filename}')
         write_dataframe_as_parquet(
@@ -501,7 +506,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
         if do_timeseries:
 
-            # Get the names of the timseries file for each simulation in this upgrade
+            # Get the names of the timeseries file for each simulation in this upgrade
             ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
 
             if not ts_filenames:
@@ -523,10 +528,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             ts_bldg_ids = [int(f[-15:-8]) for f in ts_filenames]
-            if cum_partition_df is not None:
-                partition_map_up = cum_partition_df.loc[ts_bldg_ids].copy()
-                logger.info(f"partition_map for the upgrade has {len(partition_map_up)} rows.")
-                bldg_id_groups, bldg_id_list, ngroup = get_partitioned_bldg_groups(partition_map_up,
+            if partition_columns:
+                partition_df = partition_df.loc[ts_bldg_ids].copy()
+                logger.info(f"partition_df for the upgrade has {len(partition_df)} rows.")
+                bldg_id_groups, bldg_id_list, ngroup = get_partitioned_bldg_groups(partition_df,
                                                                                    partition_columns,
                                                                                    max_files_per_partition)
             else:
@@ -541,8 +546,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             )
             full_df = dask.dataframe.from_delayed([read_partial(bldg_id_list) for bldg_id_list in bldg_id_groups])
 
-            if cum_partition_df is not None:
-                full_df = full_df.join(partition_map_up)
+            if partition_columns:
+                full_df = full_df.join(partition_df)
 
             logger.info(f"Processing {len(ts_filenames)} building timeseries by combining max of "
                         f"{max_files_per_partition} parquets together. This will create {len(bldg_id_groups)} parquet "
