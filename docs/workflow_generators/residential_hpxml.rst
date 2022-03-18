@@ -73,9 +73,9 @@ Arguments
   Note that the default behavior is to retain some files and remove others.
   See :ref:`server-dir-cleanup-defaults` for current defaults.
 
-.. _BuildExistingModel: https://github.com/NREL/resstock/blob/restructure-v3/measures/BuildExistingModel/measure.xml
-.. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/ReportSimulationOutput/measure.xml
-.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/restructure-v3/measures/ServerDirectoryCleanup/measure.xml
+.. _BuildExistingModel: https://github.com/NREL/resstock/blob/develop/measures/BuildExistingModel/measure.xml
+.. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
+.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
 
 .. _build-existing-model-defaults:
 
