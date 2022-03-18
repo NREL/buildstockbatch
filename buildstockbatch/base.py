@@ -180,14 +180,14 @@ class BuildStockBatchBase(object):
         # Convert the timeseries data to parquet
         # and copy it to the results directory
         timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
-        skiprows = [1]
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
-        if not os.path.isfile(timeseries_filepath):
-            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-            skiprows = []
-            units_dict = {}
-        else:
+        if os.path.isfile(timeseries_filepath):
             units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            skiprows = [1]
+        else:
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            units_dict = {}
+            skiprows = []
 
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
@@ -216,8 +216,8 @@ class BuildStockBatchBase(object):
                 Will rename column names like End Use: Natural Gas: Range/Oven to
                 end_use__natural_gas__range_oven__kbtu to play nice with Athena
                 """
-                unit = units_dict.get(x)
-                unit = '' if not isinstance(unit, str) else unit
+                unit = units_dict.get(x)  # missing units (e.g. for time) gets nan
+                unit = unit if isinstance(unit, str) else ''  
                 sepecial_characters = [':', ' ', '/']
                 for char in sepecial_characters:
                     x = x.replace(char, '_')
