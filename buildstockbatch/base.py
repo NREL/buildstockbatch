@@ -187,7 +187,7 @@ class BuildStockBatchBase(object):
             skiprows = []
             units_dict = {}
         else:
-            units_dict = pd.read_csv("results_timeseries.csv", nrows=1).transpose().to_dict()[0]
+            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
 
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
