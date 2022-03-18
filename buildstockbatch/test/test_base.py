@@ -219,13 +219,13 @@ def test_combine_files(basic_residential_project_file):
     test_pq_all = dd.read_parquet(os.path.join(test_path, 'timeseries'), engine='pyarrow')\
         .compute()
 
-    test_pq = test_pq_all[test_pq_all['upgrade']==0].copy().reset_index()
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 0].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
     reference_pq['upgrade'] = test_pq['upgrade'] = 0
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = test_pq_all[test_pq_all['upgrade']==1].copy().reset_index()
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 1].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
     reference_pq['upgrade'] = test_pq['upgrade'] = 1

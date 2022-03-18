@@ -228,11 +228,6 @@ def test_bad_measures_validation(project_file):
         raise Exception("validate_measure_references was supposed to raise ValueError for "
                         "enforce-validate-measures-bad.yml")
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'),
-])
-def test_good_measures_validation(project_file):
-    assert BuildStockBatchBase.validate_measure_references(project_file)
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-options-bad-2.yml'),

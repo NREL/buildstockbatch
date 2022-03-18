@@ -480,7 +480,7 @@ class EagleBatch(BuildStockBatchBase):
         memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
         n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 5)
         n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
-        upgrades_list = self.cfg.get('postprocessing',{}).get('upgrades', [])
+        upgrades_list = self.cfg.get('postprocessing', {}).get('upgrades', [])
         print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
 
