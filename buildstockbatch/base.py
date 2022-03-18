@@ -217,7 +217,7 @@ class BuildStockBatchBase(object):
                 end_use__natural_gas__range_oven__kbtu to play nice with Athena
                 """
                 unit = units_dict.get(x)  # missing units (e.g. for time) gets nan
-                unit = unit if isinstance(unit, str) else ''  
+                unit = unit if isinstance(unit, str) else ''
                 sepecial_characters = [':', ' ', '/']
                 for char in sepecial_characters:
                     x = x.replace(char, '_')
