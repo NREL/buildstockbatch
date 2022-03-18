@@ -185,15 +185,16 @@ class BuildStockBatchBase(object):
         if not os.path.isfile(timeseries_filepath):
             timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
             skiprows = []
-            units_dict = None
+            units_dict = {}
         else:
-            units_dict = pd.read_csv("results_timeseries.csv", nrows=1, header=[0]).transpose().to_dict()[0]
+            units_dict = pd.read_csv("results_timeseries.csv", nrows=1).transpose().to_dict()[0]
 
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
                 if file.endswith('schedules.csv'):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
+
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
@@ -202,13 +203,28 @@ class BuildStockBatchBase(object):
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
-            
+
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
+
+            def get_clean_column_name(x):
+                """"
+                Will rename column names like End Use: Natural Gas: Range/Oven to
+                end_use__natural_gas__range_oven__kbtu to play nice with Athena
+                """
+                unit = units_dict.get(x)
+                unit = '' if not isinstance(unit, str) else unit
+                sepecial_characters = [':', ' ', '/']
+                for char in sepecial_characters:
+                    x = x.replace(char, '_')
+                x = x + "__" + unit if unit else x
+                return x.lower()
+
+            tsdf.rename(columns=get_clean_column_name, inplace=True)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
