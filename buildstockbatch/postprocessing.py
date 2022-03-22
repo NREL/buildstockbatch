@@ -268,7 +268,7 @@ def read_enduse_timeseries_parquet(fs, all_cols, filename):
 
 def concat_and_normalize(fs, all_cols, src_path, dst_path, partition_columns, indx, bldg_ids, partition_vals):
     dfs = []
-    for bldg_id in bldg_ids:
+    for bldg_id in sorted(bldg_ids):
         src_filename = Path(src_path) / f"bldg{bldg_id:07}.parquet"
         df = pd.read_parquet(src_filename, engine='pyarrow')
         for col in set(all_cols).difference(df.columns.values):
@@ -459,7 +459,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     fold(lambda x, y: x.union(y)).compute()
                 logger.info("Collected all the columns")
             else:
-                logger.warning(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
     if do_timeseries:
         # Sort the columns
