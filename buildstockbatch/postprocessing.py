@@ -388,6 +388,7 @@ def get_upgrade_list(cfg):
     upgrade_list = [upgrade for upgrade in upgrade_list if upgrade in full_upgrade_list]
     return upgrade_list
 
+
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
     df = dd.read_parquet(parquet_root_dir)
     sch = pa.Schema.from_pandas(df._meta_nonempty)
@@ -400,6 +401,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
     create_metadata_file(concat_files, root_dir=parquet_root_dir, engine='pyarrow', fs=fs)
     logger.info(f"_metadata file written to {parquet_root_dir}")
+
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
@@ -452,9 +454,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             if ts_filenames:
                 do_timeseries = True
                 logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
-                files_bag =  db.from_sequence(ts_filenames, partition_size=100)
+                files_bag = db.from_sequence(ts_filenames, partition_size=100)
                 all_ts_cols |= files_bag.map(partial(get_cols, fs, upgrade_folder)).\
-                               fold(lambda x, y: x.union(y)).compute()
+                    fold(lambda x, y: x.union(y)).compute()
                 logger.info("Collected all the columns")
             else:
                 logger.warning(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
@@ -469,7 +471,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f"Got {len(all_ts_cols_sorted)} columns in total")
         logger.info(f"The columns are: {all_ts_cols_sorted}")
     else:
-        logger.warning(f"There are no timeseries files for any upgrades.")
+        logger.warning("There are no timeseries files for any upgrades.")
 
     results_df_groups = results_df.groupby('upgrade')
     upgrade_list = get_upgrade_list(cfg)
@@ -591,7 +593,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmpfilepath = Path(tmpdir, 'dask-report.html')
                 with performance_report(filename=str(tmpfilepath)):
-                    dask.compute(map(concat_partial, *zip(*enumerate(bldg_id_groups)), partition_vals_list ))
+                    dask.compute(map(concat_partial, *zip(*enumerate(bldg_id_groups)), partition_vals_list))
                 if tmpfilepath.exists():
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
