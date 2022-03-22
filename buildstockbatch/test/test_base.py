@@ -323,6 +323,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
+    s3_file_path = s3_path + 'timeseries/_common_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_common_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'timeseries/_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
 
 
