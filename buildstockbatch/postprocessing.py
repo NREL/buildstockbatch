@@ -379,14 +379,7 @@ def get_bldg_groups(bldg_id_list, files_per_partition):
 def get_upgrade_list(cfg):
     upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
     upgrade_end = len(cfg.get('upgrades', [])) + 1
-    full_upgrade_list = range(upgrade_start, upgrade_end)
-    upgrade_list = cfg.get('postprocessing', {}).get('upgrades', [])
-    upgrade_list = sorted(upgrade_list) or full_upgrade_list
-    for upgrade in upgrade_list:
-        if upgrade not in full_upgrade_list:
-            logger.warning(f"Upgrade {upgrade} specified in the yaml is not valid")
-    upgrade_list = [upgrade for upgrade in upgrade_list if upgrade in full_upgrade_list]
-    return upgrade_list
+    return list(range(upgrade_start, upgrade_end))
 
 
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
@@ -481,9 +474,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     missing_cols = set(df_partition_columns) - set(all_schema_dict.keys())
 
     if missing_cols:
-        df_partition_columns = list(set(df_partition_columns) - set(missing_cols))
-        logger.info(f"The following patition columns are not available on the results.json: {missing_cols}")
-        logger.info(f"Only using these as the partition column:s {df_partition_columns}")
+        raise ValueError(f"The following partitioning columns are not found in results.json: {missing_cols}")
 
     logger.info(f"Will postprocess the following upgrades {upgrade_list}")
     for upgrade_id in upgrade_list:
@@ -552,13 +543,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
             sample_size = min(len(ts_filenames), 36 * 3)
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames) / 1e6  # total_mem in MB
 
             # Determine how many files should be in each partition and group the files
             parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
-            npartitions = math.ceil(total_mem / parquet_memory)
-            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
             max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             ts_bldg_ids = [int(f[-15:-8]) for f in ts_filenames]
             if partition_columns:

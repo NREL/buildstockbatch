@@ -255,7 +255,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
-        assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         logger.info('Base Validation Successful')
         return True
 
