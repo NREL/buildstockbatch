@@ -23,6 +23,7 @@ Configuration Example
 
         simulation_output_report:
           timeseries_frequency: hourly
+          include_timeseries_total_consumptions: true
           include_timeseries_fuel_consumptions: true
           include_timeseries_end_use_consumptions: true
           include_timeseries_emissions: true
