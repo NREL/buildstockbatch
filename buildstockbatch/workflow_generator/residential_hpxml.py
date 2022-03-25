@@ -88,7 +88,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_begin_day_of_month': 1,
             'simulation_control_run_period_end_month': 12,
             'simulation_control_run_period_end_day_of_month': 31,
-            'simulation_control_run_period_calendar_year': 2007
+            'simulation_control_run_period_calendar_year': 2007,
+            'debug': False,
+            'add_component_loads': False
         }
 
         bld_exist_model_args = {
