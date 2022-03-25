@@ -107,7 +107,6 @@ cost-spec:
 
 postprocessing-spec:
   partition_columns: list(str(), required=False)
-  upgrades: list(int, required=False)
   aws: include('aws-postprocessing-spec', required=False)
   keep_individual_timeseries: bool(required=False)
 
