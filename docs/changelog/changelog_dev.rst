@@ -36,3 +36,11 @@ Development Changelog
 
         Postprocessing can correctly handle assortment of upgrades with overlaping set of columns with missing and
         non-missing values.
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 275
+        :tickets:
+
+        Postprocessing can take partition the data before uploading to s3 and Athena. This allows for faster and cheaper
+        queries.
