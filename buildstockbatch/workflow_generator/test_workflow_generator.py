@@ -337,6 +337,7 @@ def test_residential_hpxml(mocker):
                 },
                 'simulation_output_report': {
                     'timeseries_frequency': 'hourly',
+                    'include_timeseries_total_consumptions': True,
                     'include_timeseries_end_use_consumptions': True,
                     'include_timeseries_total_loads': True,
                     'include_timeseries_zone_temperatures': False,
@@ -374,6 +375,7 @@ def test_residential_hpxml(mocker):
     simulation_output_step = steps[2]
     assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
     assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
+    assert(simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True)
     assert(simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True)
     assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
     assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
