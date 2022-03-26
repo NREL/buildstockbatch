@@ -56,6 +56,8 @@ Arguments
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
 
+  - ``output_variables``: Optionally request EnergyPlus output variables.
+
 - ``reporting_measures`` (optional): a list of reporting measures to apply
   to the workflow. Any columns reported by these additional measures will be
   appended to the results csv. Note: For upgrade runs, do not add
