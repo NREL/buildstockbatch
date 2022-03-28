@@ -28,6 +28,9 @@ Configuration Example
           include_timeseries_end_use_consumptions: true
           include_timeseries_emissions: true
 
+        reporting_measures:
+          - measure_dir_name: QOIReport
+
         server_directory_cleanup:
           retain_in_osm: true
           retain_in_idf: false
@@ -46,7 +49,7 @@ Arguments
   - ``simulation_control_run_period_end_day_of_month``: This numeric field should contain the ending day of the ending month (must be valid for month) for the annual run period desired.
   - ``simulation_control_run_period_calendar_year``: This numeric field should contain the calendar year that determines the start day of week. If you are running simulations using AMY weather files, the value entered for calendar year will not be used; it will be overridden by the actual year found in the AMY weather file.
   - ``debug``: If true: 1) Writes in.osm file, 2) Generates additional log output, and 3) Creates all EnergyPlus output files.
-  - ``add_component_loads``: If true, output the annual component loads.
+  - ``add_component_loads``: If true, output the annual heating/cooling component loads. Using this comes with a small runtime performance penalty.
 
 - ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
 
@@ -68,19 +71,19 @@ Arguments
 
   - ``timeseries_frequency``: The frequency at which to report timeseries output data. Using 'none' will disable timeseries outputs. Valid choices are 'none', 'timestep', 'hourly', 'daily', and 'monthly'.
   - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for building total.
-  - ``include_timeseries_fuel_consumptions``: Generates timeseries energy consumptions for each fuel type.
-  - ``include_timeseries_end_use_consumptions``: Generates timeseries energy consumptions for each end use.
-  - ``include_timeseries_emissions``: Generates timeseries emissions. Requires the appropriate HPXML inputs to be specified.
-  - ``include_timeseries_hot_water_uses``: Generates timeseries hot water usages for each end use.
-  - ``include_timeseries_total_loads``: Generates timeseries total heating, cooling, and hot water loads.
-  - ``include_timeseries_component_loads``: Generates timeseries heating and cooling loads disaggregated by component type.
-  - ``include_timeseries_zone_temperatures``: Generates timeseries temperatures for each thermal zone. 
-  - ``include_timeseries_airflows``: Generates timeseries airflows.
-  - ``include_timeseries_weather``: Generates timeseries weather data.
+  - ``include_timeseries_fuel_consumptions``: Generates timeseries energy consumptions for each fuel type (in kBtu for fossil fuels and kWh for electricity).
+  - ``include_timeseries_end_use_consumptions``: Generates timeseries energy consumptions for each end use type (in kBtu for fossil fuels and kWh for electricity).
+  - ``include_timeseries_emissions``: Generates timeseries emissions (e.g., CO2). Requires the appropriate HPXML inputs to be specified.
+  - ``include_timeseries_hot_water_uses``: Generates timeseries hot water usages for each end use type (in gallons).
+  - ``include_timeseries_total_loads``: Generates timeseries total heating, cooling, and hot water loads (in kBtu) for the building.
+  - ``include_timeseries_component_loads``: Generates timeseries heating and cooling loads (in kBtu) disaggregated by component type (e.g., Walls, Windows, Infiltration, Ducts, etc.).
+  - ``include_timeseries_zone_temperatures``: Generates timeseries average temperatures (in deg-F) for each space modeled (e.g., living space, attic, garage, basement, crawlspace, etc.). 
+  - ``include_timeseries_airflows``: Generates timeseries airflow rates (in cfm) for infiltration, mechanical ventilation (including clothes dryer exhaust), natural ventilation, whole house fans.
+  - ``include_timeseries_weather``: Generates timeseries weather file data including outdoor temperatures, relative humidity, wind speed, and solar.
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
   - ``add_timeseries_utc_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeUTC column. If the time zone UTC offset is not provided in the HPXML file, the time zone in the EPW header will be used.
 
-- ``reporting_measures`` (optional): A list of reporting measures to apply to the workflow.
+- ``reporting_measures`` (optional): A list of additional reporting measures to apply to the workflow.
   Any columns reported by these additional measures will be appended to the results csv.
   Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run to fail prematurely.
   ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
