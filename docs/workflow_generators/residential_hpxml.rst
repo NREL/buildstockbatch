@@ -27,6 +27,8 @@ Configuration Example
           include_timeseries_fuel_consumptions: true
           include_timeseries_end_use_consumptions: true
           include_timeseries_emissions: true
+          output_variables:
+            - name: Zone People Occupant Count
 
         server_directory_cleanup:
           retain_in_osm: true
@@ -57,7 +59,7 @@ Arguments
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
   :ref:`sim-output-report-defaults` for current defaults.
 
-  - ``output_variables``: Optionally request EnergyPlus output variables.
+  - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
 
 - ``reporting_measures`` (optional): a list of reporting measures to apply
   to the workflow. Any columns reported by these additional measures will be
