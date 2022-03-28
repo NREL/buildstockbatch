@@ -8,6 +8,7 @@ import shutil
 import tarfile
 from unittest.mock import patch
 import gzip
+import unittest
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 from buildstockbatch.utils import get_project_configuration
@@ -16,7 +17,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 
 
 @patch('buildstockbatch.eagle.subprocess')
-@pytest.mark.skip
+@unittest.skip
 def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_project_file):
 
     tar_filename = pathlib.Path(__file__).resolve().parent / 'test_results' / 'simulation_output' / 'simulations_job0.tar.gz'  # noqa E501
@@ -85,7 +86,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert(called_kw['input'].decode('utf-8').find(' --measures_only') > -1)
 
 
-@pytest.mark.skip
+@unittest.skip
 def test_singularity_image_download_url(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file()
     with patch.object(EagleBatch, 'weather_dir', None):
@@ -96,7 +97,7 @@ def test_singularity_image_download_url(basic_residential_project_file):
 
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.subprocess')
-@pytest.mark.skip
+@unittest.skip
 def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file,
                   monkeypatch):
     mock_validate_options.return_value = True
@@ -161,7 +162,7 @@ def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_proj
 
 
 @patch('buildstockbatch.eagle.subprocess')
-@pytest.mark.skip
+@unittest.skip
 def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, monkeypatch):
     mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
     mock_subprocess.PIPE = None
@@ -193,7 +194,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
 
 
-@pytest.mark.skip
+@unittest.skip
 def test_run_building_process(mocker,  basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(raw=True)
     results_dir = pathlib.Path(results_dir)
@@ -276,7 +277,7 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     assert unique_buildings == set(local_buildstock_df['Building'])
 
 
-@pytest.mark.skip
+@unittest.skip
 def test_run_building_error_caught(mocker, basic_residential_project_file):
 
     project_filename, results_dir = basic_residential_project_file()
