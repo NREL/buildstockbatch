@@ -86,7 +86,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         bld_exist_model_args = {
             'building_id': building_id,
-            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented']
+            'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints
         }
         if 'measures_to_ignore' in workflow_args:
             bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
