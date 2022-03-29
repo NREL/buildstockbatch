@@ -122,6 +122,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         }
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
+        if 'output_variables' in sim_out_rep_args:
+            output_variables = sim_out_rep_args['output_variables']
+            sim_out_rep_args['user_output_variables'] = ','.join([str(s.get('name')) for s in output_variables])
+            sim_out_rep_args.pop('output_variables')
+
         osw = {
             'id': sim_id,
             'steps': [
