@@ -36,3 +36,10 @@ Development Changelog
 
         Postprocessing can correctly handle assortment of upgrades with overlaping set of columns with missing and
         non-missing values.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 282
+        :tickets:
+
+        Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
