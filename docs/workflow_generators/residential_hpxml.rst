@@ -19,7 +19,7 @@ Configuration Example
             gas_value: 147.3
             propane_value: 177.8
             oil_value: 195.9
-            wood_value: 200.0
+            wood_value: 0.0
 
         simulation_output_report:
           timeseries_frequency: hourly
@@ -27,6 +27,8 @@ Configuration Example
           include_timeseries_fuel_consumptions: true
           include_timeseries_end_use_consumptions: true
           include_timeseries_emissions: true
+          output_variables:
+            - name: Zone People Occupant Count
 
         reporting_measures:
           - measure_dir_name: QOIReport
@@ -82,6 +84,7 @@ Arguments
   - ``include_timeseries_weather``: Generates timeseries weather file data including outdoor temperatures, relative humidity, wind speed, and solar.
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
   - ``add_timeseries_utc_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeUTC column. If the time zone UTC offset is not provided in the HPXML file, the time zone in the EPW header will be used.
+  - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
 
 - ``reporting_measures`` (optional): A list of additional reporting measures to apply to the workflow.
   Any columns reported by these additional measures will be appended to the results csv.
