@@ -34,6 +34,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
         emissions: list(include('scenario-spec'), required=False)
+        measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
@@ -85,7 +86,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         bld_exist_model_args = {
             'building_id': building_id,
-            'sample_weight': self.n_datapoints / self.cfg['baseline']['n_buildings_represented']
+            'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints
         }
         if 'measures_to_ignore' in workflow_args:
             bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
@@ -106,6 +107,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
+            'include_timeseries_total_consumptions': False,
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
             'include_timeseries_emissions': False,
@@ -119,6 +121,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'add_timeseries_utc_column': True
         }
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
+
+        if 'output_variables' in sim_out_rep_args:
+            output_variables = sim_out_rep_args['output_variables']
+            sim_out_rep_args['user_output_variables'] = ','.join([str(s.get('name')) for s in output_variables])
+            sim_out_rep_args.pop('output_variables')
 
         osw = {
             'id': sim_id,

@@ -44,3 +44,11 @@ Development Changelog
 
         Postprocessing can take partition the data before uploading to s3 and Athena. This allows for faster and cheaper
         queries.
+
+    .. change::     
+        :tags: bugfix
+        :pullreq: 282
+        :tickets:
+
+        Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
+

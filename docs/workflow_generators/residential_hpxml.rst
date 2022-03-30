@@ -23,9 +23,12 @@ Configuration Example
 
         simulation_output_report:
           timeseries_frequency: hourly
+          include_timeseries_total_consumptions: true
           include_timeseries_fuel_consumptions: true
           include_timeseries_end_use_consumptions: true
           include_timeseries_emissions: true
+          output_variables:
+            - name: Zone People Occupant Count
 
         server_directory_cleanup:
           retain_in_osm: true
@@ -48,20 +51,25 @@ Arguments
     - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
     - ``wood_value``: Annual emissions factor for wood. Units are lb/MBtu (million Btu).
 
-- ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
-  :ref:`sim-output-report-defaults` for current defaults.
-
 - ``measures`` (optional): Add these optional measures to the end of your workflow.
 
     - ``measure_dir_name``: Name of measure directory.
     - ``arguments``: map of key, value arguments to pass to the measure.
 
-- ``reporting_measures`` (optional): a list of reporting measure names to apply
-  additional reporting measures (that require no arguments) to the workflow. Any
-  columns reported by these additional measures will be appended to the results
-  csv. Note: For upgrade runs, do not add ``ApplyUpgrade`` to the list of
-  reporting measures, doing so will cause run to fail prematurely.
-  ``ApplyUpgrade`` is applied automatically when the ``upgrades`` key is supplied.
+- ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
+  :ref:`sim-output-report-defaults` for current defaults.
+
+  - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
+
+- ``reporting_measures`` (optional): a list of reporting measures to apply
+  to the workflow. Any columns reported by these additional measures will be
+  appended to the results csv. Note: For upgrade runs, do not add
+  ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run
+  to fail prematurely. ``ApplyUpgrade`` is applied automatically when the
+  ``upgrades`` key is supplied.
+
+  - ``measure_dir_name``: Name of measure directory.
+  - ``arguments``: map of key, value arguments to pass to the measure.
 
 - ``server_directory_cleanup`` (optional): optionally preserve or delete
   various simulation output files. These arguments are passed directly to
@@ -70,9 +78,9 @@ Arguments
   Note that the default behavior is to retain some files and remove others.
   See :ref:`server-dir-cleanup-defaults` for current defaults.
 
-.. _BuildExistingModel: https://github.com/NREL/resstock/blob/restructure-v3/measures/BuildExistingModel/measure.xml
-.. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/restructure-v3/resources/hpxml-measures/ReportSimulationOutput/measure.xml
-.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/restructure-v3/measures/ServerDirectoryCleanup/measure.xml
+.. _BuildExistingModel: https://github.com/NREL/resstock/blob/develop/measures/BuildExistingModel/measure.xml
+.. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
+.. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
 
 .. _build-existing-model-defaults:
 
