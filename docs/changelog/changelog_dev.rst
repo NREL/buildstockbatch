@@ -46,3 +46,10 @@ Development Changelog
         queries.
         ``n_procs argument`` is added to ``eagle`` spec to allow users to pick number of CPUs in each node. Default: 18
         ``partition_columns`` argument is added to ``postprocessing`` spec to allow the partitioning. Default: []
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 282
+        :tickets:
+
+        Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
