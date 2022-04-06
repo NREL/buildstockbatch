@@ -419,7 +419,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # create the postprocessing results directories
     for dr in dirs:
-        fs.makedirs(dr, exist_ok=True)
+        fs.makedirs(dr)
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
