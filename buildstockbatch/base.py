@@ -451,6 +451,7 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
+        #  TODO: refactor this into Sampler.validate_args
         if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
             source_str = "In downselect"
             logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
