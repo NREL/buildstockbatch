@@ -45,9 +45,11 @@ hpc-spec:
 
 hpc-postprocessing-spec:
   time: int(required=True)
-  n_workers: int(required=False)
+  n_workers: int(min=1, max=32, required=False)
   node_memory_mb: enum(85248, 180224, 751616, required=False)
-  parquet_memory_mb: int(required=False)
+  n_procs: int(min=1, max=36, required=False)
+  parquet_memory_mb: int(min=100, max=4096, required=False)
+
 
 sampler-spec:
   type: str(required=True)
@@ -104,6 +106,7 @@ cost-spec:
   multiplier: str(required=True)
 
 postprocessing-spec:
+  partition_columns: list(str(), required=False)
   aws: include('aws-postprocessing-spec', required=False)
   keep_individual_timeseries: bool(required=False)
 
