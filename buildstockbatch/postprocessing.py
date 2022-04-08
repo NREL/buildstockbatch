@@ -32,7 +32,6 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
-import os
 
 logger = logging.getLogger(__name__)
 
@@ -216,8 +215,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     return results_df
 
 
-def get_cols(fs, path, filename):
-    filepath = f"{path}/{filename}"
+def get_cols(fs, filepath):
     with fs.open(filepath, 'rb') as f:
         schema = parquet.read_schema(f)
     return set(schema.names)
@@ -388,14 +386,6 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     logger.info(f"_metadata file written to {parquet_root_dir}")
 
 
-def get_files_list(fs, folder_path):
-    if isinstance(fs, LocalFileSystem):
-        filenames = os.listdir(folder_path)  # much faster than fs.glob
-    else:
-        filenames = fs.glob(folder_path + "/")
-    return filenames
-
-
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
 
@@ -443,12 +433,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         do_timeseries = False
         all_ts_cols = set()
         for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
-            ts_filenames = get_files_list(fs, upgrade_folder)
+            ts_filenames = fs.ls(upgrade_folder)
             if ts_filenames:
                 do_timeseries = True
                 logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
                 files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= files_bag.map(partial(get_cols, fs, upgrade_folder)).\
+                all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
                     fold(lambda x, y: x.union(y)).compute()
                 logger.info("Collected all the columns")
             else:
@@ -533,7 +523,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
             ts_upgrade_path = f'{ts_in_dir}/up{upgrade_id:02d}'
-            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in get_files_list(fs, ts_upgrade_path)]
+            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
             ts_bldg_ids = [int(re.search(r'bldg(\d+).parquet', flname).group(1)) for flname in ts_filenames]
             if not ts_filenames:
                 logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
