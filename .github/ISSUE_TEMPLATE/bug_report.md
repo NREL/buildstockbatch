@@ -22,7 +22,7 @@ A clear and concise description of what you expected to happen.
 
 **Logs**
 
-Please copy pertinent sections of log files here (e.g. `sampling.out`, `job.out-*`, `postprocessing.out`, `sinularity-output.log`, etc.)
+Please copy pertinent sections of log files here (e.g. `sampling.out`, `job.out-*`, `postprocessing.out`, `singularity-output.log`, etc.)
 
 ```
 log file here
