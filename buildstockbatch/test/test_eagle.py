@@ -8,7 +8,6 @@ import shutil
 import tarfile
 from unittest.mock import patch
 import gzip
-import unittest
 
 from buildstockbatch.eagle import user_cli, EagleBatch
 from buildstockbatch.utils import get_project_configuration
