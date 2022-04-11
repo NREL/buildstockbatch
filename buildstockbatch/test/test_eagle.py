@@ -262,8 +262,8 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     ts_files = list(refrence_path.glob('**/*.parquet'))
 
     def compare_ts_parquets(source, dst):
-        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index'])
-        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index'])
+        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index']).rename(columns=str.lower)
+        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index']).rename(columns=str.lower)
         pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     for file in ts_files:
