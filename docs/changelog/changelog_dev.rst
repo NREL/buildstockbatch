@@ -38,8 +38,25 @@ Development Changelog
         non-missing values.
 
     .. change::
+        :tags: postprocessing, feature
+        :pullreq: 275
+        :tickets:
+
+        Postprocessing can partition the data before uploading to s3 and Athena. This allows for faster and cheaper
+        queries.
+        ``n_procs argument`` is added to ``eagle`` spec to allow users to pick number of CPUs in each node. Default: 18
+        ``partition_columns`` argument is added to ``postprocessing`` spec to allow the partitioning. Default: []
+
+    .. change::
         :tags: bugfix
         :pullreq: 282
         :tickets:
 
         Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 281
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.4.0.

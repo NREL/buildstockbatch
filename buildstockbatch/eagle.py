@@ -96,7 +96,12 @@ class EagleBatch(BuildStockBatchBase):
 
     @property
     def singularity_image_url(self):
-        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+        if '-' in self.os_version:
+            prefix_ver = self.os_version.split('-')[0]
+        else:
+            prefix_ver = self.os_version
+        return 'https://s3.amazonaws.com/openstudio-builds/{prefix_ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                    prefix_ver=prefix_ver,
                     ver=self.os_version,
                     sha=self.os_sha
                 )
@@ -478,8 +483,11 @@ class EagleBatch(BuildStockBatchBase):
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
         memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
-        print(f"Submitting job to {memory}MB memory nodes.")
+        n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 18)
+        n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
+        print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
+
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
                 subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
@@ -503,6 +511,7 @@ class EagleBatch(BuildStockBatchBase):
         env['OUT_DIR'] = self.output_dir
         env['UPLOADONLY'] = str(upload_only)
         env['MEMORY'] = str(memory)
+        env['NPROCS'] = str(n_procs)
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
@@ -510,14 +519,14 @@ class EagleBatch(BuildStockBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY,NPROCS',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
             ':',
             '--mem={}'.format(memory),
             '--output=dask_workers.out',
-            '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
+            '--nodes={}'.format(n_workers),
             eagle_post_sh
         ]
 

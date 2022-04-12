@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.3.0'
-    DEFAULT_OS_SHA = 'ad235ff36e'
+    DEFAULT_OS_VERSION = '3.4.0-rc1'
+    DEFAULT_OS_SHA = 'fb391396ca'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -179,19 +179,22 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        results_timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
-        timeseries_filepath = results_timeseries_filepath
-        skiprows = [1]
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
-        if not os.path.isfile(results_timeseries_filepath):
-            enduse_timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-            timeseries_filepath = enduse_timeseries_filepath
-            skiprows = False
+        if os.path.isfile(timeseries_filepath):
+            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            skiprows = [1]
+        else:
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            units_dict = {}
+            skiprows = []
+
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
                 if file.endswith('schedules.csv'):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
+
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
@@ -200,15 +203,28 @@ class BuildStockBatchBase(object):
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
-            if skiprows:
-                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
-            else:
-                tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
+
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
+
+            def get_clean_column_name(x):
+                """"
+                Will rename column names like End Use: Natural Gas: Range/Oven to
+                end_use__natural_gas__range_oven__kbtu to play nice with Athena
+                """
+                unit = units_dict.get(x)  # missing units (e.g. for time) gets nan
+                unit = unit if isinstance(unit, str) else ''
+                sepecial_characters = [':', ' ', '/']
+                for char in sepecial_characters:
+                    x = x.replace(char, '_')
+                x = x + "__" + unit if unit else x
+                return x.lower()
+
+            tsdf.rename(columns=get_clean_column_name, inplace=True)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
@@ -239,7 +255,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
-        assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -288,6 +304,16 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
+    def validate_postprocessing_spec(project_file):
+        cfg = get_project_configuration(project_file)  # noqa F841
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        partition_cols = cfg.get('postprocessing', {}).get("partition_columns", [])
+        invalid_cols = [c for c in partition_cols if c not in param_option_dict.keys()]
+        if invalid_cols:
+            raise ValidationError(f"The following partition columns are not valid: {invalid_cols}")
+        return True
+
+    @staticmethod
     def validate_xor_nor_schema_keys(project_file):
         cfg = get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
@@ -301,10 +327,7 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
-    def validate_options_lookup(project_file):
-        """
-        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
-        """
+    def get_param_option_dict(project_file):
         cfg = get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
@@ -326,7 +349,15 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
+        return param_option_dict, invalid_options_lookup_str
 
+    @staticmethod
+    def validate_options_lookup(project_file):
+        """
+        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
+        """
+        cfg = get_project_configuration(project_file)
+        param_option_dict, invalid_options_lookup_str = BuildStockBatchBase.get_param_option_dict(project_file)
         invalid_option_spec_counter = Counter()
         invalid_param_counter = Counter()
         invalid_option_counter_dict = defaultdict(Counter)
@@ -420,10 +451,11 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
-        # FIXME: Get this working in new downselect sampler validation.
-        # if 'downselect' in cfg:
-        #     source_str = "In downselect"
-        #     source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
+        #  TODO: refactor this into Sampler.validate_args
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
+            source_str = "In downselect"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            source_option_str_list += get_all_option_str(source_str, logic)
 
         # Gather all the errors in the option_str, if any
         error_message = ''

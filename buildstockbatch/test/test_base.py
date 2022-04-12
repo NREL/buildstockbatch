@@ -216,16 +216,19 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     # timeseries parquet
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq_all = dd.read_parquet(os.path.join(test_path, 'timeseries'), engine='pyarrow')\
+        .compute()
+
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 0].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 0
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 1].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 1
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
@@ -317,6 +320,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
 
     s3_file_path = s3_path + 'timeseries/upgrade=1/group0.parquet'
     source_file_path = os.path.join(source_path, 'timeseries', 'upgrade=1', 'group0.parquet')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'timeseries/_common_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_common_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'timeseries/_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
