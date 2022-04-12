@@ -53,3 +53,10 @@ Development Changelog
         :tickets:
 
         Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 281
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.4.0.
