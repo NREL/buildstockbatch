@@ -162,6 +162,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
           'retain_eplusout_rdd': False,
           'retain_eplusout_shd': False,
           'retain_eplusout_sql': False,
+          'retain_eplusout_msgpack': False,
           'retain_eplustbl_htm': False,
           'retain_sqlite_err': False,
           'retain_stdout_energyplus': False,
