@@ -71,6 +71,7 @@ setuptools.setup(
         'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
+        'jinja2<3.1.0'
     ],
     extras_require={
         'dev': [
