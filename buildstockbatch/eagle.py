@@ -54,7 +54,7 @@ class EagleBatch(BuildStockBatchBase):
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2
 
-    local_scratch = pathlib.Path(os.environ['LOCAL_SCRATCH'])
+    local_scratch = pathlib.Path(os.environ.get('LOCAL_SCRATCH', '/tmp/scratch'))
     local_project_dir = local_scratch / 'project'
     local_buildstock_dir = local_scratch / 'buildstock'
     local_weather_dir = local_scratch / 'weather'
@@ -343,7 +343,7 @@ class EagleBatch(BuildStockBatchBase):
             ]
 
             # Create a temporary directory for the simulation to use
-            with tempfile.TemporaryDirectory(dir=os.environ['LOCAL_SCRATCH'], prefix=f"{sim_id}_") as tmpdir:
+            with tempfile.TemporaryDirectory(dir=cls.local_scratch, prefix=f"{sim_id}_") as tmpdir:
 
                 # Build the command to instantiate and configure the singularity container the simulation is run inside
                 local_resources_dir = cls.local_buildstock_dir / 'resources'
