@@ -588,25 +588,27 @@ class BuildStockBatchBase(object):
     @staticmethod
     def validate_resstock_version(project_file):
         """
-        Check
+        Checks the minimum required version of BuildStockBatch against the version being used
         """
         cfg = get_project_configuration(project_file)
 
-        versions = {}
-        with open(os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb'), 'r') as f:
-            for line in f:
-                line = line.strip()
-                for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
-                    if line.startswith(tool):
-                        lhs, rhs = line.split('=')
-                        version, _ = rhs.split('#')
-                        versions[tool] = eval(version.strip())
-        ResStock_Version = versions['ResStock_Version']
-        BuildStockBatch_Version = versions['BuildStockBatch_Version']
-        if bsb_version < BuildStockBatch_Version:
-            val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
-                f" for ResStock version {ResStock_Version}"
-            raise ValidationError(val_err)
+        buildstock_rb = os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb')
+        if os.path.exists(buildstock_rb):
+            versions = {}
+            with open(buildstock_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            ResStock_Version = versions['ResStock_Version']
+            BuildStockBatch_Version = versions['BuildStockBatch_Version']
+            if bsb_version < BuildStockBatch_Version:
+                val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
+                    f" for ResStock version {ResStock_Version}"
+                raise ValidationError(val_err)
 
         return True
 
