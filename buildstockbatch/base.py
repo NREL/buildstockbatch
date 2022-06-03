@@ -604,7 +604,9 @@ class BuildStockBatchBase(object):
         ResStock_Version = versions['ResStock_Version']
         BuildStockBatch_Version = versions['BuildStockBatch_Version']
         if bsb_version < BuildStockBatch_Version:
-            raise ValidationError(f"BuildStockBatch version {BuildStockBatch_Version} or above is required for ResStock version {ResStock_Version}")
+            val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
+                f" for ResStock version {ResStock_Version}"
+            raise ValidationError(val_err)
 
         return True
 
