@@ -32,6 +32,7 @@ from buildstockbatch import (
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
 from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +257,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
+        assert(BuildStockBatchBase.validate_resstock_version(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -582,6 +584,29 @@ class BuildStockBatchBase(object):
             logger.warning(warning_string)
 
         return True  # Only print the warning, but always pass the validation
+
+    @staticmethod
+    def validate_resstock_version(project_file):
+        """
+        Check
+        """
+        cfg = get_project_configuration(project_file)
+
+        versions = {}
+        with open(os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb'), 'r') as f:
+            for line in f:
+                line = line.strip()
+                for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                    if line.startswith(tool):
+                        lhs, rhs = line.split('=')
+                        version, _ = rhs.split('#')
+                        versions[tool] = eval(version.strip())
+        ResStock_Version = versions['ResStock_Version']
+        BuildStockBatch_Version = versions['BuildStockBatch_Version']
+        if bsb_version < BuildStockBatch_Version:
+            raise ValidationError(f"BuildStockBatch version {BuildStockBatch_Version} or above is required for ResStock version {ResStock_Version}")
+
+        return True
 
     def get_dask_client(self):
         return Client()
