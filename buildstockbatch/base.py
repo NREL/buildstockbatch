@@ -620,8 +620,10 @@ class BuildStockBatchBase(object):
         """
         cfg = get_project_configuration(project_file)
 
-        version_rb = os.path.join(cfg['buildstock_directory'],
-            'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb')
+        if not 'os_version' in cfg:
+            return True
+        version_path = 'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb'
+        version_rb = os.path.join(cfg['buildstock_directory'], version_path)
         if os.path.exists(version_rb):
             versions = {}
             with open(version_rb, 'r') as f:
