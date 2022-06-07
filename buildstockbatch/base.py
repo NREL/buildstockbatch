@@ -258,6 +258,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         assert(BuildStockBatchBase.validate_resstock_version(project_file))
+        assert(BuildStockBatchBase.validate_openstudio_version(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -608,6 +609,31 @@ class BuildStockBatchBase(object):
             if bsb_version < BuildStockBatch_Version:
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
                     f" for ResStock version {ResStock_Version}"
+                raise ValidationError(val_err)
+
+        return True
+
+    @staticmethod
+    def validate_openstudio_version(project_file):
+        """
+        Checks the required version of OpenStudio against the version being used
+        """
+        cfg = get_project_configuration(project_file)
+
+        version_rb = os.path.join(cfg['buildstock_directory'], 'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb')
+        if os.path.exists(version_rb):
+            versions = {}
+            with open(version_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['OS_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            OS_Version = versions['OS_Version']
+            if cfg['os_version'] != OS_Version:
+                val_err = f"OS version {OS_Version} is required"
                 raise ValidationError(val_err)
 
         return True
