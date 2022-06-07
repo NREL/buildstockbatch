@@ -608,7 +608,7 @@ class BuildStockBatchBase(object):
             BuildStockBatch_Version = versions['BuildStockBatch_Version']
             if bsb_version < BuildStockBatch_Version:
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
-                    f" for ResStock version {ResStock_Version}"
+                    f" for ResStock version {ResStock_Version}. Found {bsb_version}"
                 raise ValidationError(val_err)
 
         return True
@@ -620,8 +620,7 @@ class BuildStockBatchBase(object):
         """
         cfg = get_project_configuration(project_file)
 
-        if 'os_version' not in cfg:
-            return True
+        os_version = cfg.get('os_version', BuildStockBatchBase.DEFAULT_OS_VERSION)
         version_path = 'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb'
         version_rb = os.path.join(cfg['buildstock_directory'], version_path)
         if os.path.exists(version_rb):
@@ -629,14 +628,16 @@ class BuildStockBatchBase(object):
             with open(version_rb, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    for tool in ['OS_Version']:
+                    for tool in ['OS_HPXML_Version', 'OS_Version']:
                         if line.startswith(tool):
                             lhs, rhs = line.split('=')
                             version, _ = rhs.split('#')
                             versions[tool] = eval(version.strip())
+            OS_HPXML_Version = versions['OS_HPXML_Version']
             OS_Version = versions['OS_Version']
-            if cfg['os_version'] != OS_Version:
-                val_err = f"OS version {OS_Version} is required"
+            if os_version != OS_Version:
+                val_err = f"OS version {OS_Version} is required" \
+                    f" for OS-HPXML version {OS_HPXML_Version}. Found {os_version}"
                 raise ValidationError(val_err)
 
         return True
