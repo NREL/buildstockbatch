@@ -563,7 +563,7 @@ class BuildStockBatchBase(object):
         if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
             source_str = "in downselect logic"
             logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
-            if problems := get_logic_problems(upgrade['package_apply_logic']):
+            if problems := get_logic_problems(logic):
                 all_problems.append((source_str, problems, logic))
 
         if all_problems:
