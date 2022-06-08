@@ -32,6 +32,7 @@ from buildstockbatch import (
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
 from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -256,6 +257,8 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
+        assert(BuildStockBatchBase.validate_resstock_version(project_file))
+        assert(BuildStockBatchBase.validate_openstudio_version(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -582,6 +585,62 @@ class BuildStockBatchBase(object):
             logger.warning(warning_string)
 
         return True  # Only print the warning, but always pass the validation
+
+    @staticmethod
+    def validate_resstock_version(project_file):
+        """
+        Checks the minimum required version of BuildStockBatch against the version being used
+        """
+        cfg = get_project_configuration(project_file)
+
+        buildstock_rb = os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb')
+        if os.path.exists(buildstock_rb):
+            versions = {}
+            with open(buildstock_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            ResStock_Version = versions['ResStock_Version']
+            BuildStockBatch_Version = versions['BuildStockBatch_Version']
+            if bsb_version < BuildStockBatch_Version:
+                val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
+                    f" for ResStock version {ResStock_Version}. Found {bsb_version}"
+                raise ValidationError(val_err)
+
+        return True
+
+    @staticmethod
+    def validate_openstudio_version(project_file):
+        """
+        Checks the required version of OpenStudio against the version being used
+        """
+        cfg = get_project_configuration(project_file)
+
+        os_version = cfg.get('os_version', BuildStockBatchBase.DEFAULT_OS_VERSION)
+        version_path = 'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb'
+        version_rb = os.path.join(cfg['buildstock_directory'], version_path)
+        if os.path.exists(version_rb):
+            versions = {}
+            with open(version_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['OS_HPXML_Version', 'OS_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            OS_HPXML_Version = versions['OS_HPXML_Version']
+            OS_Version = versions['OS_Version']
+            if os_version != OS_Version:
+                val_err = f"OS version {OS_Version} is required" \
+                    f" for OS-HPXML version {OS_HPXML_Version}. Found {os_version}"
+                raise ValidationError(val_err)
+
+        return True
 
     def get_dask_client(self):
         return Client()

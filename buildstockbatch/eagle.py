@@ -37,6 +37,7 @@ import csv
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
 from buildstockbatch import postprocessing
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -379,6 +380,8 @@ class EagleBatch(BuildStockBatchBase):
                 str(cls.local_singularity_img),
                 'bash', '-x'
             ])
+            env_vars = dict(os.environ)
+            env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
             logger.debug('\n'.join(map(str, args)))
             with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
                 try:
@@ -388,7 +391,8 @@ class EagleBatch(BuildStockBatchBase):
                         input='\n'.join(runscript).encode('utf-8'),
                         stdout=f_out,
                         stderr=subprocess.STDOUT,
-                        cwd=cls.local_output_dir
+                        cwd=cls.local_output_dir,
+                        env=env_vars,
                     )
                 except subprocess.CalledProcessError:
                     pass
