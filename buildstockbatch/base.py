@@ -23,6 +23,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict, Counter
+import pprint
 
 from buildstockbatch.__version__ import __schema_version__
 from buildstockbatch import (
@@ -254,6 +255,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_apply_logic(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         logger.info('Base Validation Successful')
@@ -498,6 +500,79 @@ class BuildStockBatchBase(object):
         else:
             logger.error(error_message)
             raise ValueError(error_message)
+
+    @staticmethod
+    def validate_apply_logic(project_file):
+        """
+        Validates that the apply logic has basic consistency.
+        Currently checks the following rules:
+        1. A 'and' block or a 'not' block doesn't contain two identical options entry. For example, the following is an
+        invalid block because no building can have both of those characteristics.
+        not:
+           - HVAC Heating Efficiency|ASHP, SEER 10, 6.2 HSPF
+           - HVAC Heating Efficiency|ASHP, SEER 13, 7.7 HSPF
+        """
+        cfg = get_project_configuration(project_file)
+
+        printer = pprint.PrettyPrinter()
+
+        def get_option(element):
+            return element.split('|')[0] if isinstance(element, str) else None
+
+        def get_logic_problems(logic, parent=None):
+            if isinstance(logic, list):
+                all_options = [opt for el in logic if (opt := get_option(el))]
+                problems = []
+                if parent in ['not', 'and', None]:
+                    for opt, count in Counter(all_options).items():
+                        if count > 1:
+                            parent_name = parent or 'and'
+                            problem_text = f"Option '{opt}' occurs {count} times in a '{parent_name}' block. "\
+                                f"It should occur at max one times. This is the block:\n{printer.pformat(logic)}"
+                            if parent is None:
+                                problem_text += "\nRemember a list without a parent is considered an 'and' block."
+                            problems.append(problem_text)
+                for el in logic:
+                    problems += get_logic_problems(el)
+                return problems
+            elif isinstance(logic, dict):
+                assert len(logic) == 1
+                for key, val in logic.items():
+                    return get_logic_problems(val, parent=key)
+            else:
+                return []
+
+        all_problems = []
+        if 'upgrades' in cfg:
+            for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                upgrade_name = upgrade.get('upgrade_name', '')
+                source_str_upgrade = f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
+                for option_count, option in enumerate(upgrade['options']):
+                    option_name = option.get('option', '')
+                    source_str_option = source_str_upgrade + f", option '{option_name}' (Option Number:{option_count})"
+                    if 'apply_logic' in option:
+                        if problems := get_logic_problems(option['apply_logic']):
+                            all_problems.append((source_str_option, problems, option['apply_logic']))
+
+                if 'package_apply_logic' in upgrade:
+                    source_str_package = source_str_upgrade + ", in package_apply_logic"
+                    if problems := get_logic_problems(upgrade['package_apply_logic']):
+                        all_problems.append((source_str_package, problems, upgrade['package_apply_logic']))
+
+        #  TODO: refactor this into Sampler.validate_args
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
+            source_str = "in downselect logic"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            if problems := get_logic_problems(upgrade['package_apply_logic']):
+                all_problems.append((source_str, problems, logic))
+
+        if all_problems:
+            for location, problems, logic in all_problems:
+                logger.error(f"There are following problems in {location} with this logic\n{printer.pformat(logic)}")
+                problem_str = "\n".join(problems)
+                logger.error(f"The problems are:\n{problem_str}")
+        else:
+            return True
 
     @staticmethod
     def validate_measure_references(project_file):
