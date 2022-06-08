@@ -60,3 +60,10 @@ Development Changelog
         :tickets:
 
         For ResStock the OpenStudio version has changed to v3.4.0.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 295
+        :tickets:
+
+        Add basic logic validation that checks for incorrect use of 'and' and 'not' block.
