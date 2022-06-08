@@ -255,7 +255,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
-        assert(BuildStockBatchBase.validate_apply_logic(project_file))
+        assert(BuildStockBatchBase.validate_logic(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         logger.info('Base Validation Successful')
@@ -430,7 +430,7 @@ class BuildStockBatchBase(object):
                             in enumerate(inp)], [])
             elif type(inp) == dict:
                 if len(inp) > 1:
-                    raise ValueError(f"{source_str} the logic is malformed.")
+                    raise ValidationError(f"{source_str} the logic is malformed. Dict can't have more than one entry")
                 source_str += f", in {list(inp.keys())[0]}"
                 return sum([get_all_option_str(source_str, i) for i in inp.values()], [])
 
@@ -499,10 +499,10 @@ class BuildStockBatchBase(object):
             return True
         else:
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
 
     @staticmethod
-    def validate_apply_logic(project_file):
+    def validate_logic(project_file):
         """
         Validates that the apply logic has basic consistency.
         Currently checks the following rules:
@@ -523,7 +523,7 @@ class BuildStockBatchBase(object):
             if isinstance(logic, list):
                 all_options = [opt for el in logic if (opt := get_option(el))]
                 problems = []
-                if parent in ['not', 'and', None]:
+                if parent in ['not', 'and', None, '&&']:
                     for opt, count in Counter(all_options).items():
                         if count > 1:
                             parent_name = parent or 'and'
@@ -538,9 +538,16 @@ class BuildStockBatchBase(object):
             elif isinstance(logic, dict):
                 assert len(logic) == 1
                 for key, val in logic.items():
+                    if key not in ['or', 'and', 'not']:
+                        raise ValidationError(f"Invalid key {key}. Only 'or', 'and' and 'not' is allowed.")
                     return get_logic_problems(val, parent=key)
+            elif isinstance(logic, str):
+                if '&&' not in logic:
+                    return []
+                entries = logic.split('&&')
+                return get_logic_problems(entries, parent="&&")
             else:
-                return []
+                raise ValidationError(f"Invalid logic element {logic} with type {type(logic)}")
 
         all_problems = []
         if 'upgrades' in cfg:
@@ -567,10 +574,12 @@ class BuildStockBatchBase(object):
                 all_problems.append((source_str, problems, logic))
 
         if all_problems:
+            error_str = ''
             for location, problems, logic in all_problems:
-                logger.error(f"There are following problems in {location} with this logic\n{printer.pformat(logic)}")
+                error_str += f"There are following problems in {location} with this logic\n{printer.pformat(logic)}\n"
                 problem_str = "\n".join(problems)
-                logger.error(f"The problems are:\n{problem_str}")
+                error_str += f"The problems are:\n{problem_str}\n"
+            raise ValidationError(error_str)
         else:
             return True
 
@@ -628,7 +637,7 @@ class BuildStockBatchBase(object):
         else:
             error_message = 'Measure name(s)/directory(ies) is(are) invalid. \n' + error_message
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
 
     @staticmethod
     def validate_reference_scenario(project_file):

@@ -12,14 +12,16 @@ upgrades:
           - or:
             - Insulation Slab|Good Option
             - Insulation Slab|None
-          - not: Insulation Wall|Good Option
+          - not: 
+            - Insulation Wall|Good Option
+            - Insulation Wall|Good Option  # Two Insulation Wall under 'not'. Should be caught by logic validator
           - and:
               - Vintage|1960s||Vintage|1960s
-              - Vintage|1980s
+              - Vintage|1980s  # Two Vintages under and. Should be caught by logic validator
       - option: Insulation Finished Basement|Good Option
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
-    package_apply_logic: Vintage|1960s||Vintage|1940s
+    package_apply_logic: Vintage|1960s&&Vintage|1940s  # Two Vintages under 'and'. Should be caught by logic validator
 downselect:
   logic: Vintage|2000s
   resample: False
