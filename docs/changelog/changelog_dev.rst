@@ -67,3 +67,4 @@ Development Changelog
         :tickets:
 
         Add basic logic validation that checks for incorrect use of 'and' and 'not' block.
+        BSB requires at least python 3.8.
