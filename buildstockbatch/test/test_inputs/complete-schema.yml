@@ -72,7 +72,7 @@ upgrades:
             - Lighting|100% LED, Low Efficacy
           - not: Lighting|100% CFL
           - not: Geometry Garage|3 Car
-          - and:
+          - or:
             - Lighting|60% CFL Hardwired, 34% CFL Plugin
             - Lighting|60% LED Hardwired, 34% CFL Plugin
           - Geometry Stories|1

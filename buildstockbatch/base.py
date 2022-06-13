@@ -23,6 +23,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict, Counter
+import pprint
 
 from buildstockbatch.__version__ import __schema_version__
 from buildstockbatch import (
@@ -255,6 +256,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_logic(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
         assert(BuildStockBatchBase.validate_resstock_version(project_file))
@@ -431,7 +433,7 @@ class BuildStockBatchBase(object):
                             in enumerate(inp)], [])
             elif type(inp) == dict:
                 if len(inp) > 1:
-                    raise ValueError(f"{source_str} the logic is malformed.")
+                    raise ValidationError(f"{source_str} the logic is malformed. Dict can't have more than one entry")
                 source_str += f", in {list(inp.keys())[0]}"
                 return sum([get_all_option_str(source_str, i) for i in inp.values()], [])
 
@@ -500,7 +502,89 @@ class BuildStockBatchBase(object):
             return True
         else:
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
+
+    @staticmethod
+    def validate_logic(project_file):
+        """
+        Validates that the apply logic has basic consistency.
+        Currently checks the following rules:
+        1. A 'and' block or a 'not' block doesn't contain two identical options entry. For example, the following is an
+        invalid block because no building can have both of those characteristics.
+        not:
+           - HVAC Heating Efficiency|ASHP, SEER 10, 6.2 HSPF
+           - HVAC Heating Efficiency|ASHP, SEER 13, 7.7 HSPF
+        """
+        cfg = get_project_configuration(project_file)
+
+        printer = pprint.PrettyPrinter()
+
+        def get_option(element):
+            return element.split('|')[0] if isinstance(element, str) else None
+
+        def get_logic_problems(logic, parent=None):
+            if isinstance(logic, list):
+                all_options = [opt for el in logic if (opt := get_option(el))]
+                problems = []
+                if parent in ['not', 'and', None, '&&']:
+                    for opt, count in Counter(all_options).items():
+                        if count > 1:
+                            parent_name = parent or 'and'
+                            problem_text = f"Option '{opt}' occurs {count} times in a '{parent_name}' block. "\
+                                f"It should occur at max one times. This is the block:\n{printer.pformat(logic)}"
+                            if parent is None:
+                                problem_text += "\nRemember a list without a parent is considered an 'and' block."
+                            problems.append(problem_text)
+                for el in logic:
+                    problems += get_logic_problems(el)
+                return problems
+            elif isinstance(logic, dict):
+                assert len(logic) == 1
+                for key, val in logic.items():
+                    if key not in ['or', 'and', 'not']:
+                        raise ValidationError(f"Invalid key {key}. Only 'or', 'and' and 'not' is allowed.")
+                    return get_logic_problems(val, parent=key)
+            elif isinstance(logic, str):
+                if '&&' not in logic:
+                    return []
+                entries = logic.split('&&')
+                return get_logic_problems(entries, parent="&&")
+            else:
+                raise ValidationError(f"Invalid logic element {logic} with type {type(logic)}")
+
+        all_problems = []
+        if 'upgrades' in cfg:
+            for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                upgrade_name = upgrade.get('upgrade_name', '')
+                source_str_upgrade = f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
+                for option_count, option in enumerate(upgrade['options']):
+                    option_name = option.get('option', '')
+                    source_str_option = source_str_upgrade + f", option '{option_name}' (Option Number:{option_count})"
+                    if 'apply_logic' in option:
+                        if problems := get_logic_problems(option['apply_logic']):
+                            all_problems.append((source_str_option, problems, option['apply_logic']))
+
+                if 'package_apply_logic' in upgrade:
+                    source_str_package = source_str_upgrade + ", in package_apply_logic"
+                    if problems := get_logic_problems(upgrade['package_apply_logic']):
+                        all_problems.append((source_str_package, problems, upgrade['package_apply_logic']))
+
+        #  TODO: refactor this into Sampler.validate_args
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
+            source_str = "in downselect logic"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            if problems := get_logic_problems(logic):
+                all_problems.append((source_str, problems, logic))
+
+        if all_problems:
+            error_str = ''
+            for location, problems, logic in all_problems:
+                error_str += f"There are following problems in {location} with this logic\n{printer.pformat(logic)}\n"
+                problem_str = "\n".join(problems)
+                error_str += f"The problems are:\n{problem_str}\n"
+            raise ValidationError(error_str)
+        else:
+            return True
 
     @staticmethod
     def validate_measure_references(project_file):
@@ -556,7 +640,7 @@ class BuildStockBatchBase(object):
         else:
             error_message = 'Measure name(s)/directory(ies) is(are) invalid. \n' + error_message
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
 
     @staticmethod
     def validate_reference_scenario(project_file):
