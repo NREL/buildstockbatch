@@ -383,7 +383,7 @@ def test_residential_hpxml(mocker):
     assert(simulation_output_step['arguments']['include_timeseries_emission_end_uses'] is False)
     assert(simulation_output_step['arguments']['include_timeseries_hot_water_uses'] is False)
     assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
-    assert(simulation_output_step['arguments']['include_timeseries_component_loads'] is True)
+    assert(simulation_output_step['arguments']['include_timeseries_component_loads'] is False)
     assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
     assert(simulation_output_step['arguments']['include_timeseries_airflows'] is False)
     assert(simulation_output_step['arguments']['include_timeseries_weather'] is False)
