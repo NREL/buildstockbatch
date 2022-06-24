@@ -222,3 +222,19 @@ epub_exclude_files = ['search.html']
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+# -- Ignore warnings ---------------------------------------------------------
+
+# Ignore reference targets not found
+nitpick_ignore = [
+  ('py:func', 'BuildStockBatchBase.validate_precomputed_sample'),
+  ('py:func', 'BuildStockBatchBase.validate_xor_nor_schema_keys'),
+  ('py:func', 'EagleBatch.run_building'),
+  ('py:class', 'sampler.CommercialSobolSingularitySampler'),
+  ('py:class', 'sampler.CommercialSobolDockerSampler'),
+  ('py:class', 'workflow_generator.CommercialDefaultWorkflowGenerator'),
+  ('py:class', 'sampler.PrecomputedSampler'),
+  ('py:class', 'sampler.BuildStockSampler'),
+  ('py:class', 'BuildStockBatchBase'),
+  ('py:func', 'BuildStockBatchBase.run_sampling')
+]
