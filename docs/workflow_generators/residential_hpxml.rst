@@ -39,7 +39,7 @@ Arguments
 ~~~~~~~~~
 
 - ``build_existing_model``: Update the simulation control arguments to the `BuildExistingModel`_ measure. See
-  :ref:`build-existing-model-defaults` for current defaults.
+  :ref:`hpxml-build-existing-model-defaults` for current defaults.
 
 - ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
 
@@ -57,7 +57,7 @@ Arguments
     - ``arguments``: map of key, value arguments to pass to the measure.
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure. See
-  :ref:`sim-output-report-defaults` for current defaults.
+  :ref:`hpxml-sim-output-report-defaults` for current defaults.
 
   - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
 
@@ -76,13 +76,13 @@ Arguments
   the `ServerDirectoryCleanup`_ measure in resstock. Please refer to the
   measure arguments there to determine what to set them to in your config file.
   Note that the default behavior is to retain some files and remove others.
-  See :ref:`server-dir-cleanup-defaults` for current defaults.
+  See :ref:`hpxml-server-dir-cleanup-defaults` for current defaults.
 
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/develop/measures/BuildExistingModel/measure.xml
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
 .. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
 
-.. _build-existing-model-defaults:
+.. _hpxml-build-existing-model-defaults:
 
 Build Existing Model Defaults
 .............................
@@ -92,7 +92,7 @@ Build Existing Model Defaults
    :start-after: sim_ctl_args = {
    :end-before: }
 
-.. _sim-output-report-defaults:
+.. _hpxml-sim-output-report-defaults:
 
 Simulation Output Report Defaults
 ..................................
@@ -102,7 +102,7 @@ Simulation Output Report Defaults
    :start-after: sim_out_rep_args = {
    :end-before: }
 
-.. _server-dir-cleanup-defaults:
+.. _hpxml-server-dir-cleanup-defaults:
 
 Server Directory Cleanup Defaults
 .................................
