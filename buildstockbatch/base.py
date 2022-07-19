@@ -16,6 +16,7 @@ from fsspec.implementations.local import LocalFileSystem
 import logging
 import os
 import pandas as pd
+import numpy as np
 import requests
 import shutil
 import tempfile
@@ -164,7 +165,23 @@ class BuildStockBatchBase(object):
         return sim_id, sim_dir
 
     @staticmethod
-    def cleanup_sim_dir(sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
+    def make_period_beginning(df):
+        step = df['time'].iloc[1] - df['time'].iloc[0]
+        if 'timedst' in df.columns:
+            diff = df['timedst'] - df['time']
+            offset_diff = np.array([0] + list(diff.values)[:-1])
+            df['time'] = df['time'] - step
+            df['timedst'] = df['time'] + np.array(offset_diff)
+        else:
+            df['time'] = df['time'] - step
+
+        if 'timeutc' in df.columns:
+            df['timeutc'] = df['timeutc'] - step
+
+        return df
+
+    @staticmethod
+    def cleanup_sim_dir(cfg, sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
         """Clean up the output directory for a single simulation.
 
         :param sim_dir: simulation directory
@@ -227,6 +244,8 @@ class BuildStockBatchBase(object):
                 return x.lower()
 
             tsdf.rename(columns=get_clean_column_name, inplace=True)
+            if cfg.get("postprocessing", {}).get("timestamps_uses_period_beginning", False):
+                BuildStockBatchBase.make_period_beginning(tsdf)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,

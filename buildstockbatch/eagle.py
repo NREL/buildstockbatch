@@ -406,6 +406,7 @@ class EagleBatch(BuildStockBatchBase):
 
                     # Clean up simulation directory
                     cls.cleanup_sim_dir(
+                        cfg,
                         sim_dir,
                         fs,
                         f'{output_dir}/results/simulation_output/timeseries',

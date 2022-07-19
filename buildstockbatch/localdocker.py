@@ -152,6 +152,7 @@ class LocalDockerBatch(DockerBatchBase):
 
         fs = LocalFileSystem()
         cls.cleanup_sim_dir(
+            cfg,
             sim_dir,
             fs,
             f"{results_dir}/simulation_output/timeseries",

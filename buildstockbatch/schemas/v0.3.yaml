@@ -109,6 +109,7 @@ postprocessing-spec:
   partition_columns: list(str(), required=False)
   aws: include('aws-postprocessing-spec', required=False)
   keep_individual_timeseries: bool(required=False)
+  timestamps_uses_period_beginning: bool(required=False)
 
 aws-postprocessing-spec:
   region_name: str(required=False)

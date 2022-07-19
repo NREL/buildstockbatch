@@ -2063,6 +2063,7 @@ class AwsBatch(DockerBatchBase):
 
                 # Clean Up simulation directory
                 cls.cleanup_sim_dir(
+                    cfg,
                     sim_dir,
                     fs,
                     f"{bucket}/{prefix}/results/simulation_output/timeseries",
