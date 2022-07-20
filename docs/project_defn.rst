@@ -264,6 +264,9 @@ The configuration options for postprocessing and AWS upload are:
       must match the parameters found in options_lookup.tsv. This allows for efficient athena queries. Only recommended
       for moderate or large sized runs (ndatapoints > 10K)
 
+    * ``timestamps_use_period_beginning``: (optional, bool) Set this to ``true`` to use the period beginning timestamps.
+      Default is ``false``.
+
     * ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to
        work, please `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.

@@ -68,3 +68,10 @@ Development Changelog
 
         Add basic logic validation that checks for incorrect use of 'and' and 'not' block.
         BSB requires at least python 3.8.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 301
+        :tickets:
+
+        Add ``timestamps_use_period_beginning`` argument to postprocessing spec.
