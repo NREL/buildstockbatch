@@ -171,7 +171,7 @@ class BuildStockBatchBase(object):
             diff = df['timedst'] - df['time']
             offset_diff = np.array([0] + list(diff.values)[:-1])
             df['time'] = df['time'] - step
-            df['timedst'] = df['time'] + np.array(offset_diff)
+            df['timedst'] = df['time'] + offset_diff
         else:
             df['time'] = df['time'] - step
 
@@ -244,7 +244,7 @@ class BuildStockBatchBase(object):
                 return x.lower()
 
             tsdf.rename(columns=get_clean_column_name, inplace=True)
-            if cfg.get("postprocessing", {}).get("timestamps_uses_period_beginning", False):
+            if cfg.get("postprocessing", {}).get("timestamps_use_period_beginning", False):
                 BuildStockBatchBase.make_period_beginning(tsdf)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
