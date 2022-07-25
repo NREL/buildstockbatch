@@ -63,14 +63,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         workflow_args = self.cfg['workflow_generator'].get('args', {})
         return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
 
-    def create_osw(self, sim_id, building_id, hpxml_path, output_dir, upgrade_idx):
+    def create_osw(self, sim_id, building_id, upgrade_idx):
         """
         Generate and return the osw as a python dict
 
         :param sim_id: simulation id, looks like 'bldg0000001up01'
         :param building_id: integer building id to use from the sampled buildstock.csv
-        :param hpxml_path: HPXMLtoOpenStudio argument for location of HPXML file
-        :param output_dir: HPXMLtoOpenStudio argument for location of run directory
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         # Default argument values
@@ -177,8 +175,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             {
                 'measure_dir_name': 'HPXMLtoOpenStudio',
                 'arguments': {
-                    'hpxml_path': hpxml_path,
-                    'output_dir': output_dir
+                    'hpxml_path': '../../../run/in.xml',
+                    'output_dir': '../../../run'
                 }
             },
             {
