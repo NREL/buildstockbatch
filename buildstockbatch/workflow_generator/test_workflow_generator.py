@@ -359,7 +359,7 @@ def test_residential_hpxml(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw['steps']
-    assert(len(steps) == 6)
+    assert(len(steps) == 7)
 
     build_existing_model_step = steps[0]
     assert(build_existing_model_step['measure_dir_name'] == 'BuildExistingModel')
