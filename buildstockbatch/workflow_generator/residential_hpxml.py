@@ -181,7 +181,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             {
                 'measure_dir_name': 'HPXMLtoOpenStudio',
                 'arguments': {
-                    'hpxml_path': '../../../run/in.xml',
+                    'hpxml_path': '../../../run/home.xml',
                     'output_dir': '../../../run',
                     'debug': debug
                 }
