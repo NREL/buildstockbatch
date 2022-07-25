@@ -372,7 +372,10 @@ def test_residential_hpxml(mocker):
     apply_upgrade_step = steps[1]
     assert(apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade')
 
-    simulation_output_step = steps[2]
+    apply_upgrade_step = steps[2]
+    assert(apply_upgrade_step['measure_dir_name'] == 'HPXMLtoOpenStudio')
+
+    simulation_output_step = steps[3]
     assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
     assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
     assert(simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True)
@@ -390,13 +393,13 @@ def test_residential_hpxml(mocker):
     assert(simulation_output_step['arguments']['add_timeseries_dst_column'] is True)
     assert(simulation_output_step['arguments']['add_timeseries_utc_column'] is True)
 
-    hpxml_output_step = steps[3]
+    hpxml_output_step = steps[4]
     assert(hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput')
 
-    upgrade_costs_step = steps[4]
+    upgrade_costs_step = steps[5]
     assert(upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts')
 
-    server_dir_cleanup_step = steps[5]
+    server_dir_cleanup_step = steps[6]
     assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
 
 
