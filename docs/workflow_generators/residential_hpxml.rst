@@ -35,6 +35,8 @@ Configuration Example
           retain_in_idf: false
           retain_eplusout_rdd: true
 
+        debug: false
+
 Arguments
 ~~~~~~~~~
 
@@ -61,7 +63,7 @@ Arguments
 
   - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
 
-- ``reporting_measures`` (optional): a list of reporting measures to apply
+- ``reporting_measures`` (optional): A list of reporting measures to apply
   to the workflow. Any columns reported by these additional measures will be
   appended to the results csv. Note: For upgrade runs, do not add
   ``ApplyUpgrade`` to the list of reporting measures, doing so will cause run
@@ -71,12 +73,17 @@ Arguments
   - ``measure_dir_name``: Name of measure directory.
   - ``arguments``: map of key, value arguments to pass to the measure.
 
-- ``server_directory_cleanup`` (optional): optionally preserve or delete
+- ``server_directory_cleanup`` (optional): Optionally preserve or delete
   various simulation output files. These arguments are passed directly to
   the `ServerDirectoryCleanup`_ measure in resstock. Please refer to the
   measure arguments there to determine what to set them to in your config file.
   Note that the default behavior is to retain some files and remove others.
   See :ref:`server-dir-cleanup-defaults` for current defaults.
+
+- ``debug`` (optional): Optionally enable debug mode. Enabling debug
+  mode will preserve all simulation input and output files, including but
+  not limited to: in.osm, all EnergyPlus output files, and intermediate
+  existing and upgraded files (e.g., OSWs and XMLs).
 
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/develop/measures/BuildExistingModel/measure.xml
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
