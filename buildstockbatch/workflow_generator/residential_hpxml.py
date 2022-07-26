@@ -31,7 +31,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
-        measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
         emissions: list(include('scenario-spec'), required=False)
         measures: list(include('measure-spec'), required=False)
@@ -83,14 +82,21 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
-        sim_ctl_args = {}
+        sim_ctl_args = {
+            'simulation_control_timestep': 60,
+            'simulation_control_run_period_begin_month': 1,
+            'simulation_control_run_period_begin_day_of_month': 1,
+            'simulation_control_run_period_end_month': 12,
+            'simulation_control_run_period_end_day_of_month': 31,
+            'simulation_control_run_period_calendar_year': 2007,
+            'add_component_loads': False
+        }
 
         bld_exist_model_args = {
             'building_id': building_id,
             'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints
         }
-        if 'measures_to_ignore' in workflow_args:
-            bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
+
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
