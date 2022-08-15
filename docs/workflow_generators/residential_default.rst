@@ -1,5 +1,5 @@
-Residential Workflow Generator
-------------------------------
+Residential Default Workflow Generator
+--------------------------------------
 
 Configuration Example
 ~~~~~~~~~~~~~~~~~~~~~

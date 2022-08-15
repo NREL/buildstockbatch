@@ -1,0 +1,11 @@
+[run]
+    omit =
+        buildstockbatch/aws/*
+        buildstockbatch/sampler/sobol_lib.py
+        buildstockbatch/sampler/commercial_sobol.py
+
+[html]
+    directory = coverage/htmlreport
+
+[xml]
+    output = coverage/coverage.xml

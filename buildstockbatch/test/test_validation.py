@@ -93,7 +93,8 @@ def test_validation_integration(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True):
+            patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
+            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True):
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)
@@ -145,7 +146,7 @@ def test_bad_measures(project_file):
             assert "Found unexpected argument key include_enduse_subcategory" in er
 
         else:
-            raise Exception("measures_and_arguments was supposed to raise ValueError for"
+            raise Exception("measures_and_arguments was supposed to raise ValidationError for"
                             " enforce-validate-measures-bad.yml")
 
 
@@ -171,18 +172,21 @@ def test_bad_path_options_validation(project_file):
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-options-good.yml'),
+    os.path.join(example_yml_dir, 'enforce-validate-options-good-2.yml'),
 ])
 def test_good_options_validation(project_file):
     assert BuildStockBatchBase.validate_options_lookup(project_file)
+    assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-options-bad.yml'),
+    os.path.join(example_yml_dir, 'enforce-validate-options-bad-2.yml'),
 ])
 def test_bad_options_validation(project_file):
     try:
         BuildStockBatchBase.validate_options_lookup(project_file)
-    except ValueError as er:
+    except ValidationError as er:
         er = str(er)
         assert "Insulation Slab(Good) Option" in er
         assert "Insulation Unfinished&Basement" in er
@@ -214,7 +218,7 @@ def test_good_measures_validation(project_file):
 def test_bad_measures_validation(project_file):
     try:
         BuildStockBatchBase.validate_measure_references(project_file)
-    except ValueError as er:
+    except ValidationError as er:
         er = str(er)
         assert "Measure directory" in er
         assert "not found" in er
@@ -224,3 +228,38 @@ def test_bad_measures_validation(project_file):
     else:
         raise Exception("validate_measure_references was supposed to raise ValueError for "
                         "enforce-validate-measures-bad.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-bad-2.yml'),
+])
+def test_bad_postprocessing_spec_validation(project_file):
+    try:
+        BuildStockBatchBase.validate_postprocessing_spec(project_file)
+    except ValidationError as er:
+        er = str(er)
+        assert "bad_partition_column" in er
+    else:
+        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-bad-2.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-good.yml')
+])
+def test_logic_validation_fail(project_file):
+    try:
+        BuildStockBatchBase.validate_logic(project_file)
+    except ValidationError as er:
+        er = str(er)
+        assert "'Insulation Wall' occurs 2 times in a 'not' block" in er
+        assert "'Vintage' occurs 2 times in a 'and' block" in er
+        assert "'Vintage' occurs 2 times in a '&&' block" in er
+    else:
+        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
+
+
+@pytest.mark.parametrize("project_file", [
+    os.path.join(example_yml_dir, 'enforce-validate-options-all-good.yml')
+])
+def test_logic_validation_pass(project_file):
+    BuildStockBatchBase.validate_logic(project_file)

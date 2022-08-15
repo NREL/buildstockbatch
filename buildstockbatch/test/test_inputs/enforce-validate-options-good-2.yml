@@ -1,0 +1,44 @@
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+schema_version: '0.3'
+weather_files_url: https://fake-url
+sampler:
+  type: residential_quota_downselect
+  args:
+    n_datapoints: 12345
+    logic: Vintage|2000s
+    resample: False
+
+baseline:
+  n_buildings_represented: 81221016
+
+upgrades:
+  - upgrade_name: good upgrade
+    options:
+      - option: Vintage|<1940
+        apply_logic:
+          - or:
+            - Insulation Slab|Good Option
+            - Insulation Slab|None
+          - not: Insulation Wall|Good Option
+          - and:
+              - Vintage|1960s||Vintage|1960s
+              - Vintage|1980s
+      - option: Insulation Finished Basement|Good Option
+        apply_logic:
+          - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1960s||Vintage|1940s
+
+postprocessing:
+  partition_columns:
+    - State
+    - County
+  aws:
+    region_name: "us-west-2"
+    s3:
+      bucket: some-bucket
+      prefix: some-prefix
+    athena:
+      glue_service_role: service-role/AWSGlueServiceRole-default
+      database_name: buildstock_testing
+      max_crawling_time: 1200
