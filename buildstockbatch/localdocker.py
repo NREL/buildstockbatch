@@ -31,6 +31,7 @@ import tempfile
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
 from .utils import log_error_details, ContainerRuntime
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,9 @@ class LocalDockerBatch(DockerBatchBase):
             (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
             (weather_dir, 'weather', 'ro')
         ]
+        if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
+            bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
+                            'resources/hpxml-measures', 'ro')]
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
@@ -123,6 +127,10 @@ class LocalDockerBatch(DockerBatchBase):
         ]
         if measures_only:
             args.insert(2, '--measures_only')
+
+        env_vars = {}
+        env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
+
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
@@ -132,6 +140,7 @@ class LocalDockerBatch(DockerBatchBase):
             remove=True,
             volumes=docker_volume_mounts,
             name=sim_id,
+            environment=env_vars,
             **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:

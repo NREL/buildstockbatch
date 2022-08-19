@@ -23,6 +23,7 @@ import yamale
 import zipfile
 import csv
 from collections import defaultdict, Counter
+import pprint
 
 from buildstockbatch.__version__ import __schema_version__
 from buildstockbatch import (
@@ -32,14 +33,16 @@ from buildstockbatch import (
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
 from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
 
 class BuildStockBatchBase(object):
 
-    DEFAULT_OS_VERSION = '2.9.1'
-    DEFAULT_OS_SHA = '3472e8b799'
+    # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
+    DEFAULT_OS_VERSION = '3.4.0'
+    DEFAULT_OS_SHA = '4bd816f785'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -178,22 +181,52 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
-        schedules_filepath = os.path.join(sim_dir, 'generated_files', 'schedules.csv')
+        timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
+        # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
+        if os.path.isfile(timeseries_filepath):
+            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            skiprows = [1]
+        else:
+            timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
+            units_dict = {}
+            skiprows = []
+
+        schedules_filepath = ''
+        if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
+            for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
+                if file.endswith('schedules.csv'):
+                    schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
+
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
             cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
-                logger.error(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
-                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in enduse_timeseries.csv.')
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols)
+                logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
+                raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
+
+            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
                 schedules = pd.read_csv(schedules_filepath)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
+
+            def get_clean_column_name(x):
+                """"
+                Will rename column names like End Use: Natural Gas: Range/Oven to
+                end_use__natural_gas__range_oven__kbtu to play nice with Athena
+                """
+                unit = units_dict.get(x)  # missing units (e.g. for time) gets nan
+                unit = unit if isinstance(unit, str) else ''
+                sepecial_characters = [':', ' ', '/']
+                for char in sepecial_characters:
+                    x = x.replace(char, '_')
+                x = x + "__" + unit if unit else x
+                return x.lower()
+
+            tsdf.rename(columns=get_clean_column_name, inplace=True)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
@@ -223,8 +256,11 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
         assert(BuildStockBatchBase.validate_reference_scenario(project_file))
         assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_logic(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
-        assert(BuildStockBatchBase.validate_options_lookup(project_file))
+        assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
+        assert(BuildStockBatchBase.validate_resstock_version(project_file))
+        assert(BuildStockBatchBase.validate_openstudio_version(project_file))
         logger.info('Base Validation Successful')
         return True
 
@@ -273,6 +309,16 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
+    def validate_postprocessing_spec(project_file):
+        cfg = get_project_configuration(project_file)  # noqa F841
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        partition_cols = cfg.get('postprocessing', {}).get("partition_columns", [])
+        invalid_cols = [c for c in partition_cols if c not in param_option_dict.keys()]
+        if invalid_cols:
+            raise ValidationError(f"The following partition columns are not valid: {invalid_cols}")
+        return True
+
+    @staticmethod
     def validate_xor_nor_schema_keys(project_file):
         cfg = get_project_configuration(project_file)
         major, minor = cfg.get('version', __schema_version__).split('.')
@@ -286,10 +332,7 @@ class BuildStockBatchBase(object):
         return True
 
     @staticmethod
-    def validate_options_lookup(project_file):
-        """
-        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
-        """
+    def get_param_option_dict(project_file):
         cfg = get_project_configuration(project_file)
         param_option_dict = defaultdict(set)
         buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
@@ -311,7 +354,15 @@ class BuildStockBatchBase(object):
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
+        return param_option_dict, invalid_options_lookup_str
 
+    @staticmethod
+    def validate_options_lookup(project_file):
+        """
+        Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
+        """
+        cfg = get_project_configuration(project_file)
+        param_option_dict, invalid_options_lookup_str = BuildStockBatchBase.get_param_option_dict(project_file)
         invalid_option_spec_counter = Counter()
         invalid_param_counter = Counter()
         invalid_option_counter_dict = defaultdict(Counter)
@@ -382,7 +433,7 @@ class BuildStockBatchBase(object):
                             in enumerate(inp)], [])
             elif type(inp) == dict:
                 if len(inp) > 1:
-                    raise ValueError(f"{source_str} the logic is malformed.")
+                    raise ValidationError(f"{source_str} the logic is malformed. Dict can't have more than one entry")
                 source_str += f", in {list(inp.keys())[0]}"
                 return sum([get_all_option_str(source_str, i) for i in inp.values()], [])
 
@@ -405,10 +456,11 @@ class BuildStockBatchBase(object):
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
                     source_option_str_list += get_all_option_str(source_str_package, upgrade['package_apply_logic'])
 
-        # FIXME: Get this working in new downselect sampler validation.
-        # if 'downselect' in cfg:
-        #     source_str = "In downselect"
-        #     source_option_str_list += get_all_option_str(source_str, cfg['downselect']['logic'])
+        #  TODO: refactor this into Sampler.validate_args
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
+            source_str = "In downselect"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            source_option_str_list += get_all_option_str(source_str, logic)
 
         # Gather all the errors in the option_str, if any
         error_message = ''
@@ -450,7 +502,89 @@ class BuildStockBatchBase(object):
             return True
         else:
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
+
+    @staticmethod
+    def validate_logic(project_file):
+        """
+        Validates that the apply logic has basic consistency.
+        Currently checks the following rules:
+        1. A 'and' block or a 'not' block doesn't contain two identical options entry. For example, the following is an
+        invalid block because no building can have both of those characteristics.
+        not:
+           - HVAC Heating Efficiency|ASHP, SEER 10, 6.2 HSPF
+           - HVAC Heating Efficiency|ASHP, SEER 13, 7.7 HSPF
+        """
+        cfg = get_project_configuration(project_file)
+
+        printer = pprint.PrettyPrinter()
+
+        def get_option(element):
+            return element.split('|')[0] if isinstance(element, str) else None
+
+        def get_logic_problems(logic, parent=None):
+            if isinstance(logic, list):
+                all_options = [opt for el in logic if (opt := get_option(el))]
+                problems = []
+                if parent in ['not', 'and', None, '&&']:
+                    for opt, count in Counter(all_options).items():
+                        if count > 1:
+                            parent_name = parent or 'and'
+                            problem_text = f"Option '{opt}' occurs {count} times in a '{parent_name}' block. "\
+                                f"It should occur at max one times. This is the block:\n{printer.pformat(logic)}"
+                            if parent is None:
+                                problem_text += "\nRemember a list without a parent is considered an 'and' block."
+                            problems.append(problem_text)
+                for el in logic:
+                    problems += get_logic_problems(el)
+                return problems
+            elif isinstance(logic, dict):
+                assert len(logic) == 1
+                for key, val in logic.items():
+                    if key not in ['or', 'and', 'not']:
+                        raise ValidationError(f"Invalid key {key}. Only 'or', 'and' and 'not' is allowed.")
+                    return get_logic_problems(val, parent=key)
+            elif isinstance(logic, str):
+                if '&&' not in logic:
+                    return []
+                entries = logic.split('&&')
+                return get_logic_problems(entries, parent="&&")
+            else:
+                raise ValidationError(f"Invalid logic element {logic} with type {type(logic)}")
+
+        all_problems = []
+        if 'upgrades' in cfg:
+            for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                upgrade_name = upgrade.get('upgrade_name', '')
+                source_str_upgrade = f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
+                for option_count, option in enumerate(upgrade['options']):
+                    option_name = option.get('option', '')
+                    source_str_option = source_str_upgrade + f", option '{option_name}' (Option Number:{option_count})"
+                    if 'apply_logic' in option:
+                        if problems := get_logic_problems(option['apply_logic']):
+                            all_problems.append((source_str_option, problems, option['apply_logic']))
+
+                if 'package_apply_logic' in upgrade:
+                    source_str_package = source_str_upgrade + ", in package_apply_logic"
+                    if problems := get_logic_problems(upgrade['package_apply_logic']):
+                        all_problems.append((source_str_package, problems, upgrade['package_apply_logic']))
+
+        #  TODO: refactor this into Sampler.validate_args
+        if 'downselect' in cfg or "downselect" in cfg.get('sampler', {}).get('type'):
+            source_str = "in downselect logic"
+            logic = cfg['downselect']['logic'] if 'downselect' in cfg else cfg['sampler']['args']['logic']
+            if problems := get_logic_problems(logic):
+                all_problems.append((source_str, problems, logic))
+
+        if all_problems:
+            error_str = ''
+            for location, problems, logic in all_problems:
+                error_str += f"There are following problems in {location} with this logic\n{printer.pformat(logic)}\n"
+                problem_str = "\n".join(problems)
+                error_str += f"The problems are:\n{problem_str}\n"
+            raise ValidationError(error_str)
+        else:
+            return True
 
     @staticmethod
     def validate_measure_references(project_file):
@@ -506,7 +640,7 @@ class BuildStockBatchBase(object):
         else:
             error_message = 'Measure name(s)/directory(ies) is(are) invalid. \n' + error_message
             logger.error(error_message)
-            raise ValueError(error_message)
+            raise ValidationError(error_message)
 
     @staticmethod
     def validate_reference_scenario(project_file):
@@ -536,13 +670,76 @@ class BuildStockBatchBase(object):
 
         return True  # Only print the warning, but always pass the validation
 
+    @staticmethod
+    def validate_resstock_version(project_file):
+        """
+        Checks the minimum required version of BuildStockBatch against the version being used
+        """
+        cfg = get_project_configuration(project_file)
+
+        buildstock_rb = os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb')
+        if os.path.exists(buildstock_rb):
+            versions = {}
+            with open(buildstock_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            ResStock_Version = versions['ResStock_Version']
+            BuildStockBatch_Version = versions['BuildStockBatch_Version']
+            if bsb_version < BuildStockBatch_Version:
+                val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
+                    f" for ResStock version {ResStock_Version}. Found {bsb_version}"
+                raise ValidationError(val_err)
+
+        return True
+
+    @staticmethod
+    def validate_openstudio_version(project_file):
+        """
+        Checks the required version of OpenStudio against the version being used
+        """
+        cfg = get_project_configuration(project_file)
+
+        os_version = cfg.get('os_version', BuildStockBatchBase.DEFAULT_OS_VERSION)
+        version_path = 'resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb'
+        version_rb = os.path.join(cfg['buildstock_directory'], version_path)
+        if os.path.exists(version_rb):
+            versions = {}
+            with open(version_rb, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    for tool in ['OS_HPXML_Version', 'OS_Version']:
+                        if line.startswith(tool):
+                            lhs, rhs = line.split('=')
+                            version, _ = rhs.split('#')
+                            versions[tool] = eval(version.strip())
+            OS_HPXML_Version = versions['OS_HPXML_Version']
+            OS_Version = versions['OS_Version']
+            if os_version != OS_Version:
+                val_err = f"OS version {OS_Version} is required" \
+                    f" for OS-HPXML version {OS_HPXML_Version}. Found {os_version}"
+                raise ValidationError(val_err)
+
+        return True
+
     def get_dask_client(self):
         return Client()
 
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+                    do_timeseries = \
+                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
+                            'none')
+        else:
+            do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
         fs = LocalFileSystem()
         if not skip_combine:

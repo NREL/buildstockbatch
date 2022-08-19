@@ -16,28 +16,55 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: bugfix
-        :pullreq: 232
-        :tickets:
+        :tags: general, housekeeping
+        :pullreq: 267
+        :tickets: 223
 
-        There was a few days there when the version of some sublibrary (click)
-        of dask was incompatible with the latest version of dask. We temporarily
-        pinned the sublibrary so that new installs would work. They have fixed
-        that problem now, so this removes the restriction on that library.
+        Migrated CI to GitHub Actions. 
+
+    .. change::
+        :tags: workflow
+        :pullreq: 208
+        :tickets: 
+
+        Add ``residential_hpxml`` workflow generator.
 
     .. change::
         :tags: bugfix
-        :pullreq: 234
+        :pullreq: 271
         :tickets:
 
-        For ResStock the ``build_existing_model.sample_weight`` was inverse to what we would expect. The bug was
-        identified in the residential workflow generator.
+        Postprocessing can correctly handle assortment of upgrades with overlaping set of columns with missing and
+        non-missing values.
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 275
+        :tickets:
+
+        Postprocessing can partition the data before uploading to s3 and Athena. This allows for faster and cheaper
+        queries.
+        ``n_procs argument`` is added to ``eagle`` spec to allow users to pick number of CPUs in each node. Default: 18
+        ``partition_columns`` argument is added to ``postprocessing`` spec to allow the partitioning. Default: []
 
     .. change::
         :tags: bugfix
-        :pullreq:
-        :tickets: 237
+        :pullreq: 282
+        :tickets:
 
-        The default commercial workflow generator was changed to mimic the residential
-        workflow generator, where a new ``timeseries_csv_export`` key was added
-        to the workflow schema in order to trigger timeseries postprocessing.
+        Fixes bug that would cause sample weight to be incorrect on the HPXML workflow.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 281
+        :tickets:
+
+        For ResStock the OpenStudio version has changed to v3.4.0.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 295
+        :tickets:
+
+        Add basic logic validation that checks for incorrect use of 'and' and 'not' block.
+        BSB requires at least python 3.8.

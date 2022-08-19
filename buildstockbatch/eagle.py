@@ -32,10 +32,12 @@ import subprocess
 import sys
 import time
 import yaml
+import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
 from buildstockbatch import postprocessing
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,12 @@ class EagleBatch(BuildStockBatchBase):
 
     @property
     def singularity_image_url(self):
-        return 'https://s3.amazonaws.com/openstudio-builds/{ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+        if '-' in self.os_version:
+            prefix_ver = self.os_version.split('-')[0]
+        else:
+            prefix_ver = self.os_version
+        return 'https://s3.amazonaws.com/openstudio-builds/{prefix_ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
+                    prefix_ver=prefix_ver,
                     ver=self.os_version,
                     sha=self.os_sha
                 )
@@ -229,6 +236,11 @@ class EagleBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / 'measures',
             self.local_buildstock_dir / 'measures'
         )
+        if os.path.exists(pathlib.Path(self.buildstock_dir) / 'resources/hpxml-measures'):
+            self.clear_and_copy_dir(
+                pathlib.Path(self.buildstock_dir) / 'resources/hpxml-measures',
+                self.local_buildstock_dir / 'resources/hpxml-measures'
+            )
         self.clear_and_copy_dir(
             self.weather_dir,
             self.local_weather_dir
@@ -245,6 +257,20 @@ class EagleBatch(BuildStockBatchBase):
         job_json_filename = os.path.join(self.output_dir, 'job{:03d}.json'.format(job_array_number))
         with open(job_json_filename, 'r') as f:
             args = json.load(f)
+
+        # trim the buildstock.csv file to only include rows for current batch. Helps speed up simulation
+        logger.debug("Trimming buildstock.csv")
+        building_ids = {x[0] for x in args['batch']}
+        buildstock_csv_path = self.local_housing_characteristics_dir / 'buildstock.csv'
+        valid_rows = []
+        with open(buildstock_csv_path, 'r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            for row in csv_reader:
+                if int(row['Building']) in building_ids:
+                    valid_rows.append(row)
+        df = pd.DataFrame.from_records(valid_rows)
+        df.to_csv(buildstock_csv_path, index=False)
+        logger.debug(f"Buildstock.csv trimmed to {len(df)} rows.")
 
         traceback_file_path = self.local_output_dir / 'simulation_output' / f'traceback{job_array_number}.out'
 
@@ -336,6 +362,12 @@ class EagleBatch(BuildStockBatchBase):
                 container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
                 runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
 
+            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+                runscript.append('ln -s /resources /var/simdata/openstudio/resources')
+                src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
+                container_mount = '/resources/hpxml-measures'
+                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+
             # Build the openstudio command that will be issued within the singularity container
             # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
             cli_cmd = 'openstudio run -w in.osw'
@@ -348,6 +380,8 @@ class EagleBatch(BuildStockBatchBase):
                 str(cls.local_singularity_img),
                 'bash', '-x'
             ])
+            env_vars = dict(os.environ)
+            env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
             logger.debug('\n'.join(map(str, args)))
             with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
                 try:
@@ -357,7 +391,8 @@ class EagleBatch(BuildStockBatchBase):
                         input='\n'.join(runscript).encode('utf-8'),
                         stdout=f_out,
                         stderr=subprocess.STDOUT,
-                        cwd=cls.local_output_dir
+                        cwd=cls.local_output_dir,
+                        env=env_vars,
                     )
                 except subprocess.CalledProcessError:
                     pass
@@ -452,8 +487,11 @@ class EagleBatch(BuildStockBatchBase):
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
         memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
-        print(f"Submitting job to {memory}MB memory nodes.")
+        n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 18)
+        n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
+        print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
+
         if not upload_only:
             for subdir in ('parquet', 'results_csvs'):
                 subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
@@ -477,6 +515,7 @@ class EagleBatch(BuildStockBatchBase):
         env['OUT_DIR'] = self.output_dir
         env['UPLOADONLY'] = str(upload_only)
         env['MEMORY'] = str(memory)
+        env['NPROCS'] = str(n_procs)
         here = os.path.dirname(os.path.abspath(__file__))
         eagle_post_sh = os.path.join(here, 'eagle_postprocessing.sh')
 
@@ -484,14 +523,14 @@ class EagleBatch(BuildStockBatchBase):
             'sbatch',
             '--account={}'.format(account),
             '--time={}'.format(walltime),
-            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY',
+            '--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY,NPROCS',
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
             ':',
             '--mem={}'.format(memory),
             '--output=dask_workers.out',
-            '--nodes={}'.format(self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)),
+            '--nodes={}'.format(n_workers),
             eagle_post_sh
         ]
 

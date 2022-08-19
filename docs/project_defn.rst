@@ -144,10 +144,13 @@ the Eagle supercomputer.
 *  ``postprocessing``: Eagle configuration for the postprocessing step
 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32. Default is 2.
+    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32.
+                      Default is 2.
+    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36. Default is 18. Try reducing this if you
+                    get OOM error.
     *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
                            85248, 180224 and 751616. Default is 85248.
-    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 40000.
+    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 1000.
 
 .. _aws-config:
 
@@ -222,7 +225,7 @@ follows:
 For ResStock runs with the ResidentialScheduleGenerator, the generated schedules
 are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
-`same way that Energeyplus handles ScheduleFiles
+`same way that EnergyPlus handles ScheduleFiles
 <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
    
 
@@ -253,12 +256,16 @@ The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
 
-    * ``keep_individual_timeseries``: For some use cases it is useful to keep
+    * ``keep_individual_timeseries``: (optional, bool) For some use cases it is useful to keep
       the timeseries output for each simulation as a separate parquet file.
       Setting this option to ``true`` allows that. Default is ``false``.
 
-    *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
-       `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+    * ``partition_columns``: (optional, list) Allows partitioning the output data based on some columns. The columns
+      must match the parameters found in options_lookup.tsv. This allows for efficient athena queries. Only recommended
+      for moderate or large sized runs (ndatapoints > 10K)
+
+    * ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to
+       work, please `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
 
         *  ``region_name``: The name of the aws region to use for database creation and other services.

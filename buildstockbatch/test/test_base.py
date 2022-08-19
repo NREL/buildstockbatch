@@ -216,16 +216,19 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     # timeseries parquet
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq_all = dd.read_parquet(os.path.join(test_path, 'timeseries'), engine='pyarrow')\
+        .compute()
+
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 0].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 0
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 1].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 1
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
@@ -320,6 +323,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
+    s3_file_path = s3_path + 'timeseries/_common_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_common_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'timeseries/_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
 
 
@@ -344,7 +357,9 @@ def test_skipping_baseline(basic_residential_project_file):
     })
 
     sim_output_path = os.path.join(results_dir, 'simulation_output')
-    shutil.rmtree(os.path.join(sim_output_path, 'timeseries', 'up00'))
+    shutil.rmtree(os.path.join(sim_output_path, 'timeseries', 'up00'))  # remove timeseries results for baseline
+
+    # remove results.csv data for baseline from results_jobx.json.gz
     results_json_filename = os.path.join(sim_output_path, 'results_job0.json.gz')
     with gzip.open(results_json_filename, 'rt', encoding='utf-8') as f:
         dpouts = json.load(f)
@@ -352,6 +367,14 @@ def test_skipping_baseline(basic_residential_project_file):
     with gzip.open(results_json_filename, 'wt', encoding='utf-8') as f:
         json.dump(dpouts2, f)
 
+    # remove jobs for baseline from jobx.json
+    with open(os.path.join(results_dir, '..', 'job0.json'), 'rt') as f:
+        job_json = json.load(f)
+    job_json['batch'] = list(filter(lambda job: job[1] is not None, job_json['batch']))
+    with open(os.path.join(results_dir, '..', 'job0.json'), 'wt') as f:
+        json.dump(job_json, f)
+
+    # run postprocessing
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
             patch.object(BuildStockBatchBase, 'results_dir', results_dir):

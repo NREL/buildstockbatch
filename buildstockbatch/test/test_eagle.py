@@ -201,6 +201,11 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     with open(results_dir / 'job001.json', 'w') as f:
         json.dump(job_json, f)
 
+    sample_buildstock_csv = pd.DataFrame.from_records([{'Building': i, 'Dummy Column': i*i} for i in range(10)])
+    os.makedirs(results_dir / 'housing_characteristics', exist_ok=True)
+    os.makedirs(results_dir / 'weather', exist_ok=True)
+    sample_buildstock_csv.to_csv(results_dir / 'housing_characteristics' / 'buildstock.csv', index=False)
+
     def sequential_parallel(**kwargs):
         kw2 = kwargs.copy()
         kw2['n_jobs'] = 1
@@ -210,10 +215,12 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
     mocker.patch('buildstockbatch.eagle.subprocess')
 
-    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'local_buildstock_dir', results_dir / 'local_buildstock_dir')
     mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
-    mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
+    mocker.patch.object(EagleBatch, 'local_weather_dir', results_dir / 'local_weather_dir')
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'local_housing_characteristics_dir',
+                        results_dir / 'local_housing_characteristics_dir')
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
 
     def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
@@ -249,13 +256,19 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     ts_files = list(refrence_path.glob('**/*.parquet'))
 
     def compare_ts_parquets(source, dst):
-        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index'])
-        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index'])
+        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index']).rename(columns=str.lower)
+        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index']).rename(columns=str.lower)
         pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     for file in ts_files:
         results_file = results_dir / 'results' / 'simulation_output' / 'timeseries' / file.parent.name / file.name
         compare_ts_parquets(file, results_file)
+
+    # Check that buildstock.csv was trimmed properly
+    local_buildstock_df = pd.read_csv(results_dir / 'local_housing_characteristics_dir' / 'buildstock.csv')
+    unique_buildings = {x[0] for x in job_json['batch']}
+    assert len(unique_buildings) == len(local_buildstock_df)
+    assert unique_buildings == set(local_buildstock_df['Building'])
 
 
 def test_run_building_error_caught(mocker, basic_residential_project_file):
@@ -271,6 +284,12 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     with open(results_dir / 'job001.json', 'w') as f:
         json.dump(job_json, f)
 
+    sample_buildstock_csv = pd.DataFrame.from_records([{'Building': i, 'Dummy Column': i * i} for i in range(10)])
+    os.makedirs(results_dir / 'housing_characteristics', exist_ok=True)
+    os.makedirs(results_dir / 'local_housing_characteristics', exist_ok=True)
+    os.makedirs(results_dir / 'weather', exist_ok=True)
+    sample_buildstock_csv.to_csv(results_dir / 'housing_characteristics' / 'buildstock.csv', index=False)
+
     def raise_error(*args, **kwargs):
         raise RuntimeError('A problem happened')
 
@@ -283,12 +302,14 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
     mocker.patch('buildstockbatch.eagle.subprocess')
 
-    mocker.patch.object(EagleBatch, 'weather_dir', None)
     mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
-    mocker.patch.object(EagleBatch, 'clear_and_copy_dir')
     mocker.patch.object(EagleBatch, 'run_building', raise_error)
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'local_buildstock_dir', results_dir / 'local_buildstock_dir')
+    mocker.patch.object(EagleBatch, 'local_weather_dir', results_dir / 'local_weather_dir')
+    mocker.patch.object(EagleBatch, 'local_housing_characteristics_dir',
+                        results_dir / 'local_housing_characteristics_dir')
 
     b = EagleBatch(project_filename)
     b.run_job_batch(1)
