@@ -259,7 +259,7 @@ class BuildStockBatchBase(object):
         assert(BuildStockBatchBase.validate_logic(project_file))
         assert(BuildStockBatchBase.validate_measure_references(project_file))
         assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
-        assert(BuildStockBatchBase.validate_resstock_version(project_file))
+        assert(BuildStockBatchBase.validate_resstock_or_comstock_version(project_file))
         assert(BuildStockBatchBase.validate_openstudio_version(project_file))
         logger.info('Base Validation Successful')
         return True
@@ -671,7 +671,7 @@ class BuildStockBatchBase(object):
         return True  # Only print the warning, but always pass the validation
 
     @staticmethod
-    def validate_resstock_version(project_file):
+    def validate_resstock_or_comstock_version(project_file):
         """
         Checks the minimum required version of BuildStockBatch against the version being used
         """
@@ -683,16 +683,21 @@ class BuildStockBatchBase(object):
             with open(buildstock_rb, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                    for tool in ['ResStock_Version', 'ComStock_Version', 'BuildStockBatch_Version']:
                         if line.startswith(tool):
                             lhs, rhs = line.split('=')
                             version, _ = rhs.split('#')
                             versions[tool] = eval(version.strip())
-            ResStock_Version = versions['ResStock_Version']
             BuildStockBatch_Version = versions['BuildStockBatch_Version']
             if bsb_version < BuildStockBatch_Version:
+                if 'ResStock_Version' in dict.keys():
+                    stock_version = versions['ResStock_Version']
+                elif 'ComStock_Version' in dict.keys():
+                    stock_version = versions['ComStock_Version']
+                else:
+                    stock_version = 'Unknown'
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
-                    f" for ResStock version {ResStock_Version}. Found {bsb_version}"
+                    f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
                 raise ValidationError(val_err)
 
         return True
