@@ -21,6 +21,7 @@ import json
 import logging
 import math
 import os
+from packaging import version
 import pandas as pd
 import pathlib
 import random
@@ -277,7 +278,7 @@ class EagleBatch(BuildStockBatchBase):
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(self.output_dir, self.cfg, args['n_datapoints'], i, upgrade_idx)
+                return self.run_building(self.output_dir, self.cfg, args['n_datapoints'], i, self.os_version, upgrade_idx)
             except Exception:
                 with open(traceback_file_path, 'a') as f:
                     txt = get_error_details()
@@ -321,7 +322,7 @@ class EagleBatch(BuildStockBatchBase):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
     @classmethod
-    def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
+    def run_building(cls, output_dir, cfg, n_datapoints, i, os_version, upgrade_idx=None):
 
         fs = LocalFileSystem()
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -372,7 +373,11 @@ class EagleBatch(BuildStockBatchBase):
             # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
             cli_cmd = 'openstudio run -w in.osw'
             if cfg.get('baseline', dict()).get('custom_gems', False):
-                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+                if version.parse(os_version) < version.parse("3.0.0"):
+                    cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+                else:
+                    cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems --bundle_without ' \
+                          'native_ext run -w in.osw --debug'
             if get_bool_env_var('MEASURESONLY'):
                 cli_cmd += ' --measures_only'
             runscript.append(cli_cmd)
