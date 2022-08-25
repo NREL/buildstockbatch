@@ -81,7 +81,7 @@ class LocalDockerBatch(DockerBatchBase):
 
             # Define directories to be mounted in the container
             local_custom_gem_dir = os.path.join(self.buildstock_dir, '.custom_gems')
-            mnt_custom_gem_dir = '/var/simdata/openstudio/.custom_gems'
+            mnt_custom_gem_dir = '/var/oscli/gems'
             bind_mounts = [
                 (local_custom_gem_dir, mnt_custom_gem_dir, 'rw')
             ]
@@ -102,12 +102,13 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(os.path.join(self.buildstock_dir, '.custom_gems')):
                 os.makedirs(os.path.join(self.buildstock_dir, '.custom_gems'))
 
-            # Copy in Gemfile from /resources
+            # Copy Gemfile from buildstock/resources into buildstock/.custom_gems
+            logger.debug(f'Copying Gemfile from {local_gemfile_path}')
             shutil.copyfile(local_gemfile_path, os.path.join(self.buildstock_dir, '.custom_gems', 'Gemfile'))
 
             # Run bundler to install the custom gems
             bundle_install_cmd = f'bundle install --path={mnt_custom_gem_dir} --gemfile={mnt_gemfile_path}'
-            logger.debug(bundle_install_cmd)
+            logger.debug(f'Running {bundle_install_cmd}')
             container_output = docker_client.containers.run(
                 self.docker_image,
                 bundle_install_cmd,
@@ -128,8 +129,10 @@ class LocalDockerBatch(DockerBatchBase):
                 volumes=docker_volume_mounts,
                 name='list_custom_gems'
             )
-            with open(os.path.join(local_custom_gem_dir, 'openstudio_gem_list_output.log'), 'wb') as f_out:
+            gem_list_log = os.path.join(local_custom_gem_dir, 'openstudio_gem_list_output.log')
+            with open(gem_list_log, 'wb') as f_out:
                 f_out.write(container_output)
+            logger.debug(f'Review custom gems list at: {gem_list_log}')
 
     @staticmethod
     def validate_project(project_file):
@@ -164,14 +167,15 @@ class LocalDockerBatch(DockerBatchBase):
         if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
             bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
                             'resources/hpxml-measures', 'ro')]
-        if cfg.get('baseline', dict()).get('custom_gems', False):
-            mnt_custom_gem_dir = '.custom_gems'
-            bind_mounts += [(os.path.join(buildstock_dir, '.custom_gems'), mnt_custom_gem_dir, 'ro')]
         docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
         for bind in bind_mounts:
             dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
+
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            mnt_custom_gem_dir = '/var/oscli/gems'
+            docker_volume_mounts[os.path.join(buildstock_dir, '.custom_gems')] = {'bind': mnt_custom_gem_dir, 'mode': 'ro'}  # noqa E501
 
         osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
