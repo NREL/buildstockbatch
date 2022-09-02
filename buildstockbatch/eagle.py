@@ -562,6 +562,17 @@ class EagleBatch(BuildStockBatchBase):
         else:
             return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
+    def process_results(self, *args, **kwargs):
+        # Check that all the jobs succeeded before proceeding
+        failed_job_array_ids = self.get_failed_job_array_ids()
+        if failed_job_array_ids:
+            logger.error("The following simulation jobs failed: {}".format(", ".join(failed_job_array_ids)))
+            logger.error("Please inspect those jobs and fix any problems before resubmitting.")
+            logger.critical("Postprocessing cancelled.")
+            return False
+
+        super().process_results(*args, **kwargs)
+
     def get_failed_job_array_ids(self):
         job_out_files = sorted(pathlib.Path(self.output_dir).glob('job.out-*'))
 
