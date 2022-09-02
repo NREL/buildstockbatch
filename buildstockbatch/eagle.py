@@ -580,8 +580,10 @@ class EagleBatch(BuildStockBatchBase):
         for filename in job_out_files:
             with open(filename, 'r') as f:
                 # TODO: Make this look for successful ones instead.
+                # TODO: Or ones that are missing altogether.
                 if re.search(r"^Traceback \(most recent call last\):", f.read(), re.MULTILINE):
                     job_id = int(re.match(r"job\.out-(\d+)", filename.name).group(1))
+                    logger.debug(f"Array Job ID {job_id} had a failure.")
                     failed_job_ids.append(job_id)
 
         return failed_job_ids
@@ -589,6 +591,10 @@ class EagleBatch(BuildStockBatchBase):
     def rerun_failed_jobs(self, hipri=False):
         # Find the jobs that failed
         failed_job_array_ids = self.get_failed_job_array_ids()
+        if not failed_job_array_ids:
+            logger.error("There are no failed jobs to rerun. Exiting.")
+            return False
+
         output_path = pathlib.Path(self.output_dir)
         results_path = pathlib.Path(self.results_dir)
 
@@ -615,7 +621,8 @@ class EagleBatch(BuildStockBatchBase):
             results_path / 'parquet'
         ]
         for x in dirs_to_delete:
-            shutil.rmtree(x)
+            if x.exists():
+                shutil.rmtree(x)
 
         job_ids = self.queue_jobs(failed_job_array_ids, hipri=hipri)
         self.queue_post_processing(job_ids, hipri=hipri)
