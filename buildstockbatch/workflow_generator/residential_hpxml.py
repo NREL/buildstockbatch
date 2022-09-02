@@ -33,13 +33,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = """
         measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
-        emissions: list(include('scenario-spec'), required=False)
+        emissions: list(include('emission-scenario-spec'), required=False)
+        utility_bills: list(include('utility-bill-scenario-spec'), required=False)
         measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
         ---
-        scenario-spec:
+        emission-scenario-spec:
             scenario_name: str(required=True)
             type: str(required=True)
             elec_folder: str(required=True)
@@ -47,6 +48,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             propane_value: num(required=False)
             oil_value: num(required=False)
             wood_value: num(required=False)
+        utility-bill-scenario-spec:
+            scenario_name: str(required=True)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
@@ -104,6 +107,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                              ['emissions_wood_values', 'wood_value']]
             for arg, item in emissions_map:
                 bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in emissions])
+
+        if 'utility_bills' in workflow_args:
+            utility_bills = workflow_args['utility_bills']
+            utility_bills_map = [['utility_bill_scenario_names', 'scenario_name']]
+            for arg, item in utility_bills_map:
+                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in utility_bills])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
@@ -178,6 +187,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'ReportHPXMLOutput',
+                'arguments': {}
+            },
+            {
+                'measure_dir_name': 'ReportUtilityBills',
                 'arguments': {}
             },
             {
