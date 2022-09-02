@@ -92,6 +92,8 @@ def flatten_datapoint_json(reporting_measures, d):
 
     # additional reporting measures
     if sim_out_report == 'ReportSimulationOutput':
+        reporting_measures += ['ReportHPXMLOutput']
+        reporting_measures += ['ReportUtilityBills']
         reporting_measures += ['UpgradeCosts']
     for col in reporting_measures:
         for k, v in d.get(col, {}).items():
