@@ -417,7 +417,7 @@ class EagleBatch(BuildStockBatchBase):
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
-    def queue_jobs(self, array_ids=None):
+    def queue_jobs(self, array_ids=None, hipri=False):
         eagle_cfg = self.cfg['eagle']
         minutes_per_sim = eagle_cfg.get('minutes_per_sim', 3)
         with open(os.path.join(self.output_dir, 'job001.json'), 'r') as f:
@@ -458,6 +458,8 @@ class EagleBatch(BuildStockBatchBase):
         ]
         if os.environ.get('SLURM_JOB_QOS'):
             args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
+        elif hipri:
+            args.insert(-1, '--qos=high')
 
         logger.debug(' '.join(args))
         resp = subprocess.run(
@@ -560,6 +562,53 @@ class EagleBatch(BuildStockBatchBase):
         else:
             return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
+    def get_failed_job_array_ids(self):
+        job_out_files = sorted(pathlib.Path(self.output_dir).glob('job.out-*'))
+
+        failed_job_ids = []
+        for filename in job_out_files:
+            with open(filename, 'r') as f:
+                # TODO: Make this look for successful ones instead.
+                if re.search(r"^Traceback \(most recent call last\):", f.read(), re.MULTILINE):
+                    job_id = int(re.match(r"job\.out-(\d+)", filename.name).group(1))
+                    failed_job_ids.append(job_id)
+
+        return failed_job_ids
+
+    def rerun_failed_jobs(self, hipri=False):
+        # Find the jobs that failed
+        failed_job_array_ids = self.get_failed_job_array_ids()
+        output_path = pathlib.Path(self.output_dir)
+        results_path = pathlib.Path(self.results_dir)
+
+        prev_failed_job_out_dir = output_path / 'prev_failed_jobs'
+        os.makedirs(prev_failed_job_out_dir, exist_ok=True)
+        for job_array_id in failed_job_array_ids:
+    
+            # Move the failed job.out file so it doesn't get overwritten
+            filepath = output_path / f'job.out-{job_array_id}'
+            last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
+            shutil.move(
+                filepath,
+                prev_failed_job_out_dir / f'{filepath.name}_{last_mod_date:%Y%m%d%H%M}'
+            )
+
+            # Delete simulation results for jobs we're about to rerun
+            files_to_delete = [f'simulations_job{job_array_id}.tar.gz', f'results_job{job_array_id}.json.gz']
+            for filename in files_to_delete:
+                (results_path / 'simulation_output' / filename).unlink(missing_ok=True)
+
+        # Clear out postprocessed data so we can start from a clean slate
+        dirs_to_delete = [
+            results_path / 'results_csvs',
+            results_path / 'parquet'
+        ]
+        for x in dirs_to_delete:
+            shutil.rmtree(x)
+
+        job_ids = self.queue_jobs(failed_job_array_ids, hipri=hipri)
+        self.queue_post_processing(job_ids, hipri=hipri)
+
 
 logging_config = {
         'version': 1,
@@ -637,6 +686,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Run the sampling only.',
         action='store_true'
     )
+    group.add_argument(
+        '--rerun_failed',
+        help='Rerun the failed jobs',
+        action='store_true'
+    )
 
     # parse CLI arguments
     args = parser.parse_args(argv)
@@ -659,6 +713,11 @@ def user_cli(argv=sys.argv[1:]):
     if args.postprocessonly or args.uploadonly:
         eagle_batch = EagleBatch(project_filename)
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
+        return True
+
+    if args.rerun_failed:
+        eagle_batch = EagleBatch(project_filename)
+        eagle_batch.rerun_failed_jobs(hipri=args.hipri)
         return True
 
     # otherwise, queue up the whole eagle buildstockbatch process
@@ -751,4 +810,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if get_bool_env_var("BUILDSTOCKBATCH_CLI"):
+        user_cli()
+    else:
+        main()
