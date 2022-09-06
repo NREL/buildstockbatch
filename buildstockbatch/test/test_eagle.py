@@ -10,6 +10,7 @@ from unittest.mock import patch
 import gzip
 
 from buildstockbatch.eagle import user_cli, EagleBatch
+from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -328,6 +329,7 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
     mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
     mocker.patch.object(EagleBatch, 'weather_dir', None)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    process_results_mocker = mocker.patch.object(BuildStockBatchBase, 'process_results')
     queue_jobs_mocker = mocker.patch.object(EagleBatch, 'queue_jobs', return_value=[42])
     queue_post_processing_mocker = mocker.patch.object(EagleBatch, 'queue_post_processing')
 
@@ -342,6 +344,10 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
             else:
                 f.write("batch complete")
             f.write('\n')
+
+    assert not b.process_results()
+    process_results_mocker.assert_not_called()
+    process_results_mocker.reset_mock()
 
     failed_array_ids = b.get_failed_job_array_ids()
     assert sorted(failed_array_ids) == [2, 4]
@@ -359,6 +365,9 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
         with open(filename, "w") as f:
             f.write('lots of output\ngoes\nhere\n')
             f.write("batch complete\n")
+
+    b.process_results()
+    process_results_mocker.assert_called_once()
 
     assert not b.rerun_failed_jobs()
     queue_jobs_mocker.assert_not_called()

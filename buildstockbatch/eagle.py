@@ -568,7 +568,7 @@ class EagleBatch(BuildStockBatchBase):
         # Check that all the jobs succeeded before proceeding
         failed_job_array_ids = self.get_failed_job_array_ids()
         if failed_job_array_ids:
-            logger.error("The following simulation jobs failed: {}".format(", ".join(failed_job_array_ids)))
+            logger.error("The following simulation jobs failed: {}".format(", ".join(map(str, failed_job_array_ids))))
             logger.error("Please inspect those jobs and fix any problems before resubmitting.")
             logger.critical("Postprocessing cancelled.")
             return False
