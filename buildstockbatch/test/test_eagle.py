@@ -319,3 +319,47 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
 
     with open(traceback_file, 'r') as f:
         assert f.read().find('RuntimeError') > -1
+
+
+def test_rerun_failed_jobs(mocker, basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file()
+    os.makedirs(os.path.join(results_dir, 'results_csvs'))
+    os.makedirs(os.path.join(results_dir, 'parquet'))
+    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    queue_jobs_mocker = mocker.patch.object(EagleBatch, 'queue_jobs', return_value=[42])
+    queue_post_processing_mocker = mocker.patch.object(EagleBatch, 'queue_post_processing')
+
+    b = EagleBatch(project_filename)
+
+    for job_id in range(1, 5):
+        filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            if job_id % 2 == 0:
+                f.write("Traceback")
+            else:
+                f.write("batch complete")
+            f.write('\n')
+
+    failed_array_ids = b.get_failed_job_array_ids()
+    assert sorted(failed_array_ids) == [2, 4]
+
+    b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_called_once_with([2, 4], hipri=False)
+    queue_jobs_mocker.reset_mock()
+    queue_post_processing_mocker.assert_called_once_with([42], hipri=False)
+    queue_post_processing_mocker.reset_mock()
+    assert not os.path.exists(os.path.join(results_dir, 'results_csvs'))
+    assert not os.path.exists(os.path.join(results_dir, 'parquet'))
+
+    for job_id in range(1, 5):
+        filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            f.write("batch complete\n")
+
+    assert not b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_not_called()
+    queue_post_processing_mocker.assert_not_called()
