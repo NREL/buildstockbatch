@@ -320,6 +320,8 @@ class EagleBatch(BuildStockBatchBase):
         if os.path.exists(traceback_file_path):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
+        logger.info(f'batch complete')
+
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
 
@@ -579,9 +581,7 @@ class EagleBatch(BuildStockBatchBase):
         failed_job_ids = []
         for filename in job_out_files:
             with open(filename, 'r') as f:
-                # TODO: Make this look for successful ones instead.
-                # TODO: Or ones that are missing altogether.
-                if re.search(r"^Traceback \(most recent call last\):", f.read(), re.MULTILINE):
+                if not re.search(r"batch complete", f.read()):
                     job_id = int(re.match(r"job\.out-(\d+)", filename.name).group(1))
                     logger.debug(f"Array Job ID {job_id} had a failure.")
                     failed_job_ids.append(job_id)
