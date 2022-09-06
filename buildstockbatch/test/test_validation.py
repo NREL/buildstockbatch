@@ -34,27 +34,27 @@ def filter_logs(logs, level):
 
 
 def test_base_validation_is_static():
-    assert(isinstance(BuildStockBatchBase.validate_project, types.FunctionType))
+    assert isinstance(BuildStockBatchBase.validate_project, types.FunctionType)
 
 
 def test_base_schema_validation_is_static():
-    assert(isinstance(BuildStockBatchBase.validate_project_schema, types.FunctionType))
+    assert isinstance(BuildStockBatchBase.validate_project_schema, types.FunctionType)
 
 
 def test_eagle_validation_is_static():
-    assert(isinstance(EagleBatch.validate_project, types.FunctionType))
+    assert isinstance(EagleBatch.validate_project, types.FunctionType)
 
 
 def test_local_docker_validation_is_static():
-    assert(isinstance(LocalDockerBatch.validate_project, types.FunctionType))
+    assert isinstance(LocalDockerBatch.validate_project, types.FunctionType)
 
 
 def test_complete_schema_passes_validation():
-    assert(BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'complete-schema.yml')))
+    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'complete-schema.yml'))
 
 
 def test_minimal_schema_passes_validation():
-    assert(BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'minimal-schema.yml')))
+    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'minimal-schema.yml'))
 
 
 @pytest.mark.parametrize("project_file", [
@@ -79,7 +79,7 @@ def test_xor_violations_fail(project_file, expected):
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
         else:
-            assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
+            assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
 @pytest.mark.parametrize("project_file,expected", [
@@ -99,7 +99,7 @@ def test_validation_integration(project_file, expected):
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_project(project_file)
         else:
-            assert(BuildStockBatchBase.validate_project(project_file))
+            assert BuildStockBatchBase.validate_project(project_file)
 
 
 @pytest.mark.parametrize("project_file", [

@@ -58,14 +58,14 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
             'bash', '-x'
         ]
         mock_subprocess.run.assert_called_once()
-        assert(mock_subprocess.run.call_args[0][0] == expected_singularity_args)
+        assert mock_subprocess.run.call_args[0][0] == expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') == -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') == -1
 
         # Measures only run
         mock_subprocess.reset_mock()
@@ -74,14 +74,14 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         monkeypatch.setenv('MEASURESONLY', '1')
         EagleBatch.run_building(*run_bldg_args)
         mock_subprocess.run.assert_called_once()
-        assert(mock_subprocess.run.call_args[0][0] == expected_singularity_args)
+        assert mock_subprocess.run.call_args[0][0] == expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') > -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') > -1
 
 
 def test_singularity_image_download_url(basic_residential_project_file):

@@ -86,7 +86,7 @@ class EagleBatch(BuildStockBatchBase):
     @property
     def results_dir(self):
         results_dir = os.path.join(self.output_dir, 'results')
-        assert(os.path.isdir(results_dir))
+        assert os.path.isdir(results_dir)
         return results_dir
 
     @staticmethod
@@ -320,7 +320,7 @@ class EagleBatch(BuildStockBatchBase):
         if os.path.exists(traceback_file_path):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
-        logger.info(f'batch complete')
+        logger.info('batch complete')
 
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
@@ -601,7 +601,6 @@ class EagleBatch(BuildStockBatchBase):
         prev_failed_job_out_dir = output_path / 'prev_failed_jobs'
         os.makedirs(prev_failed_job_out_dir, exist_ok=True)
         for job_array_id in failed_job_array_ids:
-    
             # Move the failed job.out file so it doesn't get overwritten
             filepath = output_path / f'job.out-{job_array_id}'
             last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
@@ -741,7 +740,7 @@ def user_cli(argv=sys.argv[1:]):
     # otherwise, queue up the whole eagle buildstockbatch process
     # the main work of the first Eagle job is to run the sampling script ...
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
-    assert(os.path.exists(eagle_sh))
+    assert os.path.exists(eagle_sh)
     out_dir = cfg['output_directory']
     if os.path.exists(out_dir):
         raise FileExistsError(
@@ -807,14 +806,14 @@ def main():
     if job_array_number:
         # if job array number is non-zero, run the batch job
         # Simulation should not be scheduled for sampling only
-        assert(not sampling_only)
+        assert not sampling_only
         batch.run_job_batch(job_array_number)
     elif post_process:
         logger.debug("Starting postprocessing")
         # else, we might be in a post-processing step
         # Postprocessing should not have been scheduled if measures only or sampling only are run
-        assert(not measures_only)
-        assert(not sampling_only)
+        assert not measures_only
+        assert not sampling_only
         if upload_only:
             batch.process_results(skip_combine=True, force_upload=True)
         else:
