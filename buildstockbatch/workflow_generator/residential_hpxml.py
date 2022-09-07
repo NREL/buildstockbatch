@@ -122,7 +122,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                              ['emissions_fuel_oil_values', 'oil_value'],
                              ['emissions_wood_values', 'wood_value']]
             for arg, item in emissions_map:
-                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in emissions])
+                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in emissions])
 
         if 'utility_bills' in workflow_args:
             utility_bills = workflow_args['utility_bills']
@@ -144,7 +144,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                                  ['utility_bill_pv_monthly_grid_connection_fee_units', 'pv_monthly_grid_connection_fee_units'],
                                  ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']]
             for arg, item in utility_bills_map:
-                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in utility_bills])
+                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
