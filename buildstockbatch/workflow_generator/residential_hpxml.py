@@ -50,6 +50,22 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             wood_value: num(required=False)
         utility-bill-scenario-spec:
             scenario_name: str(required=True)
+            elec_fixed_charge: num(required=False)
+            elec_marginal_rate: num(required=False)
+            gas_fixed_charge: num(required=False)
+            gas_marginal_rate: num(required=False)
+            propane_fixed_charge: num(required=False)
+            propane_marginal_rate: num(required=False)
+            oil_fixed_charge: num(required=False)
+            oil_marginal_rate: num(required=False)
+            wood_fixed_charge: num(required=False)
+            wood_marginal_rate: num(required=False)
+            pv_compensation_type: str(required=False)
+            pv_net_metering_annual_excess_sellback_rate_type: str(required=False)
+            pv_net_metering_annual_excess_sellback_rate: num(required=False)
+            pv_feed_in_tariff_rate: num(required=False)
+            pv_monthly_grid_connection_fee_units: str(required=False)
+            pv_monthly_grid_connection_fee: num(required=False)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
@@ -110,7 +126,23 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         if 'utility_bills' in workflow_args:
             utility_bills = workflow_args['utility_bills']
-            utility_bills_map = [['utility_bill_scenario_names', 'scenario_name']]
+            utility_bills_map = [['utility_bill_scenario_names', 'scenario_name'],
+                                 ['utility_bill_electricity_fixed_charges', 'elec_fixed_charge'],
+                                 ['utility_bill_electricity_marginal_rates', 'elec_marginal_rate'],
+                                 ['utility_bill_natural_gas_fixed_charges', 'gas_fixed_charge'],
+                                 ['utility_bill_natural_gas_marginal_rates', 'gas_marginal_rate'],
+                                 ['utility_bill_propane_fixed_charges', 'propane_fixed_charge'],
+                                 ['utility_bill_propane_marginal_rates', 'propane_marginal_rate'],
+                                 ['utility_bill_fuel_oil_fixed_charges', 'oil_fixed_charge'],
+                                 ['utility_bill_fuel_oil_marginal_rates', 'oil_marginal_rate'],
+                                 ['utility_bill_wood_fixed_charges', 'wood_fixed_charge'],
+                                 ['utility_bill_wood_marginal_rates', 'wood_marginal_rate'],
+                                 ['utility_bill_pv_compensation_types', 'pv_compensation_type'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rate_types', 'pv_net_metering_annual_excess_sellback_rate_type'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rates', 'pv_net_metering_annual_excess_sellback_rate'],
+                                 ['utility_bill_pv_feed_in_tariff_rates', 'pv_feed_in_tariff_rate'],
+                                 ['utility_bill_pv_monthly_grid_connection_fee_units', 'pv_monthly_grid_connection_fee_units'],
+                                 ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']]
             for arg, item in utility_bills_map:
                 bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in utility_bills])
 
