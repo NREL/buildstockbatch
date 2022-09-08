@@ -168,7 +168,7 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
         with open(buildstock_csv, 'r', newline='') as f:
             cf = csv.DictReader(f)
             for row in cf:
-                assert(row['Days Shifted'] in valid_option_values)
+                assert row['Days Shifted'] in valid_option_values
 
 
 def test_combine_files(basic_residential_project_file):
@@ -384,16 +384,16 @@ def test_skipping_baseline(basic_residential_project_file):
         get_dask_client_mock.assert_called_once()
 
     up00_parquet = os.path.join(results_dir, 'parquet', 'baseline', 'results_up00.parquet')
-    assert(not os.path.exists(up00_parquet))
+    assert not os.path.exists(up00_parquet)
 
     up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
-    assert(os.path.exists(up01_parquet))
+    assert os.path.exists(up01_parquet)
 
     up00_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
-    assert(not os.path.exists(up00_csv_gz))
+    assert not os.path.exists(up00_csv_gz)
 
     up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
-    assert(os.path.exists(up01_csv_gz))
+    assert os.path.exists(up01_csv_gz)
 
 
 def test_provide_buildstock_csv(basic_residential_project_file, mocker):
