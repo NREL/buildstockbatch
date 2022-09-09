@@ -138,8 +138,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                                  ['utility_bill_wood_fixed_charges', 'wood_fixed_charge'],
                                  ['utility_bill_wood_marginal_rates', 'wood_marginal_rate'],
                                  ['utility_bill_pv_compensation_types', 'pv_compensation_type'],
-                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rate_types', 'pv_net_metering_annual_excess_sellback_rate_type'],
-                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rates', 'pv_net_metering_annual_excess_sellback_rate'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rate_types',
+                                  'pv_net_metering_annual_excess_sellback_rate_type'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rates',
+                                  'pv_net_metering_annual_excess_sellback_rate'],
                                  ['utility_bill_pv_feed_in_tariff_rates', 'pv_feed_in_tariff_rate'],
                                  ['utility_bill_pv_monthly_grid_connection_fee_units', 'pv_monthly_grid_connection_fee_units'],
                                  ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']]

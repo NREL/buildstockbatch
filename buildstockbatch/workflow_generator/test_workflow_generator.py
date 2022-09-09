@@ -361,7 +361,6 @@ def test_residential_hpxml(mocker):
     steps = osw['steps']
     assert len(steps) == 7
 
-
     build_existing_model_step = steps[0]
     assert build_existing_model_step['measure_dir_name'] == 'BuildExistingModel'
     assert build_existing_model_step['arguments']['simulation_control_run_period_begin_month'] == 2
