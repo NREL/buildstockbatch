@@ -68,3 +68,9 @@ Development Changelog
 
         Add basic logic validation that checks for incorrect use of 'and' and 'not' block.
         BSB requires at least python 3.8.
+
+    .. change::
+        :tags: general, feature, eagle
+        :pullreq: 304
+
+        Added ability to resubmit failed array jobs on Eagle. 

@@ -19,7 +19,7 @@ def test_docker_image_exists_on_docker_hub(basic_residential_project_file):
         docker_tag = bsb.os_version
         baseurl = 'https://registry.hub.docker.com/v2/'
         r1 = requests.get(baseurl)
-        assert(r1.status_code == 401)
+        assert r1.status_code == 401
         m = re.search(r'realm="(.+?)"', r1.headers['Www-Authenticate'])
         authurl = m.group(1)
         m = re.search(r'service="(.+?)"', r1.headers['Www-Authenticate'])
@@ -28,10 +28,10 @@ def test_docker_image_exists_on_docker_hub(basic_residential_project_file):
             'service': service,
             'scope': f'repository:{docker_image}:pull'
         })
-        assert(r2.ok)
+        assert r2.ok
         token = r2.json()['token']
         r3 = requests.head(
             f'{baseurl}{docker_image}/manifests/{docker_tag}',
             headers={'Authorization': f'Bearer {token}'}
         )
-        assert(r3.ok)
+        assert r3.ok
