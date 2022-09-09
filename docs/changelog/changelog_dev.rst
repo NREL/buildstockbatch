@@ -86,3 +86,10 @@ Development Changelog
         :pullreq: 303
 
         Add ability to calculate simple utility bills using the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: general, feature, eagle
+        :pullreq: 306
+        :tickets: 305
+
+        Now reruns jobs where the job.out-x is missing entirely.

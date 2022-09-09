@@ -575,18 +575,32 @@ class EagleBatch(BuildStockBatchBase):
 
         super().process_results(*args, **kwargs)
 
+    def _get_job_ids_for_file_pattern(self, pat):
+        job_ids = set()
+        for filename in os.listdir(self.output_dir):
+            m = re.search(pat, filename)
+            if not m:
+                continue
+            job_ids.add(int(m.group(1)))
+        return job_ids
+
     def get_failed_job_array_ids(self):
         job_out_files = sorted(pathlib.Path(self.output_dir).glob('job.out-*'))
 
-        failed_job_ids = []
+        failed_job_ids = set()
         for filename in job_out_files:
             with open(filename, 'r') as f:
                 if not re.search(r"batch complete", f.read()):
                     job_id = int(re.match(r"job\.out-(\d+)", filename.name).group(1))
                     logger.debug(f"Array Job ID {job_id} had a failure.")
-                    failed_job_ids.append(job_id)
+                    failed_job_ids.add(job_id)
 
-        return failed_job_ids
+        job_out_ids = self._get_job_ids_for_file_pattern(r"job\.out-(\d+)")
+        job_json_ids = self._get_job_ids_for_file_pattern(r"job(\d+)\.json")
+        missing_job_ids = job_json_ids - job_out_ids
+        failed_job_ids.update(missing_job_ids)
+
+        return sorted(failed_job_ids)
 
     def rerun_failed_jobs(self, hipri=False):
         # Find the jobs that failed
@@ -603,11 +617,12 @@ class EagleBatch(BuildStockBatchBase):
         for job_array_id in failed_job_array_ids:
             # Move the failed job.out file so it doesn't get overwritten
             filepath = output_path / f'job.out-{job_array_id}'
-            last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
-            shutil.move(
-                filepath,
-                prev_failed_job_out_dir / f'{filepath.name}_{last_mod_date:%Y%m%d%H%M}'
-            )
+            if filepath.exists():
+                last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
+                shutil.move(
+                    filepath,
+                    prev_failed_job_out_dir / f'{filepath.name}_{last_mod_date:%Y%m%d%H%M}'
+                )
 
             # Delete simulation results for jobs we're about to rerun
             files_to_delete = [f'simulations_job{job_array_id}.tar.gz', f'results_job{job_array_id}.json.gz']
