@@ -74,3 +74,15 @@ Development Changelog
         :pullreq: 304
 
         Added ability to resubmit failed array jobs on Eagle. 
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 259
+
+        Add ability to calculate emissions using the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 303
+
+        Add ability to calculate simple utility bills using the ``residential_hpxml`` workflow.
