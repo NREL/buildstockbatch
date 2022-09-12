@@ -359,7 +359,7 @@ def test_residential_hpxml(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw['steps']
-    assert len(steps) == 7
+    assert len(steps) == 8
 
     build_existing_model_step = steps[0]
     assert build_existing_model_step['measure_dir_name'] == 'BuildExistingModel'
@@ -396,10 +396,13 @@ def test_residential_hpxml(mocker):
     hpxml_output_step = steps[4]
     assert hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput'
 
-    upgrade_costs_step = steps[5]
+    hpxml_output_step = steps[5]
+    assert hpxml_output_step['measure_dir_name'] == 'ReportUtilityBills'
+
+    upgrade_costs_step = steps[6]
     assert upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts'
 
-    server_dir_cleanup_step = steps[6]
+    server_dir_cleanup_step = steps[7]
     assert server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup'
 
 

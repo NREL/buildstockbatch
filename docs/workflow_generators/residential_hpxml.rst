@@ -17,10 +17,10 @@ Configuration Example
           - scenario_name: Scenario1
             type: CO2
             elec_folder: data/cambium/LRMER_MidCase_15
-            gas_value: 117.6
-            propane_value: 136.6
-            oil_value: 161.0
-            wood_value: 200.0
+
+        utility_bills:
+          - scenario_name: Bills1
+            pv_compensation_type: NetMetering
 
         simulation_output_report:
           timeseries_frequency: hourly
@@ -46,13 +46,33 @@ Arguments
 
 - ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
 
-    - ``scenario_name``: Name of the emission scenario.
+    - ``scenario_name``: Name of the emissions scenario.
     - ``type``: Type of emission (e.g., CO2, NOx, etc.).
     - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Path is relative to buildstock_directory's resources folder. File names must contain GEA region names.
     - ``gas_value``: Annual emissions factor for natural gas. Units are lb/MBtu (million Btu).
     - ``propane_value``: Annual emissions factor for propane. Units are lb/MBtu (million Btu).
     - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
     - ``wood_value``: Annual emissions factor for wood. Units are lb/MBtu (million Btu).
+
+- ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
+
+    - ``scenario_name``: Name of the utility bills scenario.
+    - ``elec_fixed_charge``: Monthly fixed charge for electricity.
+    - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
+    - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
+    - ``gas_marginal_rate``: Marginal rate for natural gas. Units are $/therm.
+    - ``propane_fixed_charge``: Monthly fixed charge for propane.
+    - ``propane_marginal_rate``: Marginal rate for propane. Units are $/gallon.
+    - ``oil_fixed_charge``: Monthly fixed charge for fuel oil.
+    - ``oil_marginal_rate``: Marginal rate for fuel oil. Units are $/gallon.
+    - ``wood_fixed_charge``: Monthly fixed charge for wood.
+    - ``wood_marginal_rate``: Marginal rate for wood. Units are $/kBtu.
+    - ``pv_compensation_type``: Photovoltaic compensation types. Can be NetMetering or FeedInTariff.
+    - ``pv_net_metering_annual_excess_sellback_rate_type``: Photovoltaic net metering annual excess sellback rate type. Can be User-Specified or Retail Electricity Cost. Applies if compensation type is NetMetering.
+    - ``pv_net_metering_annual_excess_sellback_rate``: Photovoltaic net metering annual excess sellback rate. Applies if compensation type is NetMetering.
+    - ``pv_feed_in_tariff_rate``: Photovoltaic annual full/gross feed-in tariff rate. Applies if compensation type is FeedInTariff.
+    - ``pv_monthly_grid_connection_fee_units``: Photovoltaic monthly grid connection fee units. Can be $ or $/kW.
+    - ``pv_monthly_grid_connection_fee``: Photovoltaic monthly grid connection fee.
 
 - ``measures`` (optional): Add these optional measures to the end of your workflow.
 

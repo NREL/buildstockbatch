@@ -335,9 +335,14 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
 
     b = EagleBatch(project_filename)
 
-    for job_id in range(1, 5):
-        filename = os.path.join(b.output_dir, f"job.out-{job_id}")
-        with open(filename, "w") as f:
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        if job_id == 5:
+            continue
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
             f.write('lots of output\ngoes\nhere\n')
             if job_id % 2 == 0:
                 f.write("Traceback")
@@ -345,24 +350,27 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
                 f.write("batch complete")
             f.write('\n')
 
+    failed_array_ids = b.get_failed_job_array_ids()
+    assert sorted(failed_array_ids) == [2, 4, 5]
+
     assert not b.process_results()
     process_results_mocker.assert_not_called()
     process_results_mocker.reset_mock()
 
-    failed_array_ids = b.get_failed_job_array_ids()
-    assert sorted(failed_array_ids) == [2, 4]
-
     b.rerun_failed_jobs()
-    queue_jobs_mocker.assert_called_once_with([2, 4], hipri=False)
+    queue_jobs_mocker.assert_called_once_with([2, 4, 5], hipri=False)
     queue_jobs_mocker.reset_mock()
     queue_post_processing_mocker.assert_called_once_with([42], hipri=False)
     queue_post_processing_mocker.reset_mock()
     assert not os.path.exists(os.path.join(results_dir, 'results_csvs'))
     assert not os.path.exists(os.path.join(results_dir, 'parquet'))
 
-    for job_id in range(1, 5):
-        filename = os.path.join(b.output_dir, f"job.out-{job_id}")
-        with open(filename, "w") as f:
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
             f.write('lots of output\ngoes\nhere\n')
             f.write("batch complete\n")
 
