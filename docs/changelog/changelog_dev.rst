@@ -75,3 +75,26 @@ Development Changelog
         :tickets:
 
         Add ``timestamps_use_period_beginning`` argument to postprocessing spec.
+        :tags: general, feature, eagle
+        :pullreq: 304
+
+        Added ability to resubmit failed array jobs on Eagle. 
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 259
+
+        Add ability to calculate emissions using the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 303
+
+        Add ability to calculate simple utility bills using the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: general, feature, eagle
+        :pullreq: 306
+        :tickets: 305
+
+        Now reruns jobs where the job.out-x is missing entirely.

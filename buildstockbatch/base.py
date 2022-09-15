@@ -268,18 +268,18 @@ class BuildStockBatchBase(object):
 
     @staticmethod
     def validate_project(project_file):
-        assert(BuildStockBatchBase.validate_project_schema(project_file))
-        assert(BuildStockBatchBase.validate_sampler(project_file))
-        assert(BuildStockBatchBase.validate_workflow_generator(project_file))
-        assert(BuildStockBatchBase.validate_misc_constraints(project_file))
-        assert(BuildStockBatchBase.validate_xor_nor_schema_keys(project_file))
-        assert(BuildStockBatchBase.validate_reference_scenario(project_file))
-        assert(BuildStockBatchBase.validate_options_lookup(project_file))
-        assert(BuildStockBatchBase.validate_logic(project_file))
-        assert(BuildStockBatchBase.validate_measure_references(project_file))
-        assert(BuildStockBatchBase.validate_postprocessing_spec(project_file))
-        assert(BuildStockBatchBase.validate_resstock_version(project_file))
-        assert(BuildStockBatchBase.validate_openstudio_version(project_file))
+        assert BuildStockBatchBase.validate_project_schema(project_file)
+        assert BuildStockBatchBase.validate_sampler(project_file)
+        assert BuildStockBatchBase.validate_workflow_generator(project_file)
+        assert BuildStockBatchBase.validate_misc_constraints(project_file)
+        assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
+        assert BuildStockBatchBase.validate_reference_scenario(project_file)
+        assert BuildStockBatchBase.validate_options_lookup(project_file)
+        assert BuildStockBatchBase.validate_logic(project_file)
+        assert BuildStockBatchBase.validate_measure_references(project_file)
+        assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
+        assert BuildStockBatchBase.validate_resstock_version(project_file)
+        assert BuildStockBatchBase.validate_openstudio_version(project_file)
         logger.info('Base Validation Successful')
         return True
 
