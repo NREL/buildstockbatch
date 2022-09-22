@@ -53,7 +53,6 @@ Arguments
   - ``simulation_control_run_period_end_month``: This numeric field should contain the end month number (1 = January, 2 = February, etc.) for the annual run period desired.
   - ``simulation_control_run_period_end_day_of_month``: This numeric field should contain the ending day of the ending month (must be valid for month) for the annual run period desired.
   - ``simulation_control_run_period_calendar_year``: This numeric field should contain the calendar year that determines the start day of week. If you are running simulations using AMY weather files, the value entered for calendar year will not be used; it will be overridden by the actual year found in the AMY weather file.
-  - ``debug``: If true: 1) Writes in.osm file, 2) Generates additional log output, and 3) Creates all EnergyPlus output files.
   - ``add_component_loads``: If true, output the annual heating/cooling component loads. Using this comes with a small runtime performance penalty.
 
 - ``emissions`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing emissions calculations.
@@ -68,23 +67,23 @@ Arguments
 
 - ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
 
-    - ``scenario_name``: Name of the utility bills scenario.
-    - ``elec_fixed_charge``: Monthly fixed charge for electricity.
-    - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
-    - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
-    - ``gas_marginal_rate``: Marginal rate for natural gas. Units are $/therm.
-    - ``propane_fixed_charge``: Monthly fixed charge for propane.
-    - ``propane_marginal_rate``: Marginal rate for propane. Units are $/gallon.
-    - ``oil_fixed_charge``: Monthly fixed charge for fuel oil.
-    - ``oil_marginal_rate``: Marginal rate for fuel oil. Units are $/gallon.
-    - ``wood_fixed_charge``: Monthly fixed charge for wood.
-    - ``wood_marginal_rate``: Marginal rate for wood. Units are $/kBtu.
-    - ``pv_compensation_type``: Photovoltaic compensation types. Can be NetMetering or FeedInTariff.
-    - ``pv_net_metering_annual_excess_sellback_rate_type``: Photovoltaic net metering annual excess sellback rate type. Can be User-Specified or Retail Electricity Cost. Applies if compensation type is NetMetering.
-    - ``pv_net_metering_annual_excess_sellback_rate``: Photovoltaic net metering annual excess sellback rate. Applies if compensation type is NetMetering.
-    - ``pv_feed_in_tariff_rate``: Photovoltaic annual full/gross feed-in tariff rate. Applies if compensation type is FeedInTariff.
-    - ``pv_monthly_grid_connection_fee_units``: Photovoltaic monthly grid connection fee units. Can be $ or $/kW.
-    - ``pv_monthly_grid_connection_fee``: Photovoltaic monthly grid connection fee.
+  - ``scenario_name``: Name of the utility bills scenario.
+  - ``elec_fixed_charge``: Monthly fixed charge for electricity.
+  - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
+  - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
+  - ``gas_marginal_rate``: Marginal rate for natural gas. Units are $/therm.
+  - ``propane_fixed_charge``: Monthly fixed charge for propane.
+  - ``propane_marginal_rate``: Marginal rate for propane. Units are $/gallon.
+  - ``oil_fixed_charge``: Monthly fixed charge for fuel oil.
+  - ``oil_marginal_rate``: Marginal rate for fuel oil. Units are $/gallon.
+  - ``wood_fixed_charge``: Monthly fixed charge for wood.
+  - ``wood_marginal_rate``: Marginal rate for wood. Units are $/kBtu.
+  - ``pv_compensation_type``: Photovoltaic compensation types. Can be NetMetering or FeedInTariff.
+  - ``pv_net_metering_annual_excess_sellback_rate_type``: Photovoltaic net metering annual excess sellback rate type. Can be User-Specified or Retail Electricity Cost. Applies if compensation type is NetMetering.
+  - ``pv_net_metering_annual_excess_sellback_rate``: Photovoltaic net metering annual excess sellback rate. Applies if compensation type is NetMetering.
+  - ``pv_feed_in_tariff_rate``: Photovoltaic annual full/gross feed-in tariff rate. Applies if compensation type is FeedInTariff.
+  - ``pv_monthly_grid_connection_fee_units``: Photovoltaic monthly grid connection fee units. Can be $ or $/kW.
+  - ``pv_monthly_grid_connection_fee``: Photovoltaic monthly grid connection fee.
 
 - ``measures`` (optional): Add these optional measures to the end of your workflow.
 
