@@ -64,7 +64,18 @@ Next, you will need to add an ``eagle`` top level key to the project file, which
 
 In general, be conservative on the time estimates. It can be helpful to run a small batch with
 pretty conservative estimates and then look at the output logs to see how long things really took
-before submitting a full batch simulation. 
+before submitting a full batch simulation.
+
+Re-running failed array jobs on Eagle
+.....................................
+
+Running buildstockbatch on Eagle breaks the simulation into an array of jobs
+that you set with the ``eagle.n_jobs`` configuration parameter. Each of those
+jobs runs a batch of simulations on a single compute node. Sometimes a handful
+of jobs will fail due to issues with Eagle (filesystem or timeouts). If most of
+the jobs succeeded, rather than rerun everything you can resubmit just the jobs
+that failed with the ``--rerun_failed`` command line argument. This will also
+clear out and rerun the postprocessing. 
 
 
 Amazon Web Services
