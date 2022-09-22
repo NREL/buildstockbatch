@@ -372,8 +372,8 @@ def test_residential_hpxml(mocker):
     apply_upgrade_step = steps[1]
     assert apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade'
 
-    apply_upgrade_step = steps[2]
-    assert apply_upgrade_step['measure_dir_name'] == 'HPXMLtoOpenStudio'
+    hpxml_to_os_step = steps[2]
+    assert hpxml_to_os_step['measure_dir_name'] == 'HPXMLtoOpenStudio'
 
     simulation_output_step = steps[3]
     assert simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput'
