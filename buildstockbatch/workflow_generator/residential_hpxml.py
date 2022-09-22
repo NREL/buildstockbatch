@@ -31,15 +31,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
-        measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
-        emissions: list(include('scenario-spec'), required=False)
+        emissions: list(include('emission-scenario-spec'), required=False)
+        utility_bills: list(include('utility-bill-scenario-spec'), required=False)
         measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
+        debug: bool(required=False)
         ---
-        scenario-spec:
+        emission-scenario-spec:
             scenario_name: str(required=True)
             type: str(required=True)
             elec_folder: str(required=True)
@@ -47,6 +48,24 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             propane_value: num(required=False)
             oil_value: num(required=False)
             wood_value: num(required=False)
+        utility-bill-scenario-spec:
+            scenario_name: str(required=True)
+            elec_fixed_charge: num(required=False)
+            elec_marginal_rate: num(required=False)
+            gas_fixed_charge: num(required=False)
+            gas_marginal_rate: num(required=False)
+            propane_fixed_charge: num(required=False)
+            propane_marginal_rate: num(required=False)
+            oil_fixed_charge: num(required=False)
+            oil_marginal_rate: num(required=False)
+            wood_fixed_charge: num(required=False)
+            wood_marginal_rate: num(required=False)
+            pv_compensation_type: str(required=False)
+            pv_net_metering_annual_excess_sellback_rate_type: str(required=False)
+            pv_net_metering_annual_excess_sellback_rate: num(required=False)
+            pv_feed_in_tariff_rate: num(required=False)
+            pv_monthly_grid_connection_fee_units: str(required=False)
+            pv_monthly_grid_connection_fee: num(required=False)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
@@ -89,7 +108,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'simulation_control_run_period_end_month': 12,
             'simulation_control_run_period_end_day_of_month': 31,
             'simulation_control_run_period_calendar_year': 2007,
-            'debug': False,
             'add_component_loads': False
         }
 
@@ -97,10 +115,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'building_id': building_id,
             'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints
         }
-        if 'measures_to_ignore' in workflow_args:
-            bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
+
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
+
+        add_component_loads = False
+        if 'add_component_loads' in bld_exist_model_args:
+            add_component_loads = bld_exist_model_args['add_component_loads']
+            bld_exist_model_args.pop('add_component_loads')
 
         if 'emissions' in workflow_args:
             emissions = workflow_args['emissions']
@@ -112,7 +134,31 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                              ['emissions_fuel_oil_values', 'oil_value'],
                              ['emissions_wood_values', 'wood_value']]
             for arg, item in emissions_map:
-                bld_exist_model_args[arg] = ','.join([str(s.get(item)) for s in emissions])
+                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in emissions])
+
+        if 'utility_bills' in workflow_args:
+            utility_bills = workflow_args['utility_bills']
+            utility_bills_map = [['utility_bill_scenario_names', 'scenario_name'],
+                                 ['utility_bill_electricity_fixed_charges', 'elec_fixed_charge'],
+                                 ['utility_bill_electricity_marginal_rates', 'elec_marginal_rate'],
+                                 ['utility_bill_natural_gas_fixed_charges', 'gas_fixed_charge'],
+                                 ['utility_bill_natural_gas_marginal_rates', 'gas_marginal_rate'],
+                                 ['utility_bill_propane_fixed_charges', 'propane_fixed_charge'],
+                                 ['utility_bill_propane_marginal_rates', 'propane_marginal_rate'],
+                                 ['utility_bill_fuel_oil_fixed_charges', 'oil_fixed_charge'],
+                                 ['utility_bill_fuel_oil_marginal_rates', 'oil_marginal_rate'],
+                                 ['utility_bill_wood_fixed_charges', 'wood_fixed_charge'],
+                                 ['utility_bill_wood_marginal_rates', 'wood_marginal_rate'],
+                                 ['utility_bill_pv_compensation_types', 'pv_compensation_type'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rate_types',
+                                  'pv_net_metering_annual_excess_sellback_rate_type'],
+                                 ['utility_bill_pv_net_metering_annual_excess_sellback_rates',
+                                  'pv_net_metering_annual_excess_sellback_rate'],
+                                 ['utility_bill_pv_feed_in_tariff_rates', 'pv_feed_in_tariff_rate'],
+                                 ['utility_bill_pv_monthly_grid_connection_fee_units', 'pv_monthly_grid_connection_fee_units'],
+                                 ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']]
+            for arg, item in utility_bills_map:
+                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
@@ -120,6 +166,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_fuel_consumptions': False,
             'include_timeseries_end_use_consumptions': True,
             'include_timeseries_emissions': False,
+            'include_timeseries_emission_fuels': False,
+            'include_timeseries_emission_end_uses': False,
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
@@ -156,6 +204,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend(workflow_args['measures'])
 
+        debug = False
+        if 'debug' in workflow_args:
+            debug = workflow_args['debug']
+
         server_dir_cleanup_args = {
           'retain_in_osm': False,
           'retain_in_idf': True,
@@ -170,16 +222,25 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
           'retain_eplusout_mtd': False,
           'retain_eplusout_rdd': False,
           'retain_eplusout_shd': False,
-          'retain_eplusout_sql': False,
+          'retain_eplusout_msgpack': False,
           'retain_eplustbl_htm': False,
-          'retain_sqlite_err': False,
           'retain_stdout_energyplus': False,
           'retain_stdout_expandobject': False,
-          'retain_schedules_csv': True
+          'retain_schedules_csv': True,
+          'debug': debug
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
         osw['steps'].extend([
+            {
+                'measure_dir_name': 'HPXMLtoOpenStudio',
+                'arguments': {
+                    'hpxml_path': '../../run/home.xml',
+                    'output_dir': '../../run',
+                    'debug': debug,
+                    'add_component_loads': add_component_loads
+                }
+            },
             {
                 'measure_dir_name': 'ReportSimulationOutput',
                 'arguments': sim_out_rep_args
@@ -189,8 +250,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'arguments': {}
             },
             {
-                'measure_dir_name': 'UpgradeCosts',
+                'measure_dir_name': 'ReportUtilityBills',
                 'arguments': {}
+            },
+            {
+                'measure_dir_name': 'UpgradeCosts',
+                'arguments': {
+                    'debug': debug
+                }
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
