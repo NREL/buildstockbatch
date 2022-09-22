@@ -45,7 +45,7 @@ Arguments
 ~~~~~~~~~
 
 - ``build_existing_model``: Update the simulation control arguments to the `BuildExistingModel`_ measure.
-  See :ref:`build-existing-model-defaults` for current defaults.
+  See :ref:`hpxml-build-existing-model-defaults` for current defaults.
 
   - ``simulation_control_timestep``: Value must be a divisor of 60.
   - ``simulation_control_run_period_begin_month``: This numeric field should contain the starting month number (1 = January, 2 = February, etc.) for the annual run period desired.
@@ -91,7 +91,7 @@ Arguments
   - ``arguments``: map of key, value arguments to pass to the measure.
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure.
-  See :ref:`sim-output-report-defaults` for current defaults.
+  See :ref:`hpxml-sim-output-report-defaults` for current defaults.
 
   - ``timeseries_frequency``: The frequency at which to report timeseries output data. Using 'none' will disable timeseries outputs. Valid choices are 'none', 'timestep', 'hourly', 'daily', and 'monthly'.
   - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for building total.
@@ -120,7 +120,7 @@ Arguments
   These arguments are passed directly to the `ServerDirectoryCleanup`_ measure in resstock.
   Please refer to the measure arguments there to determine what to set them to in your config file.
   Note that the default behavior is to retain some files and remove others.
-  See :ref:`server-dir-cleanup-defaults` for current defaults.
+  See :ref:`hpxml-server-dir-cleanup-defaults` for current defaults.
 
 - ``debug`` (optional): Optionally enable debug mode. Enabling debug
   mode will preserve all simulation input and output files, including but
@@ -131,7 +131,7 @@ Arguments
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
 .. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
 
-.. _build-existing-model-defaults:
+.. _hpxml-build-existing-model-defaults:
 
 Build Existing Model Defaults
 .............................
@@ -141,7 +141,7 @@ Build Existing Model Defaults
    :start-after: sim_ctl_args = {
    :end-before: }
 
-.. _sim-output-report-defaults:
+.. _hpxml-sim-output-report-defaults:
 
 Simulation Output Report Defaults
 ..................................
@@ -151,7 +151,7 @@ Simulation Output Report Defaults
    :start-after: sim_out_rep_args = {
    :end-before: }
 
-.. _server-dir-cleanup-defaults:
+.. _hpxml-server-dir-cleanup-defaults:
 
 Server Directory Cleanup Defaults
 .................................
