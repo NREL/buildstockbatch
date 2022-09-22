@@ -31,7 +31,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
-        measures_to_ignore: list(str(), required=False)
         build_existing_model: map(required=False)
         emissions: list(include('emission-scenario-spec'), required=False)
         utility_bills: list(include('utility-bill-scenario-spec'), required=False)
@@ -39,6 +38,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
+        debug: bool(required=False)
         ---
         emission-scenario-spec:
             scenario_name: str(required=True)
@@ -101,16 +101,28 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         logger.debug('Generating OSW, sim_id={}'.format(sim_id))
 
-        sim_ctl_args = {}
+        sim_ctl_args = {
+            'simulation_control_timestep': 60,
+            'simulation_control_run_period_begin_month': 1,
+            'simulation_control_run_period_begin_day_of_month': 1,
+            'simulation_control_run_period_end_month': 12,
+            'simulation_control_run_period_end_day_of_month': 31,
+            'simulation_control_run_period_calendar_year': 2007,
+            'add_component_loads': False
+        }
 
         bld_exist_model_args = {
             'building_id': building_id,
             'sample_weight': self.cfg['baseline']['n_buildings_represented'] / self.n_datapoints
         }
-        if 'measures_to_ignore' in workflow_args:
-            bld_exist_model_args['measures_to_ignore'] = '|'.join(workflow_args['measures_to_ignore'])
+
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
+
+        add_component_loads = False
+        if 'add_component_loads' in bld_exist_model_args:
+            add_component_loads = bld_exist_model_args['add_component_loads']
+            bld_exist_model_args.pop('add_component_loads')
 
         if 'emissions' in workflow_args:
             emissions = workflow_args['emissions']
@@ -192,6 +204,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend(workflow_args['measures'])
 
+        debug = False
+        if 'debug' in workflow_args:
+            debug = workflow_args['debug']
+
         server_dir_cleanup_args = {
           'retain_in_osm': False,
           'retain_in_idf': True,
@@ -210,11 +226,21 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
           'retain_eplustbl_htm': False,
           'retain_stdout_energyplus': False,
           'retain_stdout_expandobject': False,
-          'retain_schedules_csv': True
+          'retain_schedules_csv': True,
+          'debug': debug
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
         osw['steps'].extend([
+            {
+                'measure_dir_name': 'HPXMLtoOpenStudio',
+                'arguments': {
+                    'hpxml_path': '../../run/home.xml',
+                    'output_dir': '../../run',
+                    'debug': debug,
+                    'add_component_loads': add_component_loads
+                }
+            },
             {
                 'measure_dir_name': 'ReportSimulationOutput',
                 'arguments': sim_out_rep_args
@@ -229,7 +255,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
-                'arguments': {}
+                'arguments': {
+                    'debug': debug
+                }
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
