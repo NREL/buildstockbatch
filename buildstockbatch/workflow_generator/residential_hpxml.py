@@ -377,7 +377,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     'debug': debug,
                     'add_component_loads': add_component_loads
                 }
-            }]
+            }
+        ])
 
         osw['steps'].extend(workflow_args['measures'])
 
