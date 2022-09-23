@@ -31,15 +31,23 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         schema_yml = """
-        build_existing_model: map(required=False)
+        build_existing_model: include('build-existing-model-spec', required=False)
         emissions: list(include('emission-scenario-spec'), required=False)
         utility_bills: list(include('utility-bill-scenario-spec'), required=False)
         measures: list(include('measure-spec'), required=False)
         reporting_measures: list(include('measure-spec'), required=False)
-        simulation_output_report: map(required=False)
-        server_directory_cleanup: map(required=False)
+        simulation_output_report: include('sim-output-report-spec', required=False)
+        server_directory_cleanup: include('server-dir-cleanup-spec', required=False)
         debug: bool(required=False)
         ---
+        build-existing-model-spec:
+            simulation_control_timestep: int(required=False)
+            simulation_control_run_period_begin_month: int(required=False)
+            simulation_control_run_period_begin_day_of_month: int(required=False)
+            simulation_control_run_period_end_month: int(required=False)
+            simulation_control_run_period_end_day_of_month: int(required=False)
+            simulation_control_run_period_calendar_year: int(required=False)
+            add_component_loads: bool(required=False)
         emission-scenario-spec:
             scenario_name: str(required=True)
             type: str(required=True)
@@ -66,16 +74,54 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             pv_feed_in_tariff_rate: num(required=False)
             pv_monthly_grid_connection_fee_units: str(required=False)
             pv_monthly_grid_connection_fee: num(required=False)
+        sim-output-report-spec:
+            timeseries_frequency: str(required=False)
+            include_timeseries_total_consumptions: bool(required=False)
+            include_timeseries_fuel_consumptions: bool(required=False)
+            include_timeseries_end_use_consumptions: bool(required=False)
+            include_timeseries_emissions: bool(required=False)
+            include_timeseries_emission_fuels: bool(required=False)
+            include_timeseries_emission_end_uses: bool(required=False)
+            include_timeseries_hot_water_uses: bool(required=False)
+            include_timeseries_total_loads: bool(required=False)
+            include_timeseries_component_loads: bool(required=False)
+            include_timeseries_zone_temperatures: bool(required=False)
+            include_timeseries_airflows: bool(required=False)
+            include_timeseries_weather: bool(required=False)
+            add_timeseries_dst_column: bool(required=False)
+            add_timeseries_utc_column: bool(required=False)
+            output_variables: list(include('output-var-spec'), required=False)
+        output-var-spec:
+            name: str(required=True)
         measure-spec:
             measure_dir_name: str(required=True)
             arguments: map(required=False)
+        server-dir-cleanup-spec:
+            retain_in_osm: bool(required=False)
+            retain_in_idf: bool(required=False)
+            retain_pre_process_idf: bool(required=False)
+            retain_eplusout_audit: bool(required=False)
+            retain_eplusout_bnd: bool(required=False)
+            retain_eplusout_eio: bool(required=False)
+            retain_eplusout_end: bool(required=False)
+            retain_eplusout_err: bool(required=False)
+            retain_eplusout_eso: bool(required=False)
+            retain_eplusout_mdd: bool(required=False)
+            retain_eplusout_mtd: bool(required=False)
+            retain_eplusout_rdd: bool(required=False)
+            retain_eplusout_shd: bool(required=False)
+            retain_eplusout_msgpack: bool(required=False)
+            retain_eplustbl_htm: bool(required=False)
+            retain_stdout_energyplus: bool(required=False)
+            retain_stdout_expandobject: bool(required=False)
+            retain_schedules_csv: bool(required=False)
+            debug: bool(required=False)
         """
         workflow_generator_args = cfg['workflow_generator']['args']
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
-        yamale.validate(schema, data, strict=True)
-        return True
+        return yamale.validate(schema, data, strict=True)
 
     def reporting_measures(self):
         """Return a list of reporting measures to include in outputs"""
