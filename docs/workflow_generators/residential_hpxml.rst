@@ -47,7 +47,7 @@ Arguments
 - ``build_existing_model``: Update the simulation control arguments to the `BuildExistingModel`_ measure.
   See :ref:`hpxml-build-existing-model-defaults` for current defaults.
 
-  - ``simulation_control_timestep``: Value must be a divisor of 60.
+  - ``simulation_control_timestep``: Value must be a divisor of 60. Units are minutes.
   - ``simulation_control_run_period_begin_month``: This numeric field should contain the starting month number (1 = January, 2 = February, etc.) for the annual run period desired.
   - ``simulation_control_run_period_begin_day_of_month``: This numeric field should contain the starting day of the starting month (must be valid for month) for the annual run period desired.
   - ``simulation_control_run_period_end_month``: This numeric field should contain the end month number (1 = January, 2 = February, etc.) for the annual run period desired.
