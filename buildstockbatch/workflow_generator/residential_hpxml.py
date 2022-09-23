@@ -10,15 +10,25 @@ This object contains the residential classes for generating OSW files from indiv
 :license: BSD-3
 """
 
+from collections import Counter
 import datetime as dt
 import json
 import logging
+import os
 import re
+from xml.etree import ElementTree
 import yamale
 
 from .base import WorkflowGeneratorBase
+from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
+
+
+def get_measure_xml(xml_path):
+    tree = ElementTree.parse(xml_path)
+    root = tree.getroot()
+    return root
 
 
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
@@ -41,7 +51,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         debug: bool(required=False)
         ---
         build-existing-model-spec:
-            simulation_control_timestep: int(required=False)
+            simulation_control_timestep: enum(60, 30, 20, 15, 12, 10, 6, 5, 4, 3, 2, 1, required=False)
             simulation_control_run_period_begin_month: int(required=False)
             simulation_control_run_period_begin_day_of_month: int(required=False)
             simulation_control_run_period_end_month: int(required=False)
@@ -68,14 +78,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             oil_marginal_rate: num(required=False)
             wood_fixed_charge: num(required=False)
             wood_marginal_rate: num(required=False)
-            pv_compensation_type: str(required=False)
-            pv_net_metering_annual_excess_sellback_rate_type: str(required=False)
+            pv_compensation_type: enum('NetMetering', 'FeedInTariff', required=False)
+            pv_net_metering_annual_excess_sellback_rate_type: enum('User-Specified', 'Retail Electricity Cost', required=False)
             pv_net_metering_annual_excess_sellback_rate: num(required=False)
             pv_feed_in_tariff_rate: num(required=False)
-            pv_monthly_grid_connection_fee_units: str(required=False)
+            pv_monthly_grid_connection_fee_units: enum('$', '$/kW', required=False)
             pv_monthly_grid_connection_fee: num(required=False)
         sim-output-report-spec:
-            timeseries_frequency: str(required=False)
+            timeseries_frequency: enum('none', 'timestep', 'hourly', 'daily', 'monthly', required=False)
             include_timeseries_total_consumptions: bool(required=False)
             include_timeseries_fuel_consumptions: bool(required=False)
             include_timeseries_end_use_consumptions: bool(required=False)
@@ -121,12 +131,96 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
-        return yamale.validate(schema, data, strict=True)
+        yamale.validate(schema, data, strict=True)
+        return cls.validate_measures_and_arguments(cfg)
 
     def reporting_measures(self):
         """Return a list of reporting measures to include in outputs"""
         workflow_args = self.cfg['workflow_generator'].get('args', {})
         return [x['measure_dir_name'] for x in workflow_args.get('reporting_measures', [])]
+
+    @staticmethod
+    def validate_measures_and_arguments(cfg):
+
+        buildstock_dir = cfg["buildstock_directory"]
+        measures_dir = os.path.join(buildstock_dir, 'measures')
+        type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
+
+        measure_names = {
+            'BuildExistingModel': 'baseline',
+            'ApplyUpgrade': 'upgrades',
+        }
+
+        def cfg_path_exists(cfg_path):
+            if cfg_path is None:
+                return False
+            path_items = cfg_path.split('.')
+            a = cfg
+            for path_item in path_items:
+                try:
+                    a = a[path_item]  # noqa F841
+                except KeyError:
+                    return False
+            return True
+
+        def get_cfg_path(cfg_path):
+            if cfg_path is None:
+                return None
+            path_items = cfg_path.split('.')
+            a = cfg
+            for path_item in path_items:
+                try:
+                    a = a[path_item]
+                except KeyError:
+                    return None
+            return a
+
+        workflow_args = cfg['workflow_generator'].get('args', {})
+        if 'reporting_measures' in workflow_args.keys():
+            for reporting_measure in workflow_args['reporting_measures']:
+                measure_names[reporting_measure['measure_dir_name']] = 'workflow_generator.args.reporting_measures'
+
+        error_msgs = ''
+        warning_msgs = ''
+        for measure_name, cfg_key in measure_names.items():
+            measure_path = os.path.join(measures_dir, measure_name)
+
+            # check the rest only if that measure exists in cfg
+            if not cfg_path_exists(cfg_key):
+                continue
+
+            if measure_name in ['ApplyUpgrade']:
+                # For ApplyUpgrade measure, verify that all the cost_multipliers used are correct
+                root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+                valid_multipliers = set()
+                for argument in root.findall('./arguments/argument'):
+                    name = argument.find('./name')
+                    if name.text.endswith('_multiplier'):
+                        for choice in argument.findall('./choices/choice'):
+                            value = choice.find('./value')
+                            value = value.text if value is not None else ''
+                            valid_multipliers.add(value)
+                invalid_multipliers = Counter()
+                for upgrade_count, upgrade in enumerate(cfg['upgrades']):
+                    for option_count, option in enumerate(upgrade['options']):
+                        for cost_indx, cost_entry in enumerate(option.get('costs', [])):
+                            if cost_entry['multiplier'] not in valid_multipliers:
+                                invalid_multipliers[cost_entry['multiplier']] += 1
+
+                if invalid_multipliers:
+                    error_msgs += "* The following multipliers values are invalid: \n"
+                    for multiplier, count in invalid_multipliers.items():
+                        error_msgs += f"    '{multiplier}' - Used {count} times \n"
+                    error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
+
+        if warning_msgs:
+            logger.warning(warning_msgs)
+
+        if not error_msgs:
+            return True
+        else:
+            logger.error(error_msgs)
+            raise ValidationError(error_msgs)
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         """
