@@ -144,7 +144,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         buildstock_dir = cfg["buildstock_directory"]
         measures_dir = os.path.join(buildstock_dir, 'measures')
-        type_map = {'Integer': int, 'Boolean': bool, 'String': str, 'Double': float}
 
         measure_names = {
             'BuildExistingModel': 'baseline',
@@ -342,8 +341,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             }
         }
 
-        osw['steps'].extend(workflow_args['measures'])
-
         debug = False
         if 'debug' in workflow_args:
             debug = workflow_args['debug']
@@ -380,7 +377,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     'debug': debug,
                     'add_component_loads': add_component_loads
                 }
-            },
+            }]
+
+        osw['steps'].extend(workflow_args['measures'])
+
+        osw['steps'].extend([
             {
                 'measure_dir_name': 'ReportSimulationOutput',
                 'arguments': sim_out_rep_args
