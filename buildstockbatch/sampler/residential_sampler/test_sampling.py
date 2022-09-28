@@ -58,7 +58,7 @@ def test_get_issues() -> None:
 
     issues = get_issues(["Yes", "No"], [1, 0], ["Yes", "No"])
     assert len(issues) == 1
-    assert "marginal probability is zero" in issues[0]
+    assert "marginal probability is 0" in issues[0]
     assert len(get_issues(["Yes", "No"], [0.75, 0.25], ["Yes", "No"])) == 0
     assert len(get_issues(["Yes", "Yes"], [0.75, 0.25], ["Yes", "No"])) == 0
     assert len(get_issues(["Yes", "Yes", "No"], [0.75, 0.25], ["Yes", "No"])) == 0
@@ -83,7 +83,7 @@ def test_get_issues() -> None:
 
     issues = get_issues(["A", "A", "B", "C", "D"], [0.2] * 5, ["A", "B", "C", "D", "E"])
     assert len(issues) == 1
-    assert "marginal probability is zero" in issues[0]
+    assert "marginal probability is 0" in issues[0]
 
     assert len(get_issues(["A", "E", "B", "C", "D"], [0.2] * 5, ["A", "B", "C", "D", "E"])) == 0
 

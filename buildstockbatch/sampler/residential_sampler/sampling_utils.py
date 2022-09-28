@@ -1,4 +1,4 @@
-from functools import cache
+from functools import lru_cache
 import math
 import pathlib
 import pandas as pd
@@ -41,7 +41,7 @@ def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
     return group2probs, dep_cols, opt_cols
 
 
-@cache
+@lru_cache(maxsize=None)
 def get_param2tsv(project_dir: pathlib.Path) -> dict[str, TSVTuple]:
     characteristics_dir = project_dir / "housing_characteristics"
     s_time = time.time()
