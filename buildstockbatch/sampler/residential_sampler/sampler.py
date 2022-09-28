@@ -1,7 +1,3 @@
-# python version of run_sampling.rb
-# Author: Rajendra.Adhikari@nrel.gov
-
-import argparse
 import pandas as pd
 import networkx as nx
 import time

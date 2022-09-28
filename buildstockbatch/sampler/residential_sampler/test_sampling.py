@@ -1,12 +1,4 @@
-# python version of run_sampling.rb
-# Author: Rajendra.Adhikari@nrel.gov
-
-import argparse
 import pathlib
-from re import sub
-import time
-import itertools as it
-import multiprocessing
 import random
 from buildstockbatch.sampler.residential_sampler import sampling_utils as sampling_utils
 from sampling_utils import read_char_tsv
