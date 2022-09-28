@@ -1,9 +1,8 @@
 import pathlib
 import random
-from buildstockbatch.sampler.residential_sampler import sampling_utils as sampling_utils
-from sampling_utils import read_char_tsv
-from sampling_utils import get_param2tsv, get_issues, get_samples, get_marginal_prob, get_tsv_issues
-from sampling_utils import get_all_tsv_issues, get_tsv_max_errors, get_all_tsv_max_errors
+from buildstockbatch.sampler.residential_sampler.sampling_utils import read_char_tsv, get_param2tsv, get_issues, \
+    get_samples, get_marginal_prob, get_tsv_issues, get_all_tsv_issues, get_tsv_max_errors, get_all_tsv_max_errors
+
 from buildstockbatch.sampler.residential_sampler.sampler import sample_param, sample_all
 from collections import Counter
 import pandas as pd
@@ -12,28 +11,29 @@ random.seed(42)
 
 
 def test_get_samples() -> None:
-    samples = get_samples(probs = [1], options= ["Yes"], num_samples = 10)
+    samples = get_samples(probs=[1], options=["Yes"], num_samples=10)
     assert samples == ["Yes"]*10
-    samples = get_samples(probs = [0.5, 0.5], options= ["Yes", "No"], num_samples = 4)
+    samples = get_samples(probs=[0.5, 0.5], options=["Yes", "No"], num_samples=4)
     assert sorted(samples) == ['No', 'No', 'Yes', 'Yes']
 
-    samples = get_samples(probs = [0.5, 0.5], options= ["Yes", "No"], num_samples = 1)
+    samples = get_samples(probs=[0.5, 0.5], options=["Yes", "No"], num_samples=1)
     assert samples in [['No'], ['Yes']]
 
     # probabilities may not exactly sum to 1
-    samples = get_samples(probs = [0.49, 0.49], options= ["Yes", "No"], num_samples = 4)
+    samples = get_samples(probs=[0.49, 0.49], options=["Yes", "No"], num_samples=4)
     assert sorted(samples) == ['No', 'No', 'Yes', 'Yes']
-    samples = get_samples(probs = [0.5, 0.5], options= ["Yes", "No"], num_samples = 3)
+    samples = get_samples(probs=[0.5, 0.5], options=["Yes", "No"], num_samples=3)
     assert sorted(samples) in [['No', 'No', 'Yes'], ['No', 'Yes', 'Yes']]
-    samples = get_samples(probs = [0.75, 0.25], options=["Yes", "No"], num_samples = 2)
+    samples = get_samples(probs=[0.75, 0.25], options=["Yes", "No"], num_samples=2)
     assert sorted(samples) in [['Yes', 'Yes'], ['No', 'Yes']]
-    samples = get_samples(probs = [0.6, 0.15, 0.15, 0.10], options=["A", "B", "C", "D"], num_samples = 2)
+    samples = get_samples(probs=[0.6, 0.15, 0.15, 0.10], options=["A", "B", "C", "D"], num_samples=2)
     assert sorted(samples) == ['A', 'A']
-    samples = get_samples(probs = [0.6, 0.15, 0.15, 0.10], options=["A", "B", "C", "D"], num_samples = 198)
+    samples = get_samples(probs=[0.6, 0.15, 0.15, 0.10], options=["A", "B", "C", "D"], num_samples=198)
     assert Counter(samples) in [Counter({'A': 119, 'B': 30, 'C': 29, 'D': 20}),
                                 Counter({'A': 119, 'B': 29, 'C': 30, 'D': 20})]
 
-def test_get_marginal_prob()->None:
+
+def test_get_marginal_prob() -> None:
     assert get_marginal_prob(0.75, 2) == 0.5
     assert get_marginal_prob(0.25, 2) == 0.5
     assert get_marginal_prob(0.75, 4) == 0
@@ -41,7 +41,7 @@ def test_get_marginal_prob()->None:
     assert get_marginal_prob(0.75, 1) == 0.75
 
 
-def test_get_issues()->None:
+def test_get_issues() -> None:
     issues = get_issues(["Yes"]*10, [1], ["Yes"])
     assert len(issues) == 0
     issues = get_issues(["Yes"], [0.5, 0.5], ["Yes", "No"])
@@ -97,8 +97,9 @@ def test_get_tsv_issues():
                             'Option=Standard': [0.4] * 5,
                             'Option=Premium': [0.2] * 5})
     sample_df = pd.DataFrame({'Bedrooms': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-        'Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard']
-    })
+                              'Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard',
+                                      'None', 'Standard']
+                              })
     with tempfile.TemporaryDirectory() as tmp_dir:
         tsv_file = tmp_dir + "/Fan.tsv"
         fan_tsv.to_csv(tsv_file, sep='\t', index=False)
@@ -110,8 +111,9 @@ def test_get_tsv_issues():
                             'Option=Standard': [0.4],
                             'Option=Premium': [0.2]})
     sample_df = pd.DataFrame({'Bedrooms': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-        'Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard']
-    })
+                              'Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard',
+                                      'None', 'Standard']
+                              })
     with tempfile.TemporaryDirectory() as tmp_dir:
         tsv_file = tmp_dir + "/Fan.tsv"
         fan_tsv.to_csv(tsv_file, sep='\t', index=False)
@@ -126,8 +128,9 @@ def test_get_tsv_issues():
                             'Option=Standard': [0.4] * 5,
                             'Option=Premium': [0.2] * 5})
     sample_df = pd.DataFrame({'Bedrooms': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-        'Fan': ['None', 'Standard', 'None', 'Standard', 'Premium', 'Standard', 'None', 'Standard', 'None', 'Premium']
-    })
+                              'Fan': ['None', 'Standard', 'None', 'Standard', 'Premium', 'Standard', 'None', 'Standard',
+                                      'None', 'Premium']
+                              })
     with tempfile.TemporaryDirectory() as tmp_dir:
         tsv_file = tmp_dir + "/Fan.tsv"
         fan_tsv.to_csv(tsv_file, sep='\t', index=False)
@@ -180,7 +183,7 @@ def test_get_param2tsv():
     assert dep_cols == ['Bedrooms']
     assert opt_cols == ['None', 'Standard', 'Premium']
     assert len(group2probs) == 5
-    for group in  ['1', '2', '3', '4', '5']:
+    for group in ['1', '2', '3', '4', '5']:
         assert group2probs[(group,)] == [0.4, 0.4, 0.2, 0.2]
 
 
@@ -194,23 +197,24 @@ def test_sample_all():
     assert get_tsv_issues(param='Ceiling Fan', tsv_tuple=tsv_tuple, sample_df=sample_df) == []
 
 
-def test_get_all_tsv_issues()->None:
+def test_get_all_tsv_issues() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
-        'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
-                        'Standard']
-    })
+                              'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
+                                              'Standard', 'None', 'Standard']
+                              })
     issues_dict = get_all_tsv_issues(sample_df=sample_df, project_dir=project_dir)
     assert len(issues_dict) == 2
     for param, issues in issues_dict.items():
         assert issues == []
 
 
-def test_get_tsv_errors()->None:
+def test_get_tsv_errors() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
-        'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard']
-    })
+                              'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
+                                              'Standard', 'None', 'Standard']
+                              })
     assert len(sample_df) == 10
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Bedrooms.tsv')
     error_dict = get_tsv_max_errors(param='Bedrooms', tsv_tuple=tsv_tuple, sample_df=sample_df)
@@ -226,11 +230,12 @@ def test_get_tsv_errors()->None:
     assert error_dict['max_total_error_param'] == 'Premium'
 
 
-def test_get_all_tsv_errors()->None:
+def test_get_all_tsv_errors() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
-        'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None', 'Standard']
-    })
+                              'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
+                                              'Standard', 'None', 'Standard']
+                              })
     error_df = get_all_tsv_max_errors(sample_df=sample_df, project_dir=project_dir)
     assert len(error_df) == 2
     assert (error_df['max_row_error'] < 1).all()  # Individual row error less than 1 sample

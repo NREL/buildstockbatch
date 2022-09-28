@@ -1,3 +1,5 @@
+from functools import cache
+import math
 import pathlib
 import pandas as pd
 import numpy as np
@@ -7,12 +9,11 @@ import multiprocessing
 import random
 from collections import Counter, defaultdict
 random.seed(42)
-import math
-import pandas as pd
-from functools import cache
 
 
 TSVTuple = tuple[dict[tuple[str, ...], list[float]], list[str], list[str]]
+
+
 def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
     dep_cols = []
     opt_cols = []
@@ -22,7 +23,7 @@ def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
         for line_num, line in enumerate(file):
             if line[0] == '#':
                 continue
-            if line_num==0:
+            if line_num == 0:
                 for col_num, header in enumerate(line.split("\t")):
                     if header.startswith("Dependency="):
                         dep_cols.append(header.removeprefix('Dependency=').strip())
@@ -33,11 +34,12 @@ def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
             else:
                 line_array = line.split("\t")
                 dep_val = tuple(line_array[:len(dep_cols)])
-                opt_val = [float(v) for v in line_array[len(dep_cols) : len(dep_cols) + len(opt_cols)]]
+                opt_val = [float(v) for v in line_array[len(dep_cols): len(dep_cols) + len(opt_cols)]]
                 sampling_prob = float(line_array[sampling_col]) if sampling_col else 1
                 group2probs[dep_val] = opt_val + [sampling_prob]  # append sampling probability at the end
 
     return group2probs, dep_cols, opt_cols
+
 
 @cache
 def get_param2tsv(project_dir: pathlib.Path) -> dict[str, TSVTuple]:
@@ -52,6 +54,7 @@ def get_param2tsv(project_dir: pathlib.Path) -> dict[str, TSVTuple]:
     param2tsv = dict(res)
     print(f"Got Param2tsv in {time.time()-s_time:.2f} seconds")
     return param2tsv
+
 
 def get_samples(probs: list[float], options: list[str], num_samples: int) -> list[str]:
     """Returns a list of samples chosen from the options list as per the probability distribution in probs using quota
@@ -76,13 +79,14 @@ def get_samples(probs: list[float], options: list[str], num_samples: int) -> lis
     extra_opts = sorted(enumerate(remaining_allocation), key=lambda x: (x[1], x[0]), reverse=True)[:remaining_samples]
 
     for indx, _ in extra_opts:
-       allocations[indx] += 1
+        allocations[indx] += 1
 
     samples = []
     for (indx, count) in enumerate(allocations):
-        samples.extend([new_options[indx]] *count)
+        samples.extend([new_options[indx]] * count)
     random.shuffle(samples)
     return samples
+
 
 def get_marginal_prob(initial_prob: float, count: int) -> float:
     """Returns the relative 'marginal' probability for an option with a initial probability and total counts.
@@ -156,23 +160,23 @@ def get_issues(samples: list[str], probs: list[float], opts: list[str]) -> list[
             continue
         if pos_diff_prob == 0:
             issue = f"{pos_opt} has one sample more ({act_sample2count[pos_opt]}) than reference, and {neg_opt} "\
-            f"has one sample less ({act_sample2count[pos_opt]}), but the marginal probability is zero for {pos_opt} "\
-            f"so it can't have an extra sample in expense of {neg_opt} when nsamples is {nsamples}"
+                f"has one sample less ({act_sample2count[pos_opt]}), but the marginal probability is 0 for {pos_opt} "\
+                f"so it can't have an extra sample in expense of {neg_opt} when nsamples is {nsamples}"
             issues.append(issue)
         elif abs(pos_diff_prob - neg_diff_prob) >= 1e-9:
             issue = f"{pos_opt} has one sample more than reference, and {neg_opt} "\
-            f"has one sample less, but their marginal probabilities are not equal."
+                f"has one sample less, but their marginal probabilities are not equal."
             issues.append(issue)
 
     return issues
 
 
-def get_tsv_issues(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame)->list[str]:
+def get_tsv_issues(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame) -> list[str]:
     group2probs, dep_cols, opt_cols = tsv_tuple
     issues: list[str] = []
     if not dep_cols:
         probs = group2probs[()]
-        samples=sample_df[param].values
+        samples = sample_df[param].values
         issues.extend(get_issues(samples=samples, probs=probs[:-1], opts=opt_cols))
     else:
         convert_dict = {dep_col: str for dep_col in dep_cols}
@@ -183,7 +187,8 @@ def get_tsv_issues(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame)->li
             group_key = group_key if isinstance(group_key, tuple) else (group_key,)
             probs = group2probs[group_key]
             samples = sub_df[param].values
-            current_issues = [f"In {group_key} {issue}" for issue in get_issues(samples=samples,probs=probs[:-1], opts=opt_cols)]
+            current_issues = [f"In {group_key} {issue}" for issue in get_issues(
+                samples=samples, probs=probs[:-1], opts=opt_cols)]
             issues.extend(current_issues)
     if issues:
         print(f"{param} has {len(issues)} issues.")
@@ -201,7 +206,7 @@ def get_all_tsv_issues(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> di
             _, dep_cols, _ = param2tsv[param]
             res = pool.apply_async(get_tsv_issues, (param, param2tsv[param], sample_df[dep_cols + [param]]))
             results.append(res)
-        all_issues = {param:res_val.get() for param, res_val in zip(all_params, results)}
+        all_issues = {param: res_val.get() for param, res_val in zip(all_params, results)}
     return all_issues
 
 
@@ -246,6 +251,7 @@ def get_tsv_max_errors(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame)
             'max_row_error_group': max_row_diff[2],
             'max_total_error': max_total_diff[0], 'max_total_error_param': max_total_diff[1]}
 
+
 def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> pd.DataFrame:
     param2tsv = get_param2tsv(project_dir)
     all_params = list(param2tsv.keys())
@@ -256,6 +262,6 @@ def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -
             res = pool.apply_async(get_tsv_max_errors, (param, param2tsv[param], sample_df[dep_cols + [param]]))
             # res = test_sample(param, param2tsv[param], sample_df[dep_cols + [param]])
             results.append(res)
-        errors_dict = {param:res_val.get() for param, res_val in zip(all_params, results)}
+        errors_dict = {param: res_val.get() for param, res_val in zip(all_params, results)}
     error_df = pd.DataFrame(errors_dict).transpose()
     return error_df
