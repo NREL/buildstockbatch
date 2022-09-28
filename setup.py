@@ -71,7 +71,10 @@ setuptools.setup(
         'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
-        'jinja2<3.1.0'
+        'jinja2<3.1.0',
+        'networkx',
+        'colorama',
+        'click'
     ],
     extras_require={
         'dev': [
@@ -95,7 +98,8 @@ setuptools.setup(
         'console_scripts': [
             'buildstock_docker=buildstockbatch.localdocker:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
-            'buildstock_aws=buildstockbatch.aws.aws:main'
+            'buildstock_aws=buildstockbatch.aws.aws:main',
+            'resstock_sampler=buildstockbatch.sampler.residential_sampler.sampler:main'
         ]
     },
     cmdclass={'test': PyTest},

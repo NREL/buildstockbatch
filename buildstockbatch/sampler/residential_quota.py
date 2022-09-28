@@ -7,16 +7,13 @@ This object contains the code required for generating the set of simulations to 
 :copyright: (c) 2020 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
-import docker
 import logging
-import os
-import shutil
-import subprocess
-import sys
 import time
+import pathlib
 
 from .base import BuildStockSampler
 from .downselect import DownselectSamplerBase
+from .residential_sampler.sampler import sample_all
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -52,59 +49,20 @@ class ResidentialQuotaSampler(BuildStockSampler):
             raise ValidationError('The following sampler arguments are required: ' + ', '.join(expected_args))
         return True
 
-    def _run_sampling_docker(self):
-        docker_client = docker.DockerClient.from_env()
+    def _run_sampling(self):
         tick = time.time()
-        extra_kws = {}
-        if sys.platform.startswith('linux'):
-            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
-        container_output = docker_client.containers.run(
-            self.parent().docker_image,
-            [
-                'ruby',
-                'resources/run_sampling.rb',
-                '-p', self.cfg['project_directory'],
-                '-n', str(self.n_datapoints),
-                '-o', 'buildstock.csv'
-            ],
-            remove=True,
-            volumes={
-                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
-            },
-            name='buildstock_sampling',
-            **extra_kws
-        )
-        tick = time.time() - tick
-        for line in container_output.decode('utf-8').split('\n'):
-            logger.debug(line)
-        logger.debug('Sampling took {:.1f} seconds'.format(tick))
-        destination_filename = self.csv_path
-        if os.path.exists(destination_filename):
-            os.remove(destination_filename)
-        shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
-        )
-        return destination_filename
+        buildstock_directory = pathlib.Path(self.cfg['buildstock_directory'])
+        sample_df = sample_all(buildstock_directory / self.cfg['project_directory'], self.n_datapoints)
+        print(self.csv_path)
+        sample_df.to_csv(self.csv_path, index=False)
+        logger.debug('Sampling took {:.1f} seconds'.format(time.time() - tick))
+        return self.csv_path
+
+    def _run_sampling_docker(self):
+        return self._run_sampling()
 
     def _run_sampling_singularity(self):
-        args = [
-            'singularity',
-            'exec',
-            '--contain',
-            '--home', '{}:/buildstock'.format(self.buildstock_dir),
-            '--bind', '{}:/outbind'.format(os.path.dirname(self.csv_path)),
-            self.parent().singularity_image,
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(self.n_datapoints),
-            '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
-        ]
-        logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
-        subprocess.run(args, check=True, env=os.environ, cwd=self.parent().output_dir)
-        logger.debug("Singularity sampling completed.")
-        return self.csv_path
+        return self._run_sampling()
 
 
 class ResidentialQuotaDownselectSampler(DownselectSamplerBase):
