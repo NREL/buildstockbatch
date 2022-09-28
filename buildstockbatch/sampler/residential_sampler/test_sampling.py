@@ -8,10 +8,11 @@ import time
 import itertools as it
 import multiprocessing
 import random
-from .sampling_utils import read_char_tsv
-from .sampling_utils import get_param2tsv, get_issues, get_samples, get_marginal_prob, get_tsv_issues
-from .sampling_utils import get_all_tsv_issues, get_tsv_max_errors, get_all_tsv_max_errors
-from .sampler import sample_param, sample_all
+from buildstockbatch.sampler.residential_sampler import sampling_utils as sampling_utils
+from sampling_utils import read_char_tsv
+from sampling_utils import get_param2tsv, get_issues, get_samples, get_marginal_prob, get_tsv_issues
+from sampling_utils import get_all_tsv_issues, get_tsv_max_errors, get_all_tsv_max_errors
+from buildstockbatch.sampler.residential_sampler.sampler import sample_param, sample_all
 from collections import Counter
 import pandas as pd
 import tempfile
