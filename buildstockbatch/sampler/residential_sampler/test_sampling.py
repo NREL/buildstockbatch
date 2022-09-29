@@ -1,13 +1,12 @@
 import pathlib
-import random
 from buildstockbatch.sampler.residential_sampler.sampling_utils import read_char_tsv, get_param2tsv, get_issues, \
-    get_samples, get_marginal_prob, get_tsv_issues, get_all_tsv_issues, get_tsv_max_errors, get_all_tsv_max_errors
+    get_samples, get_marginal_prob, get_tsv_issues, get_all_tsv_issues, get_tsv_max_sampling_errors, \
+    get_all_tsv_max_errors
 
 from buildstockbatch.sampler.residential_sampler.sampler import sample_param, sample_all
 from collections import Counter
 import pandas as pd
 import tempfile
-random.seed(42)
 
 
 def test_get_samples() -> None:
@@ -171,9 +170,10 @@ def test_sample_param():
 def test_get_param2tsv():
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     param2tsv = get_param2tsv(project_dir)
-    assert len(param2tsv) == 2
+    assert len(param2tsv) == 3
     assert 'Bedrooms' in param2tsv
     assert 'Ceiling Fan' in param2tsv
+    assert 'Uses AC' in param2tsv
     group2probs, dep_cols, opt_cols = param2tsv['Bedrooms']
     assert dep_cols == []
     assert opt_cols == ['1', '2', '3', '4', '5']
@@ -185,6 +185,10 @@ def test_get_param2tsv():
     assert len(group2probs) == 5
     for group in ['1', '2', '3', '4', '5']:
         assert group2probs[(group,)] == [0.4, 0.4, 0.2, 0.2]
+    group2probs, dep_cols, opt_cols = param2tsv['Uses AC']
+    assert dep_cols == ['Ceiling Fan']
+    assert opt_cols == ['Yes', 'No']
+    assert len(group2probs) == 3
 
 
 def test_sample_all():
@@ -201,10 +205,11 @@ def test_get_all_tsv_issues() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
                               'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
-                                              'Standard', 'None', 'Standard']
+                                              'Standard', 'None', 'Standard'],
+                              'Uses AC': ['Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
                               })
     issues_dict = get_all_tsv_issues(sample_df=sample_df, project_dir=project_dir)
-    assert len(issues_dict) == 2
+    assert len(issues_dict) == 3
     for param, issues in issues_dict.items():
         assert issues == []
 
@@ -213,38 +218,46 @@ def test_get_tsv_errors() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
                               'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
-                                              'Standard', 'None', 'Standard']
+                                              'Standard', 'None', 'Standard'],
+                              'Uses AC': ['Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
                               })
     assert len(sample_df) == 10
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Bedrooms.tsv')
-    error_dict = get_tsv_max_errors(param='Bedrooms', tsv_tuple=tsv_tuple, sample_df=sample_df)
-    assert error_dict['max_row_error'] == 0
-    assert error_dict['max_row_error_group'] == ()
-    assert error_dict['max_total_error'] == 0
+    error_dict = get_tsv_max_sampling_errors(param='Bedrooms', tsv_tuple=tsv_tuple, sample_df=sample_df)
+    assert error_dict['max_group_error'] == 0
+    assert error_dict['max_group_error_group'] == ()
+    assert error_dict['max_option_error'] == 0
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Ceiling Fan.tsv')
-    error_dict = get_tsv_max_errors(param='Ceiling Fan', tsv_tuple=tsv_tuple, sample_df=sample_df)
-    assert error_dict['max_row_error'] == 0.4
-    assert error_dict['max_row_error_param'] == 'Premium'
-    assert error_dict['max_row_error_group'] in [(str(i),) for i in range(1, 6)]
-    assert error_dict['max_total_error'] == 2.0
-    assert error_dict['max_total_error_param'] == 'Premium'
+    error_dict = get_tsv_max_sampling_errors(param='Ceiling Fan', tsv_tuple=tsv_tuple, sample_df=sample_df)
+    assert error_dict['max_group_error'] == 0
+    assert error_dict['max_group_error_group'] in [(str(i),) for i in range(1, 6)]
+    assert error_dict['max_option_error'] == -2.0
+    assert error_dict['max_option_error_option'] == 'Premium'
+
+    tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Uses AC.tsv')
+    error_dict = get_tsv_max_sampling_errors(param='Uses AC', tsv_tuple=tsv_tuple, sample_df=sample_df)
+    assert error_dict['max_group_error'] == -2
+    assert error_dict['max_group_error_group'] == ('Premium',)
+    assert (error_dict['max_option_error'], error_dict['max_option_error_option']) in [(-2.0, 'No'), (2.0, 'Yes')]
 
 
 def test_get_all_tsv_errors() -> None:
     project_dir = pathlib.Path(__file__).parent / 'project_sampling_test'
     sample_df = pd.DataFrame({'Bedrooms': [1, 1, 2, 2, 3, 3, 4, 4, 5, 5],
                               'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
-                                              'Standard', 'None', 'Standard']
+                                              'Standard', 'None', 'Standard'],
+                              'Uses AC': ['Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
                               })
     error_df = get_all_tsv_max_errors(sample_df=sample_df, project_dir=project_dir)
-    assert len(error_df) == 2
-    assert (error_df['max_row_error'] < 1).all()  # Individual row error less than 1 sample
-    assert (error_df['max_total_error'] <= 0.2 * len(sample_df)).all()  # total error less than 20%
-    assert error_df.loc['Bedrooms'].max_row_error == 0
-    assert error_df.loc['Bedrooms'].max_row_error_group == ()
-    assert error_df.loc['Bedrooms'].max_total_error == 0
-    assert error_df.loc['Ceiling Fan'].max_row_error == 0.4
-    assert error_df.loc['Ceiling Fan'].max_row_error_group in [(str(i),) for i in range(1, 6)]
-    assert error_df.loc['Ceiling Fan'].max_row_error_param == 'Premium'
-    assert error_df.loc['Ceiling Fan'].max_total_error == 2.0
-    assert error_df.loc['Ceiling Fan'].max_total_error_param == 'Premium'
+    assert len(error_df) == 3
+    assert error_df.loc['Bedrooms'].max_group_error == 0
+    assert error_df.loc['Bedrooms'].max_group_error_group == ()
+    assert error_df.loc['Bedrooms'].max_option_error == 0
+    edf = error_df.loc['Ceiling Fan']
+    assert edf.max_group_error == 0
+    assert edf.max_group_error_group in [(str(i),) for i in range(1, 6)]
+    assert (edf.max_option_error, edf.max_option_error_option) == (-2.0, 'Premium')
+    edf = error_df.loc['Uses AC']
+    assert edf.max_group_error == -2
+    assert edf.max_group_error_group == ('Premium',)
+    assert edf.max_option_error, edf.max_option_error_option in [(-2.0, 'No'), (2.0, 'Yes')]

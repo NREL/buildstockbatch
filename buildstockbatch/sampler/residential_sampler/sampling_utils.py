@@ -210,46 +210,48 @@ def get_all_tsv_issues(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> di
     return all_issues
 
 
-def get_tsv_max_errors(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame) -> dict[str, tuple[float, str]]:
+def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
+                                sample_df: pd.DataFrame) -> dict[str, tuple[float, str]]:
     sample_df = sample_df.astype(str)
     group2probs, dep_cols, opt_cols = tsv_tuple
     nsamples = len(sample_df)
-    diff_counts = defaultdict(list)
-    total_diff_counts: dict[str, int] = defaultdict(int)
-
-    def get_stats(param, vals):
-        return {'max_diff': max(vals)[0], 'max_diff_grp': max(vals)[1], 'total_diff': total_diff_counts[param]}
+    option_diff_counts: dict[str, int] = defaultdict(int)
+    max_group_error, max_group_eror_group = 0, None
 
     def gather_diffs(df, probs, grp):
+        nonlocal max_group_error, max_group_eror_group
         samples_count = Counter(df[param].values)
         current_nsamples = len(df)
         sampling_probability = probs[-1]
+        true_nsamples_for_grp = nsamples * sampling_probability
+        group_error = current_nsamples - true_nsamples_for_grp
+        if abs(group_error) >= abs(max_group_error):
+            max_group_error, max_group_eror_group = group_error, grp
         probs_sum = sum(probs[:-1])
         probs = [p/probs_sum for p in probs[:-1]]  # Normalize the probabilities
-        true_nsamples_for_grp = nsamples * sampling_probability
-        expected_samples = Counter(dict(zip(opt_cols, np.array(probs) * current_nsamples)))
-        true_expected_samples = Counter(dict(zip(opt_cols, np.array(probs) * true_nsamples_for_grp)))
+        expected_samples = Counter(dict(zip(opt_cols, np.array(probs) * true_nsamples_for_grp)))
         for opt, expected_count in expected_samples.items():
-            diff_counts[opt].append((expected_count - samples_count.get(opt, 0), grp))
-            total_diff_counts[opt] += true_expected_samples[opt] - samples_count.get(opt, 0)
+            true_diff = samples_count.get(opt, 0) - expected_count
+            option_diff_counts[opt] += true_diff
 
     if not dep_cols:
         probs = group2probs[()]
         gather_diffs(sample_df, probs, ())
     else:
         grp_cols = dep_cols[0] if len(dep_cols) == 1 else dep_cols
-        grouped_df = sample_df.groupby(grp_cols, sort=False)
-        for group_key, sub_df in grouped_df:
-            group_key = group_key if isinstance(group_key, tuple) else (group_key,)
-            probs = group2probs[group_key]
+        grouped_df = sample_df.groupby(grp_cols, sort=True)
+        df_keys = set(grouped_df.groups.keys())
+        for group_key, probs in group2probs.items():
+            df_group_key = group_key[0] if len(group_key) == 1 else group_key
+            if df_group_key in df_keys:
+                sub_df = grouped_df.get_group(df_group_key)
+            else:
+                sub_df = pd.DataFrame({param: []})
             gather_diffs(sub_df, probs, group_key)
 
-    diff_stats = {param: get_stats(param, vals) for param, vals in diff_counts.items()}
-    max_total_diff = max((stats['total_diff'], param) for param, stats in diff_stats.items())
-    max_row_diff = max((stats['max_diff'], param, stats['max_diff_grp']) for param, stats in diff_stats.items())
-    return {'max_row_error': max_row_diff[0], 'max_row_error_param': max_row_diff[1],
-            'max_row_error_group': max_row_diff[2],
-            'max_total_error': max_total_diff[0], 'max_total_error_param': max_total_diff[1]}
+    max_option_error_option, max_option_error = max(option_diff_counts.items(), key=lambda x: abs(x[1]))
+    return {'max_group_error': max_group_error, 'max_group_error_group': max_group_eror_group,
+            'max_option_error': max_option_error, 'max_option_error_option': max_option_error_option}
 
 
 def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> pd.DataFrame:
@@ -258,8 +260,9 @@ def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -
     results = []
     with multiprocessing.Pool(processes=max(multiprocessing.cpu_count() - 2, 1)) as pool:
         for param in all_params:
-            _, dep_cols, opt_cols = param2tsv[param]
-            res = pool.apply_async(get_tsv_max_errors, (param, param2tsv[param], sample_df[dep_cols + [param]]))
+            _, dep_cols, _ = param2tsv[param]
+            res = pool.apply_async(get_tsv_max_sampling_errors,
+                                   (param, param2tsv[param], sample_df[dep_cols + [param]]))
             # res = test_sample(param, param2tsv[param], sample_df[dep_cols + [param]])
             results.append(res)
         errors_dict = {param: res_val.get() for param, res_val in zip(all_params, results)}
