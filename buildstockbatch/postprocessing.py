@@ -339,7 +339,7 @@ def get_partitioned_bldg_groups(partition_df, partition_columns, files_per_parti
     """
     total_building = len(partition_df)
     if partition_columns:
-        bldg_id_list_df = partition_df.reset_index().groupby(partition_columns)['building_id'].apply(list)
+        bldg_id_list_df = partition_df.reset_index().groupby(partition_columns, dropna=False)['building_id'].apply(list)
         ngroups = len(bldg_id_list_df)
         bldg_id_list = bldg_id_list_df.sum()
         nfiles_in_each_group = [nfiles for nfiles in bldg_id_list_df.map(lambda x: len(x))]
