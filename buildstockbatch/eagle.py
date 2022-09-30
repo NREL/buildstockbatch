@@ -503,7 +503,8 @@ class EagleBatch(BuildStockBatchBase):
                     raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')  # noqa E501
 
         # Move old output logs and config to make way for new ones
-        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
+        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out',
+                         'buildstockbatch_crash_details.log'):
             filepath = pathlib.Path(self.output_dir, filename)
             if filepath.exists():
                 last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
