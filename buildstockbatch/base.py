@@ -180,8 +180,8 @@ class BuildStockBatchBase(object):
 
         return df
 
-    @staticmethod
-    def cleanup_sim_dir(cfg, sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
+    @classmethod
+    def cleanup_sim_dir(cls, cfg, sim_dir, dest_fs, simout_ts_dir, upgrade_id, building_id):
         """Clean up the output directory for a single simulation.
 
         :param sim_dir: simulation directory
@@ -245,7 +245,7 @@ class BuildStockBatchBase(object):
 
             tsdf.rename(columns=get_clean_column_name, inplace=True)
             if cfg.get("postprocessing", {}).get("timestamps_use_period_beginning", False):
-                BuildStockBatchBase.make_period_beginning(tsdf)
+                cls.make_period_beginning(tsdf)
             postprocessing.write_dataframe_as_parquet(
                 tsdf,
                 dest_fs,
