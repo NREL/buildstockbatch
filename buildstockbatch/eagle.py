@@ -30,6 +30,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import yaml
 import csv
@@ -54,7 +55,7 @@ class EagleBatch(BuildStockBatchBase):
     hpc_name = 'eagle'
     min_sims_per_job = 36 * 2
 
-    local_scratch = pathlib.Path('/tmp/scratch')
+    local_scratch = pathlib.Path(os.environ.get('LOCAL_SCRATCH', '/tmp/scratch'))
     local_project_dir = local_scratch / 'project'
     local_buildstock_dir = local_scratch / 'buildstock'
     local_weather_dir = local_scratch / 'weather'
@@ -344,77 +345,85 @@ class EagleBatch(BuildStockBatchBase):
                 cls.local_weather_dir,
             ]
 
-            # Build the command to instantiate and configure the singularity container the simulation is run inside
-            local_resources_dir = cls.local_buildstock_dir / 'resources'
-            args = [
-                'singularity', 'exec',
-                '--contain',
-                '-e',
-                '--pwd', '/var/simdata/openstudio',
-                '-B', f'{sim_dir}:/var/simdata/openstudio',
-                '-B', f'{local_resources_dir}:/lib/resources',
-                '-B', f'{cls.local_housing_characteristics_dir}:/lib/housing_characteristics'
-            ]
-            runscript = [
-                'ln -s /lib /var/simdata/openstudio/lib'
-            ]
-            for src in dirs_to_mount:
-                container_mount = '/' + os.path.basename(src)
-                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
-                container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
-                runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
+            # Create a temporary directory for the simulation to use
+            with tempfile.TemporaryDirectory(dir=cls.local_scratch, prefix=f"{sim_id}_") as tmpdir:
 
-            if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
-                runscript.append('ln -s /resources /var/simdata/openstudio/resources')
-                src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
-                container_mount = '/resources/hpxml-measures'
-                args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                # Build the command to instantiate and configure the singularity container the simulation is run inside
+                local_resources_dir = cls.local_buildstock_dir / 'resources'
+                args = [
+                    'singularity', 'exec',
+                    '--contain',
+                    '-e',
+                    '--pwd', '/var/simdata/openstudio',
+                    '-B', f'{sim_dir}:/var/simdata/openstudio',
+                    '-B', f'{local_resources_dir}:/lib/resources',
+                    '-B', f'{cls.local_housing_characteristics_dir}:/lib/housing_characteristics',
+                    '-B', f'{tmpdir}:/tmp'
+                ]
+                runscript = [
+                    'ln -s /lib /var/simdata/openstudio/lib'
+                ]
+                for src in dirs_to_mount:
+                    container_mount = '/' + os.path.basename(src)
+                    args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                    container_symlink = os.path.join('/var/simdata/openstudio', os.path.basename(src))
+                    runscript.append('ln -s {} {}'.format(*map(shlex.quote, (container_mount, container_symlink))))
 
-            # Build the openstudio command that will be issued within the singularity container
-            # If custom gems are to be used in the singularity container add extra bundle arguments to the cli command
-            cli_cmd = 'openstudio run -w in.osw'
-            if cfg.get('baseline', dict()).get('custom_gems', False):
-                cli_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
-            if get_bool_env_var('MEASURESONLY'):
-                cli_cmd += ' --measures_only'
-            runscript.append(cli_cmd)
-            args.extend([
-                str(cls.local_singularity_img),
-                'bash', '-x'
-            ])
-            env_vars = dict(os.environ)
-            env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
-            logger.debug('\n'.join(map(str, args)))
-            with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
-                try:
-                    subprocess.run(
-                        args,
-                        check=True,
-                        input='\n'.join(runscript).encode('utf-8'),
-                        stdout=f_out,
-                        stderr=subprocess.STDOUT,
-                        cwd=cls.local_output_dir,
-                        env=env_vars,
+                if os.path.exists(os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')):
+                    runscript.append('ln -s /resources /var/simdata/openstudio/resources')
+                    src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
+                    container_mount = '/resources/hpxml-measures'
+                    args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+
+                # Build the openstudio command that will be issued within the
+                # singularity container If custom gems are to be used in the
+                # singularity container add extra bundle arguments to the cli
+                # command
+                cli_cmd = 'openstudio run -w in.osw'
+                if cfg.get('baseline', dict()).get('custom_gems', False):
+                    cli_cmd = (
+                        'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
                     )
-                except subprocess.CalledProcessError:
-                    pass
-                finally:
-                    # Clean up the symbolic links we created in the container
-                    for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
-                        try:
-                            os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
-                        except FileNotFoundError:
-                            pass
+                if get_bool_env_var('MEASURESONLY'):
+                    cli_cmd += ' --measures_only'
+                runscript.append(cli_cmd)
+                args.extend([
+                    str(cls.local_singularity_img),
+                    'bash', '-x'
+                ])
+                env_vars = dict(os.environ)
+                env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
+                logger.debug('\n'.join(map(str, args)))
+                with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                    try:
+                        subprocess.run(
+                            args,
+                            check=True,
+                            input='\n'.join(runscript).encode('utf-8'),
+                            stdout=f_out,
+                            stderr=subprocess.STDOUT,
+                            cwd=cls.local_output_dir,
+                            env=env_vars,
+                        )
+                    except subprocess.CalledProcessError:
+                        pass
+                    finally:
+                        # Clean up the symbolic links we created in the container
+                        for mount_dir in dirs_to_mount + [os.path.join(sim_dir, 'lib')]:
+                            try:
+                                os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
+                            except FileNotFoundError:
+                                pass
 
-                    # Clean up simulation directory
-                    cls.cleanup_sim_dir(
-                        cfg,
-                        sim_dir,
-                        fs,
-                        f'{output_dir}/results/simulation_output/timeseries',
-                        upgrade_id,
-                        i
-                    )
+                        # Clean up simulation directory
+                        cls.cleanup_sim_dir(
+                            cfg,
+                            sim_dir,
+                            fs,
+                            f'{output_dir}/results/simulation_output/timeseries',
+                            upgrade_id,
+                            i
+                        )
 
         reporting_measures = cls.get_reporting_measures(cfg)
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)

@@ -98,3 +98,11 @@ Development Changelog
         :tickets: 305
 
         Now reruns jobs where the job.out-x is missing entirely.
+
+    .. change::
+        :tags: bugfix, eagle
+        :pullreq: 291
+
+        Mounts a temp dir into the container to avoid using the RAM disk.
+        Especially helpful for large schedules. Fixes `NREL/OpenStudio-HPXML#1070 <https://github.com/NREL/OpenStudio-HPXML/issues/1070>`_.
+
