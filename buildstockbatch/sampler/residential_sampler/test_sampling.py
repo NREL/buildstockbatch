@@ -7,6 +7,7 @@ from buildstockbatch.sampler.residential_sampler.sampler import sample_param, sa
 from collections import Counter
 import pandas as pd
 import tempfile
+import math
 
 
 def test_get_samples() -> None:
@@ -221,24 +222,31 @@ def test_get_tsv_errors() -> None:
                                               'Standard', 'None', 'Standard'],
                               'Uses AC': ['Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
                               })
-    assert len(sample_df) == 10
+    nsamples = len(sample_df)
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Bedrooms.tsv')
     error_dict = get_tsv_max_sampling_errors(param='Bedrooms', tsv_tuple=tsv_tuple, sample_df=sample_df)
     assert error_dict['max_group_error'] == 0
+    assert error_dict['total_group_error'] == 0
     assert error_dict['max_group_error_group'] == ()
     assert error_dict['max_option_error'] == 0
+    assert error_dict['total_option_error'] == 0
+
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Ceiling Fan.tsv')
     error_dict = get_tsv_max_sampling_errors(param='Ceiling Fan', tsv_tuple=tsv_tuple, sample_df=sample_df)
     assert error_dict['max_group_error'] == 0
+    assert error_dict['total_group_error'] == 0
     assert error_dict['max_group_error_group'] in [(str(i),) for i in range(1, 6)]
-    assert error_dict['max_option_error'] == -2.0
+    assert math.isclose(error_dict['max_option_error'], 2.0 / nsamples)
     assert error_dict['max_option_error_option'] == 'Premium'
+    assert math.isclose(error_dict['total_option_error'], 4.0 / nsamples)
 
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Uses AC.tsv')
     error_dict = get_tsv_max_sampling_errors(param='Uses AC', tsv_tuple=tsv_tuple, sample_df=sample_df)
-    assert error_dict['max_group_error'] == -2
+    assert math.isclose(error_dict['max_group_error'], 2.0 / nsamples)
+    assert math.isclose(error_dict['total_group_error'], 4.0 / nsamples)
     assert error_dict['max_group_error_group'] == ('Premium',)
-    assert (error_dict['max_option_error'], error_dict['max_option_error_option']) in [(-2.0, 'No'), (2.0, 'Yes')]
+    assert error_dict['max_option_error_option'] in ('No', 'Yes')
+    assert math.isclose(error_dict['total_option_error'], 4.0 / nsamples)
 
 
 def test_get_all_tsv_errors() -> None:
@@ -248,16 +256,24 @@ def test_get_all_tsv_errors() -> None:
                                               'Standard', 'None', 'Standard'],
                               'Uses AC': ['Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
                               })
+    nsamples = len(sample_df)
     error_df = get_all_tsv_max_errors(sample_df=sample_df, project_dir=project_dir)
     assert len(error_df) == 3
     assert error_df.loc['Bedrooms'].max_group_error == 0
+    assert error_df.loc['Bedrooms'].total_group_error == 0
     assert error_df.loc['Bedrooms'].max_group_error_group == ()
     assert error_df.loc['Bedrooms'].max_option_error == 0
+    assert error_df.loc['Bedrooms'].total_option_error == 0
     edf = error_df.loc['Ceiling Fan']
-    assert edf.max_group_error == 0
+    assert math.isclose(edf.max_group_error, 0)
+    assert math.isclose(edf.total_group_error, 0)
     assert edf.max_group_error_group in [(str(i),) for i in range(1, 6)]
-    assert (edf.max_option_error, edf.max_option_error_option) == (-2.0, 'Premium')
+    assert math.isclose(edf.max_option_error, 2.0 / nsamples)
+    assert edf.max_option_error_option == 'Premium'
+    assert math.isclose(edf.total_option_error, 4.0 / nsamples)
     edf = error_df.loc['Uses AC']
-    assert edf.max_group_error == -2
+    assert math.isclose(edf.max_group_error, 2 / nsamples)
+    assert math.isclose(edf.total_group_error, 4 / nsamples)
     assert edf.max_group_error_group == ('Premium',)
-    assert edf.max_option_error, edf.max_option_error_option in [(-2.0, 'No'), (2.0, 'Yes')]
+    assert edf.max_option_error_option in ['No', 'Yes']
+    assert math.isclose(edf.total_option_error, 4 / nsamples)

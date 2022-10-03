@@ -8,6 +8,7 @@ from joblib import Parallel, delayed
 import multiprocessing
 import random
 from collections import Counter, defaultdict
+from typing import Union, TypedDict
 random.seed(42)
 
 
@@ -210,28 +211,39 @@ def get_all_tsv_issues(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> di
     return all_issues
 
 
+class ErrorDict(TypedDict):
+    max_group_error: float
+    max_group_error_group: Union[str, None]
+    total_group_error: float
+    max_option_error: float
+    max_option_error_option: str
+    total_option_error: float
+
+
 def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
-                                sample_df: pd.DataFrame) -> dict[str, tuple[float, str]]:
+                                sample_df: pd.DataFrame) -> ErrorDict:
     sample_df = sample_df.astype(str)
     group2probs, dep_cols, opt_cols = tsv_tuple
     nsamples = len(sample_df)
     option_diff_counts: dict[str, int] = defaultdict(int)
     max_group_error, max_group_eror_group = 0, None
+    total_group_error = 0
 
     def gather_diffs(df, probs, grp):
-        nonlocal max_group_error, max_group_eror_group
+        nonlocal max_group_error, max_group_eror_group, total_group_error
         samples_count = Counter(df[param].values)
         current_nsamples = len(df)
         sampling_probability = probs[-1]
         true_nsamples_for_grp = nsamples * sampling_probability
-        group_error = current_nsamples - true_nsamples_for_grp
-        if abs(group_error) >= abs(max_group_error):
+        group_error = abs(current_nsamples - true_nsamples_for_grp) / nsamples
+        total_group_error += group_error
+        if group_error >= max_group_error:
             max_group_error, max_group_eror_group = group_error, grp
         probs_sum = sum(probs[:-1])
         probs = [p/probs_sum for p in probs[:-1]]  # Normalize the probabilities
         expected_samples = Counter(dict(zip(opt_cols, np.array(probs) * true_nsamples_for_grp)))
         for opt, expected_count in expected_samples.items():
-            true_diff = samples_count.get(opt, 0) - expected_count
+            true_diff = (samples_count.get(opt, 0) - expected_count) / nsamples
             option_diff_counts[opt] += true_diff
 
     if not dep_cols:
@@ -250,8 +262,10 @@ def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
             gather_diffs(sub_df, probs, group_key)
 
     max_option_error_option, max_option_error = max(option_diff_counts.items(), key=lambda x: abs(x[1]))
+    total_option_error = sum(abs(diff) for diff in option_diff_counts.values())
     return {'max_group_error': max_group_error, 'max_group_error_group': max_group_eror_group,
-            'max_option_error': max_option_error, 'max_option_error_option': max_option_error_option}
+            'total_group_error': total_group_error, 'max_option_error': abs(max_option_error),
+            'max_option_error_option': max_option_error_option, 'total_option_error': total_option_error}
 
 
 def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> pd.DataFrame:

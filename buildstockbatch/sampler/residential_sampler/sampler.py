@@ -119,10 +119,10 @@ def verify(buildstock_file: str, project: str, output: str):
        the probability distribution in project TSVs can result in the BUILDSTOCK_FILE using quota sampling.
 
        \b
-       In addition to correctness verification, it also calculates the maximum number of sample error for any
-       options in each TSVs between the BUILDSTOCK_FILE and what one would expect purely based on the probabilities if
-       fractional samples were possible. It also calculates smapling errors for each group in the TSV. An example is
-       provided below to explain the error calculation futher.
+       In addition to correctness verification, it also calculates the sample probability distribution error for the
+       options in each TSVs between the BUILDSTOCK_FILE and what one would expect based on the probabilities. It also
+       calculates smapling errors for each group in the TSV. An example is provided below to explain the error
+       calculation further.
        Consider a project with three TSVs.
        Bedrooms.tsv
        ----------
@@ -160,25 +160,24 @@ def verify(buildstock_file: str, project: str, output: str):
               *         5         Standard       No
        \b
        For nsamples=10, the error calculation for each of the TSV will be as follows.
-       For Bedrooms.tsv, expected sampels for each option is 2, and there are exactly two samples for each option in the
-       buildstock.csv. Hence, the max_option_error is 0 for all options.
-       There are no dependencies, so, the max_group_error is also 0.
+       For Bedrooms.tsv, distribution of various bedrooms is 0.2 in the buildstock.csv which exactly matches with the
+       distribution in the TSV. Hences, max_option_error = total_option_error = 0.
+       Since there are no dependencies, the max_group_error and total_group_error is also 0.
        \b
-       For Fan.tsv, based on the sampling_probability and the options probabilities for each row
-       the expected number of samples for None and Standard is 3.5 each, and expected number samples for Premium is 3
-       Since the buildstock.csv has 5 samples each for None and Standard and no samples for Premium, there is an error
-       of +1.5 samples for None and Standard, and error of -3 samples for Premium. Hence, max_option_error is -3 and
-       max_option_error_option is Premium. There are 5 dependency groups [(1,), (2,), (3,), (4,), (5,)] in Fan.tsv with
-       sampling_probability of 0.2 for all. Thus we expect 2 samples for each group in buildstock.csv. Since this
-       matches exactly with what we have in buildstock.csv, max_group_error is 0.
+       For Fan.tsv, we expect the sample distribution for None, Standard and Premium to be 0.35, 0.35 and 0.3.
+       The actual distribution is 0.5, 0.5 and 0.0. This gives absolute distribution errors as 0.15, 0.15 and 0.3.
+       Hence, the max_option_error is 0.3 and total_option_error is 0.6
+       There are 5 dependency groups [(1,), (2,), (3,), (4,), (5,)] in Fan.tsv with expected sample distribution of
+       [0.2, 0.2, 0.2, 0.2, 0.2]. The actual probability distribution for these groups are also the same, both the
+       max_group_error and total_group_error is 0.
        \b
-       For AC.tsv, we expect 6.25 samples for Yes since 0.9 * 0.35 + 0.8 * 0.35 + 0.1 * 0.3 = 6.25. We also expect 3.75
-       samples for No. Since there are 9 samples for Yes, and 1 sample for No in buildstock.csv, option=Yes has sampling
-       error of +2.75 and option=No has error of -2.75. Hence max_option_error is either -2.75 or +2.75 (only absolute
-       value is compared to determine the maximum, though the sign is preserved in the output). There are 3 dependency
-       groups [(None,), (Standard,), (Premium,)] with sampling probability of 0.35, 0.35 and 0.3. Hence we expect 3.5,
-       3.5 and 3.0 samples for each group. Since we have 5 samples each for the first two groups and no samples for the
-       last, the max_group_error is -3.0 and max_group_error_group is (Premium,).
+       For AC.tsv, expect the sample distribution for Yes and No to be 0.625 (0.9 * 0.35 + 0.8 * 0.35 + 0.1 * 0.3) and
+       0.375. The actual sample distribution we have for Yes and No is 0.9 and 0.1. This gives absolute distribution
+       errors as 0.275 and 0.275. Hence, the max_option_error = 0.275 and total_option_error is 0.55.
+       There are 3 dependency groups [(None,), (Standard,), (Premium,)] in AC.tsv with expected sample distribution of
+       0.35, 0.35 and 0.3. The actual sample distribution we have for [(None,), (Standard,), (Premium,)] is 0.5, 0.5, 0.
+       This gives absolute distribution error for group as 0.15, 0.15 and 0.3. Hence, max_group_error is 0.3 and
+       total_group_eror is 0.6
     """
     buildstock_df = pd.read_csv(buildstock_file)
     buildstock_df = buildstock_df.astype(str)
@@ -193,11 +192,11 @@ def verify(buildstock_file: str, project: str, output: str):
         click.echo(click.style("Buildstock.csv is correct.", fg='green'))
     click.echo("Now calculating max sampling error.")
     error_df = get_all_tsv_max_errors(sample_df=buildstock_df, project_dir=pathlib.Path(project))
-    error_df = error_df.sort_values(by=['max_option_error'], key=lambda x: abs(x), ascending=False)
+    error_df = error_df.sort_values(by=['total_option_error'], key=lambda x: abs(x), ascending=False)
     click.echo("Top 10 TSVs with maximum option sampling errors")
     click.echo(error_df.head(10))
     error_df.to_csv(output)
-    error_df = error_df.sort_values(by=['max_group_error'], key=lambda x: abs(x), ascending=False)
+    error_df = error_df.sort_values(by=['total_group_error'], key=lambda x: abs(x), ascending=False)
     click.echo("Top 10 TSVs with maximum group sampling errors")
     click.echo(error_df.head(10))
 
