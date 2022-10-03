@@ -13,7 +13,7 @@ import pathlib
 
 from .base import BuildStockSampler
 from .downselect import DownselectSamplerBase
-from .residential_sampler.sampler import sample_all
+from buildstockbatch.sampler.residential_sampler.sampler import sample_all
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
