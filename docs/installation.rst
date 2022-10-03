@@ -22,7 +22,7 @@ computationally intensive. Local use is only recommended for very small testing 
    `Docker Desktop Community 2.1.0.5 <https://docs.docker.com/docker-for-windows/release-notes/#docker-desktop-community-2105>`_
    or below.
 
-Install Python 3.6 or greater for your platform. Either the official
+Install Python 3.8 or greater for your platform. Either the official
 distribution from python.org or the `Anaconda distribution
 <https://www.anaconda.com/distribution/>`_ (recommended).
 
@@ -31,7 +31,7 @@ Get a copy of this code either by downloading the zip file from GitHub or
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
-environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.6 or greater. Then activate your environment. 
+environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.8 or greater. Then activate your environment.
 
 .. _python virtual environment: https://docs.python.org/3/library/venv.html
 .. _conda environment: https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html

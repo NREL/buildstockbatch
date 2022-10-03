@@ -10,6 +10,7 @@ from unittest.mock import patch
 import gzip
 
 from buildstockbatch.eagle import user_cli, EagleBatch
+from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -70,12 +71,12 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert(mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args)
         assert(mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args)
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') == -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') == -1
 
         # Measures only run
         mock_subprocess.reset_mock()
@@ -87,12 +88,12 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert(mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args)
         assert(mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args)
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') > -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') > -1
 
 
 def test_singularity_image_download_url(basic_residential_project_file):
@@ -331,3 +332,63 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
 
     with open(traceback_file, 'r') as f:
         assert f.read().find('RuntimeError') > -1
+
+
+def test_rerun_failed_jobs(mocker, basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file()
+    os.makedirs(os.path.join(results_dir, 'results_csvs'))
+    os.makedirs(os.path.join(results_dir, 'parquet'))
+    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    process_results_mocker = mocker.patch.object(BuildStockBatchBase, 'process_results')
+    queue_jobs_mocker = mocker.patch.object(EagleBatch, 'queue_jobs', return_value=[42])
+    queue_post_processing_mocker = mocker.patch.object(EagleBatch, 'queue_post_processing')
+
+    b = EagleBatch(project_filename)
+
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        if job_id == 5:
+            continue
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            if job_id % 2 == 0:
+                f.write("Traceback")
+            else:
+                f.write("batch complete")
+            f.write('\n')
+
+    failed_array_ids = b.get_failed_job_array_ids()
+    assert sorted(failed_array_ids) == [2, 4, 5]
+
+    assert not b.process_results()
+    process_results_mocker.assert_not_called()
+    process_results_mocker.reset_mock()
+
+    b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_called_once_with([2, 4, 5], hipri=False)
+    queue_jobs_mocker.reset_mock()
+    queue_post_processing_mocker.assert_called_once_with([42], hipri=False)
+    queue_post_processing_mocker.reset_mock()
+    assert not os.path.exists(os.path.join(results_dir, 'results_csvs'))
+    assert not os.path.exists(os.path.join(results_dir, 'parquet'))
+
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            f.write("batch complete\n")
+
+    b.process_results()
+    process_results_mocker.assert_called_once()
+
+    assert not b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_not_called()
+    queue_post_processing_mocker.assert_not_called()

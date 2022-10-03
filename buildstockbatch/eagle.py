@@ -38,6 +38,7 @@ import csv
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
 from buildstockbatch import postprocessing
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,7 @@ class EagleBatch(BuildStockBatchBase):
     @property
     def results_dir(self):
         results_dir = os.path.join(self.output_dir, 'results')
-        assert(os.path.isdir(results_dir))
+        assert os.path.isdir(results_dir)
         return results_dir
 
     @staticmethod
@@ -320,6 +321,8 @@ class EagleBatch(BuildStockBatchBase):
         if os.path.exists(traceback_file_path):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
+        logger.info('batch complete')
+
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
 
@@ -388,6 +391,8 @@ class EagleBatch(BuildStockBatchBase):
                     str(cls.local_singularity_img),
                     'bash', '-x'
                 ])
+                env_vars = dict(os.environ)
+                env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
                 logger.debug('\n'.join(map(str, args)))
                 with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
                     try:
@@ -397,7 +402,8 @@ class EagleBatch(BuildStockBatchBase):
                             input='\n'.join(runscript).encode('utf-8'),
                             stdout=f_out,
                             stderr=subprocess.STDOUT,
-                            cwd=cls.local_output_dir
+                            cwd=cls.local_output_dir,
+                            env=env_vars,
                         )
                     except subprocess.CalledProcessError:
                         pass
@@ -422,7 +428,7 @@ class EagleBatch(BuildStockBatchBase):
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
-    def queue_jobs(self, array_ids=None):
+    def queue_jobs(self, array_ids=None, hipri=False):
         eagle_cfg = self.cfg['eagle']
         minutes_per_sim = eagle_cfg.get('minutes_per_sim', 3)
         with open(os.path.join(self.output_dir, 'job001.json'), 'r') as f:
@@ -463,6 +469,8 @@ class EagleBatch(BuildStockBatchBase):
         ]
         if os.environ.get('SLURM_JOB_QOS'):
             args.insert(-1, '--qos={}'.format(os.environ.get('SLURM_JOB_QOS')))
+        elif hipri:
+            args.insert(-1, '--qos=high')
 
         logger.debug(' '.join(args))
         resp = subprocess.run(
@@ -565,6 +573,83 @@ class EagleBatch(BuildStockBatchBase):
         else:
             return Client(scheduler_file=os.path.join(self.output_dir, 'dask_scheduler.json'))
 
+    def process_results(self, *args, **kwargs):
+        # Check that all the jobs succeeded before proceeding
+        failed_job_array_ids = self.get_failed_job_array_ids()
+        if failed_job_array_ids:
+            logger.error("The following simulation jobs failed: {}".format(", ".join(map(str, failed_job_array_ids))))
+            logger.error("Please inspect those jobs and fix any problems before resubmitting.")
+            logger.critical("Postprocessing cancelled.")
+            return False
+
+        super().process_results(*args, **kwargs)
+
+    def _get_job_ids_for_file_pattern(self, pat):
+        job_ids = set()
+        for filename in os.listdir(self.output_dir):
+            m = re.search(pat, filename)
+            if not m:
+                continue
+            job_ids.add(int(m.group(1)))
+        return job_ids
+
+    def get_failed_job_array_ids(self):
+        job_out_files = sorted(pathlib.Path(self.output_dir).glob('job.out-*'))
+
+        failed_job_ids = set()
+        for filename in job_out_files:
+            with open(filename, 'r') as f:
+                if not re.search(r"batch complete", f.read()):
+                    job_id = int(re.match(r"job\.out-(\d+)", filename.name).group(1))
+                    logger.debug(f"Array Job ID {job_id} had a failure.")
+                    failed_job_ids.add(job_id)
+
+        job_out_ids = self._get_job_ids_for_file_pattern(r"job\.out-(\d+)")
+        job_json_ids = self._get_job_ids_for_file_pattern(r"job(\d+)\.json")
+        missing_job_ids = job_json_ids - job_out_ids
+        failed_job_ids.update(missing_job_ids)
+
+        return sorted(failed_job_ids)
+
+    def rerun_failed_jobs(self, hipri=False):
+        # Find the jobs that failed
+        failed_job_array_ids = self.get_failed_job_array_ids()
+        if not failed_job_array_ids:
+            logger.error("There are no failed jobs to rerun. Exiting.")
+            return False
+
+        output_path = pathlib.Path(self.output_dir)
+        results_path = pathlib.Path(self.results_dir)
+
+        prev_failed_job_out_dir = output_path / 'prev_failed_jobs'
+        os.makedirs(prev_failed_job_out_dir, exist_ok=True)
+        for job_array_id in failed_job_array_ids:
+            # Move the failed job.out file so it doesn't get overwritten
+            filepath = output_path / f'job.out-{job_array_id}'
+            if filepath.exists():
+                last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
+                shutil.move(
+                    filepath,
+                    prev_failed_job_out_dir / f'{filepath.name}_{last_mod_date:%Y%m%d%H%M}'
+                )
+
+            # Delete simulation results for jobs we're about to rerun
+            files_to_delete = [f'simulations_job{job_array_id}.tar.gz', f'results_job{job_array_id}.json.gz']
+            for filename in files_to_delete:
+                (results_path / 'simulation_output' / filename).unlink(missing_ok=True)
+
+        # Clear out postprocessed data so we can start from a clean slate
+        dirs_to_delete = [
+            results_path / 'results_csvs',
+            results_path / 'parquet'
+        ]
+        for x in dirs_to_delete:
+            if x.exists():
+                shutil.rmtree(x)
+
+        job_ids = self.queue_jobs(failed_job_array_ids, hipri=hipri)
+        self.queue_post_processing(job_ids, hipri=hipri)
+
 
 logging_config = {
         'version': 1,
@@ -642,6 +727,11 @@ def user_cli(argv=sys.argv[1:]):
         help='Run the sampling only.',
         action='store_true'
     )
+    group.add_argument(
+        '--rerun_failed',
+        help='Rerun the failed jobs',
+        action='store_true'
+    )
 
     # parse CLI arguments
     args = parser.parse_args(argv)
@@ -666,10 +756,15 @@ def user_cli(argv=sys.argv[1:]):
         eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
         return True
 
+    if args.rerun_failed:
+        eagle_batch = EagleBatch(project_filename)
+        eagle_batch.rerun_failed_jobs(hipri=args.hipri)
+        return True
+
     # otherwise, queue up the whole eagle buildstockbatch process
     # the main work of the first Eagle job is to run the sampling script ...
     eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'eagle.sh')
-    assert(os.path.exists(eagle_sh))
+    assert os.path.exists(eagle_sh)
     out_dir = cfg['output_directory']
     if os.path.exists(out_dir):
         raise FileExistsError(
@@ -735,14 +830,14 @@ def main():
     if job_array_number:
         # if job array number is non-zero, run the batch job
         # Simulation should not be scheduled for sampling only
-        assert(not sampling_only)
+        assert not sampling_only
         batch.run_job_batch(job_array_number)
     elif post_process:
         logger.debug("Starting postprocessing")
         # else, we might be in a post-processing step
         # Postprocessing should not have been scheduled if measures only or sampling only are run
-        assert(not measures_only)
-        assert(not sampling_only)
+        assert not measures_only
+        assert not sampling_only
         if upload_only:
             batch.process_results(skip_combine=True, force_upload=True)
         else:
@@ -756,4 +851,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if get_bool_env_var("BUILDSTOCKBATCH_CLI"):
+        user_cli()
+    else:
+        main()
