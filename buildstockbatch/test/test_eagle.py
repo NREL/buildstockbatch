@@ -58,18 +58,18 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         ]
         mock_subprocess.run.assert_called_once()
         args = mock_subprocess.run.call_args[0][0]
-        for a, b in [args[i:i+2] for i in range(6, len(args) -3, 2)]:
-            assert(a == '-B')
-            assert(b.split(':')[1] in (
+        for a, b in [args[i:i+2] for i in range(6, len(args) - 3, 2)]:
+            assert a == '-B'
+            assert b.split(':')[1] in (
                 '/var/simdata/openstudio',
                 '/lib/resources',
                 '/lib/housing_characteristics',
                 '/measures',
                 '/weather',
                 '/tmp',
-            ))
-        assert(mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args)
-        assert(mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args)
+            )
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
         assert called_kw.get('check') is True
         assert 'input' in called_kw
@@ -85,8 +85,8 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         monkeypatch.setenv('MEASURESONLY', '1')
         EagleBatch.run_building(*run_bldg_args)
         mock_subprocess.run.assert_called_once()
-        assert(mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args)
-        assert(mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args)
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
         assert called_kw.get('check') is True
         assert 'input' in called_kw
