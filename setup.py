@@ -49,7 +49,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=metadata['__url__'],
     packages=setuptools.find_packages(),
-    python_requires='>=3.10',
+    python_requires='>=3.9',
     package_data={
         'buildstockbatch': ['*.sh', 'schemas/*.yaml'],
         '': ['LICENSE']
