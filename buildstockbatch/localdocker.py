@@ -231,7 +231,7 @@ class LocalDockerBatch(DockerBatchBase):
             f_out.write(container_output)
 
         # Clean up directories created with the docker mounts
-        for dirname in ('lib', 'measures', 'weather', '.custom_gems'):
+        for dirname in ('lib', 'measures', 'weather'):
             shutil.rmtree(os.path.join(sim_dir, dirname), ignore_errors=True)
 
         fs = LocalFileSystem()
