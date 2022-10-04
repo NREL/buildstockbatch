@@ -14,4 +14,3 @@ buildstockbatch_crash_details.log
 coverage/
 .coverage
 build/
-/Gemfile

@@ -75,39 +75,48 @@ class LocalDockerBatch(DockerBatchBase):
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
             os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
 
-        # Install custom gems to a location that will be used by all workers
+        # Install custom gems to a volume that will be used by all workers
         if self.cfg.get('baseline', dict()).get('custom_gems', False):
-            logger.info('Installing custom gems')
-
-            # Define directories to be mounted in the container
-            local_custom_gem_dir = os.path.join(self.buildstock_dir, '.custom_gems')
-            mnt_custom_gem_dir = '/var/oscli/gems'
-            bind_mounts = [
-                (local_custom_gem_dir, mnt_custom_gem_dir, 'rw')
-            ]
-            docker_volume_mounts = dict([(key, {'bind': bind, 'mode': mode}) for key, bind, mode in bind_mounts])
+            logger.info('Installing custom gems to docker volume: buildstockbatch_custom_gems')
 
             docker_client = docker.client.from_env()
 
+            # Create a volume to store the custom gems
+            docker_client.volumes.create(name='buildstockbatch_custom_gems', driver='local')
+
+            # Define directories to be mounted in the container
+            mnt_gem_dir = '/var/oscli/gems'
+            docker_volume_mounts = {'buildstockbatch_custom_gems': {'bind': mnt_gem_dir, 'mode': 'rw'}}
+
             # Install custom gems to be used in the docker container
             local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
-            mnt_gemfile_path = f"{mnt_custom_gem_dir}/Gemfile"
+            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
 
             # Check that the Gemfile exists
             if not os.path.exists(local_gemfile_path):
                 print(f'local_gemfile_path = {local_gemfile_path}')
                 raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
 
-            # Make the .custom_gems dir if it doesn't already exist
-            if not os.path.exists(os.path.join(self.buildstock_dir, '.custom_gems')):
-                os.makedirs(os.path.join(self.buildstock_dir, '.custom_gems'))
+            # Make the buildstock/resources/.custom_gems dir to store logs
+            local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.custom_gems')
+            if not os.path.exists(local_log_dir):
+                os.makedirs(local_log_dir)
 
-            # Copy Gemfile from buildstock/resources into buildstock/.custom_gems
-            logger.debug(f'Copying Gemfile from {local_gemfile_path}')
-            shutil.copyfile(local_gemfile_path, os.path.join(self.buildstock_dir, '.custom_gems', 'Gemfile'))
+            # Copy the Gemfile from buildstock/resources into the custom gems volume
+            container = docker_client.containers.create(
+                self.docker_image,
+                name='copy_gemfile',
+                volumes=docker_volume_mounts)
+            os.chdir(os.path.dirname(local_gemfile_path))
+            with tarfile.open(local_gemfile_path + '.tar', mode='w') as tar:
+                tar.add(os.path.basename(local_gemfile_path))
+            gemfile_data = open(local_gemfile_path + '.tar', 'rb').read()
+            container.put_archive(os.path.dirname(mnt_gemfile_path), gemfile_data)
+            os.remove(local_gemfile_path + '.tar')
+            container.remove()
 
             # Run bundler to install the custom gems
-            bundle_install_cmd = f'bundle install --path={mnt_custom_gem_dir} --gemfile={mnt_gemfile_path}'
+            bundle_install_cmd = f'bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}'
             logger.debug(f'Running {bundle_install_cmd}')
             container_output = docker_client.containers.run(
                 self.docker_image,
@@ -116,11 +125,11 @@ class LocalDockerBatch(DockerBatchBase):
                 volumes=docker_volume_mounts,
                 name='install_custom_gems'
             )
-            with open(os.path.join(local_custom_gem_dir, 'bundle_install_output.log'), 'wb') as f_out:
+            with open(os.path.join(local_log_dir, 'bundle_install_output.log'), 'wb') as f_out:
                 f_out.write(container_output)
 
             # Report out custom gems loaded by OpenStudio CLI
-            check_active_gems_cmd = f'openstudio --bundle {mnt_gemfile_path} --bundle_path {mnt_custom_gem_dir} ' \
+            check_active_gems_cmd = f'openstudio --bundle {mnt_gemfile_path} --bundle_path {mnt_gem_dir} ' \
                                     '--bundle_without native_ext gem_list'
             container_output = docker_client.containers.run(
                 self.docker_image,
@@ -129,7 +138,7 @@ class LocalDockerBatch(DockerBatchBase):
                 volumes=docker_volume_mounts,
                 name='list_custom_gems'
             )
-            gem_list_log = os.path.join(local_custom_gem_dir, 'openstudio_gem_list_output.log')
+            gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
             with open(gem_list_log, 'wb') as f_out:
                 f_out.write(container_output)
             logger.debug(f'Review custom gems list at: {gem_list_log}')
@@ -175,7 +184,7 @@ class LocalDockerBatch(DockerBatchBase):
 
         if cfg.get('baseline', dict()).get('custom_gems', False):
             mnt_custom_gem_dir = '/var/oscli/gems'
-            docker_volume_mounts[os.path.join(buildstock_dir, '.custom_gems')] = {'bind': mnt_custom_gem_dir, 'mode': 'ro'}  # noqa E501
+            docker_volume_mounts['buildstockbatch_custom_gems'] = {'bind': mnt_custom_gem_dir, 'mode': 'ro'}
 
         osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
