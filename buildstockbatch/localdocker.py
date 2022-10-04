@@ -192,12 +192,25 @@ class LocalDockerBatch(DockerBatchBase):
             json.dump(osw, f, indent=4)
 
         docker_client = docker.client.from_env()
-        run_cmd = 'openstudio run -w in.osw'
+        run_cmd = [
+            'openstudio',
+            'run',
+            '-w', 'in.osw',
+        ]
         if cfg.get('baseline', dict()).get('custom_gems', False):
-            run_cmd = f'openstudio --bundle {mnt_custom_gem_dir}/Gemfile --bundle_path {mnt_custom_gem_dir} ' \
-                       '--bundle_without native_ext run -w in.osw --debug'
+            run_cmd = [
+                'openstudio',
+                '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
+                '--bundle_path', f'{mnt_custom_gem_dir}',
+                '--bundle_without', 'native_ext',
+                'run', '-w', 'in.osw',
+                '--debug'
+            ]
         if measures_only:
-            run_cmd += ' --measures_only'
+            if cfg.get('baseline', dict()).get('custom_gems', False):
+                run_cmd.insert(8, '--measures_only')
+            else:
+                run_cmd.insert(2, '--measures_only')
 
         env_vars = {}
         env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
