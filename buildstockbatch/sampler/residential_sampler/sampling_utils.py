@@ -12,13 +12,14 @@ from typing import Union, TypedDict
 random.seed(42)
 
 
-TSVTuple = tuple[dict[tuple[str, ...], list[float]], list[str], list[str]]
+TSVTuple = tuple[dict[tuple[str, ...], list[float]], list[str], list[str], dict[str, float]]
 
 
 def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
     dep_cols = []
     opt_cols = []
     sampling_col = None
+    prob_cols = {}
     group2probs = {}
     with open(file_path) as file:
         for line_num, line in enumerate(file):
@@ -38,8 +39,9 @@ def read_char_tsv(file_path: pathlib.Path) -> TSVTuple:
                 opt_val = [float(v) for v in line_array[len(dep_cols): len(dep_cols) + len(opt_cols)]]
                 sampling_prob = float(line_array[sampling_col]) if sampling_col else 1
                 group2probs[dep_val] = opt_val + [sampling_prob]  # append sampling probability at the end
+                prob_cols[dep_val] = float(line_array[-1])
 
-    return group2probs, dep_cols, opt_cols
+    return group2probs, dep_cols, opt_cols, prob_cols
 
 
 @cache
@@ -204,7 +206,7 @@ def get_all_tsv_issues(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> di
     results = []
     with multiprocessing.Pool(processes=max(multiprocessing.cpu_count() - 2, 1)) as pool:
         for param in all_params:
-            _, dep_cols, _ = param2tsv[param]
+            _, dep_cols, _, _ = param2tsv[param]
             res = pool.apply_async(get_tsv_issues, (param, param2tsv[param], sample_df[dep_cols + [param]]))
             results.append(res)
         all_issues = {param: res_val.get() for param, res_val in zip(all_params, results)}
@@ -274,7 +276,7 @@ def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -
     results = []
     with multiprocessing.Pool(processes=max(multiprocessing.cpu_count() - 2, 1)) as pool:
         for param in all_params:
-            _, dep_cols, _ = param2tsv[param]
+            _, dep_cols, _, _ = param2tsv[param]
             res = pool.apply_async(get_tsv_max_sampling_errors,
                                    (param, param2tsv[param], sample_df[dep_cols + [param]]))
             # res = test_sample(param, param2tsv[param], sample_df[dep_cols + [param]])

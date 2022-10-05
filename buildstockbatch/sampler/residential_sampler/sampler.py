@@ -30,7 +30,7 @@ def get_topological_generations(param2dep: dict[str, list[str]]) -> list[tuple[i
 
 def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num_samples: int) -> list[str]:
     start_time = time.time()
-    group2values, dep_cols, opt_cols = param_tuple
+    group2values, dep_cols, opt_cols, prob_cols = param_tuple
     if not dep_cols:
         probs = group2values[()]
         samples = get_samples(probs, opt_cols, num_samples)
@@ -66,7 +66,7 @@ def sample_all(project_path, num_samples) -> pd.DataFrame:
             print(f"Sampling {len(params)} params in a batch at level {level}")
             results = []
             for param in params:
-                _, dep_cols, _ = param2tsv[param]
+                _, dep_cols, _, _ = param2tsv[param]
                 res = pool.apply_async(sample_param, (param2tsv[param], sample_df[dep_cols], param, num_samples))
                 results.append(res)
             st = time.time()
