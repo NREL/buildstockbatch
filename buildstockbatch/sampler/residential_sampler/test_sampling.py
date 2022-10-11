@@ -238,7 +238,7 @@ def test_get_tsv_errors() -> None:
     assert error_dict['max_group_error_group'] in [(str(i),) for i in range(1, 6)]
     assert math.isclose(error_dict['max_option_error'], 2.0 / nsamples)
     assert error_dict['max_option_error_option'] == 'Premium'
-    assert math.isclose(error_dict['total_option_error'], 4.0 / nsamples)
+    assert math.isclose(error_dict['total_option_error'], math.sqrt(0.1**2 + 0.1**2 + 0.2**2) / math.sqrt(10))
 
     tsv_tuple = read_char_tsv(project_dir / 'housing_characteristics' / 'Uses AC.tsv')
     error_dict = get_tsv_max_sampling_errors(param='Uses AC', tsv_tuple=tsv_tuple, sample_df=sample_df)

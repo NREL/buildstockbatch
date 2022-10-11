@@ -227,7 +227,7 @@ def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
     nsamples = len(sample_df)
     option_diff_counts: dict[str, int] = defaultdict(int)
     max_group_error, max_group_eror_group = 0, None
-    total_group_error = 0
+    total_group_error = 0.0
 
     def gather_diffs(df, probs, grp):
         nonlocal max_group_error, max_group_eror_group, total_group_error
@@ -236,7 +236,7 @@ def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
         sampling_probability = probs[-1]
         true_nsamples_for_grp = nsamples * sampling_probability
         group_error = abs(current_nsamples - true_nsamples_for_grp) / nsamples
-        total_group_error += group_error
+        total_group_error += group_error ** 2
         if group_error >= max_group_error:
             max_group_error, max_group_eror_group = group_error, grp
         probs_sum = sum(probs[:-1])
@@ -262,10 +262,11 @@ def get_tsv_max_sampling_errors(param: str, tsv_tuple: TSVTuple,
             gather_diffs(sub_df, probs, group_key)
 
     max_option_error_option, max_option_error = max(option_diff_counts.items(), key=lambda x: abs(x[1]))
-    total_option_error = sum(abs(diff) for diff in option_diff_counts.values())
+    l2norm_option_error = math.sqrt(sum((diff)**2 for diff in option_diff_counts.values())) / math.sqrt(len(opt_cols))
+    total_group_error = math.sqrt(total_group_error) / math.sqrt(len(opt_cols))
     return {'max_group_error': max_group_error, 'max_group_error_group': max_group_eror_group,
             'total_group_error': total_group_error, 'max_option_error': abs(max_option_error),
-            'max_option_error_option': max_option_error_option, 'total_option_error': total_option_error}
+            'max_option_error_option': max_option_error_option, 'total_option_error': l2norm_option_error}
 
 
 def get_all_tsv_max_errors(sample_df: pd.DataFrame, project_dir: pathlib.Path) -> pd.DataFrame:
