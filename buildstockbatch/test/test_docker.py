@@ -38,6 +38,7 @@ def test_docker_image_exists_on_docker_hub(basic_residential_project_file):
         )
         assert r3.ok
 
+
 def test_custom_gem_install(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file()
 
