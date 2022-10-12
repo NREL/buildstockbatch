@@ -539,8 +539,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size)))[0])
 
             # Determine how many files should be in each partition and group the files
-            parquet_memory = int(cfg.get('eagle', {}).get('postprocessing', {}
-                                                          ).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
             max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             partition_df = partition_df.loc[ts_bldg_ids].copy()
