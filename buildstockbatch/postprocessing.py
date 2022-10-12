@@ -383,6 +383,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     logger.info(f"Gathering all the parquet files in {glob_str}")
     concat_files = fs.glob(glob_str)
     logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
+    parquet_root_dir = Path(parquet_root_dir).as_posix()
     create_metadata_file(concat_files, root_dir=parquet_root_dir, engine='pyarrow', fs=fs)
     logger.info(f"_metadata file written to {parquet_root_dir}")
 
