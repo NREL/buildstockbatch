@@ -87,7 +87,7 @@ def test_large_parquet_combine(basic_residential_project_file):
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'get_dask_client'), \
             patch.object(BuildStockBatchBase, 'results_dir', results_dir),\
-            patch.object(postprocessing, 'MAX_PARQUET_MEMORY', 1e6):  # set the max memory to just 1MB
+            patch.object(postprocessing, 'MAX_PARQUET_MEMORY', 1):  # set the max memory to just 1MB
         bsb = BuildStockBatchBase(project_filename)
         bsb.process_results()  # this would raise exception if the postprocessing could not handle the situation
 
