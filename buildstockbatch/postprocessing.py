@@ -410,7 +410,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # create the postprocessing results directories
     for dr in dirs:
-        fs.makedirs(dr)
+        fs.makedirs(dr, exist_ok=True)
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
@@ -500,10 +500,13 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     logger.info("All columns were successfully assigned a datatype based on other upgrades.")
         # Write CSV
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
-        logger.info(f'Writing {csv_filename}')
-        with fs.open(csv_filename, 'wb') as f:
-            with gzip.open(f, 'wt', encoding='utf-8') as gf:
-                df.to_csv(gf, index=True, line_terminator='\n')
+        if fs.exists(csv_filename):
+            logger.info(f'{csv_filename} already exists. Skipping ...')
+        else:
+            logger.info(f'Writing {csv_filename}')
+            with fs.open(csv_filename, 'wb') as f:
+                with gzip.open(f, 'wt', encoding='utf-8') as gf:
+                    df.to_csv(gf, index=True, line_terminator='\n')
 
         # Write Parquet
         if upgrade_id == 0:
@@ -511,15 +514,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
 
-        fs.makedirs(results_parquet_dir)
+        fs.makedirs(results_parquet_dir, exist_ok=True)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
-        logger.info(f'Writing {parquet_filename}')
-        write_dataframe_as_parquet(
-            df.reset_index(),
-            fs,
-            parquet_filename,
-            schema=schema
-        )
+        if fs.exists(parquet_filename):
+            logger.info(f'{parquet_filename} already exists. Skippping ...')
+        else:
+            logger.info(f'Writing {parquet_filename}')
+            write_dataframe_as_parquet(
+                df.reset_index(),
+                fs,
+                parquet_filename,
+                schema=schema
+            )
 
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
@@ -556,9 +562,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
-            fs.makedirs(ts_out_loc)
-            logger.info(f'Created directory {ts_out_loc} for writing. Now concatenating ...')
+            fs.makedirs(ts_out_loc, exist_ok=True)
+            existing_files_count = len(fs.glob(f"{ts_out_loc}**/*.parquet"))
+            if existing_files_count == len(bldg_id_groups):
+                logger.info('All combined parquet files are already there; skipping to next upgrade')
+                continue
+            elif existing_files_count > len(bldg_id_groups):
+                logger.error('More ({existing_files_count}) than expected ({bldg_id_groups}) parquets found.')
+                raise ValueError("More than expected number of existing files.")
+            elif existing_files_count > 0:
+                logger.info('Some ({existing_files_count}) parquet partitions already exists. Redoing all ...')
 
+            logger.info('Now concatenating ...')
             src_path = f'{ts_in_dir}/up{upgrade_id:02d}/'
             concat_partial = dask.delayed(partial(concat_and_normalize,
                                                   fs, all_ts_cols_sorted, src_path, ts_out_loc, partition_columns))

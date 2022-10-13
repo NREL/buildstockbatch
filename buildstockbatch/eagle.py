@@ -494,16 +494,10 @@ class EagleBatch(BuildStockBatchBase):
         n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 18)
         n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
         print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
-        # Throw an error if the files already exist.
-
-        if not upload_only:
-            for subdir in ('parquet', 'results_csvs'):
-                subdirpath = pathlib.Path(self.output_dir, 'results', subdir)
-                if subdirpath.exists():
-                    raise FileExistsError(f'{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again.')  # noqa E501
 
         # Move old output logs and config to make way for new ones
-        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out'):
+        for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out',
+                         "buildstockbatch_crash_details.log"):
             filepath = pathlib.Path(self.output_dir, filename)
             if filepath.exists():
                 last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
