@@ -83,14 +83,18 @@ class LocalDockerBatch(DockerBatchBase):
 
             # Create a volume to store the custom gems
             docker_client.volumes.create(name='buildstockbatch_custom_gems', driver='local')
+            simdata_vol = docker_client.volumes.create(name='buildstockbatch_simdata_temp', driver='local')
 
             # Define directories to be mounted in the container
             mnt_gem_dir = '/var/oscli/gems'
-            docker_volume_mounts = {'buildstockbatch_custom_gems': {'bind': mnt_gem_dir, 'mode': 'rw'}}
-
             # Install custom gems to be used in the docker container
             local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
-            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
+            mnt_gemfile_path_orig = "/var/oscli/gemfile/Gemfile"
+            docker_volume_mounts = {
+                'buildstockbatch_custom_gems': {'bind': mnt_gem_dir, 'mode': 'rw'},
+                local_gemfile_path: {'bind': mnt_gemfile_path_orig, 'mode': 'ro'},
+                simdata_vol.name: {'bind': '/var/simdata/openstudio', 'mode': 'rw'},
+            }
 
             # Check that the Gemfile exists
             if not os.path.exists(local_gemfile_path):
@@ -102,21 +106,9 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(local_log_dir):
                 os.makedirs(local_log_dir)
 
-            # Copy the Gemfile from buildstock/resources into the custom gems volume
-            container = docker_client.containers.create(
-                self.docker_image,
-                name='copy_gemfile',
-                volumes=docker_volume_mounts)
-            os.chdir(os.path.dirname(local_gemfile_path))
-            with tarfile.open(local_gemfile_path + '.tar', mode='w') as tar:
-                tar.add(os.path.basename(local_gemfile_path))
-            gemfile_data = open(local_gemfile_path + '.tar', 'rb').read()
-            container.put_archive(os.path.dirname(mnt_gemfile_path), gemfile_data)
-            os.remove(local_gemfile_path + '.tar')
-            container.remove()
-
             # Run bundler to install the custom gems
-            bundle_install_cmd = f'bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}'
+            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
+            bundle_install_cmd = f'/bin/bash -c "cp {mnt_gemfile_path_orig} {mnt_gemfile_path} && bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}"'  # noqa: E501
             logger.debug(f'Running {bundle_install_cmd}')
             container_output = docker_client.containers.run(
                 self.docker_image,
@@ -141,6 +133,7 @@ class LocalDockerBatch(DockerBatchBase):
             gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
             with open(gem_list_log, 'wb') as f_out:
                 f_out.write(container_output)
+            simdata_vol.remove()
             logger.debug(f'Review custom gems list at: {gem_list_log}')
 
     @staticmethod
