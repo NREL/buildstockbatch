@@ -491,9 +491,10 @@ class EagleBatch(BuildStockBatchBase):
         account = self.cfg['eagle']['account']
         walltime = self.cfg['eagle'].get('postprocessing', {}).get('time', '1:30:00')
         memory = self.cfg['eagle'].get('postprocessing', {}).get('node_memory_mb', 85248)
+        sch_memory = self.cfg['eagle'].get('postprocessing', {}).get('scheduler_memory_mb', 85248)
         n_procs = self.cfg['eagle'].get('postprocessing', {}).get('n_procs', 18)
         n_workers = self.cfg['eagle'].get('postprocessing', {}).get('n_workers', 2)
-        print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
+        print(f"Processing with 1 scheduler ({sch_memory} MB) and {n_workers} workers ({memory} MB {n_procs} cores).")
 
         # Move old output logs and config to make way for new ones
         for filename in ('dask_scheduler.json', 'dask_scheduler.out', 'dask_workers.out', 'postprocessing.out',
@@ -525,6 +526,7 @@ class EagleBatch(BuildStockBatchBase):
             '--job-name=bstkpost',
             '--output=postprocessing.out',
             '--nodes=1',
+            '--mem={}'.format(sch_memory),
             ':',
             '--mem={}'.format(memory),
             '--output=dask_workers.out',

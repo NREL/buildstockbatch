@@ -88,7 +88,8 @@ setuptools.setup(
             'flake8',
             'coverage',
             'rope',
-            'doc8'
+            'doc8',
+            'pympler'
         ]
     },
     entry_points={

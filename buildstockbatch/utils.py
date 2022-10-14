@@ -4,6 +4,7 @@ import os
 import logging
 import traceback
 import yaml
+from pympler import asizeof
 
 logger = logging.getLogger(__name__)
 
@@ -105,3 +106,9 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
         return run_with_error_capture
 
     return log_error_decorator
+
+
+def print_largest_objects(obj_dict):
+    obj_by_size = [(asizeof.asizeof(obj) / 1024 * 1024, obj_name) for obj_name, obj in obj_dict.items()]
+    obj_by_size = sorted(obj_by_size, reverse=True)
+    print(f"Objects and Sizes: {obj_by_size}")

@@ -32,6 +32,9 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
+from pympler import tracker
+from buildstockbatch.utils import print_largest_objects
+
 
 logger = logging.getLogger(__name__)
 
@@ -418,6 +421,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         raise ValueError("No simulation results found to post-process.")
 
     logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
+    mem_tracker = tracker.SummaryTracker()
+
     all_schema_dict = db.from_sequence(results_json_files).map(partial(get_schema_dict, fs)).\
         fold(lambda x, y: merge_schema_dicts(x, y)).compute()
     logger.info(f"Got {len(all_schema_dict)} columns")
@@ -427,23 +432,33 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
                            for x in results_json_files]
     results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
+    all_ts_cols_file = f"{results_dir}/all_ts_cols.json"
 
     if do_timeseries:
-        # Look at all the parquet files to see what columns are in all of them.
-        logger.info("Collecting all the columns in timeseries parquet files.")
-        do_timeseries = False
-        all_ts_cols = set()
-        for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
-            ts_filenames = fs.ls(upgrade_folder)
-            if ts_filenames:
-                do_timeseries = True
-                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
-                files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
-                    fold(lambda x, y: x.union(y)).compute()
-                logger.info("Collected all the columns")
-            else:
-                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+        if fs.exists(all_ts_cols_file):
+            with open(all_ts_cols_file, 'r') as f:
+                all_ts_cols = set(json.load(f))
+            logger.info(f"Read the list of columns from: {all_ts_cols}")
+        else:
+            # Look at all the parquet files to see what columns are in all of them.
+            logger.info("Collecting all the columns in timeseries parquet files.")
+            do_timeseries = False
+            all_ts_cols = set()
+            for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
+                ts_filenames = fs.ls(upgrade_folder)
+                if ts_filenames:
+                    do_timeseries = True
+                    logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
+                    files_bag = db.from_sequence(ts_filenames, partition_size=100)
+                    all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
+                        fold(lambda x, y: x.union(y)).compute()
+                    logger.info("Collected all the columns")
+                else:
+                    logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+
+            with open(all_ts_cols_file, 'w') as f:
+                logger.info(f"Saved the list of columns to: {all_ts_cols}")
+                json.dump(list(all_ts_cols), f)
 
     if do_timeseries:
         # Sort the columns
@@ -470,6 +485,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     logger.info(f"Will postprocess the following upgrades {upgrade_list}")
     for upgrade_id in upgrade_list:
+        mem_tracker.print_diff()
+        print_largest_objects(locals())
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
@@ -589,6 +606,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
     logger.info("All aggregation completed. ")
+    print_largest_objects(locals())
+    mem_tracker.print_diff()
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
         write_metadata_files(fs, ts_dir, partition_columns)
