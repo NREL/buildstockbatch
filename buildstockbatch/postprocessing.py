@@ -33,6 +33,8 @@ from s3fs import S3FileSystem
 import tempfile
 import time
 from pympler import tracker
+from pympler import summary
+from pympler import muppy
 from buildstockbatch.utils import print_largest_objects
 
 
@@ -438,7 +440,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         if fs.exists(all_ts_cols_file):
             with open(all_ts_cols_file, 'r') as f:
                 all_ts_cols = set(json.load(f))
-            logger.info(f"Read the list of columns from: {all_ts_cols}")
+            logger.info(f"Read the list of columns from: {all_ts_cols_file}")
         else:
             # Look at all the parquet files to see what columns are in all of them.
             logger.info("Collecting all the columns in timeseries parquet files.")
@@ -485,8 +487,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     logger.info(f"Will postprocess the following upgrades {upgrade_list}")
     for upgrade_id in upgrade_list:
-        mem_tracker.print_diff()
         print_largest_objects(locals())
+        print_largest_objects(globals())
+        sum1 = summary.summarize(muppy.get_objects())
+        summary.print_(sum1)
+        mem_tracker.print_diff()
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
@@ -607,7 +612,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
     logger.info("All aggregation completed. ")
     print_largest_objects(locals())
+    print_largest_objects(globals())
+    sum1 = summary.summarize(muppy.get_objects())
+    summary.print_(sum1)
     mem_tracker.print_diff()
+
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
         write_metadata_files(fs, ts_dir, partition_columns)
