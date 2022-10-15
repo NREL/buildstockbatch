@@ -35,6 +35,7 @@ import time
 from pympler import tracker
 from pympler import summary
 from pympler import muppy
+from pympler import asizeof
 from buildstockbatch.utils import print_largest_objects
 
 
@@ -492,6 +493,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         sum1 = summary.summarize(muppy.get_objects())
         summary.print_(sum1)
         mem_tracker.print_diff()
+        print(f"Total size: {asizeof.asizeof(muppy.get_objects()) / (1024 * 1024 * 1024)}")
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
@@ -616,7 +618,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     sum1 = summary.summarize(muppy.get_objects())
     summary.print_(sum1)
     mem_tracker.print_diff()
-
+    print(f"Total size: {asizeof.asizeof(muppy.get_objects()) / (1024 * 1024 * 1024)}")
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
         write_metadata_files(fs, ts_dir, partition_columns)
