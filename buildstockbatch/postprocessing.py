@@ -37,7 +37,7 @@ from pympler import summary
 from pympler import muppy
 from pympler import asizeof
 from buildstockbatch.utils import print_largest_objects
-
+import gc
 
 logger = logging.getLogger(__name__)
 
@@ -491,7 +491,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         print_largest_objects(locals())
         print_largest_objects(globals())
         sum1 = summary.summarize(muppy.get_objects())
-        summary.print_(sum1)
+        summary.print_(summary.summarize(muppy.get_objects()))
         mem_tracker.print_diff()
         try:
             print(f"Total size: {asizeof.asizeof(*muppy.get_objects()) / (1024 * 1024 * 1024)}")
@@ -514,7 +514,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), df.columns)
             )
-            df = df[cols_to_keep]
+            df = df[cols_to_keep].copy()
             null_cols = get_null_cols(df)
             # If certain column datatype is null (happens when it doesn't have any data), the datatype
             # for that column is attempted to be determined based on datatype in other upgrades
@@ -615,6 +615,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
+            gc.collect()
+
     logger.info("All aggregation completed. ")
     print_largest_objects(locals())
     print_largest_objects(globals())
