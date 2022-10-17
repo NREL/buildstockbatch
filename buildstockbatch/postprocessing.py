@@ -475,7 +475,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     else:
         logger.warning("There are no timeseries files for any upgrades.")
 
-    results_df_groups = results_df.groupby('upgrade')
     upgrade_list = get_upgrade_list(cfg)
     partition_columns = cfg.get('postprocessing', {}).get('partition_columns', [])
     partition_columns = [c.lower() for c in partition_columns]
@@ -490,7 +489,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     for upgrade_id in upgrade_list:
         print_largest_objects(locals())
         print_largest_objects(globals())
-        sum1 = summary.summarize(muppy.get_objects())
         summary.print_(summary.summarize(muppy.get_objects()))
         mem_tracker.print_diff()
         try:
@@ -498,7 +496,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         except Exception as err:
             print(err)
         logger.info(f"Processing upgrade {upgrade_id}. ")
-        df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
+        df = dask.compute(results_df[results_df['upgrade'] == upgrade_id])[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
         df.sort_index(inplace=True)
         df.rename(columns=to_camelcase, inplace=True)
@@ -615,7 +613,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
-            gc.collect()
+        gc.collect()
 
     logger.info("All aggregation completed. ")
     print_largest_objects(locals())
@@ -660,6 +658,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
         all_files.append(file.relative_to(parquet_dir))
 
+    logger.info(f"Gathered {len(all_files)} files to upload.")
     s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
     if not (s3_prefix and s3_bucket):
