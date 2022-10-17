@@ -20,12 +20,12 @@ Development Changelog
         :pullreq: 267
         :tickets: 223
 
-        Migrated CI to GitHub Actions. 
+        Migrated CI to GitHub Actions.
 
     .. change::
         :tags: workflow
         :pullreq: 208
-        :tickets: 
+        :tickets:
 
         Add ``residential_hpxml`` workflow generator.
 
@@ -73,7 +73,7 @@ Development Changelog
         :tags: general, feature, eagle
         :pullreq: 304
 
-        Added ability to resubmit failed array jobs on Eagle. 
+        Added ability to resubmit failed array jobs on Eagle.
 
     .. change::
         :tags: workflow, feature
@@ -101,3 +101,11 @@ Development Changelog
         Mounts a temp dir into the container to avoid using the RAM disk.
         Especially helpful for large schedules. Fixes `NREL/OpenStudio-HPXML#1070 <https://github.com/NREL/OpenStudio-HPXML/issues/1070>`_.
 
+    .. change::
+        :tags: comstock, local
+        :pullreq: 238
+
+        Changes the default commercial workflow generator to mimic the residential workflow generator,
+        where a new timeseries_csv_export key was added to the workflow schema in order to trigger timeseries postprocessing.
+        Changes the CLI commands to work with OpenStudio 3.X when custom_gems=True.
+        Enables use of custom gems in local docker runs by installing to local docker volume.
