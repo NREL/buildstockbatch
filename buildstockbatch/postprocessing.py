@@ -383,6 +383,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     logger.info(f"Gathering all the parquet files in {glob_str}")
     concat_files = fs.glob(glob_str)
     logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
+    parquet_root_dir = Path(parquet_root_dir).as_posix()
     create_metadata_file(concat_files, root_dir=parquet_root_dir, engine='pyarrow', fs=fs)
     logger.info(f"_metadata file written to {parquet_root_dir}")
 
@@ -538,7 +539,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size)))[0])
 
             # Determine how many files should be in each partition and group the files
-            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            parquet_memory = int(cfg.get('eagle', {}).get('postprocessing', {}
+                                                          ).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
             max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             partition_df = partition_df.loc[ts_bldg_ids].copy()
