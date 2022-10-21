@@ -5,6 +5,7 @@ import itertools as it
 import multiprocessing
 import click
 import pathlib
+import json
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
 
 
@@ -27,10 +28,60 @@ def get_topological_generations(param2dep: dict[str, list[str]]) -> list[tuple[i
     param2dep_graph = get_param_graph(param2dep)
     return list(enumerate(nx.topological_generations(param2dep_graph)))
 
+def apply_downselect(param2tsv, param2dep, downselect):
+    # assume 1 parameter to start
+    param = list(downselect.keys())[0]
+    tsv_data, dep_cols, opt_cols, samp_probs = param2tsv[param]    
+
+    # Get dict of dependency structure
+    G = get_param_graph(param2dep)
+    dep_structure = nx.dfs_predecessors(G.reverse(), source=param)
+    root_node = list(dep_structure.items())[-1][0]
+    second_node = dep_structure[root_node]
+
+    # Downselect node dependencies
+    down_s_idx = [opt_cols.index(option) for option in list(downselect.values())[0]]
+    first_dep_options = [dep for dep, vals in tsv_data.items() if vals[down_s_idx[0]]>0]
+    previous_deps = first_dep_options
+
+    # Iterate dependency structure tsvs
+    for tsv, pre_dep in dep_structure.items(): # starts with tsv=County and PUMA
+        tsv_data, dep_cols, opt_cols, samp_probs = param2tsv[tsv]  
+        opt_idxs = [opt_cols.index(option[0]) for option in previous_deps]  # relevent options that were dependencies in previous node
+        dep_options = [dep for dep, vals in tsv_data.items() if vals[opt_idxs[0]]>0]
+
+        # Write new data for node preceeding root node using global probabilities
+        if tsv == second_node:
+            global_probs = {dep:[i*samp_probs[dep] for i in tsv_data[dep]] for dep in dep_options}
+            global_probs_slice = {dep: [vals[i] for i in opt_idxs if vals[i]>0] for dep, vals in global_probs.items()}
+            new_data = {dep: [val/sum(vals) for val in vals] for dep, vals in global_probs_slice.items()}
+            collapse_global_prob = {dep: sum(val) for dep, val in global_probs_slice.items()}
+
+            for dep, vals in new_data.items():
+                param2tsv[tsv][0][dep] =  [0.0]*len(param2tsv[tsv][0][dep])
+                for i,val in zip(opt_idxs, vals): param2tsv[tsv][0][dep][i] = val
+
+        # Write data for root node using succeeding global probabilities
+        if tsv == root_node:
+            param2tsv[tsv][0][()] =  [0.0]*len(param2tsv[tsv][0][()])
+            for i,val in zip(opt_idxs, collapse_global_prob.values()): param2tsv[tsv][0][()][i] = val/sum(collapse_global_prob.values())
+        previous_deps = dep_options
+
+        # NEW METHODS NEEDED:
+        # normalize_by_row(dependencies, tsv2param)
+        # normalize_by_column()
+
+        # QUESTIONS/FIXMEs:
+        # What would happen if the first tsv is not a mapping tsv? Probably need to consider global probability starting at the downselect tsv
+        # Allow for downselect of tsvs with > 1 dependency
+        # Does not work for downselect of tsv with 0 dependencies
+
+    return(param2tsv)
+
 
 def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num_samples: int) -> list[str]:
     start_time = time.time()
-    group2values, dep_cols, opt_cols = param_tuple
+    group2values, dep_cols, opt_cols, prob_cols = param_tuple
     if not dep_cols:
         probs = group2values[()]
         samples = get_samples(probs, opt_cols, num_samples)
@@ -55,9 +106,13 @@ def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num
     return samples
 
 
-def sample_all(project_path, num_samples) -> pd.DataFrame:
+def sample_all(project_path, num_samples, downselect=None) -> pd.DataFrame:
     param2tsv = get_param2tsv(project_path)
     param2dep = {param: tsv_tuple[1] for (param, tsv_tuple) in param2tsv.items()}
+    if downselect: 
+        downselect = json.loads(downselect)
+        print(downselect)
+        param2tsv = apply_downselect(param2tsv, param2dep, downselect)
     sample_df = pd.DataFrame()
     sample_df.loc[:, "Building"] = list(range(1, num_samples+1))
     s_time = time.time()
@@ -66,7 +121,7 @@ def sample_all(project_path, num_samples) -> pd.DataFrame:
             print(f"Sampling {len(params)} params in a batch at level {level}")
             results = []
             for param in params:
-                _, dep_cols, _ = param2tsv[param]
+                _, dep_cols, _, _ = param2tsv[param]
                 res = pool.apply_async(sample_param, (param2tsv[param], sample_df[dep_cols], param, num_samples))
                 results.append(res)
             st = time.time()
@@ -95,12 +150,14 @@ def cli():
               help="The number of datapoints to sample.")
 @click.option("-o", "--output", type=str, required=True,
               help="The output filename for samples.")
-def sample(project: str, num_datapoints: int, output: str) -> None:
+@click.option("-d", "--downselect", type=str, required=False,
+               help='Downselect parameter and options. \'{\"parameter\": [\"option 1\", \"option 2\", ...]}\'')
+def sample(project: str, num_datapoints: int, output: str, downselect: str = None) -> None:
     """Performs sampling for project and writes output csv file.
     """
     start_time = time.time()
     print(project, num_datapoints, output)
-    sample_df = sample_all(pathlib.Path(project), num_datapoints)
+    sample_df = sample_all(pathlib.Path(project), num_datapoints, downselect)
     click.echo("Writing CSV")
     sample_df.to_csv(output, index=False)
     click.echo(f"Completed sampling in {time.time() - start_time:.2f} seconds")
