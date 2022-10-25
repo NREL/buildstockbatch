@@ -168,7 +168,7 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
         with open(buildstock_csv, 'r', newline='') as f:
             cf = csv.DictReader(f)
             for row in cf:
-                assert(row['Days Shifted'] in valid_option_values)
+                assert row['Days Shifted'] in valid_option_values
 
 
 def test_combine_files(basic_residential_project_file):
@@ -216,16 +216,19 @@ def test_combine_files(basic_residential_project_file):
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     # timeseries parquet
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq_all = dd.read_parquet(os.path.join(test_path, 'timeseries'), engine='pyarrow')\
+        .compute()
+
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 0].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 0
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
+    test_pq = test_pq_all[test_pq_all['upgrade'] == 1].copy().reset_index()
     reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
         .compute().reset_index()
+    reference_pq['upgrade'] = test_pq['upgrade'] = 1
     pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
@@ -320,6 +323,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
+    s3_file_path = s3_path + 'timeseries/_common_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_common_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'timeseries/_metadata'
+    source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
 
 
@@ -371,16 +384,16 @@ def test_skipping_baseline(basic_residential_project_file):
         get_dask_client_mock.assert_called_once()
 
     up00_parquet = os.path.join(results_dir, 'parquet', 'baseline', 'results_up00.parquet')
-    assert(not os.path.exists(up00_parquet))
+    assert not os.path.exists(up00_parquet)
 
     up01_parquet = os.path.join(results_dir, 'parquet', 'upgrades', 'upgrade=1', 'results_up01.parquet')
-    assert(os.path.exists(up01_parquet))
+    assert os.path.exists(up01_parquet)
 
     up00_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up00.csv.gz')
-    assert(not os.path.exists(up00_csv_gz))
+    assert not os.path.exists(up00_csv_gz)
 
     up01_csv_gz = os.path.join(results_dir, 'results_csvs', 'results_up01.csv.gz')
-    assert(os.path.exists(up01_csv_gz))
+    assert os.path.exists(up01_csv_gz)
 
 
 def test_provide_buildstock_csv(basic_residential_project_file, mocker):

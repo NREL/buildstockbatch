@@ -10,6 +10,7 @@ from unittest.mock import patch
 import gzip
 
 from buildstockbatch.eagle import user_cli, EagleBatch
+from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +33,8 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
     with patch.object(EagleBatch, 'weather_dir', None), \
             patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'), \
             patch.object(EagleBatch, 'create_osw', return_value=osw_dict), \
-            patch.object(EagleBatch, 'make_sim_dir', return_value=('bldg0000001up00', sim_path)):
+            patch.object(EagleBatch, 'make_sim_dir', return_value=('bldg0000001up00', sim_path)), \
+            patch.object(EagleBatch, 'local_scratch', tmp_path):
 
         # Normal run
         run_bldg_args = [
@@ -49,23 +51,33 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
             '-e',
             '--pwd',
             '/var/simdata/openstudio',
-            '-B', f'{sim_path}:/var/simdata/openstudio',
-            '-B', '/tmp/scratch/buildstock/resources:/lib/resources',
-            '-B', '/tmp/scratch/housing_characteristics:/lib/housing_characteristics',
-            '-B', '/tmp/scratch/buildstock/measures:/measures:ro',
-            '-B', '/tmp/scratch/weather:/weather:ro',
-            '/tmp/scratch/openstudio.simg',
+        ]
+        end_expected_singularity_args = [
+            str(pathlib.Path('/tmp/scratch/openstudio.simg')),
             'bash', '-x'
         ]
         mock_subprocess.run.assert_called_once()
-        assert(mock_subprocess.run.call_args[0][0] == expected_singularity_args)
+        args = mock_subprocess.run.call_args[0][0]
+        for a, b in [args[i:i+2] for i in range(6, len(args) - 3, 2)]:
+            assert a == '-B'
+            drive, tail = os.path.splitdrive(b)
+            assert tail.split(':')[1] in (
+                '/var/simdata/openstudio',
+                '/lib/resources',
+                '/lib/housing_characteristics',
+                '/measures',
+                '/weather',
+                '/tmp',
+            )
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') == -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == str(pathlib.Path('/tmp/scratch/output'))
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') == -1
 
         # Measures only run
         mock_subprocess.reset_mock()
@@ -74,14 +86,15 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         monkeypatch.setenv('MEASURESONLY', '1')
         EagleBatch.run_building(*run_bldg_args)
         mock_subprocess.run.assert_called_once()
-        assert(mock_subprocess.run.call_args[0][0] == expected_singularity_args)
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
         called_kw = mock_subprocess.run.call_args[1]
-        assert(called_kw.get('check') is True)
-        assert('input' in called_kw)
-        assert('stdout' in called_kw)
-        assert('stderr' in called_kw)
-        assert(str(called_kw.get('cwd')) == '/tmp/scratch/output')
-        assert(called_kw['input'].decode('utf-8').find(' --measures_only') > -1)
+        assert called_kw.get('check') is True
+        assert 'input' in called_kw
+        assert 'stdout' in called_kw
+        assert 'stderr' in called_kw
+        assert str(called_kw.get('cwd')) == str(pathlib.Path('/tmp/scratch/output'))
+        assert called_kw['input'].decode('utf-8').find(' --measures_only') > -1
 
 
 def test_singularity_image_download_url(basic_residential_project_file):
@@ -222,6 +235,7 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch.object(EagleBatch, 'local_housing_characteristics_dir',
                         results_dir / 'local_housing_characteristics_dir')
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    mocker.patch.object(EagleBatch, 'local_scratch', results_dir.parent)
 
     def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -256,8 +270,8 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     ts_files = list(refrence_path.glob('**/*.parquet'))
 
     def compare_ts_parquets(source, dst):
-        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index'])
-        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index'])
+        test_pq = pd.read_parquet(source).reset_index().drop(columns=['index']).rename(columns=str.lower)
+        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=['index']).rename(columns=str.lower)
         pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     for file in ts_files:
@@ -319,3 +333,63 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
 
     with open(traceback_file, 'r') as f:
         assert f.read().find('RuntimeError') > -1
+
+
+def test_rerun_failed_jobs(mocker, basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file()
+    os.makedirs(os.path.join(results_dir, 'results_csvs'))
+    os.makedirs(os.path.join(results_dir, 'parquet'))
+    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mocker.patch.object(EagleBatch, 'results_dir', results_dir)
+    process_results_mocker = mocker.patch.object(BuildStockBatchBase, 'process_results')
+    queue_jobs_mocker = mocker.patch.object(EagleBatch, 'queue_jobs', return_value=[42])
+    queue_post_processing_mocker = mocker.patch.object(EagleBatch, 'queue_post_processing')
+
+    b = EagleBatch(project_filename)
+
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        if job_id == 5:
+            continue
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            if job_id % 2 == 0:
+                f.write("Traceback")
+            else:
+                f.write("batch complete")
+            f.write('\n')
+
+    failed_array_ids = b.get_failed_job_array_ids()
+    assert sorted(failed_array_ids) == [2, 4, 5]
+
+    assert not b.process_results()
+    process_results_mocker.assert_not_called()
+    process_results_mocker.reset_mock()
+
+    b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_called_once_with([2, 4, 5], hipri=False)
+    queue_jobs_mocker.reset_mock()
+    queue_post_processing_mocker.assert_called_once_with([42], hipri=False)
+    queue_post_processing_mocker.reset_mock()
+    assert not os.path.exists(os.path.join(results_dir, 'results_csvs'))
+    assert not os.path.exists(os.path.join(results_dir, 'parquet'))
+
+    for job_id in range(1, 6):
+        json_filename = os.path.join(b.output_dir, f"job{job_id:03d}.json")
+        with open(json_filename, 'w') as f:
+            json.dump({}, f)
+        out_filename = os.path.join(b.output_dir, f"job.out-{job_id}")
+        with open(out_filename, "w") as f:
+            f.write('lots of output\ngoes\nhere\n')
+            f.write("batch complete\n")
+
+    b.process_results()
+    process_results_mocker.assert_called_once()
+
+    assert not b.rerun_failed_jobs()
+    queue_jobs_mocker.assert_not_called()
+    queue_post_processing_mocker.assert_not_called()

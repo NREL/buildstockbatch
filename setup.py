@@ -49,7 +49,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=metadata['__url__'],
     packages=setuptools.find_packages(),
-    python_requires='>=3.7',
+    python_requires='>=3.8',
     package_data={
         'buildstockbatch': ['*.sh', 'schemas/*.yaml'],
         '': ['LICENSE']
@@ -61,7 +61,7 @@ setuptools.setup(
         'pandas>=1.0.0,!=1.0.4',
         'joblib',
         'pyarrow>=3.0.0',
-        'dask[complete]>=2021.5',
+        'dask[complete]>=2022.2.0',
         'docker',
         'boto3>=1.10.44',
         's3fs>=0.4.0,<0.5.0',
@@ -71,6 +71,7 @@ setuptools.setup(
         'ruamel.yaml>=0.15.0',
         'testfixtures',
         'awsretry',
+        'jinja2<3.1.0'
     ],
     extras_require={
         'dev': [

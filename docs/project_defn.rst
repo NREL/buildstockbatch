@@ -77,11 +77,14 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: **VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE** This
-  activates the ``bundle`` and ``bundle_path`` interfaces in the OpenStudio CLI to allow for custom gem packages (needed
-  to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
-  image is properly configured but that's easier said than done. The la100 branch on the nrel/docker-openstudio repo
-  is a starting place if this is required.
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE AND LOCAL DOCKER** When true, buildstockbatch will
+  call the OpenStudio CLI commands with the  ``bundle`` and ``bundle_path`` options. These options tell the CLI
+  to load a custom set of gems rather than those included in the OpenStudio CLI. For both Eagle
+  and local Docker runs, these gems are first specified in the ``buildstock\resources\Gemfile``.
+  For Eagle, when the Singularity image is built, these gems are added to the image.
+  For local Docker, when the containers are started, the gems specified in the Gemfile are installed into a Docker
+  volume on the local computer. This volume is mounted by each container as models are run, so each run
+  uses the custom gems.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -144,10 +147,13 @@ the Eagle supercomputer.
 *  ``postprocessing``: Eagle configuration for the postprocessing step
 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32. Default is 2.
+    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32.
+                      Default is 2.
+    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36. Default is 18. Try reducing this if you
+                    get OOM error.
     *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
                            85248, 180224 and 751616. Default is 85248.
-    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 40000.
+    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 1000.
 
 .. _aws-config:
 
@@ -189,7 +195,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
     * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
     * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
       Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
@@ -224,7 +230,7 @@ are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
 `same way that EnergyPlus handles ScheduleFiles
 <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
-   
+
 
 Uploading to AWS Athena
 .......................
@@ -253,12 +259,16 @@ The configuration options for postprocessing and AWS upload are:
 
 *  ``postprocessing``: postprocessing configuration
 
-    * ``keep_individual_timeseries``: For some use cases it is useful to keep
+    * ``keep_individual_timeseries``: (optional, bool) For some use cases it is useful to keep
       the timeseries output for each simulation as a separate parquet file.
       Setting this option to ``true`` allows that. Default is ``false``.
 
-    *  ``aws``: configuration related to uploading to and managing data in amazon web services. For this to work, please
-       `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
+    * ``partition_columns``: (optional, list) Allows partitioning the output data based on some columns. The columns
+      must match the parameters found in options_lookup.tsv. This allows for efficient athena queries. Only recommended
+      for moderate or large sized runs (ndatapoints > 10K)
+
+    * ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to
+       work, please `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
        Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
 
         *  ``region_name``: The name of the aws region to use for database creation and other services.

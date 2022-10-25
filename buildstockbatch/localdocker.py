@@ -32,6 +32,7 @@ from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
 from .utils import log_error_details, ContainerRuntime
 from docker.errors import ImageNotFound
+from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +94,67 @@ class LocalDockerBatch(DockerBatchBase):
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
             os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
 
+        # Install custom gems to a volume that will be used by all workers
+        if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            logger.info('Installing custom gems to docker volume: buildstockbatch_custom_gems')
+
+            docker_client = docker.client.from_env()
+
+            # Create a volume to store the custom gems
+            docker_client.volumes.create(name='buildstockbatch_custom_gems', driver='local')
+            simdata_vol = docker_client.volumes.create(name='buildstockbatch_simdata_temp', driver='local')
+
+            # Define directories to be mounted in the container
+            mnt_gem_dir = '/var/oscli/gems'
+            # Install custom gems to be used in the docker container
+            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
+            mnt_gemfile_path_orig = "/var/oscli/gemfile/Gemfile"
+            docker_volume_mounts = {
+                'buildstockbatch_custom_gems': {'bind': mnt_gem_dir, 'mode': 'rw'},
+                local_gemfile_path: {'bind': mnt_gemfile_path_orig, 'mode': 'ro'},
+                simdata_vol.name: {'bind': '/var/simdata/openstudio', 'mode': 'rw'},
+            }
+
+            # Check that the Gemfile exists
+            if not os.path.exists(local_gemfile_path):
+                print(f'local_gemfile_path = {local_gemfile_path}')
+                raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
+
+            # Make the buildstock/resources/.custom_gems dir to store logs
+            local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.custom_gems')
+            if not os.path.exists(local_log_dir):
+                os.makedirs(local_log_dir)
+
+            # Run bundler to install the custom gems
+            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
+            bundle_install_cmd = f'/bin/bash -c "cp {mnt_gemfile_path_orig} {mnt_gemfile_path} && bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}"'  # noqa: E501
+            logger.debug(f'Running {bundle_install_cmd}')
+            container_output = docker_client.containers.run(
+                self.docker_image,
+                bundle_install_cmd,
+                remove=True,
+                volumes=docker_volume_mounts,
+                name='install_custom_gems'
+            )
+            with open(os.path.join(local_log_dir, 'bundle_install_output.log'), 'wb') as f_out:
+                f_out.write(container_output)
+
+            # Report out custom gems loaded by OpenStudio CLI
+            check_active_gems_cmd = f'openstudio --bundle {mnt_gemfile_path} --bundle_path {mnt_gem_dir} ' \
+                                    '--bundle_without native_ext gem_list'
+            container_output = docker_client.containers.run(
+                self.docker_image,
+                check_active_gems_cmd,
+                remove=True,
+                volumes=docker_volume_mounts,
+                name='list_custom_gems'
+            )
+            gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
+            with open(gem_list_log, 'wb') as f_out:
+                f_out.write(container_output)
+            simdata_vol.remove()
+            logger.debug(f'Review custom gems list at: {gem_list_log}')
+
     @staticmethod
     def validate_project(project_file):
         super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
@@ -148,30 +210,51 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
 
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            mnt_custom_gem_dir = '/var/oscli/gems'
+            docker_volume_mounts['buildstockbatch_custom_gems'] = {'bind': mnt_custom_gem_dir, 'mode': 'ro'}
+
         osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
 
         docker_client = docker.client.from_env()
-        args = [
+        run_cmd = [
             'openstudio',
             'run',
             '-w', 'in.osw',
         ]
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            run_cmd = [
+                'openstudio',
+                '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
+                '--bundle_path', f'{mnt_custom_gem_dir}',
+                '--bundle_without', 'native_ext',
+                'run', '-w', 'in.osw',
+                '--debug'
+            ]
         if measures_only:
-            args.insert(2, '--measures_only')
+            if cfg.get('baseline', dict()).get('custom_gems', False):
+                run_cmd.insert(8, '--measures_only')
+            else:
+                run_cmd.insert(2, '--measures_only')
+
+        env_vars = {}
+        env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
+
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
 
         container = docker_client.containers.run(
             docker_image,
-            args,
+            run_cmd,
             remove=True,
             detach=True,
             volumes=docker_volume_mounts,
             name=sim_id,
+            environment=env_vars,
             **extra_kws
         )
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:

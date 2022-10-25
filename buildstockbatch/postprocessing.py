@@ -14,6 +14,7 @@ import dask.bag as db
 from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
+from dask.dataframe.io.parquet import create_metadata_file
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
@@ -91,6 +92,7 @@ def flatten_datapoint_json(reporting_measures, d):
 
     # additional reporting measures
     if sim_out_report == 'ReportSimulationOutput':
+        reporting_measures += ['ReportUtilityBills']
         reporting_measures += ['UpgradeCosts']
     for col in reporting_measures:
         for k, v in d.get(col, {}).items():
@@ -154,8 +156,8 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     return dpout
 
 
-def write_dataframe_as_parquet(df, fs, filename):
-    tbl = pa.Table.from_pandas(df, preserve_index=False)
+def write_dataframe_as_parquet(df, fs, filename, schema=None):
+    tbl = pa.Table.from_pandas(df, schema=schema, preserve_index=False)
     with fs.open(filename, 'wb') as f:
         parquet.write_table(tbl, f)
 
@@ -214,39 +216,176 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     return results_df
 
 
-def get_cols(fs, filename):
-    with fs.open(filename, 'rb') as f:
+def get_cols(fs, filepath):
+    with fs.open(filepath, 'rb') as f:
         schema = parquet.read_schema(f)
     return set(schema.names)
 
 
-def read_results_json(fs, filename):
+def read_results_json(fs, filename, all_cols=None):
     with fs.open(filename, 'rb') as f1:
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
     df = pd.DataFrame(dpouts)
     df['job_id'] = int(re.search(r'results_job(\d+)\.json\.gz', filename).group(1))
+    if all_cols is not None:
+        for missing_col in set(all_cols).difference(df.columns.values):
+            df[missing_col] = None
     # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
     df = df.reindex(sorted(df.columns), axis=1)
     return df
 
 
-def read_enduse_timeseries_parquet(fs, filename, all_cols):
-    with fs.open(filename, 'rb') as f:
+def get_schema_dict(fs, filename):
+    df = read_results_json(fs, filename)
+    df = df.replace('', np.nan)  # required to make pa correctly infer the dtypes
+    sch = pa.Schema.from_pandas(df)
+    sch_dict = {name: type for name, type in zip(sch.names, sch.types)}
+    return sch_dict
+
+
+def merge_schema_dicts(dict1, dict2):
+    new_dict = dict(dict1)
+    for col, dtype2 in dict2.items():
+        dtype1 = new_dict.get(col)
+        if col not in new_dict or dtype1 == pa.null():
+            new_dict[col] = dtype2
+    return new_dict
+
+
+def read_enduse_timeseries_parquet(fs, all_cols, src_path, bldg_id):
+    src_filename = f"{src_path}/bldg{bldg_id:07}.parquet"
+    with fs.open(src_filename, 'rb') as f:
         df = pd.read_parquet(f, engine='pyarrow')
-    building_id = int(re.search(r'bldg(\d+).parquet', filename).group(1))
-    df['building_id'] = building_id
+    df['building_id'] = bldg_id
     for col in set(all_cols).difference(df.columns.values):
         df[col] = np.nan
-    return df[all_cols]
+    df = df[all_cols]
+    df.set_index('building_id', inplace=True)
+    return df
 
 
-def read_and_concat_enduse_timeseries_parquet(fs, all_cols, output_dir, filenames, group_id):
-    dfs = [read_enduse_timeseries_parquet(fs, filename, all_cols) for filename in filenames]
-    grouped_df = pd.concat(dfs)
-    grouped_df.set_index('building_id', inplace=True)
-    grouped_df.to_parquet(output_dir + f'group{group_id}.parquet')
-    del grouped_df
+def concat_and_normalize(fs, all_cols, src_path, dst_path, partition_columns, indx, bldg_ids, partition_vals):
+    dfs = []
+    for bldg_id in sorted(bldg_ids):
+        df = read_enduse_timeseries_parquet(fs, all_cols, src_path, bldg_id)
+        dfs.append(df)
+    df = pd.concat(dfs)
+    del dfs
+
+    dst_filepath = dst_path
+    for col, val in zip(partition_columns, partition_vals):
+        folder_name = f"{col}={val}"
+        dst_filepath = f"{dst_filepath}/{folder_name}"
+
+    fs.makedirs(dst_filepath, exist_ok=True)
+    dst_filename = f"{dst_filepath}/group{indx}.parquet"
+    with fs.open(dst_filename, 'wb') as f:
+        df.to_parquet(f, index=True)
+    return len(bldg_ids)
+
+
+def get_null_cols(df):
+    sch = pa.Schema.from_pandas(df)
+    null_cols = []
+    for col, dtype in zip(sch.names, sch.types):
+        if dtype == pa.null():
+            null_cols.append(col)
+    return null_cols
+
+
+def correct_schema(cur_schema_dict, df):
+    sch = pa.Schema.from_pandas(df)
+    sch_dict = {name: type for name, type in zip(sch.names, sch.types)}
+    unresolved = []
+    for col, dtype in sch_dict.items():
+        if dtype == pa.null():
+            if col in cur_schema_dict:
+                indx = sch.get_field_index(col)
+                sch = sch.set(indx, pa.field(col, cur_schema_dict.get(col)))
+            else:
+                unresolved.append(col)
+    return sch, unresolved
+
+
+def split_into_groups(total_size, max_group_size):
+    """
+    Splits an integer into sum of integers (returned as an array) each not exceeding max_group_size
+    e.g. split_into_groups(10, 3) = [3, 3, 2, 2]
+    """
+    if total_size == 0:
+        return []
+    total_groups = math.ceil(total_size / max_group_size)
+    min_elements_per_group = math.floor(total_size / total_groups)
+    split_array = [min_elements_per_group] * total_groups
+    remainder = total_size - min_elements_per_group * total_groups
+    assert 0 <= remainder < len(split_array)
+    for i in range(remainder):
+        split_array[i] += 1
+    return split_array
+
+
+def get_partitioned_bldg_groups(partition_df, partition_columns, files_per_partition):
+    """
+        Returns intelligent grouping of building_ids by partition columns.
+        1. Group the building_ids by partition columns. For each group, say (CO, Jefferson), we have a list of building
+           ids. The total number of such groups is ngroups
+        2. Concatenate those list to get bldg_id_list, which will have all the bldg_ids but ordered such that that
+           buildings belonging to the same group are close together.
+        3. Split the list of building in each group in 1 to multiple subgroups so that total number of buildings
+           in each subgroup is less than or equal to files_per_partition. This will give the bldg_id_groups (list of
+           list) used to read the dataframe. The buildings within the inner list will be concatenated.
+           len(bldg_id_groups) is equal to number of such concatenation, and eventually, number of output parquet files.
+    """
+    total_building = len(partition_df)
+    if partition_columns:
+        bldg_id_list_df = partition_df.reset_index().groupby(partition_columns)['building_id'].apply(list)
+        ngroups = len(bldg_id_list_df)
+        bldg_id_list = bldg_id_list_df.sum()
+        nfiles_in_each_group = [nfiles for nfiles in bldg_id_list_df.map(lambda x: len(x))]
+        files_groups = [split_into_groups(n, files_per_partition) for n in nfiles_in_each_group]
+        flat_groups = [n for group in files_groups for n in group]  # flatten list of list into a list (maintain order)
+    else:
+        # no partitioning by a column. Just put buildings into groups of files_per_partition
+        ngroups = 1
+        bldg_id_list = list(partition_df.index)
+        flat_groups = split_into_groups(total_building, files_per_partition)
+
+    cum_files_count = np.cumsum(flat_groups)
+    assert cum_files_count[-1] == total_building
+    cur_index = 0
+    bldg_id_groups = []
+    for indx in cum_files_count:
+        bldg_id_groups.append(bldg_id_list[cur_index:indx])
+        cur_index = indx
+
+    return bldg_id_groups, bldg_id_list, ngroups
+
+
+def get_upgrade_list(cfg):
+    upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
+    upgrade_end = len(cfg.get('upgrades', [])) + 1
+    return list(range(upgrade_start, upgrade_end))
+
+
+def write_metadata_files(fs, parquet_root_dir, partition_columns):
+    df = dd.read_parquet(parquet_root_dir)
+    sch = pa.Schema.from_pandas(df._meta_nonempty)
+    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata")
+    logger.info(f"Written _common_metadata to {parquet_root_dir}")
+
+    if partition_columns:
+        partition_glob = "/".join([f'{c}*' for c in partition_columns])
+        glob_str = f"{parquet_root_dir}/up*/{partition_glob}/*.parquet"
+    else:
+        glob_str = f"{parquet_root_dir}/up*/*.parquet"
+
+    logger.info(f"Gathering all the parquet files in {glob_str}")
+    concat_files = fs.glob(glob_str)
+    logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
+    parquet_root_dir = Path(parquet_root_dir).as_posix()
+    create_metadata_file(concat_files, root_dir=parquet_root_dir, engine='pyarrow', fs=fs)
+    logger.info(f"_metadata file written to {parquet_root_dir}")
 
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
@@ -276,47 +415,90 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
-    if results_json_files:
-        delayed_results_dfs = [dask.delayed(read_results_json)(fs, x) for x in results_json_files]
-        results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
-    else:
+    if not results_json_files:
         raise ValueError("No simulation results found to post-process.")
+
+    logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
+    all_schema_dict = db.from_sequence(results_json_files).map(partial(get_schema_dict, fs)).\
+        fold(lambda x, y: merge_schema_dicts(x, y)).compute()
+    logger.info(f"Got {len(all_schema_dict)} columns")
+    all_results_cols = list(all_schema_dict.keys())
+    all_schema_dict = {to_camelcase(key): value for key, value in all_schema_dict.items()}
+    logger.info(f"Got this schema: {all_schema_dict}\n")
+    delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
+                           for x in results_json_files]
+    results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
 
     if do_timeseries:
         # Look at all the parquet files to see what columns are in all of them.
         logger.info("Collecting all the columns in timeseries parquet files.")
-        ts_filenames = fs.glob(f'{ts_in_dir}/up*/bldg*.parquet')
-        all_ts_cols = db.from_sequence(ts_filenames, partition_size=100).map(partial(get_cols, fs)).\
-            fold(lambda x, y: x.union(y)).compute()
+        do_timeseries = False
+        all_ts_cols = set()
+        for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
+            ts_filenames = fs.ls(upgrade_folder)
+            if ts_filenames:
+                do_timeseries = True
+                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
+                files_bag = db.from_sequence(ts_filenames, partition_size=100)
+                all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
+                    fold(lambda x, y: x.union(y)).compute()
+                logger.info("Collected all the columns")
+            else:
+                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
+    if do_timeseries:
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith(']')))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(all_ts_cols))
+        logger.info(f"Got {len(all_ts_cols_sorted)} columns in total")
+        logger.info(f"The columns are: {all_ts_cols_sorted}")
+    else:
+        logger.warning("There are no timeseries files for any upgrades.")
 
     results_df_groups = results_df.groupby('upgrade')
-    upgrade_start = 1 if cfg['baseline'].get('skip_sims', False) else 0
-    upgrade_end = len(cfg.get('upgrades', [])) + 1
-    for upgrade_id in range(upgrade_start, upgrade_end):
+    upgrade_list = get_upgrade_list(cfg)
+    partition_columns = cfg.get('postprocessing', {}).get('partition_columns', [])
+    partition_columns = [c.lower() for c in partition_columns]
+    df_partition_columns = [f'build_existing_model.{c}' for c in partition_columns]
+    missing_cols = set(df_partition_columns) - set(all_schema_dict.keys())
+    if missing_cols:
+        raise ValueError(f"The following partitioning columns are not found in results.json: {missing_cols}")
+    if partition_columns:
+        logger.info(f"The timeseries files will be partitioned by {partition_columns}.")
+
+    logger.info(f"Will postprocess the following upgrades {upgrade_list}")
+    for upgrade_id in upgrade_list:
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
+        df.sort_index(inplace=True)
         df.rename(columns=to_camelcase, inplace=True)
         df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
-
+        del df['upgrade']
+        df.set_index('building_id', inplace=True)
+        schema = None
+        partition_df = df[df_partition_columns].copy()
+        partition_df.rename(columns={df_c: c for df_c, c in zip(df_partition_columns, partition_columns)},
+                            inplace=True)
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), df.columns)
             )
             df = df[cols_to_keep]
-        df = df.copy()
-        del df['upgrade']
-        df.set_index('building_id', inplace=True)
-        df.sort_index(inplace=True)
-
+            null_cols = get_null_cols(df)
+            # If certain column datatype is null (happens when it doesn't have any data), the datatype
+            # for that column is attempted to be determined based on datatype in other upgrades
+            if null_cols:
+                logger.info(f"Upgrade {upgrade_id} has null cols: {null_cols}")
+                schema, unresolved = correct_schema(all_schema_dict, df)
+                if unresolved:
+                    logger.info(f"The types for {unresolved} columns couldn't be determined.")
+                else:
+                    logger.info("All columns were successfully assigned a datatype based on other upgrades.")
         # Write CSV
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
         logger.info(f'Writing {csv_filename}')
@@ -329,39 +511,47 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             results_parquet_dir = f"{parquet_dir}/baseline"
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
-        if not fs.exists(results_parquet_dir):
-            fs.makedirs(results_parquet_dir)
+
+        fs.makedirs(results_parquet_dir)
+        parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+        logger.info(f'Writing {parquet_filename}')
         write_dataframe_as_parquet(
             df.reset_index(),
             fs,
-            f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
+            parquet_filename,
+            schema=schema
         )
 
         if do_timeseries:
-
-            # Get the names of the timseries file for each simulation in this upgrade
-            ts_filenames = fs.glob(f'{ts_in_dir}/up{upgrade_id:02d}/bldg*.parquet')
-
+            # Get the names of the timeseries file for each simulation in this upgrade
+            ts_upgrade_path = f'{ts_in_dir}/up{upgrade_id:02d}'
+            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            ts_bldg_ids = [int(re.search(r'bldg(\d+).parquet', flname).group(1)) for flname in ts_filenames]
             if not ts_filenames:
                 logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
                 continue
+            logger.info(f"There are {len(ts_filenames)} timeseries files for upgrade{upgrade_id}.")
 
             # Calculate the mean and estimate the total memory usage
-            read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_cols=all_ts_cols_sorted)
+            read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_upgrade_path)
             get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
-            sample_size = min(len(ts_filenames), 36 * 3)
-            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_filenames, sample_size)))[0])
-            total_mem = mean_mem * len(ts_filenames) / 1e6  # total_mem in MB
+            sample_size = min(len(ts_bldg_ids), 36 * 3)
+            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size)))[0])
 
             # Determine how many files should be in each partition and group the files
-            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            parquet_memory = int(cfg.get('eagle', {}).get('postprocessing', {}
+                                                          ).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
-            npartitions = math.ceil(total_mem / parquet_memory)
-            npartitions = min(len(ts_filenames), npartitions)  # cannot have less than one file per partition
-            ts_files_in_each_partition = np.array_split(ts_filenames, npartitions)
+            max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
+            partition_df = partition_df.loc[ts_bldg_ids].copy()
+            logger.info(f"partition_df for the upgrade has {len(partition_df)} rows.")
+            bldg_id_groups, bldg_id_list, ngroup = get_partitioned_bldg_groups(partition_df,
+                                                                               partition_columns,
+                                                                               max_files_per_partition)
+            logger.info(f"Processing {len(bldg_id_list)} building timeseries by combining max of "
+                        f"{max_files_per_partition} parquets together. This will create {len(bldg_id_groups)} parquet "
+                        f"partitions which go into {ngroup} column group(s) of {partition_columns}")
 
-            logger.info(f"Combining about {len(ts_files_in_each_partition[0])} parquets together."
-                        f" Creating {npartitions} groups.")
             if isinstance(fs, LocalFileSystem):
                 ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
             else:
@@ -369,22 +559,26 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
             fs.makedirs(ts_out_loc)
-            logger.info(f'Created directory {ts_out_loc} for writing.')
+            logger.info(f'Created directory {ts_out_loc} for writing. Now concatenating ...')
 
-            # Read the timeseries into a dask dataframe
-            read_and_concat_ts_pq_d = dask.delayed(
-                # fs, all_cols, output_dir, filenames, group_id
-                partial(read_and_concat_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_out_loc)
-            )
-            group_ids = list(range(npartitions))
+            src_path = f'{ts_in_dir}/up{upgrade_id:02d}/'
+            concat_partial = dask.delayed(partial(concat_and_normalize,
+                                                  fs, all_ts_cols_sorted, src_path, ts_out_loc, partition_columns))
+            partition_vals_list = [list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else []
+                                   for bldg_id_list in bldg_id_groups]
+
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmpfilepath = Path(tmpdir, 'dask-report.html')
                 with performance_report(filename=str(tmpfilepath)):
-                    dask.compute(map(read_and_concat_ts_pq_d, ts_files_in_each_partition, group_ids))
+                    dask.compute(map(concat_partial, *zip(*enumerate(bldg_id_groups)), partition_vals_list))
                 if tmpfilepath.exists():
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
+    logger.info("All aggregation completed. ")
+    if do_timeseries:
+        logger.info("Writing timeseries metadata files")
+        write_metadata_files(fs, ts_dir, partition_columns)
 
 
 def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False):
@@ -404,14 +598,16 @@ def upload_results(aws_conf, output_dir, results_dir):
 
     output_folder_name = Path(output_dir).name
     parquet_dir = Path(results_dir).joinpath('parquet')
-
+    ts_dir = parquet_dir / 'timeseries'
     if not parquet_dir.is_dir():
         logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
         raise FileNotFoundError(parquet_dir)
 
     all_files = []
-    for files in parquet_dir.rglob('*.parquet'):
-        all_files.append(files.relative_to(parquet_dir))
+    for file in parquet_dir.rglob('*.parquet'):
+        all_files.append(file.relative_to(parquet_dir))
+    for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
+        all_files.append(file.relative_to(parquet_dir))
 
     s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
@@ -461,7 +657,7 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     crawlTarget = {
         'S3Targets': [{
             'Path': s3_path,
-            'Exclusions': []
+            'Exclusions': ['**_metadata', '**_common_metadata']
         }]
     }
     crawler_name = db_name + '_' + tbl_prefix

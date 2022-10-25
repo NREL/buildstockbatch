@@ -100,7 +100,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -128,7 +128,7 @@ html_theme_path = ["_themes", ]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -222,3 +222,19 @@ epub_exclude_files = ['search.html']
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+# -- Ignore warnings ---------------------------------------------------------
+
+# Ignore reference targets not found
+nitpick_ignore = [
+  ('py:func', 'BuildStockBatchBase.validate_precomputed_sample'),
+  ('py:func', 'BuildStockBatchBase.validate_xor_nor_schema_keys'),
+  ('py:func', 'EagleBatch.run_building'),
+  ('py:class', 'sampler.CommercialSobolSingularitySampler'),
+  ('py:class', 'sampler.CommercialSobolDockerSampler'),
+  ('py:class', 'workflow_generator.CommercialDefaultWorkflowGenerator'),
+  ('py:class', 'sampler.PrecomputedSampler'),
+  ('py:class', 'sampler.BuildStockSampler'),
+  ('py:class', 'BuildStockBatchBase'),
+  ('py:func', 'BuildStockBatchBase.run_sampling')
+]
