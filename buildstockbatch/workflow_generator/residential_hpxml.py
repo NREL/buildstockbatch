@@ -98,6 +98,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
+            timeseries_timestamp_convention: enum('start', 'end', required=False)
             add_timeseries_dst_column: bool(required=False)
             add_timeseries_utc_column: bool(required=False)
             output_variables: list(include('output-var-spec'), required=False)
