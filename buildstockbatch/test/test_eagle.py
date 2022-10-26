@@ -53,14 +53,15 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
             '/var/simdata/openstudio',
         ]
         end_expected_singularity_args = [
-            '/tmp/scratch/openstudio.simg',
+            str(pathlib.Path('/tmp/scratch/openstudio.simg')),
             'bash', '-x'
         ]
         mock_subprocess.run.assert_called_once()
         args = mock_subprocess.run.call_args[0][0]
         for a, b in [args[i:i+2] for i in range(6, len(args) - 3, 2)]:
             assert a == '-B'
-            assert b.split(':')[1] in (
+            drive, tail = os.path.splitdrive(b)
+            assert tail.split(':')[1] in (
                 '/var/simdata/openstudio',
                 '/lib/resources',
                 '/lib/housing_characteristics',
@@ -75,7 +76,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert 'input' in called_kw
         assert 'stdout' in called_kw
         assert 'stderr' in called_kw
-        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert str(called_kw.get('cwd')) == str(pathlib.Path('/tmp/scratch/output'))
         assert called_kw['input'].decode('utf-8').find(' --measures_only') == -1
 
         # Measures only run
@@ -92,7 +93,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert 'input' in called_kw
         assert 'stdout' in called_kw
         assert 'stderr' in called_kw
-        assert str(called_kw.get('cwd')) == '/tmp/scratch/output'
+        assert str(called_kw.get('cwd')) == str(pathlib.Path('/tmp/scratch/output'))
         assert called_kw['input'].decode('utf-8').find(' --measures_only') > -1
 
 
