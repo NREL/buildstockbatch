@@ -109,3 +109,9 @@ Development Changelog
         where a new timeseries_csv_export key was added to the workflow schema in order to trigger timeseries postprocessing.
         Changes the CLI commands to work with OpenStudio 3.X when custom_gems=True.
         Enables use of custom gems in local docker runs by installing to local docker volume.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 311
+
+        Add ability to use start-of-timestep or end-of-timestep convention for timeseries timestamps using the ``residential_hpxml`` workflow.
