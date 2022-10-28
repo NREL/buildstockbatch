@@ -77,11 +77,14 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: **VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE** This
-  activates the ``bundle`` and ``bundle_path`` interfaces in the OpenStudio CLI to allow for custom gem packages (needed
-  to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
-  image is properly configured but that's easier said than done. The la100 branch on the nrel/docker-openstudio repo
-  is a starting place if this is required.
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE AND LOCAL DOCKER** When true, buildstockbatch will
+  call the OpenStudio CLI commands with the  ``bundle`` and ``bundle_path`` options. These options tell the CLI
+  to load a custom set of gems rather than those included in the OpenStudio CLI. For both Eagle
+  and local Docker runs, these gems are first specified in the ``buildstock\resources\Gemfile``.
+  For Eagle, when the Singularity image is built, these gems are added to the image.
+  For local Docker, when the containers are started, the gems specified in the Gemfile are installed into a Docker
+  volume on the local computer. This volume is mounted by each container as models are run, so each run
+  uses the custom gems.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,6 +130,8 @@ Output Directory
 ~~~~~~~~~~~~~~~~
 
 ``output_directory`` specifies where the outputs of the simulation should be stored.
+
+.. _eagle-config:
 
 Eagle Configuration
 ~~~~~~~~~~~~~~~~~~~
@@ -192,7 +197,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
     * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
     * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
       Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
@@ -227,7 +232,7 @@ are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
 `same way that EnergyPlus handles ScheduleFiles
 <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
-   
+
 
 Uploading to AWS Athena
 .......................

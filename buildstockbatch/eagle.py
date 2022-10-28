@@ -382,7 +382,8 @@ class EagleBatch(BuildStockBatchBase):
                 cli_cmd = 'openstudio run -w in.osw'
                 if cfg.get('baseline', dict()).get('custom_gems', False):
                     cli_cmd = (
-                        'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems run -w in.osw --debug'
+                        'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems '
+                        '--bundle_without native_ext run -w in.osw --debug'
                     )
                 if get_bool_env_var('MEASURESONLY'):
                     cli_cmd += ' --measures_only'
