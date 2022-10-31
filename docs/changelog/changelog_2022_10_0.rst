@@ -100,9 +100,3 @@ v2022.10.0 Changelog
         where a new timeseries_csv_export key was added to the workflow schema in order to trigger timeseries postprocessing.
         Changes the CLI commands to work with OpenStudio 3.X when custom_gems=True.
         Enables use of custom gems in local docker runs by installing to local docker volume.
-
-    .. change::
-        :tags: bugfix, eagle
-        :pullreq: 324
-
-        Using new style CLI for dask scheduler and dask workers. Requiring dask >= 2022.10.
