@@ -390,6 +390,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
     assert simulation_output_step['arguments']['include_timeseries_airflows'] is False
     assert simulation_output_step['arguments']['include_timeseries_weather'] is False
+    assert simulation_output_step['arguments']['timeseries_timestamp_convention'] == 'end'
     assert simulation_output_step['arguments']['add_timeseries_dst_column'] is True
     assert simulation_output_step['arguments']['add_timeseries_utc_column'] is True
 
