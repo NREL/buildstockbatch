@@ -61,7 +61,7 @@ setuptools.setup(
         'pandas>=1.0.0,!=1.0.4',
         'joblib',
         'pyarrow>=3.0.0',
-        'dask[complete]>=2022.2.0',
+        'dask[complete]>=2022.10.0',
         'docker',
         'boto3>=1.10.44',
         's3fs>=0.4.0,<0.5.0',
