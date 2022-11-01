@@ -32,6 +32,12 @@ import re
 from s3fs import S3FileSystem
 import tempfile
 import time
+from pympler import tracker
+from pympler import summary
+from pympler import muppy
+from pympler import asizeof
+from buildstockbatch.utils import print_largest_objects
+import gc
 
 logger = logging.getLogger(__name__)
 
@@ -411,7 +417,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # create the postprocessing results directories
     for dr in dirs:
-        fs.makedirs(dr)
+        fs.makedirs(dr, exist_ok=True)
 
     # Results "CSV"
     results_json_files = fs.glob(f'{sim_output_dir}/results_job*.json.gz')
@@ -419,6 +425,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         raise ValueError("No simulation results found to post-process.")
 
     logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
+    mem_tracker = tracker.SummaryTracker()
+
     all_schema_dict = db.from_sequence(results_json_files).map(partial(get_schema_dict, fs)).\
         fold(lambda x, y: merge_schema_dicts(x, y)).compute()
     logger.info(f"Got {len(all_schema_dict)} columns")
@@ -428,23 +436,33 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     delayed_results_dfs = [dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
                            for x in results_json_files]
     results_df = dd.from_delayed(delayed_results_dfs,  verify_meta=False)
+    all_ts_cols_file = f"{results_dir}/all_ts_cols.json"
 
     if do_timeseries:
-        # Look at all the parquet files to see what columns are in all of them.
-        logger.info("Collecting all the columns in timeseries parquet files.")
-        do_timeseries = False
-        all_ts_cols = set()
-        for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
-            ts_filenames = fs.ls(upgrade_folder)
-            if ts_filenames:
-                do_timeseries = True
-                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
-                files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
-                    fold(lambda x, y: x.union(y)).compute()
-                logger.info("Collected all the columns")
-            else:
-                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+        if fs.exists(all_ts_cols_file):
+            with open(all_ts_cols_file, 'r') as f:
+                all_ts_cols = set(json.load(f))
+            logger.info(f"Read the list of columns from: {all_ts_cols_file}")
+        else:
+            # Look at all the parquet files to see what columns are in all of them.
+            logger.info("Collecting all the columns in timeseries parquet files.")
+            do_timeseries = False
+            all_ts_cols = set()
+            for upgrade_folder in fs.glob(f'{ts_in_dir}/up*'):
+                ts_filenames = fs.ls(upgrade_folder)
+                if ts_filenames:
+                    do_timeseries = True
+                    logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
+                    files_bag = db.from_sequence(ts_filenames, partition_size=100)
+                    all_ts_cols |= files_bag.map(partial(get_cols, fs)).\
+                        fold(lambda x, y: x.union(y)).compute()
+                    logger.info("Collected all the columns")
+                else:
+                    logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+
+            with open(all_ts_cols_file, 'w') as f:
+                logger.info(f"Saved the list of columns to: {all_ts_cols}")
+                json.dump(list(all_ts_cols), f)
 
     if do_timeseries:
         # Sort the columns
@@ -458,7 +476,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     else:
         logger.warning("There are no timeseries files for any upgrades.")
 
-    results_df_groups = results_df.groupby('upgrade')
     upgrade_list = get_upgrade_list(cfg)
     partition_columns = cfg.get('postprocessing', {}).get('partition_columns', [])
     partition_columns = [c.lower() for c in partition_columns]
@@ -471,8 +488,16 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     logger.info(f"Will postprocess the following upgrades {upgrade_list}")
     for upgrade_id in upgrade_list:
+        print_largest_objects(locals())
+        print_largest_objects(globals())
+        summary.print_(summary.summarize(muppy.get_objects()))
+        mem_tracker.print_diff()
+        try:
+            print(f"Total size: {asizeof.asizeof(*muppy.get_objects()) / (1024 * 1024 * 1024)}")
+        except Exception as err:
+            print(err)
         logger.info(f"Processing upgrade {upgrade_id}. ")
-        df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
+        df = dask.compute(results_df[results_df['upgrade'] == upgrade_id])[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
         df.sort_index(inplace=True)
         df.rename(columns=to_camelcase, inplace=True)
@@ -488,7 +513,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             cols_to_keep = list(
                 filter(lambda x: not x.startswith('build_existing_model.'), df.columns)
             )
-            df = df[cols_to_keep]
+            df = df[cols_to_keep].copy()
             null_cols = get_null_cols(df)
             # If certain column datatype is null (happens when it doesn't have any data), the datatype
             # for that column is attempted to be determined based on datatype in other upgrades
@@ -501,10 +526,13 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     logger.info("All columns were successfully assigned a datatype based on other upgrades.")
         # Write CSV
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
-        logger.info(f'Writing {csv_filename}')
-        with fs.open(csv_filename, 'wb') as f:
-            with gzip.open(f, 'wt', encoding='utf-8') as gf:
-                df.to_csv(gf, index=True, line_terminator='\n')
+        if fs.exists(csv_filename):
+            logger.info(f'{csv_filename} already exists. Skipping ...')
+        else:
+            logger.info(f'Writing {csv_filename}')
+            with fs.open(csv_filename, 'wb') as f:
+                with gzip.open(f, 'wt', encoding='utf-8') as gf:
+                    df.to_csv(gf, index=True, line_terminator='\n')
 
         # Write Parquet
         if upgrade_id == 0:
@@ -512,15 +540,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
 
-        fs.makedirs(results_parquet_dir)
+        fs.makedirs(results_parquet_dir, exist_ok=True)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
-        logger.info(f'Writing {parquet_filename}')
-        write_dataframe_as_parquet(
-            df.reset_index(),
-            fs,
-            parquet_filename,
-            schema=schema
-        )
+        if fs.exists(parquet_filename):
+            logger.info(f'{parquet_filename} already exists. Skippping ...')
+        else:
+            logger.info(f'Writing {parquet_filename}')
+            write_dataframe_as_parquet(
+                df.reset_index(),
+                fs,
+                parquet_filename,
+                schema=schema
+            )
 
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
@@ -558,9 +589,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
-            fs.makedirs(ts_out_loc)
-            logger.info(f'Created directory {ts_out_loc} for writing. Now concatenating ...')
+            fs.makedirs(ts_out_loc, exist_ok=True)
+            existing_files_count = len(fs.glob(f"{ts_out_loc}**/*.parquet"))
+            if existing_files_count == len(bldg_id_groups):
+                logger.info('All combined parquet files are already there; skipping to next upgrade')
+                continue
+            elif existing_files_count > len(bldg_id_groups):
+                logger.error('More ({existing_files_count}) than expected ({bldg_id_groups}) parquets found.')
+                raise ValueError("More than expected number of existing files.")
+            elif existing_files_count > 0:
+                logger.info('Some ({existing_files_count}) parquet partitions already exists. Redoing all ...')
 
+            logger.info('Now concatenating ...')
             src_path = f'{ts_in_dir}/up{upgrade_id:02d}/'
             concat_partial = dask.delayed(partial(concat_and_normalize,
                                                   fs, all_ts_cols_sorted, src_path, ts_out_loc, partition_columns))
@@ -575,7 +615,18 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     fs.put_file(str(tmpfilepath), f'{results_dir}/dask_combine_report{upgrade_id}.html')
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
+        gc.collect()
+
     logger.info("All aggregation completed. ")
+    print_largest_objects(locals())
+    print_largest_objects(globals())
+    sum1 = summary.summarize(muppy.get_objects())
+    summary.print_(sum1)
+    mem_tracker.print_diff()
+    try:
+        print(f"Total size: {asizeof.asizeof(*muppy.get_objects()) / (1024 * 1024 * 1024)}")
+    except Exception as err:
+        print(err)
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
         write_metadata_files(fs, ts_dir, partition_columns)
@@ -609,6 +660,7 @@ def upload_results(aws_conf, output_dir, results_dir):
     for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
         all_files.append(file.relative_to(parquet_dir))
 
+    logger.info(f"Gathered {len(all_files)} files to upload.")
     s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
     if not (s3_prefix and s3_bucket):
