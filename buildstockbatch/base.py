@@ -100,6 +100,7 @@ class BuildStockBatchBase(object):
                 logger.debug('Extracting weather files to: {}'.format(self.weather_dir))
                 zf.extractall(self.weather_dir)
         else:
+            assert False
             logger.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
             with tempfile.TemporaryFile() as f:
