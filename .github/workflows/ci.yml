@@ -60,7 +60,7 @@ jobs:
         with:
           path: buildstockbatch/coverage/coverage.xml
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          minimum_coverage: 24
+          minimum_coverage: 33
           fail_below_threshold: true
       - name: Build documentation
         if: ${{ matrix.python-version == '3.10' }}
