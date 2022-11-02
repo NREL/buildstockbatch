@@ -20,3 +20,9 @@ Development Changelog
         :pullreq: 323
 
         Updates and simplifies python dependencies.
+
+    .. change::
+        :tags: general
+        :pullreq: 326
+
+        Adds some integration tests with the lastest ResStock.
