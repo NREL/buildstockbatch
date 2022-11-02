@@ -39,7 +39,6 @@ def test_resstock_local_batch(project_filename, mocker):
         n_datapoints = 2
     batch.cfg["sampler"]["args"]["n_datapoints"] = n_datapoints
 
-    # FIXME: Find a better way to do this
     local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
     if local_weather_file.exists():
         del batch.cfg["weather_files_url"]
