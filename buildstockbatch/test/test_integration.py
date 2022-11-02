@@ -25,16 +25,19 @@ def test_resstock_local_batch(project_filename, mocker):
     LocalDockerBatch.validate_project(str(project_filename))
     batch = LocalDockerBatch(str(project_filename))
 
-    # Modify the number of datapoints so we're not here all day.
-    n_datapoints = 4
-    batch.cfg["sampler"]["args"]["n_datapoints"] = n_datapoints
-
     # Get the number of upgrades
     n_upgrades = len(batch.cfg.get("upgrades", []))
     # Limit the number of upgrades to 2 to reduce simulation time
     if n_upgrades > 2:
         batch.cfg["upgrades"] = batch.cfg["upgrades"][0:2]
         n_upgrades = 2
+
+    # Modify the number of datapoints so we're not here all day.
+    if n_upgrades == 0:
+        n_datapoints = 4
+    else:
+        n_datapoints = 2
+    batch.cfg["sampler"]["args"]["n_datapoints"] = n_datapoints
 
     # FIXME: Find a better way to do this
     local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
