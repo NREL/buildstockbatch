@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 import pathlib
 import pytest
 import shutil
@@ -61,11 +62,21 @@ def test_resstock_local_batch(project_filename, mocker):
     assert not (simout_path / "timeseries").exists()
     assert not (simout_path / "results_job0.json.gz").exists()
     assert (simout_path / "simulations_job0.tar.gz").exists()
-    assert (out_path / "parquet" / "baseline" / "results_up00.parquet").exists()
+    base_pq = out_path / "parquet" / "baseline" / "results_up00.parquet"
+    assert base_pq.exists()
+    base = pd.read_parquet(base_pq, columns=["completed_status"])
+    assert (base["completed_status"] == "Success").all()
+    assert base.shape[0] == n_datapoints
     ts_pq_path = out_path / "parquet" / "timeseries"
     for upgrade_id in range(0, n_upgrades + 1):
         assert (ts_pq_path / f"upgrade={upgrade_id}" / "group0.parquet").exists()
         assert (out_path / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz").exists()
+        if upgrade_id >= 1:
+            upg_pq = out_path / "parquet" / "upgrades" / f"upgrade={upgrade_id}" / f"results_up{upgrade_id:02d}.parquet"
+            assert upg_pq.exists()
+            upg = pd.read_parquet(upg_pq, columns=["completed_status"])
+            assert (upg["completed_status"] == "Success").all()
+            assert upg.shape[0] == n_datapoints
     assert (ts_pq_path / "_common_metadata").exists()
     assert (ts_pq_path / "_metadata").exists()
 
