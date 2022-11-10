@@ -106,6 +106,7 @@ Arguments
   - ``include_timeseries_zone_temperatures``: Generates timeseries average temperatures (in deg-F) for each space modeled (e.g., living space, attic, garage, basement, crawlspace, etc.). 
   - ``include_timeseries_airflows``: Generates timeseries airflow rates (in cfm) for infiltration, mechanical ventilation (including clothes dryer exhaust), natural ventilation, whole house fans.
   - ``include_timeseries_weather``: Generates timeseries weather file data including outdoor temperatures, relative humidity, wind speed, and solar.
+  - ``timeseries_timestamp_convention``: Determines whether timeseries timestamps use the start-of-timestep or end-of-timestep convention. Valid choices are 'start' and 'end'.
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
   - ``add_timeseries_utc_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeUTC column. If the time zone UTC offset is not provided in the HPXML file, the time zone in the EPW header will be used.
   - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.

@@ -11,7 +11,7 @@ Current Migration Guide
 .. toctree::
    :titlesonly:
 
-   migration_0_21
+   migration_2022_10_1
 
 Change logs
 -----------
@@ -19,6 +19,8 @@ Change logs
 .. toctree::
    :titlesonly:
 
+   changelog_2022_10_1
+   changelog_2022_10_0
    changelog_0_21
    changelog_0_20
    changelog_0_19_2
@@ -40,6 +42,8 @@ Older Migration Guides
 .. toctree::
    :titlesonly:
 
+   migration_2022_10_0
+   migration_0_21
    migration_0_20
    migration_0_19
    migration_0_18

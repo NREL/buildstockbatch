@@ -131,6 +131,8 @@ Output Directory
 
 ``output_directory`` specifies where the outputs of the simulation should be stored.
 
+.. _eagle-config:
+
 Eagle Configuration
 ~~~~~~~~~~~~~~~~~~~
 
