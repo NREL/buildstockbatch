@@ -60,7 +60,8 @@ class DockerBatchBase(BuildStockBatchBase):
                 path=self.os_hescore_dir,
                 tag=self.docker_image,
                 dockerfile="resstock/Dockerfile",
-                rm=True
+                rm=True,
+                buildargs={'os_version': self.os_version}
             )
             logger.debug("Docker image built")
         else:
