@@ -11,7 +11,7 @@ This object contains the residential classes for generating OSW files from indiv
 """
 
 from .residential_hpxml import ResidentialHpxmlWorkflowGenerator  # noqa F041
-
+import yamale
 
 class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
@@ -22,5 +22,14 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
         # Add measure path for reporting measure
         osw['measure_paths'].insert(0, '/opt/OpenStudio-HEScore/hpxml-measures')
-
         return osw
+
+    @classmethod
+    def get_yml_schema(cls):
+        schema = super().get_yml_schema()
+
+        # Require os_hescore_directory argument
+        string_validator = yamale.validators.String(required=True)
+        schema.includes['build-existing-model-spec'].dict['os_hescore_directory'] = string_validator
+        print(schema.includes['build-existing-model-spec'].dict)
+        return(schema)

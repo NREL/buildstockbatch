@@ -34,7 +34,7 @@ def get_measure_xml(xml_path):
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
-    def validate(cls, cfg):
+    def get_yml_schema(cls):
         """Validate arguments
 
         :param cfg: project configuration
@@ -127,9 +127,15 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             retain_schedules_csv: bool(required=False)
             debug: bool(required=False)
         """
-        workflow_generator_args = cfg['workflow_generator']['args']
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
+        return(schema)
+
+    @classmethod
+    def validate(cls, cfg):
+        schema = cls.get_yml_schema()
+
+        workflow_generator_args = cfg['workflow_generator']['args']
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         yamale.validate(schema, data, strict=True)
         return cls.validate_measures_and_arguments(cfg)
@@ -374,8 +380,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             {
                 'measure_dir_name': 'HPXMLtoOpenStudio',
                 'arguments': {
-                    'hpxml_path': '../../run/home.xml',
-                    'output_dir': '../../run',
+                    'hpxml_path': '/var/simdata/openstudio/run/home.xml',
+                    'output_dir': '/var/simdata/openstudio/run',
                     'debug': debug,
                     'add_component_loads': add_component_loads
                 }
