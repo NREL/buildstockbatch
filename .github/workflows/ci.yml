@@ -1,7 +1,14 @@
 name: BuildStockBatch Tests
-on: [pull_request]
+on: 
+  push:
+    branches:
+      - develop
+  pull_request:
+    types:
+      - synchronize
+      - opened
 jobs:
-  build:
+  tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -9,52 +16,67 @@ jobs:
         python-version: ['3.8', '3.9', '3.10']
     name: Tests - Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+        with:
+          path: buildstockbatch
+      - uses: actions/checkout@v3
+        with:
+          repository: NREL/resstock
+          path: resstock
+          ref: develop
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - name: Download weather
+        run: |
+          mkdir weather
+          cd weather
+          wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
       - name: Install buildstockbatch
         run: |
+          cd buildstockbatch
           python -m pip install --progress-bar off --upgrade pip
           pip install .[dev] --progress-bar off
       - name: Linting
         run: |
+          cd buildstockbatch
           # stop the build if there are Python syntax errors or undefined names
           flake8 buildstockbatch --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 buildstockbatch --count --max-line-length=127 --statistics
       - name: Run PyTest and Coverage
         run: |
+          cd buildstockbatch
           pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport
       - name: Test Report
-        uses: mikepenz/action-junit-report@v2.9.1
-        if: ${{ matrix.python-version == '3.9' }}
+        uses: mikepenz/action-junit-report@v3.5.2
+        if: ${{ matrix.python-version == '3.10' }}
         with:
-          report_paths: coverage/junit.xml
+          report_paths: buildstockbatch/coverage/junit.xml
           check_name: Testing Report
           fail_on_failure: true
       - name: Save Coverage Report
-        uses: actions/upload-artifact@v2
-        if: ${{ matrix.python-version == '3.9' }}
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.python-version == '3.10' }}
         with:
           name: coverage-report-html
-          path: coverage/htmlreport/
+          path: buildstockbatch/coverage/htmlreport/
       - name: Report coverage to PR
-        uses: 5monkeys/cobertura-action@v12
-        if: ${{ matrix.python-version == '3.9' }}
+        uses: 5monkeys/cobertura-action@v13
+        if: ${{ matrix.python-version == '3.10' }}
         with:
-          path: coverage/coverage.xml
+          path: buildstockbatch/coverage/coverage.xml
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          minimum_coverage: 24
+          minimum_coverage: 33
           fail_below_threshold: true
       - name: Build documentation
-        if: ${{ matrix.python-version == '3.9' }}
+        if: ${{ matrix.python-version == '3.10' }}
         run: |
-          cd docs
+          cd buildstockbatch/docs
           make html SPHINXOPTS="-W --keep-going -n"
       - name: Save Docs
-        uses: actions/upload-artifact@v2
-        if: ${{ matrix.python-version == '3.9' }}
+        uses: actions/upload-artifact@v3
+        if: ${{ matrix.python-version == '3.10' }}
         with:
           name: documentation
           path: docs/_build/html/
