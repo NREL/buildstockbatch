@@ -13,6 +13,7 @@ This object contains the residential classes for generating OSW files from indiv
 from .residential_hpxml import ResidentialHpxmlWorkflowGenerator  # noqa F041
 import yamale
 
+
 class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
     def create_osw(self, sim_id, building_id, upgrade_idx):

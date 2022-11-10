@@ -103,10 +103,10 @@ class EagleBatch(BuildStockBatchBase):
         else:
             prefix_ver = self.os_version
         return 'https://s3.amazonaws.com/openstudio-builds/{prefix_ver}/OpenStudio-{ver}.{sha}-Singularity.simg'.format(
-                    prefix_ver=prefix_ver,
-                    ver=self.os_version,
-                    sha=self.os_sha
-                )
+            prefix_ver=prefix_ver,
+            ver=self.os_version,
+            sha=self.os_sha
+        )
 
     @property
     def singularity_image(self):
