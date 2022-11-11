@@ -130,7 +130,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         """
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
-        return(schema)
+        return schema
 
     @classmethod
     def validate(cls, cfg):

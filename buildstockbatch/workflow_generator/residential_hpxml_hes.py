@@ -33,4 +33,4 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
         string_validator = yamale.validators.String(required=True)
         schema.includes['build-existing-model-spec'].dict['os_hescore_directory'] = string_validator
         print(schema.includes['build-existing-model-spec'].dict)
-        return(schema)
+        return schema

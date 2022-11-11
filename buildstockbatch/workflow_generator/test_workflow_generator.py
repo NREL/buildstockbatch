@@ -451,35 +451,35 @@ def test_residential_hpxml_hes(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw['steps']
-    assert(len(steps) == 6)
+    assert len(steps) == 6
 
     build_existing_model_step = steps[0]
-    assert(build_existing_model_step['measure_dir_name'] == 'BuildExistingModel')
-    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_month'] == 2)
-    assert(build_existing_model_step['arguments']['simulation_control_run_period_begin_day_of_month'] == 1)
-    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_month'] == 2)
-    assert(build_existing_model_step['arguments']['simulation_control_run_period_end_day_of_month'] == 28)
-    assert(build_existing_model_step['arguments']['simulation_control_run_period_calendar_year'] == 2010)
-    assert(build_existing_model_step['arguments']['os_hescore_directory'] == "../../OpenStudio-HEScore")
+    assert build_existing_model_step['measure_dir_name'] == 'BuildExistingModel'
+    assert build_existing_model_step['arguments']['simulation_control_run_period_begin_month'] == 2
+    assert build_existing_model_step['arguments']['simulation_control_run_period_begin_day_of_month'] == 1
+    assert build_existing_model_step['arguments']['simulation_control_run_period_end_month'] == 2
+    assert build_existing_model_step['arguments']['simulation_control_run_period_end_day_of_month'] == 28
+    assert build_existing_model_step['arguments']['simulation_control_run_period_calendar_year'] == 2010
+    assert build_existing_model_step['arguments']['os_hescore_directory'] == "../../OpenStudio-HEScore"
 
     apply_upgrade_step = steps[1]
-    assert(apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade')
+    assert apply_upgrade_step['measure_dir_name'] == 'ApplyUpgrade'
 
     simulation_output_step = steps[2]
-    assert(simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput')
-    assert(simulation_output_step['arguments']['timeseries_frequency'] == 'hourly')
-    assert(simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True)
-    assert(simulation_output_step['arguments']['include_timeseries_total_loads'] is True)
-    assert(simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False)
+    assert simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput'
+    assert simulation_output_step['arguments']['timeseries_frequency'] == 'hourly'
+    assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
+    assert simulation_output_step['arguments']['include_timeseries_total_loads'] is True
+    assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
 
     hpxml_output_step = steps[3]
-    assert(hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput')
+    assert hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput'
 
     upgrade_costs_step = steps[4]
-    assert(upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts')
+    assert upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts'
 
     server_dir_cleanup_step = steps[5]
-    assert(server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup')
+    assert server_dir_cleanup_step['measure_dir_name'] == 'ServerDirectoryCleanup'
 
 
 def test_com_default_workflow_generator_basic(mocker):
