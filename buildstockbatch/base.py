@@ -65,12 +65,12 @@ class BuildStockBatchBase(object):
         self.project_dir = os.path.join(self.buildstock_dir, self.cfg['project_directory'])
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
+
+        self.os_hescore_dir = None
         if 'build_existing_model' in self.cfg['workflow_generator']['args']:
             if 'os_hescore_directory' in self.cfg['workflow_generator']['args']['build_existing_model']:
                 self.os_hescore_dir = path_rel_to_file(
                     project_filename, self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory'])
-            else:
-                self.os_hescore_dir = None
 
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
