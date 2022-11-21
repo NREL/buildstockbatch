@@ -222,6 +222,19 @@ class AwsJobBase():
         self.priv_vpc_subnet_id_1 = 'REPL'  # will be available after VPC creation
         self.priv_vpc_subnet_id_2 = 'REPL'  # will be available after VPC creation
 
+    def get_tags(self, **kwargs):
+        tags = kwargs.copy()
+        tags.update(self.aws_config.get('tags', {}))
+        return tags
+
+    def get_tags_uppercase(self, **kwargs):
+        tags = self.get_tags(**kwargs)
+        return [{'Key': k, 'Value': v} for k, v in tags.items()]
+
+    def get_tags_lowercase(self, _caps=True, **kwargs):
+        tags = self.get_tags(**kwargs)
+        return [{'key': k, 'value': v} for k, v in tags.items()]
+
     def __repr__(self):
 
         return f"""

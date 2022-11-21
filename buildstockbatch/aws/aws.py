@@ -132,11 +132,6 @@ class AwsBatchEnv(AwsJobBase):
 
         return super().__repr__()
 
-    def get_tags(self, **kwargs):
-        tags = kwargs.copy()
-        tags.update(self.aws_config.get('tags', {}))
-        return [{'Key': k, 'Value': v} for k, v in tags.items()]
-
     def create_emr_lambda_roles(self):
         """
         Create supporting IAM roles for Lambda support.
@@ -229,7 +224,7 @@ class AwsBatchEnv(AwsJobBase):
                     Resources=[
                         self.vpc_id
                     ],
-                    Tags=self.get_tags(Name=self.job_identifier)
+                    Tags=self.get_tags_uppercase(Name=self.job_identifier)
                 )
                 break
             except Exception as e:
@@ -300,14 +295,14 @@ class AwsBatchEnv(AwsJobBase):
             Resources=[
                 self.priv_vpc_subnet_id_1
             ],
-            Tags=self.get_tags(Name=self.job_identifier)
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
         self.ec2.create_tags(
             Resources=[
                 self.priv_vpc_subnet_id_2
             ],
-            Tags=self.get_tags(Name=self.job_identifier)
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
         ig_response = self.ec2.create_internet_gateway()
@@ -318,7 +313,7 @@ class AwsBatchEnv(AwsJobBase):
             Resources=[
                 self.internet_gateway_id
             ],
-            Tags=self.get_tags(Name=self.job_identifier)
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
         logger.info(f'Internet gateway {self.internet_gateway_id} created.')
@@ -338,7 +333,7 @@ class AwsBatchEnv(AwsJobBase):
             Resources=[
                 self.pub_vpc_subnet_id
             ],
-            Tags=self.get_tags(Name=self.job_identifier)
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
         # Create and elastic IP for the NAT Gateway
@@ -357,7 +352,7 @@ class AwsBatchEnv(AwsJobBase):
                 Resources=[
                     self.nat_ip_allocation
                 ],
-                Tags=self.get_tags(Name=self.job_identifier)
+                Tags=self.get_tags_uppercase(Name=self.job_identifier)
             )
 
         except Exception as e:
@@ -432,7 +427,7 @@ class AwsBatchEnv(AwsJobBase):
             Resources=[
                 self.priv_route_table_id
             ],
-            Tags=self.get_tags(Name=self.job_identifier)
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
         # Associate the private route to the private subnet
@@ -657,10 +652,7 @@ class AwsBatchEnv(AwsJobBase):
             else:
                 compute_resources['type'] = 'EC2'
 
-            compute_resources['tags'] = self.aws_config.get('tags', {}).copy()
-            compute_resources['tags']['Name'] = f"{self.job_identifier} batch instance"
-            compute_env_tags = compute_resources['tags'].copy()
-            del compute_env_tags['Name']
+            compute_resources['tags'] = self.get_tags(Name=f"{self.job_identifier} batch instance")
 
             self.batch.create_compute_environment(
                 computeEnvironmentName=self.batch_compute_environment_name,
@@ -668,7 +660,7 @@ class AwsBatchEnv(AwsJobBase):
                 state='ENABLED',
                 computeResources=compute_resources,
                 serviceRole=self.service_role_arn,
-                tags=compute_env_tags
+                tags=self.get_tags()
             )
 
             logger.info(f'Compute environment {self.batch_compute_environment_name} created.')
@@ -697,7 +689,7 @@ class AwsBatchEnv(AwsJobBase):
                             'computeEnvironment': self.batch_compute_environment_name
                         },
                     ],
-                    tags=self.aws_config.get('tags', {}).copy()
+                    tags=self.get_tags()
                 )
 
                 # print("JOB QUEUE")
@@ -752,7 +744,7 @@ class AwsBatchEnv(AwsJobBase):
             retryStrategy={
                 'attempts': 2
             },
-            tags=self.aws_config.get('tags', {}).copy()
+            tags=self.get_tags()
         )
 
         self.job_definition_arn = response['jobDefinitionArn']
@@ -771,7 +763,7 @@ class AwsBatchEnv(AwsJobBase):
                         'size': array_size
                     },
                     jobDefinition=self.job_definition_arn,
-                    tags=self.aws_config.get('tags', {}).copy()
+                    tags=self.get_tags()
                 )
 
                 logger.info(f"Job {self.job_identifier} submitted.")
@@ -940,7 +932,7 @@ class AwsBatchEnv(AwsJobBase):
                     name=self.state_machine_name,
                     definition=job_definition,
                     roleArn=self.state_machine_role_arn,
-                    tags=self.get_tags()
+                    tags=self.get_tags_lowercase()
                 )
 
                 # print(response)
@@ -1530,7 +1522,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
             VisibleToAllUsers=True,
             JobFlowRole=self.emr_instance_profile_name,
             ServiceRole=self.emr_service_role_name,
-            Tags=self.get_tags(),
+            Tags=self.get_tags_uppercase(),
             AutoScalingRole='EMR_AutoScaling_DefaultRole',
             ScaleDownBehavior='TERMINATE_AT_TASK_COMPLETION',
             EbsRootVolumeSize=100
@@ -1606,7 +1598,7 @@ class AwsSNS(AwsJobBase):
     def create_topic(self):
         response = self.sns.create_topic(
             Name=self.sns_state_machine_topic,
-            Tags=self.get_tags()
+            Tags=self.get_tags_uppercase()
         )
 
         logger.info(f"Simple notifications topic {self.sns_state_machine_topic} created.")
