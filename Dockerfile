@@ -1,5 +1,5 @@
 ARG OS_VER=3.5.0
-FROM nrel/openstudio:$OS_VER
+FROM --platform=linux/amd64 nrel/openstudio:$OS_VER
 
 RUN sudo apt update && sudo apt install -y python3-pip
 
