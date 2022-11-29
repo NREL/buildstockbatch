@@ -5,7 +5,6 @@ import pytest
 import shutil
 import tempfile
 import json
-import re
 
 from buildstockbatch.localdocker import LocalDockerBatch
 from buildstockbatch.utils import get_project_configuration
