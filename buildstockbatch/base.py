@@ -744,14 +744,18 @@ class BuildStockBatchBase(object):
             err_msgs = []
             if n_options_in_cfg > n_options_in_measure:
                 err_msgs.append(
-                    f"There are {n_options_in_cfg} options in an upgrade in your project file and only {n_options_in_measure} in the ApplyUpgrade measure."
+                    f"There are {n_options_in_cfg} options in an upgrade in your project file and only "
+                    f"{n_options_in_measure} in the ApplyUpgrade measure."
                 )
             if n_costs_in_cfg > n_costs_per_option_in_measure:
                 err_msgs.append(
-                    f"There are {n_costs_in_cfg} costs on an option in your project file and only {n_costs_per_option_in_measure} in the ApplyUpgrade measure."
+                    f"There are {n_costs_in_cfg} costs on an option in your project file and only "
+                    f"{n_costs_per_option_in_measure} in the ApplyUpgrade measure."
                 )
             if err_msgs:
-                err_msgs.append("See https://github.com/NREL/buildstockbatch/wiki/Adding-Options-to-the-ApplyUpgrade-measure")
+                err_msgs.append(
+                    "See https://github.com/NREL/buildstockbatch/wiki/Adding-Options-to-the-ApplyUpgrade-measure"
+                )
                 raise ValidationError("\n".join(err_msgs))
 
         return True
