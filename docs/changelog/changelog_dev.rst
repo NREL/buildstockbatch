@@ -25,10 +25,10 @@ Development Changelog
         :tags: general
         :pullreq: 326
 
-        Adds some integration tests with the lastest ResStock.
+        Adds some integration tests with the latest ResStock.
 
     .. change::
-        :tags: validaton
+        :tags: validation
         :pullreq: 330
         :tickets: 329
 
