@@ -14,8 +14,10 @@ from dask.distributed import Client
 import difflib
 from fsspec.implementations.local import LocalFileSystem
 import logging
+from lxml import objectify
 import os
 import pandas as pd
+import re
 import requests
 import shutil
 import tempfile
@@ -261,6 +263,7 @@ class BuildStockBatchBase(object):
         assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
         assert BuildStockBatchBase.validate_resstock_or_comstock_version(project_file)
         assert BuildStockBatchBase.validate_openstudio_version(project_file)
+        assert BuildStockBatchBase.validate_number_of_options(project_file)
         logger.info('Base Validation Successful')
         return True
 
@@ -699,6 +702,61 @@ class BuildStockBatchBase(object):
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
                     f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
                 raise ValidationError(val_err)
+
+        return True
+
+    @staticmethod
+    def validate_number_of_options(project_file):
+        """Checks that there aren't more options than are allowed in the ApplyUpgrade measure.
+
+        :param project_file: path to project file
+        :type project_file: str
+        :raises ValidationError: if there are more options defined than there are in the measure.
+        :return: whether validation passes or not
+        :rtype: bool
+        """
+        cfg = get_project_configuration(project_file)
+        measure_xml_filename = os.path.join(
+            cfg["buildstock_directory"], "measures", "ApplyUpgrade", "measure.xml"
+        )
+        if os.path.exists(measure_xml_filename):
+            measure_xml_tree = objectify.parse(measure_xml_filename)
+            measure_xml = measure_xml_tree.getroot()
+            n_options_in_measure = 0
+            n_costs_per_option_in_measure = 0
+            for argument in measure_xml.arguments.argument:
+                m_option = re.match(r"^option_(\d+)$", str(argument.name))
+                if m_option:
+                    option_number = int(m_option.group(1))
+                    n_options_in_measure = max(option_number, n_options_in_measure)
+                m_costs = re.match(r"^option_(\d+)_cost_(\d+)_value", str(argument.name))
+                if m_costs:
+                    cost_number = int(m_costs.group(2))
+                    n_costs_per_option_in_measure = max(cost_number, n_costs_per_option_in_measure)
+            n_options_in_cfg = 0
+            n_costs_in_cfg = 0
+            for upgrade in cfg.get("upgrades", []):
+                options = upgrade.get("options", [])
+                n_options = len(options)
+                n_costs = max(len(option.get("costs", [])) for option in options)
+                n_options_in_cfg = max(n_options, n_options_in_cfg)
+                n_costs_in_cfg = max(n_costs, n_costs_in_cfg)
+            err_msgs = []
+            if n_options_in_cfg > n_options_in_measure:
+                err_msgs.append(
+                    f"There are {n_options_in_cfg} options in an upgrade in your project file and only "
+                    f"{n_options_in_measure} in the ApplyUpgrade measure."
+                )
+            if n_costs_in_cfg > n_costs_per_option_in_measure:
+                err_msgs.append(
+                    f"There are {n_costs_in_cfg} costs on an option in your project file and only "
+                    f"{n_costs_per_option_in_measure} in the ApplyUpgrade measure."
+                )
+            if err_msgs:
+                err_msgs.append(
+                    "See https://github.com/NREL/buildstockbatch/wiki/Adding-Options-to-the-ApplyUpgrade-measure"
+                )
+                raise ValidationError("\n".join(err_msgs))
 
         return True
 

@@ -79,4 +79,4 @@ jobs:
         if: ${{ matrix.python-version == '3.10' }}
         with:
           name: documentation
-          path: docs/_build/html/
+          path: buildstockbatch/docs/_build/html/
