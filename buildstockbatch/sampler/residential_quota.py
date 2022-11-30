@@ -56,6 +56,7 @@ class ResidentialQuotaSampler(BuildStockSampler):
         docker_client = docker.DockerClient.from_env()
         tick = time.time()
         extra_kws = {}
+        logger.debug(f"Running sampling with docker image: {self.parent().docker_image}.")
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
         container_output = docker_client.containers.run(
