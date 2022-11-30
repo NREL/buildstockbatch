@@ -1699,7 +1699,8 @@ class AwsBatch(DockerBatchBase):
         self.docker_client.images.build(
             path=str(root_path),
             tag=self.docker_image,
-            rm=True
+            rm=True,
+            platform="linux/amd64"
         )
 
     def push_image(self):
@@ -1898,7 +1899,7 @@ class AwsBatch(DockerBatchBase):
         job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
             image_url,
-            command=['python3.8', '-m', 'buildstockbatch.aws.aws'],
+            command=['python3', '-m', 'buildstockbatch.aws.aws'],
             vcpus=job_env_cfg.get('vcpus', 1),
             memory=job_env_cfg.get('memory', 1024),
             env_vars=env_vars
@@ -1974,7 +1975,7 @@ class AwsBatch(DockerBatchBase):
                 if sum(row_has_epw):
                     if row[0] != param_name and param_name is not None:
                         raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')  # noqa: E501
-                    epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                    epw_filename = row[row_has_epw.index(True) + 2].split('=')[1].split('/')[-1]
                     param_name = row[0]
                     option_name = row[1]
                     epws_by_option[option_name] = epw_filename
