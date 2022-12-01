@@ -446,7 +446,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             else:
                 logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
-    if do_timeseries:
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
         all_ts_cols.difference_update(all_ts_cols_sorted)
@@ -474,11 +473,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
-        df.sort_index(inplace=True)
         df.rename(columns=to_camelcase, inplace=True)
         df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
         del df['upgrade']
         df.set_index('building_id', inplace=True)
+        df.sort_index(inplace=True)
         schema = None
         partition_df = df[df_partition_columns].copy()
         partition_df.rename(columns={df_c: c for df_c, c in zip(df_partition_columns, partition_columns)},
