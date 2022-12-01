@@ -36,3 +36,10 @@ Development Changelog
         options specified to support the upgrades in the current project file.
         Instructs the user how to add more options to the ApplyUpgrade measure
         if not.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 332
+        :tickets: 331
+
+        Sort the results by ``building_id``.
