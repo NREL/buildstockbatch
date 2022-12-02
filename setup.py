@@ -68,6 +68,7 @@ setuptools.setup(
         'yamale',
         'ruamel.yaml',
         'awsretry',
+        'lxml'
     ],
     extras_require={
         'dev': [

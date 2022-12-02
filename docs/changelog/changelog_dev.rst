@@ -25,4 +25,21 @@ Development Changelog
         :tags: general
         :pullreq: 326
 
-        Adds some integration tests with the lastest ResStock.
+        Adds some integration tests with the latest ResStock.
+
+    .. change::
+        :tags: validation
+        :pullreq: 330
+        :tickets: 329
+
+        Adds a validation step to verify the ApplyUpgrade measure has enough
+        options specified to support the upgrades in the current project file.
+        Instructs the user how to add more options to the ApplyUpgrade measure
+        if not.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 332
+        :tickets: 331
+
+        Sort the results by ``building_id``.

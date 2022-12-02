@@ -13,6 +13,7 @@ This object contains the code required for execution of local docker batch simul
 import argparse
 from dask.distributed import Client, LocalCluster
 import docker
+from docker.errors import ImageNotFound
 import functools
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -66,8 +67,11 @@ class LocalDockerBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
-        logger.debug(f'Pulling docker image: {self.docker_image}')
-        self.docker_client.images.pull(self.docker_image)
+        try:
+            self.docker_client.images.get(self.docker_image)
+        except ImageNotFound:
+            logger.debug(f'Pulling docker image: {self.docker_image}')
+            self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
