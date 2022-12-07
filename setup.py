@@ -77,7 +77,7 @@ setuptools.setup(
             'pytest-cov',
             'testfixtures',
             'Sphinx',
-            'sphinx_rtd_theme',
+            'sphinx_rtd_theme>=1.1.0',
             'sphinx-autobuild',
             'sphinxcontrib-programoutput',
             'sphinx_paramlinks',
