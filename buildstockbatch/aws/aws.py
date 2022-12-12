@@ -1978,7 +1978,26 @@ class AwsBatch(DockerBatchBase):
         assets_file_path = sim_dir.parent / 'assets.tar.gz'
         s3.download_file(bucket, f'{prefix}/assets.tar.gz', str(assets_file_path))
         with tarfile.open(assets_file_path, 'r') as tar_f:
-            tar_f.extractall(sim_dir)
+            def is_within_directory(directory, target):
+                
+                abs_directory = os.path.abspath(directory)
+                abs_target = os.path.abspath(target)
+            
+                prefix = os.path.commonprefix([abs_directory, abs_target])
+                
+                return prefix == abs_directory
+            
+            def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+            
+                for member in tar.getmembers():
+                    member_path = os.path.join(path, member.name)
+                    if not is_within_directory(path, member_path):
+                        raise Exception("Attempted Path Traversal in Tar File")
+            
+                tar.extractall(path, members, numeric_owner=numeric_owner) 
+                
+            
+            safe_extract(tar_f, sim_dir)
         os.remove(assets_file_path)
 
         logger.debug('Reading config')
