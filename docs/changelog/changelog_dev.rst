@@ -43,3 +43,10 @@ Development Changelog
         :tickets: 331
 
         Sort the results by ``building_id``.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 334
+        :tickets: 333
+
+        Fixes the indenting and bullets in the documentation.
