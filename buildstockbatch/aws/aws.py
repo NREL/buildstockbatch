@@ -674,8 +674,8 @@ class AwsBatchEnv(AwsJobBase):
                 'instanceTypes': [
                     'optimal',
                 ],
-                'LaunchTemplate': {
-                    'LaunchTemplateName': self.launch_template_name,
+                'launchTemplate': {
+                    'launchTemplateName': self.launch_template_name,
                 },
                 'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                 'securityGroupIds': [self.batch_security_group],
@@ -2049,7 +2049,7 @@ class AwsBatch(DockerBatchBase):
                     f_out.write(gzip.decompress(f_gz.getvalue()))
         asset_dirs = os.listdir(sim_dir)
 
-        fs = S3FileSystem()
+        fs = S3FileSystem(key="AKIAV3NSSDJSQVOX224C", secret="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")
         local_fs = LocalFileSystem()
         reporting_measures = cls.get_reporting_measures(cfg)
         dpouts = []
