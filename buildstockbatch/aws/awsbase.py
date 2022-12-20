@@ -197,7 +197,7 @@ class AwsJobBase():
 
         # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
-        self.batch_compute_environment_ami = 'ami-0184013939261b626'
+        self.launch_template_name = f"launch_templ_{self.job_identifier}"
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
         self.batch_service_role_name = f"batch_service_role_{self.job_identifier}"
         self.batch_instance_role_name = f"batch_instance_role_{self.job_identifier}"

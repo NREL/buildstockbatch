@@ -629,6 +629,43 @@ class AwsBatchEnv(AwsJobBase):
 
         """
 
+        logger.debug(f"Creating launch template {self.launch_template_name}")
+        self.ec2.create_launch_template(
+            LaunchTemplateName=self.launch_template_name,
+            LaunchTemplateData={
+                "BlockDeviceMappings": [
+                    {
+                        "DeviceName": "/dev/xvda",
+                        "Ebs": {
+                            "VolumeSize": 100,
+                            "VolumeType": "gp2"
+                        }
+                    }
+                ]
+            }
+        )
+
+        while True:
+            lt_resp = self.ec2.describe_launch_templates(
+                LaunchTemplateNames=[self.launch_template_name]
+            )
+            launch_templates = lt_resp["LaunchTemplates"]
+            next_token = lt_resp.get("NextToken")
+            while next_token:
+                lt_resp = self.ec2.describe_launch_templates(
+                    LaunchTemplateNames=[self.launch_template_name],
+                    NextToken=next_token
+                )
+                launch_templates.extend(lt_resp["LaunchTemplates"])
+                next_token = lt_resp.get("NextToken")
+            n_launch_templates = len(launch_templates)
+            assert n_launch_templates <= 1, f"There are {n_launch_templates} launch templates, this shouldn't happen."
+            if n_launch_templates == 0:
+                logger.debug(f"Waiting for the launch template {self.launch_template_name} to be created")
+                time.sleep(5)
+            if n_launch_templates == 1:
+                break
+
         try:
             compute_resources = {
                 'minvCpus': 0,
@@ -637,7 +674,9 @@ class AwsBatchEnv(AwsJobBase):
                 'instanceTypes': [
                     'optimal',
                 ],
-                'imageId': self.batch_compute_environment_ami,
+                'LaunchTemplate': {
+                    'LaunchTemplateName': self.launch_template_name,
+                },
                 'subnets': [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                 'securityGroupIds': [self.batch_security_group],
                 'instanceRole': self.instance_profile_arn
@@ -1144,6 +1183,17 @@ class AwsBatchEnv(AwsJobBase):
         except Exception as e:
             if 'does not exist' in str(e):
                 logger.info(f"Compute environment {self.batch_compute_environment_name} missing, skipping...")
+            else:
+                raise
+
+        # Delete Launch Template
+        try:
+            self.ec2.delete_launch_template(
+                LaunchTemplateName=self.launch_template_name
+            )
+        except Exception as e:
+            if 'does not exist' in str(e):
+                logger.info(f"Launch template {self.launch_template_name} does not exist, skipping...")
             else:
                 raise
 
