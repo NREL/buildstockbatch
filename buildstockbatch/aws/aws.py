@@ -2049,7 +2049,7 @@ class AwsBatch(DockerBatchBase):
                     f_out.write(gzip.decompress(f_gz.getvalue()))
         asset_dirs = os.listdir(sim_dir)
 
-        fs = S3FileSystem(key="AKIAV3NSSDJSQVOX224C", secret="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")
+        fs = S3FileSystem()
         local_fs = LocalFileSystem()
         reporting_measures = cls.get_reporting_measures(cfg)
         dpouts = []
