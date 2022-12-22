@@ -1,7 +1,15 @@
 import logging
+from botocore.config import Config
 
 
 logger = logging.getLogger(__name__)
+
+boto_client_config = Config(
+    retries={
+        "max_attempts": 5,
+        "mode": "standard"
+    }
+)
 
 
 class AWSIAMHelper():
@@ -14,7 +22,7 @@ class AWSIAMHelper():
         :param session: boto3 Session from 'parent' job base class
         '''
         self.session = session
-        self.iam = self.session.client('iam')
+        self.iam = self.session.client('iam', config=boto_client_config)
 
     def role_stitcher(self, role_name, trust_service, description, policies_list=[], managed_policie_arns=[]):
         '''
@@ -161,9 +169,9 @@ class AwsJobBase():
         self.session = boto3_session
         self.iam_helper = AWSIAMHelper(self.session)
         self.iam = self.iam_helper.iam
-        self.s3 = self.session.client('s3')
+        self.s3 = self.session.client('s3', config=boto_client_config)
         self.job_identifier = job_identifier
-        self.account = self.session.client('sts').get_caller_identity().get('Account')
+        self.account = self.session.client('sts', config=boto_client_config).get_caller_identity().get('Account')
         self.region = aws_config['region']
         self.operator_email = aws_config['notifications_email']
 

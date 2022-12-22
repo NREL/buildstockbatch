@@ -10,7 +10,6 @@ This class contains the object & methods that allow for usage of the library wit
 :license: BSD-3
 """
 import argparse
-from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
@@ -40,15 +39,42 @@ import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
-from buildstockbatch.aws.awsbase import AwsJobBase
+from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch import postprocessing
 from ..utils import log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
 
+def backoff(thefunc, *args, **kwargs):
+    backoff_mult = 1.1
+    delay = 3
+    tries = 5
+    error_patterns = [
+        r"\w+.NotFound"
+    ]
+    while tries > 0:
+        try:
+            result = thefunc(*args, **kwargs)
+        except ClientError as error:
+            error_code = error.response["Error"]["Code"]
+            caught_error = False
+            for pat in error_patterns:
+                if re.search(pat, error_code):
+                    logger.debug(f"{error_code}: Waiting and retrying in {delay} seconds")
+                    caught_error = True
+                    time.sleep(delay)
+                    delay *= backoff_mult
+                    tries -= 1
+                    break
+            if not caught_error:
+                raise error
+        else:
+            return result
+
+
 def upload_file_to_s3(*args, **kwargs):
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', config=boto_client_config)
     s3.upload_file(*args, **kwargs)
 
 
@@ -88,7 +114,7 @@ def calc_hash_for_file(filename):
 
 
 def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
-    s3 = boto3.client('s3')
+    s3 = boto3.client('s3', config=boto_client_config)
     s3.copy(
         {'Bucket': src_bucket, 'Key': src_key},
         dest_bucket,
@@ -109,14 +135,14 @@ class AwsBatchEnv(AwsJobBase):
         """
         super().__init__(job_name, aws_config, boto3_session)
 
-        self.batch = self.session.client('batch')
-        self.ec2 = self.session.client('ec2')
-        self.ec2r = self.session.resource('ec2')
-        self.emr = self.session.client('emr')
-        self.step_functions = self.session.client('stepfunctions')
-        self.aws_lambda = self.session.client('lambda')
-        self.s3 = self.session.client('s3')
-        self.s3_res = self.session.resource('s3')
+        self.batch = self.session.client('batch', config=boto_client_config)
+        self.ec2 = self.session.client('ec2', config=boto_client_config)
+        self.ec2r = self.session.resource('ec2', config=boto_client_config)
+        self.emr = self.session.client('emr', config=boto_client_config)
+        self.step_functions = self.session.client('stepfunctions', config=boto_client_config)
+        self.aws_lambda = self.session.client('lambda', config=boto_client_config)
+        self.s3 = self.session.client('s3', config=boto_client_config)
+        self.s3_res = self.session.resource('s3', config=boto_client_config)
 
         self.task_role_arn = None
         self.job_definition_arn = None
@@ -193,7 +219,7 @@ class AwsBatchEnv(AwsJobBase):
 
     def create_vpc(self):
         cidrs_in_use = set()
-        vpc_response = AWSRetry.backoff()(self.ec2.describe_vpcs)()
+        vpc_response = self.ec2.describe_vpcs()
         for vpc in vpc_response['Vpcs']:
             cidrs_in_use.add(vpc['CidrBlock'])
             for cidr_assoc in vpc['CidrBlockAssociationSet']:
@@ -309,7 +335,7 @@ class AwsBatchEnv(AwsJobBase):
 
         self.internet_gateway_id = ig_response['InternetGateway']['InternetGatewayId']
 
-        AWSRetry.backoff()(self.ec2.create_tags)(
+        backoff(self.ec2.create_tags,
             Resources=[
                 self.internet_gateway_id
             ],
@@ -423,7 +449,7 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Route table created.")
 
-        AWSRetry.backoff()(self.ec2.create_tags)(
+        backoff(self.ec2.create_tags,
             Resources=[
                 self.priv_route_table_id
             ],
@@ -1062,7 +1088,7 @@ class AwsBatchEnv(AwsJobBase):
                 if len(dsg.ip_permissions_egress):
                     response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
-        sg_response = AWSRetry.backoff()(self.ec2.describe_security_groups)(
+        sg_response = self.ec2.describe_security_groups(
             Filters=[
                 {
                     'Name': 'group-name',
@@ -1207,7 +1233,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Find Nat Gateways and VPCs
 
-        response = AWSRetry.backoff()(self.ec2.describe_vpcs)(
+        response = self.ec2.describe_vpcs(
             Filters=[
                 {
                     'Name': 'tag:Name',
@@ -1216,13 +1242,12 @@ class AwsBatchEnv(AwsJobBase):
                     ]
                 },
             ],
-
         )
 
         for vpc in response['Vpcs']:
             this_vpc = vpc['VpcId']
 
-            ng_response = AWSRetry.backoff()(self.ec2.describe_nat_gateways)(
+            ng_response = self.ec2.describe_nat_gateways(
                 Filters=[
                     {
                         'Name': 'vpc-id',
@@ -1241,7 +1266,7 @@ class AwsBatchEnv(AwsJobBase):
                         NatGatewayId=this_natgw
                     )
 
-            rtas_response = AWSRetry.backoff()(self.ec2.describe_route_tables)(
+            rtas_response = self.ec2.describe_route_tables(
                 Filters=[
                     {
                         'Name': 'vpc-id',
@@ -1276,7 +1301,7 @@ class AwsBatchEnv(AwsJobBase):
                                 else:
                                     raise
 
-            igw_response = AWSRetry.backoff()(self.ec2.describe_internet_gateways)(
+            igw_response = self.ec2.describe_internet_gateways(
                 Filters=[
                     {
                         'Name': 'tag:Name',
@@ -1339,7 +1364,7 @@ class AwsBatchEnv(AwsJobBase):
                         else:
                             raise
 
-            AWSRetry.backoff()(self.ec2.delete_vpc)(
+            self.ec2.delete_vpc(
                 VpcId=this_vpc
             )
 
@@ -1642,7 +1667,7 @@ class AwsSNS(AwsJobBase):
 
     def __init__(self, job_name, aws_config, boto3_session):
         super().__init__(job_name, aws_config, boto3_session)
-        self.sns = self.session.client("sns")
+        self.sns = self.session.client("sns", config=boto_client_config)
         self.sns_state_machine_topic_arn = None
 
     def create_topic(self):
@@ -1683,8 +1708,8 @@ class AwsBatch(DockerBatchBase):
 
         self.project_filename = project_filename
         self.region = self.cfg['aws']['region']
-        self.ecr = boto3.client('ecr', region_name=self.region)
-        self.s3 = boto3.client('s3', region_name=self.region)
+        self.ecr = boto3.client('ecr', region_name=self.region, config=boto_client_config)
+        self.s3 = boto3.client('s3', region_name=self.region, config=boto_client_config)
         self.s3_bucket = self.cfg['aws']['s3']['bucket']
         self.s3_bucket_prefix = self.cfg['aws']['s3']['prefix'].rstrip('/')
         self.batch_env_use_spot = self.cfg['aws']['use_spot']
@@ -1696,7 +1721,7 @@ class AwsBatch(DockerBatchBase):
         cfg = get_project_configuration(project_file)
         aws_config = cfg['aws']
         boto3_session = boto3.Session(region_name=aws_config['region'])
-        ec2 = boto3_session.client('ec2')
+        ec2 = boto3_session.client('ec2', config=boto_client_config)
         job_base = AwsJobBase('genericjobid', aws_config, boto3_session)
         instance_types_requested = set()
         instance_types_requested.add(job_base.emr_manager_instance_type)
@@ -1987,7 +2012,7 @@ class AwsBatch(DockerBatchBase):
         """
 
         logger.debug(f"region: {region}")
-        s3 = boto3.client('s3')
+        s3 = boto3.client('s3', config=boto_client_config)
 
         sim_dir = pathlib.Path('/var/simdata/openstudio')
 

@@ -67,7 +67,6 @@ setuptools.setup(
         'fsspec',
         'yamale',
         'ruamel.yaml',
-        'awsretry',
         'lxml'
     ],
     extras_require={
