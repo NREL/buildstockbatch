@@ -318,7 +318,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
             'timeseries_timestamp_convention': 'end',
-            'timeseries_num_decimal_places': 3,
             'add_timeseries_dst_column': True,
             'add_timeseries_utc_column': True
         }
