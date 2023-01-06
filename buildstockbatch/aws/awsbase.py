@@ -189,6 +189,7 @@ class AwsJobBase():
         self.emr_worker_instance_type = emr_config.get('worker_instance_type', 'r5.4xlarge')
         self.emr_worker_instance_count = emr_config.get('worker_instance_count', 4)
         self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
+        self.emr_service_access_security_group_name = f'{self.job_identifier}_emr_service_access'
         self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
         self.emr_job_flow_role_name = f'{self.job_identifier}_emr_job_flow_role'
         self.emr_job_flow_role_arn = ''

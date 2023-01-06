@@ -1432,6 +1432,68 @@ class AwsBatchEnv(AwsJobBase):
             else:
                 raise
 
+        try:
+            response = self.ec2.create_security_group(
+                Description='EMR Service Access Security Group',
+                GroupName=self.emr_service_access_security_group_name,
+                VpcId=self.vpc_id
+            )
+        except Exception as e:
+            if 'already exists for VPC' in str(e):
+                logger.info("Security group for EMR service access already exists, skipping ...")
+                response = self.ec2.describe_security_groups(
+                    Filters=[
+                        {
+                            'Name': 'group-name',
+                            'Values': [
+                                self.emr_service_access_security_group_name,
+                            ]
+                        },
+                    ]
+                )
+            self.emr_service_access_security_group_id = response['SecurityGroups'][0]['GroupId']
+        else:
+            self.emr_service_access_security_group_id = response['GroupId']
+
+        # See https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-man-sec-groups.html#emr-sg-elasticmapreduce-sa-private
+        try:
+            response = self.ec2.authorize_security_group_ingress(
+                GroupId=self.emr_service_access_security_group_id,
+                IpPermissions=[dict(
+                    FromPort=9443,
+                    ToPort=9443,
+                    IpProtocol='tcp',
+                    UserIdGroupPairs=[dict(
+                        GroupId=self.emr_cluster_security_group_id,
+                        UserId=self.account
+                    )]
+                )]
+            )
+        except Exception as e:
+            if 'already exists' in str(e):
+                logger.info("Security group ingress rule for EMR already exists, skipping ...")
+            else:
+                raise
+
+        try:
+            response = self.ec2.authorize_security_group_egress(
+                GroupId=self.emr_service_access_security_group_id,
+                IpPermissions=[dict(
+                    FromPort=8443,
+                    ToPort=8443,
+                    IpProtocol='tcp',
+                    UserIdGroupPairs=[dict(
+                        GroupId=self.emr_cluster_security_group_id,
+                        UserId=self.account
+                    )]
+                )]
+            )
+        except Exception as e:
+            if 'already exists' in str(e):
+                logger.info("Security group egress rule for EMR already exists, skipping ...")
+            else:
+                raise
+
     def create_emr_iam_roles(self):
 
         self.emr_service_role_arn = self.iam_helper.role_stitcher(
@@ -1543,7 +1605,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
             Name=self.emr_cluster_name,
             LogUri=self.emr_log_uri,
 
-            ReleaseLabel='emr-5.23.0',
+            ReleaseLabel='emr-5.36.0',
             Instances={
                 'InstanceGroups': [
                     {
@@ -1563,7 +1625,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                 'KeepJobFlowAliveWhenNoSteps': False,
                 'EmrManagedMasterSecurityGroup': self.emr_cluster_security_group_id,
                 'EmrManagedSlaveSecurityGroup': self.emr_cluster_security_group_id,
-                'ServiceAccessSecurityGroup': self.batch_security_group
+                'ServiceAccessSecurityGroup': self.emr_service_access_security_group_id
             },
 
             Applications=[
