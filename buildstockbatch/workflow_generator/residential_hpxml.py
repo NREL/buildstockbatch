@@ -30,6 +30,7 @@ def get_measure_xml(xml_path):
     root = tree.getroot()
     return root
 
+
 def get_measure_arguments(xml_path):
     root = get_measure_xml(xml_path)
     arguments = []
