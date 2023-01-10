@@ -322,6 +322,7 @@ def test_residential_hpxml(mocker):
     building_id = 1
     upgrade_idx = 0
     cfg = {
+        'buildstock_directory': '../',
         'baseline': {
             'n_buildings_represented': 100
         },
