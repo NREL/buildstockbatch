@@ -338,8 +338,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
         sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
 
-        if 'include_timeseries_component_loads' in sim_out_rep_args_avail:
-            sim_out_rep_args['include_timeseries_component_loads'] = False
+        if 'include_timeseries_unmet_hours' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_unmet_hours'] = False
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
             sim_out_rep_args['timeseries_num_decimal_places'] = 5
