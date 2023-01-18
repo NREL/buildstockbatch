@@ -39,7 +39,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
-        debug: str(required=False)
         ---
         emission-scenario-spec:
             scenario_name: str(required=True)
@@ -195,10 +194,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         osw['steps'].extend(workflow_args['measures'])
 
-        debug = False
-        if 'debug' in workflow_args:
-            debug = workflow_args['debug']
-
         server_dir_cleanup_args = {
           'retain_in_osm': False,
           'retain_in_idf': True,
@@ -217,8 +212,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
           'retain_eplustbl_htm': False,
           'retain_stdout_energyplus': False,
           'retain_stdout_expandobject': False,
-          'retain_schedules_csv': True,
-          'debug': debug
+          'retain_schedules_csv': True
         }
         server_dir_cleanup_args.update(workflow_args['server_directory_cleanup'])
 
@@ -227,8 +221,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'measure_dir_name': 'HPXMLtoOpenStudio',
                 'arguments': {
                     'hpxml_path': '../../../run/in.xml',
-                    'output_dir': '../../../run',
-                    'debug': debug
+                    'output_dir': '../../../run'
                 }
             },
             {
@@ -245,9 +238,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
-                'arguments': {
-                    'debug': debug
-                }
+                'arguments': {}
             },
             {
                 'measure_dir_name': 'ServerDirectoryCleanup',
