@@ -105,6 +105,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_hot_water_uses: bool(required=False)
             include_timeseries_total_loads: bool(required=False)
             include_timeseries_component_loads: bool(required=False)
+            include_timeseries_unmet_hours: bool(required=False)
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
@@ -336,6 +337,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
         measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
         sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
+        if 'include_timeseries_component_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_component_loads'] = False
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
             sim_out_rep_args['timeseries_num_decimal_places'] = 5
