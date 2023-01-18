@@ -11,7 +11,6 @@ Configuration Example
       args:
         build_existing_model:
           simulation_control_run_period_calendar_year: 2010
-          add_component_loads: false
 
         emissions:
           - scenario_name: Scenario1

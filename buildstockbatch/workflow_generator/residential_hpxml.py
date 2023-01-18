@@ -119,11 +119,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         bld_exist_model_args.update(sim_ctl_args)
         bld_exist_model_args.update(workflow_args['build_existing_model'])
 
-        add_component_loads = False
-        if 'add_component_loads' in bld_exist_model_args:
-            add_component_loads = bld_exist_model_args['add_component_loads']
-            bld_exist_model_args.pop('add_component_loads')
-
         if 'emissions' in workflow_args:
             emissions = workflow_args['emissions']
             emissions_map = [['emissions_scenario_names', 'scenario_name'],
@@ -239,8 +234,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 'arguments': {
                     'hpxml_path': '../../../run/home.xml',
                     'output_dir': '../../../run',
-                    'debug': debug,
-                    'add_component_loads': add_component_loads
+                    'debug': debug
                 }
             },
             {
