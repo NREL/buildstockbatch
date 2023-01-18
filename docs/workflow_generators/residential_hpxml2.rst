@@ -7,7 +7,7 @@ Configuration Example
 .. code-block:: yaml
 
     workflow_generator:
-      type: residential_hpxml
+      type: residential_hpxml2
       args:
         build_existing_model:
           simulation_control_run_period_calendar_year: 2010
