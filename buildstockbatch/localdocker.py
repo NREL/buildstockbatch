@@ -114,7 +114,9 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(dir_to_make):
                 os.makedirs(dir_to_make)
 
-        osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
+        output_dir = '../../../run'
+        hpxml_path = '../../../run/in.xml'
+        osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, hpxml_path=hpxml_path, output_dir=output_dir, upgrade_idx=upgrade_idx)
 
         with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
             json.dump(osw, f, indent=4)
