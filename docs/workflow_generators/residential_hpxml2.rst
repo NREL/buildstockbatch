@@ -45,7 +45,7 @@ Arguments
 ~~~~~~~~~
 
 - ``build_existing_model``: Update the simulation control arguments to the `BuildExistingModel`_ measure.
-  See :ref:`hpxml-build-existing-model-defaults` for current defaults.
+  See :ref:`hpxml-build-existing-model-defaults-2` for current defaults.
 
   - ``simulation_control_timestep``: Value must be a divisor of 60. Units are minutes.
   - ``simulation_control_run_period_begin_month``: This numeric field should contain the starting month number (1 = January, 2 = February, etc.) for the annual run period desired.
@@ -91,7 +91,7 @@ Arguments
   - ``arguments``: map of key, value arguments to pass to the measure.
 
 - ``simulation_output_report``: Update the arguments to the `ReportSimulationOutput`_ measure.
-  See :ref:`hpxml-sim-output-report-defaults` for current defaults.
+  See :ref:`hpxml-sim-output-report-defaults-2` for current defaults.
 
   - ``timeseries_frequency``: The frequency at which to report timeseries output data. Using 'none' will disable timeseries outputs. Valid choices are 'none', 'timestep', 'hourly', 'daily', and 'monthly'.
   - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for building total.
@@ -125,7 +125,7 @@ Arguments
   These arguments are passed directly to the `ServerDirectoryCleanup`_ measure in resstock.
   Please refer to the measure arguments there to determine what to set them to in your config file.
   Note that the default behavior is to retain some files and remove others.
-  See :ref:`hpxml-server-dir-cleanup-defaults` for current defaults.
+  See :ref:`hpxml-server-dir-cleanup-defaults-2` for current defaults.
 
 - ``debug`` (optional): Optionally enable debug mode. Enabling debug
   mode will preserve all simulation input and output files, including but
@@ -136,32 +136,32 @@ Arguments
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
 .. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
 
-.. _hpxml-build-existing-model-defaults:
+.. _hpxml-build-existing-model-defaults-2:
 
 Build Existing Model Defaults
 .............................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml2.py
    :code: python
    :start-after: sim_ctl_args = {
    :end-before: }
 
-.. _hpxml-sim-output-report-defaults:
+.. _hpxml-sim-output-report-defaults-2:
 
 Simulation Output Report Defaults
 ..................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml2.py
    :code: python
    :start-after: sim_out_rep_args = {
    :end-before: }
 
-.. _hpxml-server-dir-cleanup-defaults:
+.. _hpxml-server-dir-cleanup-defaults-2:
 
 Server Directory Cleanup Defaults
 .................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml2.py
    :code: python
    :start-after: server_dir_cleanup_args = {
    :end-before: }
