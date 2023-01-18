@@ -39,7 +39,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         reporting_measures: list(include('measure-spec'), required=False)
         simulation_output_report: map(required=False)
         server_directory_cleanup: map(required=False)
-        debug: bool(required=False)
+        debug: str(required=False)
         ---
         emission-scenario-spec:
             scenario_name: str(required=True)
