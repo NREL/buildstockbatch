@@ -95,10 +95,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_hot_water_uses: bool(required=False)
             include_timeseries_total_loads: bool(required=False)
             include_timeseries_component_loads: bool(required=False)
+            include_timeseries_unmet_hours: bool(required=False)
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
             timeseries_timestamp_convention: enum('start', 'end', required=False)
+            timeseries_num_decimal_places: int(required=False)
             add_timeseries_dst_column: bool(required=False)
             add_timeseries_utc_column: bool(required=False)
             output_variables: list(include('output-var-spec'), required=False)
@@ -143,7 +145,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
     @staticmethod
     def validate_measures_and_arguments(cfg):
 
-        buildstock_dir = cfg["buildstock_directory"]
+        buildstock_dir = cfg['buildstock_directory']
         measures_dir = os.path.join(buildstock_dir, 'measures')
 
         measure_names = {
@@ -313,13 +315,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'include_timeseries_hot_water_uses': False,
             'include_timeseries_total_loads': True,
             'include_timeseries_component_loads': False,
+            'include_timeseries_unmet_hours': False,
             'include_timeseries_zone_temperatures': False,
             'include_timeseries_airflows': False,
             'include_timeseries_weather': False,
             'timeseries_timestamp_convention': 'end',
+            'timeseries_num_decimal_places': 5,
             'add_timeseries_dst_column': True,
             'add_timeseries_utc_column': True
         }
+
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
         if 'output_variables' in sim_out_rep_args:
