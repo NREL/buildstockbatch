@@ -1,6 +1,6 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
-from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
+from buildstockbatch.workflow_generator.residential_hpxml2 import ResidentialHpxml2WorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
 import pytest
 
@@ -355,7 +355,7 @@ def test_residential_hpxml(mocker):
         ]
     }
     n_datapoints = 10
-    osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
+    osw_gen = ResidentialHpxml2WorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw['steps']

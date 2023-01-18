@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-buildstockbatch.workflow_generator.residential_hpxml
+buildstockbatch.workflow_generator.residential_hpxml2
 ~~~~~~~~~~~~~~~
 This object contains the residential classes for generating OSW files from individual samples
 
@@ -31,7 +31,7 @@ def get_measure_xml(xml_path):
     return root
 
 
-class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
+class ResidentialHpxml2WorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
     def validate(cls, cfg):
