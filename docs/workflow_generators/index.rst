@@ -5,6 +5,6 @@ Workflow Generators
     :maxdepth: 1
 
     residential_default
-    residential_hpxml2
+    residential_hpxml
     commercial_default
     
