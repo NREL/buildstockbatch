@@ -183,27 +183,6 @@ class AwsJobBase():
         self.s3_lambda_emr_config_key = f'{self.s3_bucket_prefix}/lambda_functions/emr_config.json'
         self.s3_emr_folder_name = 'emr'
 
-        # EMR
-        emr_config = aws_config.get('emr', {})
-        self.emr_manager_instance_type = emr_config.get('manager_instance_type', 'm5.4xlarge')
-        self.emr_worker_instance_type = emr_config.get('worker_instance_type', 'r5.4xlarge')
-        self.emr_worker_instance_count = emr_config.get('worker_instance_count', 4)
-        self.emr_cluster_security_group_name = f'{self.job_identifier}_emr_security_group'
-        self.emr_service_access_security_group_name = f'{self.job_identifier}_emr_service_access'
-        self.emr_cluster_name = f'{self.job_identifier}_emr_dask_cluster'
-        self.emr_job_flow_role_name = f'{self.job_identifier}_emr_job_flow_role'
-        self.emr_job_flow_role_arn = ''
-        self.emr_service_role_name = f'{self.job_identifier}_emr_service_role'
-        self.emr_service_role_arn = ''
-        self.emr_cluster_security_group_id = ''
-        self.emr_log_uri = f's3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/'
-        self.emr_instance_profile_name = f'{self.job_identifier}_emr_instance_profile'
-
-        # Lambda
-        self.lambda_emr_job_step_execution_role = f'{self.job_identifier}_emr_job_step_execution_role'
-        self.lambda_emr_job_step_function_name = f'{self.job_identifier}_emr_job_step_submission'
-        self.lambda_emr_job_step_execution_role_arn = ''
-
         # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
         self.launch_template_name = f"launch_templ_{self.job_identifier}"
