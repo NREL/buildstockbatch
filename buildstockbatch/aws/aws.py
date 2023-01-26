@@ -783,143 +783,6 @@ class AwsBatchEnv(AwsJobBase):
                 else:
                     raise
 
-    def create_state_machine_roles(self):
-
-        batch_policy = '''{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "batch:SubmitJob",
-                "batch:DescribeJobs",
-                "batch:TerminateJob"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule"
-            ],
-            "Resource": [
-               "arn:aws:events:*:*:rule/StepFunctionsGetEventsForBatchJobsRule"
-            ]
-        }
-    ]
-}
-
-        '''
-
-        sns_policy = f'''{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Effect": "Allow",
-                    "Action": [
-                        "sns:Publish"
-                    ],
-                    "Resource": "arn:aws:sns:*:*:{self.sns_state_machine_topic}"
-                }}
-            ]
-        }}
-        '''
-
-        policies_list = [batch_policy, sns_policy]
-
-        self.state_machine_role_arn = self.iam_helper.role_stitcher(self.state_machine_role_name, 'states',
-                                                                    'Permissions for statemachine to run jobs',
-                                                                    policies_list=policies_list)
-
-    def create_state_machine(self):
-
-        job_definition = f'''{{
-  "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
-  "StartAt": "Submit Batch Job",
-  "States": {{
-    "Submit Batch Job": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::batch:submitJob.sync",
-      "Parameters": {{
-        "JobDefinition": "{self.job_definition_arn}",
-        "JobName": "{self.job_identifier}",
-        "JobQueue": "{self.job_queue_arn}",
-         "ArrayProperties": {{
-                        "Size.$": "$.array_size"
-                    }}
-    }},
-      "Next": "Notify Batch Success",
-      "Catch": [
-        {{
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Batch Failure"
-        }}
-      ]
-    }},
-    "Notify Batch Success": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Batch job submitted through Step Functions succeeded",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "End": true
-    }},
-    "Notify Batch Failure": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Batch job submitted through Step Functions failed",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "Next": "Job Failure"
-    }},
-     "Job Failure": {{
-      "Type": "Fail"
-    }}
-  }}
-}}
-
-        '''
-
-        while True:
-
-            try:
-                response = self.step_functions.create_state_machine(
-                    name=self.state_machine_name,
-                    definition=job_definition,
-                    roleArn=self.state_machine_role_arn,
-                    tags=self.get_tags_lowercase()
-                )
-
-                # print(response)
-                self.state_machine_arn = response['stateMachineArn']
-                logger.info(f"State machine {self.state_machine_name} created.")
-                break
-            except Exception as e:
-                if "AccessDeniedException" in str(e):
-                    logger.info("State machine role not yet registered, sleeping...")
-                    time.sleep(5)
-                elif "StateMachineAlreadyExists" in str(e):
-                    logger.info("State machine already exists, skipping...")
-                    self.state_machine_arn = f"arn:aws:states:{self.region}:{self.account}:stateMachine:{self.state_machine_name}"  # noqa E501
-
-                    break
-                else:
-                    raise
-
-    def start_state_machine_execution(self, array_size):
-
-        self.step_functions.start_execution(
-            stateMachineArn=self.state_machine_arn,
-            name=f'{self.state_machine_name}_execution_{int(time.time())}',
-            input=f'{{"array_size": {array_size}}}'
-        )
-
-        logger.info(f"Starting state machine {self.state_machine_name}.")
-
     def clean(self):
 
         # Get our vpc:
@@ -957,19 +820,6 @@ class AwsBatchEnv(AwsJobBase):
                 dsg = self.ec2r.SecurityGroup(default_group_id)
                 if len(dsg.ip_permissions_egress):
                     response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
-
-        state_machines = self.step_functions.list_state_machines()
-
-        for sm in state_machines['stateMachines']:
-            if sm['name'] == self.state_machine_name:
-                self.state_machine_arn = sm['stateMachineArn']
-                self.step_functions.delete_state_machine(
-                    stateMachineArn=self.state_machine_arn
-                )
-                logger.info(f"Deleted state machine {self.state_machine_name}.")
-                break
-
-        self.iam_helper.delete_role(self.state_machine_role_name)
 
         try:
 
@@ -1199,42 +1049,6 @@ class AwsBatchEnv(AwsJobBase):
             )
 
 
-class AwsSNS(AwsJobBase):
-
-    def __init__(self, job_name, aws_config, boto3_session):
-        super().__init__(job_name, aws_config, boto3_session)
-        self.sns = self.session.client("sns", config=boto_client_config)
-        self.sns_state_machine_topic_arn = None
-
-    def create_topic(self):
-        response = self.sns.create_topic(
-            Name=self.sns_state_machine_topic,
-            Tags=self.get_tags_uppercase()
-        )
-
-        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} created.")
-
-        self.sns_state_machine_topic_arn = response['TopicArn']
-
-    def subscribe_to_topic(self):
-        self.sns.subscribe(
-            TopicArn=self.sns_state_machine_topic_arn,
-            Protocol='email',
-            Endpoint=self.operator_email
-        )
-
-        logger.info(
-            f"Operator {self.operator_email} subscribed to topic - please confirm via email to recieve state machine progress messages."  # noqa 501
-        )
-
-    def clean(self):
-        self.sns.delete_topic(
-            TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-        )
-
-        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} deleted.")
-
-
 class AwsBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
@@ -1350,9 +1164,6 @@ class AwsBatch(DockerBatchBase):
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         batch_env.clean()
 
-        sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        sns_env.clean()
-
     def run_batch(self):
         """
         Run a batch of simulations using AWS Batch
@@ -1417,12 +1228,7 @@ class AwsBatch(DockerBatchBase):
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
             logger.debug('Total number of simulations = {}'.format(n_sims))
 
-            # This is the maximum number of jobs that can be in an array
-            if self.batch_array_size <= 10000:
-                max_array_size = self.batch_array_size
-            else:
-                max_array_size = 10000
-            n_sims_per_job = math.ceil(n_sims / max_array_size)
+            n_sims_per_job = math.ceil(n_sims / self.batch_array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
             logger.debug('Number of simulations per array job = {}'.format(n_sims_per_job))
 
@@ -1514,18 +1320,8 @@ class AwsBatch(DockerBatchBase):
             env_vars=env_vars
         )
 
-        # SNS Topic
-        sns_env = AwsSNS(self.job_identifier, self.cfg['aws'], self.boto3_session)
-        sns_env.create_topic()
-        sns_env.subscribe_to_topic()
-
-        # State machine
-        batch_env.create_state_machine_roles()
-        batch_env.create_state_machine()
-
         # start job
-        batch_env.start_state_machine_execution(array_size)
-
+        batch_env.submit_job(array_size=self.batch_array_size)
         logger.info('Batch job submitted. Check your email to subscribe to notifications.')
 
     @classmethod
@@ -1710,6 +1506,11 @@ def main():
                 'handlers': ['console']
             },
             'buildstockbatch': {
+                'level': 'DEBUG',
+                'propagate': True,
+                'handlers': ['console']
+            },
+            'buildstockbatch.aws': {
                 'level': 'DEBUG',
                 'propagate': True,
                 'handlers': ['console']
