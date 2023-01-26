@@ -342,7 +342,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             sim_out_rep_args['include_timeseries_unmet_hours'] = False
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
-            sim_out_rep_args['timeseries_num_decimal_places'] = 5
+            sim_out_rep_args['timeseries_num_decimal_places'] = 3
 
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
