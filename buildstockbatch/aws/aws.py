@@ -34,6 +34,7 @@ import tarfile
 import tempfile
 import re
 import time
+import tqdm
 import io
 import zipfile
 
@@ -761,7 +762,7 @@ class AwsBatchEnv(AwsJobBase):
 
         while True:
             try:
-                self.batch.submit_job(
+                resp = self.batch.submit_job(
                     jobName=self.job_identifier,
                     jobQueue=self.batch_job_queue_name,
                     arrayProperties={
@@ -772,7 +773,7 @@ class AwsBatchEnv(AwsJobBase):
                 )
 
                 logger.info(f"Job {self.job_identifier} submitted.")
-                break
+                return resp
 
             except Exception as e:
 
@@ -1321,8 +1322,28 @@ class AwsBatch(DockerBatchBase):
         )
 
         # start job
-        batch_env.submit_job(array_size=self.batch_array_size)
-        logger.info('Batch job submitted. Check your email to subscribe to notifications.')
+        job_info = batch_env.submit_job(array_size=self.batch_array_size)
+
+        # Monitor job status
+        with tqdm.tqdm(desc="Running Simulations", total=self.batch_array_size) as progress_bar:
+            job_status = None
+            while job_status not in ('SUCCEEDED', 'FAILED'):
+                time.sleep(10)
+                job_desc_resp = batch_env.batch.describe_jobs(jobs=[job_info['jobId']])
+                job_status = job_desc_resp['jobs'][0]['status']
+
+                jobs_resp = batch_env.batch.list_jobs(arrayJobId=job_info['jobId'], jobStatus='SUCCEEDED')
+                n_succeeded = len(jobs_resp["jobSummaryList"])
+                next_token = jobs_resp.get("nextToken")
+                while next_token is not None:
+                    jobs_resp = batch_env.batch.list_jobs(arrayJobId=job_info['jobId'], jobStatus='SUCCEEDED', nextToken=next_token)
+                    n_succeeded += len(jobs_resp["jobSummaryList"])
+                    next_token = jobs_resp.get("nextToken")
+                progress_bar.update(n_succeeded)
+
+        logger.info(f"Batch job status: {job_status}")
+        if job_status == "FAILED":
+            raise RuntimeError("Batch Job Failed. Go look at the CloudWatch logs.")
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -1510,11 +1531,6 @@ def main():
                 'propagate': True,
                 'handlers': ['console']
             },
-            'buildstockbatch.aws': {
-                'level': 'DEBUG',
-                'propagate': True,
-                'handlers': ['console']
-            }
         },
     })
     print(AwsBatch.LOGO)
