@@ -792,25 +792,39 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
+    def get_fs(self):
+        return LocalFileSystem()
+
+    def upload_results(self, *args, **kwargs):
+        return postprocessing.upload_results(*args, **kwargs)
+
     def process_results(self, skip_combine=False, force_upload=False):
-        self.get_dask_client()  # noqa: F841
+        dask_client = self.get_dask_client()
 
-        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
-            if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
-                if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
-                    do_timeseries = \
-                        (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
-                            'none')
-        else:
-            do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
+        try:
+            if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+                if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
+                    if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
+                        do_timeseries = \
+                            (self.cfg['workflow_generator']['args']['simulation_output_report']['timeseries_frequency'] !=
+                                'none')
+            else:
+                do_timeseries = 'timeseries_csv_export' in self.cfg['workflow_generator']['args'].keys()
 
-        fs = LocalFileSystem()
-        if not skip_combine:
-            postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+            fs = self.get_fs()
+            if not skip_combine:
+                postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+        finally:
+            cluster = getattr(dask_client, 'cluster', None)
+            dask_client.close()
+            try:
+                cluster.close()
+            except:
+                pass
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
+            s3_bucket, s3_prefix = self.upload_results(aws_conf, self.output_dir, self.results_dir)
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 

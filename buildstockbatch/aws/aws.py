@@ -15,6 +15,8 @@ import boto3
 from botocore.exceptions import ClientError
 import collections
 import csv
+from dask.distributed import Client
+from dask_cloudprovider.aws import FargateCluster
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import hashlib
@@ -125,7 +127,7 @@ def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
 
 class AwsBatchEnv(AwsJobBase):
     """
-    Class to manage the AWS Batch environment and Step Function controller.
+    Class to manage the AWS Batch environment.
     """
 
     def __init__(self, job_name, aws_config, boto3_session):
@@ -784,6 +786,13 @@ class AwsBatchEnv(AwsJobBase):
                 else:
                     raise
 
+    def create_dask_assets(self):
+        self.ecs.create_cluster(
+            clusterName=self.dask_ecs_cluster_name,
+            tags=self.get_tags_lowercase(),
+            capa
+        )
+
     def clean(self):
 
         # Get our vpc:
@@ -1100,6 +1109,10 @@ class AwsBatch(DockerBatchBase):
         return self._weather_dir
 
     @property
+    def results_dir(self):
+        return f'{self.s3_bucket}/{self.s3_bucket_prefix}/results'
+
+    @property
     def container_repo(self):
         repo_name = self.docker_image
         repos = self.ecr.describe_repositories()
@@ -1111,6 +1124,9 @@ class AwsBatch(DockerBatchBase):
             resp = self.ecr.create_repository(repositoryName=repo_name)
             repo = resp['repository']
         return repo
+
+    def image_url(self):
+        return f"{self.container_repo['repositoryUri']}:{self.job_identifier}"
 
     def build_image(self):
         """
@@ -1307,14 +1323,9 @@ class AwsBatch(DockerBatchBase):
         env_vars = dict(S3_BUCKET=self.s3_bucket, S3_PREFIX=self.s3_bucket_prefix, JOB_NAME=self.job_identifier,
                         REGION=self.region)
 
-        image_url = '{}:{}'.format(
-            self.container_repo['repositoryUri'],
-            self.job_identifier
-        )
-
         job_env_cfg = self.cfg['aws'].get('job_environment', {})
         batch_env.create_job_definition(
-            image_url,
+            self.image_url,
             command=['python3', '-m', 'buildstockbatch.aws.aws'],
             vcpus=job_env_cfg.get('vcpus', 1),
             memory=job_env_cfg.get('memory', 1024),
@@ -1499,6 +1510,32 @@ class AwsBatch(DockerBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    def get_fs(self):
+        return S3FileSystem()
+
+    def get_dask_client(self):
+        # TODO: Add (some of) these to the config and have sensible defaults.
+        batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
+        m = 1024
+        cluster = FargateCluster(
+            fargate_spot=True,
+            image=self.image_url,
+            cluster_name_template=f"dask-{self.job_identifier}",
+            scheduler_cpu=2 * m,
+            scheduler_mem=8 * m,
+            worker_cpu=2 * m,
+            worker_mem=8 * m,
+            n_workers=4,
+            task_role_policies=['arn:aws:iam::aws:policy/AmazonS3FullAccess'],
+            tags=batch_env.get_tags()
+        )
+        client = Client(cluster)
+        return client
+
+    def upload_results(self, *args, **kwargs):
+        """Do nothing because the results are already on S3"""
+        return self.s3_bucket, self.results_dir
 
 
 @log_error_details()
