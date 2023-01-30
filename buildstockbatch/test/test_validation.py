@@ -14,9 +14,14 @@ This file contains the code required to test validation methods across
 import os
 import pytest
 import types
+import tempfile
+import json
+import pathlib
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.localdocker import LocalDockerBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
+from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
+from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
 import logging
@@ -263,3 +268,27 @@ def test_logic_validation_fail(project_file):
 ])
 def test_logic_validation_pass(project_file):
     BuildStockBatchBase.validate_logic(project_file)
+
+
+@resstock_required
+def test_number_of_options_apply_upgrade():
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    cfg = get_project_configuration(str(proj_filename))
+    cfg["upgrades"][-1]["options"] = cfg["upgrades"][-1]["options"] * 10
+    cfg["upgrades"][0]["options"][0]["costs"] = cfg["upgrades"][0]["options"][0]["costs"] * 5
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmppath = pathlib.Path(tmpdir)
+        new_proj_filename = tmppath / "project.yml"
+        with open(new_proj_filename, "w") as f:
+            json.dump(cfg, f)
+        with pytest.raises(ValidationError):
+            LocalDockerBatch.validate_number_of_options(str(new_proj_filename))
+
+
+@resstock_required
+def test_validate_resstock_or_comstock_version(mocker):
+    # Set the version to a 'really old' one so we trigger the version check error
+    mocker.patch("buildstockbatch.base.bsb_version", "0.1")
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    with pytest.raises(ValidationError):
+        BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
