@@ -43,8 +43,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.5.0'
-    DEFAULT_OS_SHA = '7b14ce1588'
+    DEFAULT_OS_VERSION = '3.5.1'
+    DEFAULT_OS_SHA = '22e1db7be5'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -782,7 +782,7 @@ class BuildStockBatchBase(object):
                             versions[tool] = eval(version.strip())
             OS_HPXML_Version = versions['OS_HPXML_Version']
             OS_Version = versions['OS_Version']
-            if os_version != OS_Version:
+            if not os_version.startswith(OS_Version):
                 val_err = f"OS version {OS_Version} is required" \
                     f" for OS-HPXML version {OS_HPXML_Version}. Found {os_version}"
                 raise ValidationError(val_err)
