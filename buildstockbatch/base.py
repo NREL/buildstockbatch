@@ -693,9 +693,9 @@ class BuildStockBatchBase(object):
                             versions[tool] = eval(version.strip())
             BuildStockBatch_Version = versions['BuildStockBatch_Version']
             if bsb_version < BuildStockBatch_Version:
-                if 'ResStock_Version' in dict.keys():
+                if 'ResStock_Version' in versions.keys():
                     stock_version = versions['ResStock_Version']
-                elif 'ComStock_Version' in dict.keys():
+                elif 'ComStock_Version' in versions.keys():
                     stock_version = versions['ComStock_Version']
                 else:
                     stock_version = 'Unknown'
