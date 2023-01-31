@@ -4,7 +4,7 @@ What's new in buildstockbatch 2023.01.0
 
 .. admonition:: About this Document
 
-    This document describes changes between buildstockbatch version 2022.10.1 and
+    This document describes changes between buildstockbatch version 2022.12.0 and
     buildstockbatch version 2023.01.0
 
 General
@@ -20,9 +20,9 @@ Residential HPXML Workflow Changes
 ==================================
 
 Two new optional arguments were added to the Residential HPXML Workflow
-Generator. It is recommended to add the ``timeseries_num_decimal_places``
-argument and set it to at least ``5`` to reduce cumulative rounding errors in
-the timeseries outputs.
+Generator: ``timeseries_num_decimal_places`` and
+``include_timeseries_unmet_hours``. See
+:doc:`../workflow_generators/residential_default` for details about their usage.
 
 Schema Updates
 ==============
