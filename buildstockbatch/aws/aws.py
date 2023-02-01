@@ -599,20 +599,26 @@ class AwsBatchEnv(AwsJobBase):
         """
 
         logger.debug(f"Creating launch template {self.launch_template_name}")
-        self.ec2.create_launch_template(
-            LaunchTemplateName=self.launch_template_name,
-            LaunchTemplateData={
-                "BlockDeviceMappings": [
-                    {
-                        "DeviceName": "/dev/xvda",
-                        "Ebs": {
-                            "VolumeSize": 100,
-                            "VolumeType": "gp2"
+        try:
+            self.ec2.create_launch_template(
+                LaunchTemplateName=self.launch_template_name,
+                LaunchTemplateData={
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/xvda",
+                            "Ebs": {
+                                "VolumeSize": 100,
+                                "VolumeType": "gp2"
+                            }
                         }
-                    }
-                ]
-            }
-        )
+                    ]
+                }
+            )
+        except ClientError as error:
+            if error.response['Error']['Code'] == 'InvalidLaunchTemplateName.AlreadyExistsException':
+                logger.debug('Launch template exists, skipping creation')
+            else:
+                raise error
 
         while True:
             lt_resp = self.ec2.describe_launch_templates(
@@ -785,13 +791,6 @@ class AwsBatchEnv(AwsJobBase):
                     time.sleep(5)
                 else:
                     raise
-
-    def create_dask_assets(self):
-        self.ecs.create_cluster(
-            clusterName=self.dask_ecs_cluster_name,
-            tags=self.get_tags_lowercase(),
-            capa
-        )
 
     def clean(self):
 
@@ -1058,6 +1057,16 @@ class AwsBatchEnv(AwsJobBase):
                 AllocationId=this_address
             )
 
+        try:
+            self.ec2.delete_security_group(
+                GroupName=f"dask-{self.job_identifier}"
+            )
+        except ClientError as error:
+            if error.response['Error']['Code'] == 'InvalidGroup.NotFound':
+                pass
+            else:
+                raise error
+
 
 class AwsBatch(DockerBatchBase):
 
@@ -1125,6 +1134,7 @@ class AwsBatch(DockerBatchBase):
             repo = resp['repository']
         return repo
 
+    @property
     def image_url(self):
         return f"{self.container_repo['repositoryUri']}:{self.job_identifier}"
 
@@ -1526,7 +1536,7 @@ class AwsBatch(DockerBatchBase):
             scheduler_mem=8 * m,
             worker_cpu=2 * m,
             worker_mem=8 * m,
-            n_workers=4,
+            n_workers=12,
             task_role_policies=['arn:aws:iam::aws:policy/AmazonS3FullAccess'],
             tags=batch_env.get_tags()
         )
@@ -1581,14 +1591,20 @@ def main():
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             '-c', '--clean',
             action='store_true',
             help='After the simulation is done, run with --clean to clean up AWS environment'
         )
-        parser.add_argument(
+        group.add_argument(
             '--validateonly',
             help='Only validate the project YAML file and references. Nothing is executed',
+            action='store_true'
+        )
+        group.add_argument(
+            '--postprocessonly',
+            help='Only do postprocessing, useful for when the simulations are already done',
             action='store_true'
         )
         args = parser.parse_args()
@@ -1601,10 +1617,16 @@ def main():
         batch = AwsBatch(args.project_filename)
         if args.clean:
             batch.clean()
+        elif args.postprocessonly:
+            batch.build_image()
+            batch.push_image()
+            batch.process_results()
         else:
             batch.build_image()
             batch.push_image()
             batch.run_batch()
+            batch.process_results()
+            batch.clean()
 
 
 if __name__ == '__main__':

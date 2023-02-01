@@ -67,7 +67,8 @@ setuptools.setup(
         'fsspec',
         'yamale',
         'ruamel.yaml',
-        'lxml'
+        'lxml',
+        'tqdm',
     ],
     extras_require={
         'dev': [
@@ -84,7 +85,6 @@ setuptools.setup(
             'flake8',
             'rope',
             'doc8'
-            'tqdm',
         ],
         'aws': [
             'dask-cloudprovider[aws]',

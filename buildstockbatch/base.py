@@ -815,12 +815,7 @@ class BuildStockBatchBase(object):
             if not skip_combine:
                 postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
         finally:
-            cluster = getattr(dask_client, 'cluster', None)
             dask_client.close()
-            try:
-                cluster.close()
-            except:
-                pass
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
