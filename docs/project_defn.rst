@@ -149,13 +149,15 @@ the Eagle supercomputer.
 *  ``postprocessing``: Eagle configuration for the postprocessing step
 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32.
-                      Default is 2.
-    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36. Default is 18. Try reducing this if you
-                    get OOM error.
-    *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
-                           85248, 180224 and 751616. Default is 85248.
-    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 1000.
+    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing
+       job into. Max supported is 32. Default is 2.
+    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36.
+       Default is 18. Try reducing this if you get OOM error.
+    *  ``node_memory_mb``: The memory (in MB) to request for eagle node for
+       postprocessing. The valid values are 85248, 180224 and 751616. Default is
+       85248.
+    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in
+       memory. Default is 1000.
 
 .. _aws-config:
 
@@ -269,9 +271,10 @@ The configuration options for postprocessing and AWS upload are:
       must match the parameters found in options_lookup.tsv. This allows for efficient athena queries. Only recommended
       for moderate or large sized runs (ndatapoints > 10K)
 
-    * ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to
-       work, please `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
-       Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
+    * ``aws``: (optional) configuration related to uploading to and managing
+      data in amazon web services. For this to work, please `configure aws`_.
+      Including this key will cause your datasets to be uploaded to AWS,
+      omitting it will cause them not to be uploaded.
 
         *  ``region_name``: The name of the aws region to use for database creation and other services.
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
@@ -289,3 +292,5 @@ The configuration options for postprocessing and AWS upload are:
             *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
             *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
                before aborting it.
+
+.. _configure aws: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration
