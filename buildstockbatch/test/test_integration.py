@@ -1,22 +1,10 @@
-import os
 import pandas as pd
 import pathlib
 import pytest
 import shutil
-import tempfile
-import json
 
 from buildstockbatch.localdocker import LocalDockerBatch
-from buildstockbatch.utils import get_project_configuration
-from buildstockbatch.exc import ValidationError
-
-resstock_directory = pathlib.Path(
-    os.environ.get("RESSTOCK_DIR", pathlib.Path(__file__).resolve().parent.parent.parent.parent / "resstock")
-)
-resstock_required = pytest.mark.skipif(
-    not resstock_directory.exists(),
-    reason="ResStock checkout is not found"
-)
+from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 
 
 @pytest.mark.parametrize("project_filename", [
@@ -85,18 +73,3 @@ def test_resstock_local_batch(project_filename):
     assert (ts_pq_path / "_metadata").exists()
 
     shutil.rmtree(out_path)
-
-
-@resstock_required
-def test_number_of_options_apply_upgrade():
-    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
-    cfg = get_project_configuration(str(proj_filename))
-    cfg["upgrades"][-1]["options"] = cfg["upgrades"][-1]["options"] * 10
-    cfg["upgrades"][0]["options"][0]["costs"] = cfg["upgrades"][0]["options"][0]["costs"] * 5
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmppath = pathlib.Path(tmpdir)
-        new_proj_filename = tmppath / "project.yml"
-        with open(new_proj_filename, "w") as f:
-            json.dump(cfg, f)
-        with pytest.raises(ValidationError):
-            LocalDockerBatch.validate_number_of_options(str(new_proj_filename))
