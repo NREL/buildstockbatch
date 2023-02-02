@@ -1086,28 +1086,42 @@ class AwsBatch(DockerBatchBase):
         self.boto3_session = boto3.Session(region_name=self.region)
 
     @staticmethod
-    def validate_instance_types(project_file):
+    def validate_dask_settings(project_file):
         cfg = get_project_configuration(project_file)
-        aws_config = cfg['aws']
-        boto3_session = boto3.Session(region_name=aws_config['region'])
-        ec2 = boto3_session.client('ec2', config=boto_client_config)
-        job_base = AwsJobBase('genericjobid', aws_config, boto3_session)
-        instance_types_requested = set()
-        inst_type_resp = ec2.describe_instance_type_offerings(Filters=[{
-            'Name': 'instance-type',
-            'Values': list(instance_types_requested)
-        }])
-        instance_types_available = set([x['InstanceType'] for x in inst_type_resp['InstanceTypeOfferings']])
-        if not instance_types_requested == instance_types_available:
-            instance_types_not_available = instance_types_requested - instance_types_available
-            raise ValidationError(
-                f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}."  # noqa E501
-            )
+        if "emr" in cfg["aws"]:
+            logger.warning("The `aws.emr` configuration is no longer used and is ignored. Recommend removing.")
+        dask_cfg = cfg["aws"]["dask"]
+        errors = []
+        mem_rules = {
+            1024: (2, 8, 1),
+            2048: (4, 16, 1),
+            4096: (8, 30, 1),
+            8192: (16, 60, 4),
+            16384: (32, 120, 8),
+        }
+        for node_type in ("scheduler", "worker"):
+            mem = dask_cfg[f"{node_type}_memory"]
+            if mem % 1024 != 0:
+                errors.append(
+                    f"`aws.dask.{node_type}_memory` = {mem}, needs to be a multiple of 1024."
+                )
+            mem_gb = dask_cfg[f'{node_type}_memory'] // 1024
+            min_gb, max_gb, incr_gb = mem_rules[dask_cfg[f"{node_type}_cpu"]]
+            if not (min_gb <= mem_gb <= max_gb and (mem_gb - min_gb) % incr_gb == 0):
+                errors.append(
+                    f"`aws.dask.{node_type}_memory` = {mem}, "
+                    f"should be between {min_gb * 1024} and {max_gb * 1024} in a multiple of {incr_gb * 1024}."
+                )
+        if errors:
+            errors.append("See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html")
+            raise ValidationError("\n".join(errors))
+
+        return True
 
     @staticmethod
     def validate_project(project_file):
         super(AwsBatch, AwsBatch).validate_project(project_file)
-        AwsBatch.validate_instance_types(project_file)
+        AwsBatch.validate_dask_settings(project_file)
 
     @property
     def docker_image(self):
@@ -1120,6 +1134,10 @@ class AwsBatch(DockerBatchBase):
     @property
     def results_dir(self):
         return f'{self.s3_bucket}/{self.s3_bucket_prefix}/results'
+
+    @property
+    def output_dir(self):
+        return f'{self.s3_bucket}/{self.s3_bucket_prefix}'
 
     @property
     def container_repo(self):
@@ -1525,18 +1543,19 @@ class AwsBatch(DockerBatchBase):
         return S3FileSystem()
 
     def get_dask_client(self):
-        # TODO: Add (some of) these to the config and have sensible defaults.
+        dask_cfg = self.cfg["aws"]["dask"]
+
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         m = 1024
         cluster = FargateCluster(
             fargate_spot=True,
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",
-            scheduler_cpu=2 * m,
-            scheduler_mem=8 * m,
-            worker_cpu=2 * m,
-            worker_mem=8 * m,
-            n_workers=12,
+            scheduler_cpu=dask_cfg.get("scheduler_cpu", 2 * m),
+            scheduler_mem=dask_cfg.get("scheduler_memory", 8 * m),
+            worker_cpu=dask_cfg.get("worker_cpu", 2 * m),
+            worker_mem=dask_cfg.get("worker_memory", 8 * m),
+            n_workers=dask_cfg["n_workers"],
             task_role_policies=['arn:aws:iam::aws:policy/AmazonS3FullAccess'],
             tags=batch_env.get_tags()
         )
