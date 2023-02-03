@@ -24,6 +24,11 @@ jobs:
           repository: NREL/resstock
           path: resstock
           ref: develop
+      - uses: actions/checkout@v3
+        with:
+          repository: NREL/comstock-internal
+          path: comstock
+          ref: develop
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
