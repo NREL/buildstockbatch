@@ -28,7 +28,7 @@ jobs:
         with:
           repository: NREL/comstock-internal
           path: comstock
-          ref: develop
+          ref: bsb-integration-tests
           ssh-key: ${{ secrets.COMSTOCK_SSH_KEY }}
       - uses: actions/setup-python@v4
         with:
