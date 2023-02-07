@@ -105,7 +105,7 @@ def test_comstock_local_batch(project_filename):
     n_datapoints = df.shape[0]
 
     # Run the simulations
-    batch.run_batch()
+    batch.run_batch(n_jobs=1)
 
     # Make sure all the files are there
     out_path = pathlib.Path(batch.output_dir)

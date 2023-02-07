@@ -13,7 +13,7 @@ This object contains the code required for execution of local docker batch simul
 import argparse
 from dask.distributed import Client, LocalCluster
 import docker
-from docker.errors import ImageNotFound
+from docker.errors import ImageNotFound, ContainerError
 import functools
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -110,34 +110,53 @@ class LocalDockerBatch(DockerBatchBase):
             if not os.path.exists(local_log_dir):
                 os.makedirs(local_log_dir)
 
+            extra_docker_kws = {}
+            if sys.platform.startswith('linux'):
+                extra_docker_kws['user'] = f'{os.getuid()}:{os.getgid()}'
+
             # Run bundler to install the custom gems
             mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
             bundle_install_cmd = f'/bin/bash -c "cp {mnt_gemfile_path_orig} {mnt_gemfile_path} && bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}"'  # noqa: E501
             logger.debug(f'Running {bundle_install_cmd}')
-            container_output = docker_client.containers.run(
+            container = docker_client.containers.run(
                 self.docker_image,
                 bundle_install_cmd,
-                remove=True,
+                remove=False,
                 volumes=docker_volume_mounts,
-                name='install_custom_gems'
+                name='install_custom_gems',
+                detach=True,
+                **extra_docker_kws
             )
-            with open(os.path.join(local_log_dir, 'bundle_install_output.log'), 'wb') as f_out:
+            exit_code = container.wait()
+            container_output = container.logs()
+            container_logfile = os.path.join(local_log_dir, 'bundle_install_output.log')
+            with open(container_logfile, 'wb') as f_out:
                 f_out.write(container_output)
+            container.remove()
+            if exit_code != 0:
+                raise RuntimeError(f"Container failed. See {container_logfile}")
 
             # Report out custom gems loaded by OpenStudio CLI
             check_active_gems_cmd = f'openstudio --bundle {mnt_gemfile_path} --bundle_path {mnt_gem_dir} ' \
                                     '--bundle_without native_ext gem_list'
-            container_output = docker_client.containers.run(
+            container = docker_client.containers.run(
                 self.docker_image,
                 check_active_gems_cmd,
-                remove=True,
+                remove=False,
                 volumes=docker_volume_mounts,
-                name='list_custom_gems'
+                name='list_custom_gems',
+                detach=True,
+                **extra_docker_kws
             )
+            exit_code = container.wait()
+            container_output = container.logs()
             gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
             with open(gem_list_log, 'wb') as f_out:
                 f_out.write(container_output)
+            container.remove()
             simdata_vol.remove()
+            if exit_code != 0:
+                raise RuntimeError(f"Container failed. See {gem_list_log}")
             logger.debug(f'Review custom gems list at: {gem_list_log}')
 
     @staticmethod
@@ -215,17 +234,23 @@ class LocalDockerBatch(DockerBatchBase):
         extra_kws = {}
         if sys.platform.startswith('linux'):
             extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
-        container_output = docker_client.containers.run(
+        container = docker_client.containers.run(
             docker_image,
             run_cmd,
-            remove=True,
+            remove=False,
             volumes=docker_volume_mounts,
             name=sim_id,
             environment=env_vars,
+            detach=True,
             **extra_kws
         )
+        container.wait()
+
+        container_output = container.logs()
         with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
             f_out.write(container_output)
+
+        container.remove()
 
         # Clean up directories created with the docker mounts
         for dirname in ('lib', 'measures', 'weather'):
