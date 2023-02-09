@@ -39,11 +39,11 @@ aws-emr-spec:
   dask_worker_vcores: int(min=1, required=False)
 
 aws-dask-spec:
-  scheduler_cpu: enum(1024, 2048, 4096, 8192, 16384)
-  scheduler_memory: int(min=1024)
-  worker_cpu: enum(1024, 2048, 4096, 8192, 16384)
-  worker_memory: int(min=1024)
-  n_workers: int(min=1)
+  scheduler_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  scheduler_memory: int(min=1024, required=False)
+  worker_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  worker_memory: int(min=1024, required=False)
+  n_workers: int(min=1, required=True)
 
 hpc-spec:
   account: str(required=True)

@@ -38,7 +38,6 @@ import re
 import time
 import tqdm
 import io
-import zipfile
 
 from buildstockbatch.localdocker import DockerBatchBase
 from buildstockbatch.base import ValidationError
@@ -1100,13 +1099,13 @@ class AwsBatch(DockerBatchBase):
             16384: (32, 120, 8),
         }
         for node_type in ("scheduler", "worker"):
-            mem = dask_cfg[f"{node_type}_memory"]
+            mem = dask_cfg.get(f"{node_type}_memory", 8 * 1024)
             if mem % 1024 != 0:
                 errors.append(
                     f"`aws.dask.{node_type}_memory` = {mem}, needs to be a multiple of 1024."
                 )
-            mem_gb = dask_cfg[f'{node_type}_memory'] // 1024
-            min_gb, max_gb, incr_gb = mem_rules[dask_cfg[f"{node_type}_cpu"]]
+            mem_gb = mem // 1024
+            min_gb, max_gb, incr_gb = mem_rules[dask_cfg.get(f"{node_type}_cpu", 2 * 1024)]
             if not (min_gb <= mem_gb <= max_gb and (mem_gb - min_gb) % incr_gb == 0):
                 errors.append(
                     f"`aws.dask.{node_type}_memory` = {mem}, "
@@ -1361,10 +1360,11 @@ class AwsBatch(DockerBatchBase):
         )
 
         # start job
-        job_info = batch_env.submit_job(array_size=self.batch_array_size)
+        job_info = batch_env.submit_job(array_size=array_size)
 
         # Monitor job status
-        with tqdm.tqdm(desc="Running Simulations", total=self.batch_array_size) as progress_bar:
+        n_succeeded_last_time = 0
+        with tqdm.tqdm(desc="Running Simulations", total=array_size) as progress_bar:
             job_status = None
             while job_status not in ('SUCCEEDED', 'FAILED'):
                 time.sleep(10)
@@ -1375,10 +1375,13 @@ class AwsBatch(DockerBatchBase):
                 n_succeeded = len(jobs_resp["jobSummaryList"])
                 next_token = jobs_resp.get("nextToken")
                 while next_token is not None:
-                    jobs_resp = batch_env.batch.list_jobs(arrayJobId=job_info['jobId'], jobStatus='SUCCEEDED', nextToken=next_token)
+                    jobs_resp = batch_env.batch.list_jobs(
+                        arrayJobId=job_info['jobId'], jobStatus='SUCCEEDED', nextToken=next_token
+                    )
                     n_succeeded += len(jobs_resp["jobSummaryList"])
                     next_token = jobs_resp.get("nextToken")
-                progress_bar.update(n_succeeded)
+                progress_bar.update(n_succeeded - n_succeeded_last_time)
+                n_succeeded_last_time = n_succeeded
 
         logger.info(f"Batch job status: {job_status}")
         if job_status == "FAILED":
@@ -1547,7 +1550,7 @@ class AwsBatch(DockerBatchBase):
 
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         m = 1024
-        cluster = FargateCluster(
+        self.dask_cluster = FargateCluster(
             fargate_spot=True,
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",
@@ -1559,12 +1562,16 @@ class AwsBatch(DockerBatchBase):
             task_role_policies=['arn:aws:iam::aws:policy/AmazonS3FullAccess'],
             tags=batch_env.get_tags()
         )
-        client = Client(cluster)
-        return client
+        self.dask_client = Client(self.dask_cluster)
+        return self.dask_client
+
+    def cleanup_dask(self):
+        self.dask_client.close()
+        self.dask_cluster.close()
 
     def upload_results(self, *args, **kwargs):
         """Do nothing because the results are already on S3"""
-        return self.s3_bucket, self.results_dir
+        return self.s3_bucket, self.s3_bucket_prefix + "/results/parquet"
 
 
 @log_error_details()
@@ -1626,6 +1633,11 @@ def main():
             help='Only do postprocessing, useful for when the simulations are already done',
             action='store_true'
         )
+        group.add_argument(
+            '--crawl',
+            help='Only do the crawling in Athena. When simulations and postprocessing are done.',
+            action='store_true'
+        )
         args = parser.parse_args()
 
         # validate the project, and in case of the --validateonly flag return True if validation passes
@@ -1640,6 +1652,8 @@ def main():
             batch.build_image()
             batch.push_image()
             batch.process_results()
+        elif args.crawl:
+            batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
             batch.build_image()
             batch.push_image()
