@@ -394,6 +394,7 @@ class AwsBatchEnv(AwsJobBase):
 
         backoff(self.ec2.create_tags,
             Resources=[
+                self.nat_gateway_id,
                 self.priv_route_table_id
             ],
             Tags=self.get_tags_uppercase(Name=self.job_identifier)
