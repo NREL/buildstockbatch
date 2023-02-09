@@ -36,7 +36,7 @@ jobs:
         run: |
           cd buildstockbatch
           python -m pip install --progress-bar off --upgrade pip
-          pip install .[dev] --progress-bar off
+          pip install .[dev,aws] --progress-bar off
       - name: Linting
         run: |
           cd buildstockbatch
