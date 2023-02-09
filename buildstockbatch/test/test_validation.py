@@ -26,7 +26,6 @@ from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
 import logging
-import shutil
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')

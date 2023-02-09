@@ -277,7 +277,8 @@ class AwsBatchEnv(AwsJobBase):
 
         self.internet_gateway_id = ig_response['InternetGateway']['InternetGatewayId']
 
-        backoff(self.ec2.create_tags,
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.internet_gateway_id
             ],
@@ -391,7 +392,8 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Route table created.")
 
-        backoff(self.ec2.create_tags,
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.nat_gateway_id,
                 self.priv_route_table_id

@@ -822,7 +822,12 @@ class BuildStockBatchBase(object):
             if 's3' in aws_conf or 'aws' in self.cfg:
                 s3_bucket, s3_prefix = self.upload_results(aws_conf, self.output_dir, self.results_dir)
                 if 'athena' in aws_conf:
-                    postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
+                    postprocessing.create_athena_tables(
+                        aws_conf,
+                        os.path.basename(self.output_dir),
+                        s3_bucket,
+                        s3_prefix
+                    )
         finally:
             if use_dask_cluster:
                 self.cleanup_dask()
