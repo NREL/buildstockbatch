@@ -27,7 +27,6 @@ import re
 import shutil
 import subprocess
 import tarfile
-import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
