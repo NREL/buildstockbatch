@@ -3,7 +3,7 @@
 """
 buildstockbatch.localdocker
 ~~~~~~~~~~~~~~~
-This object contains the code required for execution of local docker batch simulations
+This object contains the code required for execution of local batch simulations
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -13,7 +13,6 @@ This object contains the code required for execution of local docker batch simul
 import argparse
 from dask.distributed import Client, LocalCluster
 import docker
-from docker.errors import ImageNotFound
 import functools
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -23,55 +22,29 @@ import json
 import logging
 import os
 import pandas as pd
+import pathlib
 import re
 import shutil
-import sys
+import subprocess
 import tarfile
 import tempfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
-from .utils import log_error_details, ContainerRuntime
+from buildstockbatch.utils import log_error_details, ContainerRuntime
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
 
-class DockerBatchBase(BuildStockBatchBase):
+class LocalBatch(BuildStockBatchBase):
 
     CONTAINER_RUNTIME = ContainerRuntime.DOCKER
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
-        self.docker_client = docker.DockerClient.from_env()
-        try:
-            self.docker_client.ping()
-        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
-            logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
-            raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
-
         self._weather_dir = None
-
-    @staticmethod
-    def validate_project(project_file):
-        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
-        # LocalDocker specific code goes here
-
-    @property
-    def docker_image(self):
-        return 'nrel/openstudio:{}'.format(self.os_version)
-
-
-class LocalDockerBatch(DockerBatchBase):
-
-    def __init__(self, project_filename):
-        super().__init__(project_filename)
-        try:
-            self.docker_client.images.get(self.docker_image)
-        except ImageNotFound:
-            logger.debug(f'Pulling docker image: {self.docker_image}')
-            self.docker_client.images.pull(self.docker_image)
 
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
@@ -80,7 +53,9 @@ class LocalDockerBatch(DockerBatchBase):
             os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
 
         # Install custom gems to a volume that will be used by all workers
+        # FIXME: Get working without docker
         if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            # TODO: Fix this stuff to work without docker
             logger.info('Installing custom gems to docker volume: buildstockbatch_custom_gems')
 
             docker_client = docker.client.from_env()
@@ -140,20 +115,20 @@ class LocalDockerBatch(DockerBatchBase):
             simdata_vol.remove()
             logger.debug(f'Review custom gems list at: {gem_list_log}')
 
-    @staticmethod
-    def validate_project(project_file):
-        super(LocalDockerBatch, LocalDockerBatch).validate_project(project_file)
-        # LocalDocker specific code goes here
+    @classmethod
+    def validate_project(cls, project_file):
+        super(cls, cls).validate_project(project_file)
+        # LocalBatch specific code goes here
 
     @property
     def weather_dir(self):
         if self._weather_dir is None:
-            self._weather_dir = tempfile.TemporaryDirectory(dir=self.results_dir, prefix='weather')
+            self._weather_dir = os.path.join(self.buildstock_dir, 'weather')
             self._get_weather_files()
-        return self._weather_dir.name
+        return self._weather_dir
 
     @classmethod
-    def run_building(cls, project_dir, buildstock_dir, weather_dir, docker_image, results_dir, measures_only,
+    def run_building(cls, buildstock_dir, weather_dir, results_dir, measures_only,
                      n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -162,74 +137,62 @@ class LocalDockerBatch(DockerBatchBase):
             sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, 'simulation_output'))
         except SimulationExists:
             return
+        sim_path = pathlib.Path(sim_dir)
+        buildstock_path = pathlib.Path(buildstock_dir)
 
-        bind_mounts = [
-            (sim_dir, '', 'rw'),
-            (os.path.join(buildstock_dir, 'measures'), 'measures', 'ro'),
-            (os.path.join(buildstock_dir, 'resources'), 'lib/resources', 'ro'),
-            (os.path.join(project_dir, 'housing_characteristics'), 'lib/housing_characteristics', 'ro'),
-            (weather_dir, 'weather', 'ro')
-        ]
-        if os.path.exists(os.path.join(buildstock_dir, 'resources', 'hpxml-measures')):
-            bind_mounts += [(os.path.join(buildstock_dir, 'resources', 'hpxml-measures'),
-                            'resources/hpxml-measures', 'ro')]
-        docker_volume_mounts = dict([(key, {'bind': f'/var/simdata/openstudio/{bind}', 'mode': mode}) for key, bind, mode in bind_mounts])  # noqa E501
-        for bind in bind_mounts:
-            dir_to_make = os.path.join(sim_dir, *bind[1].split('/'))
-            if not os.path.exists(dir_to_make):
-                os.makedirs(dir_to_make)
-
-        if cfg.get('baseline', dict()).get('custom_gems', False):
-            mnt_custom_gem_dir = '/var/oscli/gems'
-            docker_volume_mounts['buildstockbatch_custom_gems'] = {'bind': mnt_custom_gem_dir, 'mode': 'ro'}
+        # Make symlinks to project and buildstock stuff
+        (sim_path / 'measures').symlink_to(buildstock_path / 'measures', target_is_directory=True)
+        (sim_path / 'lib').symlink_to(buildstock_path / "lib", target_is_directory=True)
+        (sim_path / 'weather').symlink_to(weather_dir, target_is_directory=True)
+        hpxml_measures_path = buildstock_path / 'resources' / 'hpxml-measures'
+        if hpxml_measures_path.exists():
+            resources_path = sim_path / 'resources'
+            resources_path.mkdir()
+            (resources_path / 'hpxml-measures').symlink_to(hpxml_measures_path, target_is_directory=True)
+        else:
+            resources_path = None
 
         osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
-        with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
+        with open(sim_path / 'in.osw', 'w') as f:
             json.dump(osw, f, indent=4)
 
-        docker_client = docker.client.from_env()
         run_cmd = [
-            'openstudio',
+            cls.openstudio_exe(),
             'run',
             '-w', 'in.osw',
         ]
-        if cfg.get('baseline', dict()).get('custom_gems', False):
-            run_cmd = [
-                'openstudio',
-                '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
-                '--bundle_path', f'{mnt_custom_gem_dir}',
-                '--bundle_without', 'native_ext',
-                'run', '-w', 'in.osw',
-                '--debug'
-            ]
+
+        # FIXME: Custom gems
+        # if cfg.get('baseline', dict()).get('custom_gems', False):
+        #     run_cmd = [
+        #         'openstudio',
+        #         '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
+        #         '--bundle_path', f'{mnt_custom_gem_dir}',
+        #         '--bundle_without', 'native_ext',
+        #         'run', '-w', 'in.osw',
+        #         '--debug'
+        #     ]
+
         if measures_only:
-            if cfg.get('baseline', dict()).get('custom_gems', False):
-                run_cmd.insert(8, '--measures_only')
-            else:
-                run_cmd.insert(2, '--measures_only')
+            # if cfg.get('baseline', dict()).get('custom_gems', False):
+            #     run_cmd.insert(8, '--measures_only')
+            # else:
+            run_cmd.insert(2, '--measures_only')
 
-        env_vars = {}
-        env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
+        env_vars = {
+            'BUILDSTOCKBATCH_VERSION': bsb_version
+        }
 
-        extra_kws = {}
-        if sys.platform.startswith('linux'):
-            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
-        container_output = docker_client.containers.run(
-            docker_image,
+        proc_output = subprocess.run(
             run_cmd,
-            remove=True,
-            volumes=docker_volume_mounts,
-            name=sim_id,
-            environment=env_vars,
-            **extra_kws
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            env=env_vars,
+            cwd=sim_dir,
         )
-        with open(os.path.join(sim_dir, 'docker_output.log'), 'wb') as f_out:
-            f_out.write(container_output)
-
-        # Clean up directories created with the docker mounts
-        for dirname in ('lib', 'measures', 'weather'):
-            shutil.rmtree(os.path.join(sim_dir, dirname), ignore_errors=True)
+        with open(sim_path / 'openstudio_output.log', 'wb') as f_out:
+            f_out.write(proc_output.stdout)
 
         fs = LocalFileSystem()
         cls.cleanup_sim_dir(
@@ -239,6 +202,13 @@ class LocalDockerBatch(DockerBatchBase):
             upgrade_id,
             i
         )
+
+        # Clean up symlinks
+        for directory in ('measures', 'lib', 'weather'):
+            (sim_path / directory).unlink()
+        if resources_path:
+            (resources_path / 'hpxml-measures').unlink()
+            resources_path.rmdir()
 
         # Read data_point_out.json
         reporting_measures = cls.get_reporting_measures(cfg)
@@ -251,15 +221,24 @@ class LocalDockerBatch(DockerBatchBase):
         if sampling_only:
             return
 
+        # Copy files to lib dir in buildstock root
+        # FIXME: does this work for comstock?
+        buildstock_path = pathlib.Path(self.buildstock_dir)
+        project_path = pathlib.Path(self.project_dir)
+        lib_path = pathlib.Path(self.buildstock_dir, 'lib')
+        if lib_path.exists():
+            shutil.rmtree(lib_path)
+        lib_path.mkdir()
+        shutil.copytree(buildstock_path / "resources", lib_path / "resources")
+        shutil.copytree(project_path / "housing_characteristics", lib_path / "housing_characteristics")
+
         df = pd.read_csv(buildstock_csv_filename, index_col=0)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
         run_building_d = functools.partial(
             delayed(self.run_building),
-            self.project_dir,
             self.buildstock_dir,
             self.weather_dir,
-            self.docker_image,
             self.results_dir,
             measures_only,
             n_datapoints,
@@ -274,24 +253,25 @@ class LocalDockerBatch(DockerBatchBase):
         else:
             all_sims = itertools.chain(*upgrade_sims)
         if n_jobs is None:
-            client = docker.client.from_env()
-            n_jobs = client.info()['NCPU']
+            n_jobs = -1
         dpouts = Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
-        sim_out_dir = os.path.join(self.results_dir, 'simulation_output')
+        shutil.rmtree(lib_path)
 
-        results_job_json_filename = os.path.join(sim_out_dir, 'results_job0.json.gz')
+        sim_out_path = pathlib.Path(self.results_dir, 'simulation_output')
+
+        results_job_json_filename = sim_out_path / 'results_job0.json.gz'
         with gzip.open(results_job_json_filename, 'wt', encoding='utf-8') as f:
             json.dump(dpouts, f)
         del dpouts
 
-        sim_out_tarfile_name = os.path.join(sim_out_dir, 'simulations_job0.tar.gz')
+        sim_out_tarfile_name = sim_out_path / 'simulations_job0.tar.gz'
         logger.debug(f'Compressing simulation outputs to {sim_out_tarfile_name}')
         with tarfile.open(sim_out_tarfile_name, 'w:gz') as tarf:
-            for dirname in os.listdir(sim_out_dir):
-                if re.match(r'up\d+', dirname) and os.path.isdir(os.path.join(sim_out_dir, dirname)):
-                    tarf.add(os.path.join(sim_out_dir, dirname), arcname=dirname)
-                    shutil.rmtree(os.path.join(sim_out_dir, dirname))
+            for dirname in os.listdir(sim_out_path):
+                if re.match(r'up\d+', dirname) and (sim_out_path / dirname).is_dir():
+                    tarf.add(sim_out_path / dirname, arcname=dirname)
+                    shutil.rmtree(sim_out_path / dirname)
 
     @property
     def output_dir(self):
@@ -351,7 +331,7 @@ def main():
     parser.add_argument(
         '-j',
         type=int,
-        help='Number of parallel simulations. Default: all cores available to docker.',
+        help='Number of parallel simulations. Default: all cores.',
         default=None
     )
     parser.add_argument(
@@ -375,10 +355,10 @@ def main():
         raise FileNotFoundError(f'The project file {args.project_filename} doesn\'t exist')
 
     # Validate the project, and in case of the --validateonly flag return True if validation passes
-    LocalDockerBatch.validate_project(args.project_filename)
+    LocalBatch.validate_project(args.project_filename)
     if args.validateonly:
         return True
-    batch = LocalDockerBatch(args.project_filename)
+    batch = LocalBatch(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
         batch.run_batch(n_jobs=args.j, measures_only=args.measures_only, sampling_only=args.samplingonly)
     if args.measures_only or args.samplingonly:
