@@ -32,6 +32,11 @@ jobs:
           mkdir weather
           cd weather
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+      - name: Download and Install OpenStudio
+        run: |
+          wget https://github.com/NREL/OpenStudio/releases/download/v3.5.1/OpenStudio-3.5.1+22e1db7be5-Ubuntu-20.04.deb
+          sudo apt install -y ./OpenStudio-3.5.1+22e1db7be5-Ubuntu-20.04.deb
+          openstudio openstudio_version
       - name: Install buildstockbatch
         run: |
           cd buildstockbatch
