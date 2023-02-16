@@ -179,9 +179,9 @@ class LocalBatch(BuildStockBatchBase):
             # else:
             run_cmd.insert(2, '--measures_only')
 
-        env_vars = {
-            'BUILDSTOCKBATCH_VERSION': bsb_version
-        }
+        env_vars = {}
+        env_vars.update(os.environ)
+        env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
 
         proc_output = subprocess.run(
             run_cmd,
