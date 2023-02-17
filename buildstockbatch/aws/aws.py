@@ -42,7 +42,7 @@ import zipfile
 from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
-from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
+from buildstockbatch.utils import log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -1660,8 +1660,6 @@ class AwsSNS(AwsJobBase):
 
 class DockerBatchBase(BuildStockBatchBase):
 
-    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
-
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
@@ -1731,6 +1729,10 @@ class AwsBatch(DockerBatchBase):
     @property
     def weather_dir(self):
         return self._weather_dir
+
+    @property
+    def sampler_csv_base_path(self):
+        return self.project_dir
 
     @property
     def container_repo(self):

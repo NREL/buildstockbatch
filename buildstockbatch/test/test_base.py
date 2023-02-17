@@ -19,7 +19,6 @@ import buildstockbatch
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
-from buildstockbatch.utils import ContainerRuntime
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -409,7 +408,6 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
     })
     mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
     mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
-    mocker.patch.object(BuildStockBatchBase, 'CONTAINER_RUNTIME', ContainerRuntime.DOCKER)
 
     bsb = BuildStockBatchBase(project_filename)
     sampling_output_csv = bsb.sampler.run_sampling()

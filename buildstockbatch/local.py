@@ -30,15 +30,13 @@ import tarfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
-from buildstockbatch.utils import log_error_details, ContainerRuntime
+from buildstockbatch.utils import log_error_details
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
 
 
 class LocalBatch(BuildStockBatchBase):
-
-    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
@@ -125,6 +123,10 @@ class LocalBatch(BuildStockBatchBase):
             self._weather_dir = os.path.join(self.buildstock_dir, 'weather')
             self._get_weather_files()
         return self._weather_dir
+
+    @property
+    def sampler_csv_base_path(self):
+        return self.project_dir
 
     @classmethod
     def run_building(cls, buildstock_dir, weather_dir, results_dir, measures_only,

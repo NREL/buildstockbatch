@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 class ResidentialQuotaSampler(BuildStockSampler):
 
-    def __init__(self, parent, n_datapoints):
+    def __init__(self, parent, csv_base_path, n_datapoints):
         """Residential Quota Sampler
 
         :param parent: BuildStockBatchBase object
@@ -30,9 +30,10 @@ class ResidentialQuotaSampler(BuildStockSampler):
         :param n_datapoints: number of datapoints to sample
         :type n_datapoints: int
         """
-        super().__init__(parent)
+        super().__init__(parent, csv_base_path)
         self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
         self.n_datapoints = n_datapoints
+        self.csv_path = os.path.join(self.csv_base_path, 'housing_characteristics', 'buildstock.csv')
 
     @classmethod
     def validate_args(cls, project_filename, **kw):
