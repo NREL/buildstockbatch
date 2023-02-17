@@ -2,7 +2,7 @@ import os
 import pytest
 import yaml
 
-from buildstockbatch.localdocker import LocalBatch
+from buildstockbatch.local import LocalBatch
 
 here = os.path.dirname(os.path.abspath(__file__))
 

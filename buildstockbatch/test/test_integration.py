@@ -3,7 +3,7 @@ import pathlib
 import pytest
 import shutil
 
-from buildstockbatch.localdocker import LocalBatch
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 
 

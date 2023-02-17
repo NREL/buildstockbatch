@@ -1675,7 +1675,6 @@ class DockerBatchBase(BuildStockBatchBase):
     @staticmethod
     def validate_project(project_file):
         super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
-        # LocalDocker specific code goes here
 
     @property
     def docker_image(self):

@@ -18,7 +18,7 @@ import tempfile
 import json
 import pathlib
 from buildstockbatch.eagle import EagleBatch
-from buildstockbatch.localdocker import LocalBatch
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 from buildstockbatch.utils import get_project_configuration
