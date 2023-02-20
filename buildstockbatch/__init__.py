@@ -19,7 +19,7 @@ simulation sets required for BuildStock analyses. Basic Eagle usage:
 ```
    user$ pyenv activate buildstockbatch
    user$ pip install -e ./buildstockbatch
-   user$ buildstock_docker -j -2 ~/buildstockbatch/project_resstock_multifamily.yml
+   user$ buildstock_local -j -2 ~/buildstockbatch/project_resstock_multifamily.yml
 ```
 Other batch simulation methods may be supported in future. Please refer to the documentation for more
 details regarding these features, and configuration via the project yaml configuration documentation.

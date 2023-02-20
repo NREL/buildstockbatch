@@ -10,9 +10,9 @@ looks like a little whale with boxes on its back. Select "Preferences..." and "A
 Slide the CPUs available to Docker to the number of concurrent simulations you want to run
 (probably all of them).
 
-Running a project file is straightforward. Call the ``buildstock_docker`` command line tool as follows:
+Running a project file is straightforward. Call the ``buildstock_local`` command line tool as follows:
 
-.. command-output:: buildstock_docker --help
+.. command-output:: buildstock_local --help
    :ellipsis: 0,8
 
 .. warning::
