@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 class PrecomputedSampler(BuildStockSampler):
 
-    def __init__(self, parent, csv_base_path, sample_file):
+    def __init__(self, parent, sample_file):
         """Precomputed Sampler
 
         :param parent: BuildStockBatchBase object
@@ -31,11 +31,10 @@ class PrecomputedSampler(BuildStockSampler):
         :param sample_file: relative or absolute path to buildstock.csv to use
         :type sample_file: str
         """
-        super().__init__(parent, csv_base_path)
+        super().__init__(parent)
         project_filename = self.parent().project_filename
         self.validate_args(project_filename, sample_file=sample_file)
         self.buildstock_csv = path_rel_to_file(project_filename, sample_file)
-        self.csv_path = os.path.join(self.csv_base_path, 'housing_characteristics', 'buildstock.csv')
 
     @classmethod
     def validate_args(cls, project_filename, **kw):

@@ -21,6 +21,7 @@ from warnings import warn
 
 from .sobol_lib import i4_sobol_generate
 from .base import BuildStockSampler
+from buildstockbatch.utils import ContainerRuntime
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ logger = logging.getLogger(__name__)
 
 class CommercialSobolSampler(BuildStockSampler):
 
-    def __init__(self, parent, csv_base_path, n_datapoints):
+    def __init__(self, parent, n_datapoints):
         """
         Initialize the sampler.
 
@@ -37,9 +38,13 @@ class CommercialSobolSampler(BuildStockSampler):
         :param buildstock_dir: The location of the comstock or resstock repo
         :param project_dir: The project directory within the comstock or resstock repo
         """
-        super().__init__(parent, csv_base_path)
+        super().__init__(parent)
         self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
-        self.csv_path = os.path.join(self.csv_base_path, 'buildstock.csv')
+        if self.container_runtime == ContainerRuntime.SINGULARITY:
+            self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
+        else:
+            assert self.container_runtime == ContainerRuntime.DOCKER
+            self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
         self.n_datapoints = n_datapoints
 
     @classmethod

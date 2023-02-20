@@ -36,7 +36,7 @@ import yaml
 import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.utils import log_error_details, get_error_details
+from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
 from buildstockbatch import postprocessing
 from buildstockbatch.__version__ import __version__ as bsb_version
 
@@ -48,6 +48,8 @@ def get_bool_env_var(varname):
 
 
 class EagleBatch(BuildStockBatchBase):
+
+    CONTAINER_RUNTIME = ContainerRuntime.SINGULARITY
 
     sys_image_dir = '/shared-projects/buildstock/singularity_images'
     hpc_name = 'eagle'
@@ -87,10 +89,6 @@ class EagleBatch(BuildStockBatchBase):
         results_dir = os.path.join(self.output_dir, 'results')
         assert os.path.isdir(results_dir)
         return results_dir
-
-    @property
-    def sampler_csv_base_path(self):
-        return self.output_dir
 
     @staticmethod
     def clear_and_copy_dir(src, dst):

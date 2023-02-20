@@ -25,7 +25,7 @@ class DownselectSamplerBase(BuildStockSampler):
 
     SUB_SAMPLER_CLASS = None
 
-    def __init__(self, parent, csv_base_path, n_datapoints, logic, resample=True, **kw):
+    def __init__(self, parent, n_datapoints, logic, resample=True, **kw):
         """Downselect Sampler
 
         This sampler performs a downselect of another sampler based on
@@ -41,7 +41,7 @@ class DownselectSamplerBase(BuildStockSampler):
         :type resample: bool, optional
         :param **kw: args to pass through to sub sampler
         """
-        super().__init__(parent, csv_base_path)
+        super().__init__(parent)
         self.validate_args(
             self.parent().project_filename,
             n_datapoints=n_datapoints,
@@ -53,7 +53,7 @@ class DownselectSamplerBase(BuildStockSampler):
         self.resample = resample
         self.n_datapoints = n_datapoints
         self.sub_kw = kw
-        sampler = self.SUB_SAMPLER_CLASS(self.parent(), csv_base_path, n_datapoints=n_datapoints, **kw)
+        sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_datapoints, **kw)
         self.csv_path = sampler.csv_path
 
     @classmethod

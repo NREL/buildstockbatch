@@ -10,7 +10,10 @@ This object contains the base class for the samplers.
 """
 
 import logging
+import os
 import weakref
+
+from buildstockbatch.utils import ContainerRuntime
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ class BuildStockSampler(object):
         """
         return True
 
-    def __init__(self, parent, csv_base_path):
+    def __init__(self, parent):
         """
         Create the buildstock.csv file required for batch simulations using this class.
 
@@ -45,7 +48,12 @@ class BuildStockSampler(object):
         :param parent: The BuildStockBatchBase object that owns this sampler.
         """
         self.parent = weakref.ref(parent)  # This removes circular references and allows garbage collection to work.
-        self.csv_base_path = csv_base_path
+        if self.container_runtime == ContainerRuntime.DOCKER:
+            self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        elif self.container_runtime == ContainerRuntime.SINGULARITY:
+            self.csv_path = os.path.join(self.parent().output_dir, 'housing_characteristics', 'buildstock.csv')
+        else:
+            self.csv_path = None
 
     @property
     def cfg(self):
@@ -68,5 +76,25 @@ class BuildStockSampler(object):
         Execute the sampling generating the specified number of datapoints.
 
         Replace this in a subclass if your sampling doesn't depend on containerization.
+        """
+        if self.container_runtime == ContainerRuntime.DOCKER:
+            return self._run_sampling_docker()
+        else:
+            assert self.container_runtime == ContainerRuntime.SINGULARITY
+            return self._run_sampling_singularity()
+
+    def _run_sampling_docker(self):
+        """
+        Execute the sampling in a docker container
+
+        Replace this in a subclass if your sampling needs docker.
+        """
+        raise NotImplementedError
+
+    def _run_sampling_singularity(self):
+        """
+        Execute the sampling in a singularity container
+
+        Replace this in a subclass if your sampling needs docker.
         """
         raise NotImplementedError

@@ -46,6 +46,7 @@ class BuildStockBatchBase(object):
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
     DEFAULT_OS_VERSION = '3.5.1'
     DEFAULT_OS_SHA = '22e1db7be5'
+    CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
     ( /  )    o  //   /(    _/_       / ( /  )     _/_    /
@@ -86,14 +87,10 @@ class BuildStockBatchBase(object):
         return getattr(workflow_generator, workflow_generator_class_name)
 
     @property
-    def sampler_csv_base_path(self):
-        raise NotImplementedError
-
-    @property
     def sampler(self):
         # Select a sampler
         Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
-        return Sampler(self, self.sampler_csv_base_path, **self.cfg['sampler'].get('args', {}))
+        return Sampler(self, **self.cfg['sampler'].get('args', {}))
 
     @staticmethod
     def openstudio_exe():
