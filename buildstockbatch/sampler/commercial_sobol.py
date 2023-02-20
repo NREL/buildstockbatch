@@ -43,7 +43,7 @@ class CommercialSobolSampler(BuildStockSampler):
         if self.container_runtime == ContainerRuntime.SINGULARITY:
             self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
         else:
-            assert self.container_runtime == ContainerRuntime.DOCKER
+            assert self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO)
             self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
         self.n_datapoints = n_datapoints
 

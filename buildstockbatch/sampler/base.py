@@ -48,7 +48,7 @@ class BuildStockSampler(object):
         :param parent: The BuildStockBatchBase object that owns this sampler.
         """
         self.parent = weakref.ref(parent)  # This removes circular references and allows garbage collection to work.
-        if self.container_runtime == ContainerRuntime.DOCKER:
+        if self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO):
             self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
         elif self.container_runtime == ContainerRuntime.SINGULARITY:
             self.csv_path = os.path.join(self.parent().output_dir, 'housing_characteristics', 'buildstock.csv')
@@ -79,9 +79,11 @@ class BuildStockSampler(object):
         """
         if self.container_runtime == ContainerRuntime.DOCKER:
             return self._run_sampling_docker()
-        else:
-            assert self.container_runtime == ContainerRuntime.SINGULARITY
+        elif self.container_runtime == ContainerRuntime.SINGULARITY:
             return self._run_sampling_singularity()
+        else:
+            assert self.container_runtime == ContainerRuntime.LOCAL_OPENSTUDIO
+            return self._run_sampling_local_openstudio()
 
     def _run_sampling_docker(self):
         """
@@ -96,5 +98,13 @@ class BuildStockSampler(object):
         Execute the sampling in a singularity container
 
         Replace this in a subclass if your sampling needs docker.
+        """
+        raise NotImplementedError
+
+    def _run_sampling_local_openstudio(self):
+        """
+        Execute the sampling on the local openstudio instance
+
+        Replace this in a subclass as necessary
         """
         raise NotImplementedError

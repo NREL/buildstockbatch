@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 class LocalBatch(BuildStockBatchBase):
 
-    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
+    CONTAINER_RUNTIME = ContainerRuntime.LOCAL_OPENSTUDIO
 
     def __init__(self, project_filename):
         super().__init__(project_filename)

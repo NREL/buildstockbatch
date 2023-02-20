@@ -20,7 +20,6 @@ from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
-from buildstockbatch.utils import ContainerRuntime
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
