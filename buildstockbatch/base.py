@@ -260,7 +260,6 @@ class BuildStockBatchBase(object):
     @classmethod
     def validate_project(cls, project_file):
         assert cls.validate_project_schema(project_file)
-        assert cls.validate_openstudio_path(project_file)
         assert cls.validate_sampler(project_file)
         assert cls.validate_workflow_generator(project_file)
         assert cls.validate_misc_constraints(project_file)

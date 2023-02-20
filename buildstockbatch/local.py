@@ -116,6 +116,7 @@ class LocalBatch(BuildStockBatchBase):
     def validate_project(cls, project_file):
         super(cls, cls).validate_project(project_file)
         # LocalBatch specific code goes here
+        assert cls.validate_openstudio_path(project_file)
 
     @property
     def weather_dir(self):
