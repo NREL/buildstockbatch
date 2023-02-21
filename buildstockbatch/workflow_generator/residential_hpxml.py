@@ -31,6 +31,16 @@ def get_measure_xml(xml_path):
     return root
 
 
+def get_measure_arguments(xml_path):
+    arguments = []
+    if os.path.isfile(xml_path):
+        root = get_measure_xml(xml_path)
+        for argument in root.findall('./arguments/argument'):
+            name = argument.find('./name').text
+            arguments.append(name)
+    return arguments
+
+
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
@@ -96,10 +106,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_hot_water_uses: bool(required=False)
             include_timeseries_total_loads: bool(required=False)
             include_timeseries_component_loads: bool(required=False)
+            include_timeseries_unmet_hours: bool(required=False)
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
             timeseries_timestamp_convention: enum('start', 'end', required=False)
+            timeseries_num_decimal_places: int(required=False)
             add_timeseries_dst_column: bool(required=False)
             add_timeseries_utc_column: bool(required=False)
             output_variables: list(include('output-var-spec'), required=False)
@@ -144,7 +156,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
     @staticmethod
     def validate_measures_and_arguments(cfg):
 
-        buildstock_dir = cfg["buildstock_directory"]
+        buildstock_dir = cfg['buildstock_directory']
         measures_dir = os.path.join(buildstock_dir, 'measures')
 
         measure_names = {
@@ -322,6 +334,18 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'add_timeseries_dst_column': True,
             'add_timeseries_utc_column': True
         }
+
+        buildstock_dir = self.cfg['buildstock_directory']
+        measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
+        measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
+        sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
+        if 'include_timeseries_unmet_hours' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_unmet_hours'] = False
+
+        if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
+            sim_out_rep_args['timeseries_num_decimal_places'] = 3
+
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
         if 'output_variables' in sim_out_rep_args:
