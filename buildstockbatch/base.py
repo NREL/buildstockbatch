@@ -201,7 +201,7 @@ class BuildStockBatchBase(object):
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
-                if re.match(r".*schedules.*\.csv", file):
+                if file.endswith('schedules.csv'):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
 
         if os.path.isfile(timeseries_filepath):
