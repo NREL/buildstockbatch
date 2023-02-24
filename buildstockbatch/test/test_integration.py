@@ -3,7 +3,7 @@ import pathlib
 import pytest
 import shutil
 
-from buildstockbatch.localdocker import LocalDockerBatch
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.test.shared_testing_stuff import (
     resstock_directory,
     resstock_required,
@@ -20,8 +20,8 @@ from buildstockbatch.test.shared_testing_stuff import (
 ], ids=lambda x: x.stem)
 @resstock_required
 def test_resstock_local_batch(project_filename):
-    LocalDockerBatch.validate_project(str(project_filename))
-    batch = LocalDockerBatch(str(project_filename))
+    LocalBatch.validate_project(str(project_filename))
+    batch = LocalBatch(str(project_filename))
 
     # Get the number of upgrades
     n_upgrades = len(batch.cfg.get("upgrades", []))
@@ -88,8 +88,8 @@ def test_resstock_local_batch(project_filename):
 ], ids=lambda x: x.stem)
 @comstock_required
 def test_comstock_local_batch(project_filename):
-    LocalDockerBatch.validate_project(str(project_filename))
-    batch = LocalDockerBatch(str(project_filename))
+    LocalBatch.validate_project(str(project_filename))
+    batch = LocalBatch(str(project_filename))
 
     # Use the already downloaded weather file if it exists
     local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
