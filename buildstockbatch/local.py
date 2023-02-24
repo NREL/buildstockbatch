@@ -12,7 +12,6 @@ This object contains the code required for execution of local batch simulations
 
 import argparse
 from dask.distributed import Client, LocalCluster
-import docker
 import functools
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -46,73 +45,60 @@ class LocalBatch(BuildStockBatchBase):
         self._weather_dir = None
 
         # Create simulation_output dir
-        sim_out_ts_dir = os.path.join(self.results_dir, 'simulation_output', 'timeseries')
-        os.makedirs(sim_out_ts_dir, exist_ok=True)
+        sim_out_ts_dir = pathlib.Path(self.results_dir, 'simulation_output', 'timeseries')
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
-            os.makedirs(os.path.join(sim_out_ts_dir, f'up{i:02d}'), exist_ok=True)
+            (sim_out_ts_dir / f'up{i:02d}').mkdir(exist_ok=True, parents=True)
 
         # Install custom gems to a volume that will be used by all workers
-        # FIXME: Get working without docker
-        if self.cfg.get('baseline', dict()).get('custom_gems', False):
-            # TODO: Fix this stuff to work without docker
-            logger.info('Installing custom gems to docker volume: buildstockbatch_custom_gems')
-
-            docker_client = docker.client.from_env()
-
-            # Create a volume to store the custom gems
-            docker_client.volumes.create(name='buildstockbatch_custom_gems', driver='local')
-            simdata_vol = docker_client.volumes.create(name='buildstockbatch_simdata_temp', driver='local')
-
-            # Define directories to be mounted in the container
-            mnt_gem_dir = '/var/oscli/gems'
-            # Install custom gems to be used in the docker container
-            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
-            mnt_gemfile_path_orig = "/var/oscli/gemfile/Gemfile"
-            docker_volume_mounts = {
-                'buildstockbatch_custom_gems': {'bind': mnt_gem_dir, 'mode': 'rw'},
-                local_gemfile_path: {'bind': mnt_gemfile_path_orig, 'mode': 'ro'},
-                simdata_vol.name: {'bind': '/var/simdata/openstudio', 'mode': 'rw'},
-            }
+        if self.cfg.get('baseline', {}).get('custom_gems', False):
 
             # Check that the Gemfile exists
+            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
             if not os.path.exists(local_gemfile_path):
                 print(f'local_gemfile_path = {local_gemfile_path}')
                 raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
 
-            # Make the buildstock/resources/.custom_gems dir to store logs
-            local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.custom_gems')
-            if not os.path.exists(local_log_dir):
-                os.makedirs(local_log_dir)
+            # Clear and create the buildstock/resources/.custom_gems dir to store gems
+            gems_install_path = pathlib.Path(self.buildstock_dir, 'resources', '.custom_gems')
+            if gems_install_path.exists():
+                shutil.rmtree(gems_install_path)
+            gems_install_path.mkdir(parents=True)
 
             # Run bundler to install the custom gems
-            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
-            bundle_install_cmd = f'/bin/bash -c "cp {mnt_gemfile_path_orig} {mnt_gemfile_path} && bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}"'  # noqa: E501
-            logger.debug(f'Running {bundle_install_cmd}')
-            container_output = docker_client.containers.run(
-                self.docker_image,
-                bundle_install_cmd,
-                remove=True,
-                volumes=docker_volume_mounts,
-                name='install_custom_gems'
+            copied_gemfile_path = gems_install_path / "Gemfile"
+            shutil.copy2(local_gemfile_path, copied_gemfile_path)
+            logger.debug('Running bundle install')
+            proc_output = subprocess.run(
+                [
+                    "bundle",
+                    "install",
+                    '--path', str(gems_install_path),
+                    '--gemfile', str(copied_gemfile_path)
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
             )
-            with open(os.path.join(local_log_dir, 'bundle_install_output.log'), 'wb') as f_out:
-                f_out.write(container_output)
+            with open(gems_install_path / 'bundle_install_output.log', 'wb') as f_out:
+                f_out.write(proc_output.stdout)
+            proc_output.check_returncode()
 
             # Report out custom gems loaded by OpenStudio CLI
-            check_active_gems_cmd = f'openstudio --bundle {mnt_gemfile_path} --bundle_path {mnt_gem_dir} ' \
-                                    '--bundle_without native_ext gem_list'
-            container_output = docker_client.containers.run(
-                self.docker_image,
-                check_active_gems_cmd,
-                remove=True,
-                volumes=docker_volume_mounts,
-                name='list_custom_gems'
+            proc_output = subprocess.run(
+                [
+                    self.openstudio_exe(),
+                    "--bundle", copied_gemfile_path,
+                    "--bundle_path", gems_install_path,
+                    "--bundle_without", "native_ext",
+                    "gem_list"
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
             )
-            gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
+            gem_list_log = gems_install_path / 'openstudio_gem_list_output.log'
             with open(gem_list_log, 'wb') as f_out:
-                f_out.write(container_output)
-            simdata_vol.remove()
+                f_out.write(proc_output.stdout)
             logger.debug(f'Review custom gems list at: {gem_list_log}')
+            proc_output.check_returncode()
 
     @classmethod
     def validate_project(cls, project_file):
@@ -163,22 +149,20 @@ class LocalBatch(BuildStockBatchBase):
             '-w', 'in.osw',
         ]
 
-        # FIXME: Custom gems
-        # if cfg.get('baseline', dict()).get('custom_gems', False):
-        #     run_cmd = [
-        #         'openstudio',
-        #         '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
-        #         '--bundle_path', f'{mnt_custom_gem_dir}',
-        #         '--bundle_without', 'native_ext',
-        #         'run', '-w', 'in.osw',
-        #         '--debug'
-        #     ]
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            custom_gem_dir = buildstock_path / 'resources' / '.custom_gems'
+            run_cmd = [
+                cls.openstudio_exe(),
+                '--bundle', str(custom_gem_dir / 'Gemfile'),
+                '--bundle_path', str(custom_gem_dir),
+                '--bundle_without', 'native_ext',
+                'run', '-w', 'in.osw',
+                '--debug'
+            ]
 
         if measures_only:
-            # if cfg.get('baseline', dict()).get('custom_gems', False):
-            #     run_cmd.insert(8, '--measures_only')
-            # else:
-            run_cmd.insert(2, '--measures_only')
+            idx = run_cmd.index('run') + 1
+            run_cmd.insert(idx, '--measures_only')
 
         env_vars = {}
         env_vars.update(os.environ)
@@ -222,7 +206,6 @@ class LocalBatch(BuildStockBatchBase):
             return
 
         # Copy files to lib dir in buildstock root
-        # FIXME: does this work for comstock?
         buildstock_path = pathlib.Path(self.buildstock_dir)
         project_path = pathlib.Path(self.project_dir)
         lib_path = pathlib.Path(self.buildstock_dir, 'lib')
