@@ -73,7 +73,8 @@ class LocalBatch(BuildStockBatchBase):
                     "bundle",
                     "install",
                     '--path', str(gems_install_path),
-                    '--gemfile', str(copied_gemfile_path)
+                    '--gemfile', str(copied_gemfile_path),
+                    "--without", "native_ext",
                 ],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT

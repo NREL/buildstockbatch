@@ -15,6 +15,8 @@ jobs:
       matrix:
         python-version: ['3.8', '3.9', '3.10', '3.11']
     name: Tests - Python ${{ matrix.python-version }}
+    env:
+      OPENSTUDIO_COMSTOCK: OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04/usr/local/openstudio-3.4.0/bin/openstudio
     steps:
       - uses: actions/checkout@v3
         with:
@@ -38,12 +40,18 @@ jobs:
           mkdir weather
           cd weather
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
-      - name: Download and Install OpenStudio
+      - name: Download and Install OpenStudio 3.5.1
         run: |
           wget -q https://github.com/NREL/OpenStudio/releases/download/v3.5.1/OpenStudio-3.5.1+22e1db7be5-Ubuntu-20.04.deb
           sudo apt install -y ./OpenStudio-3.5.1+22e1db7be5-Ubuntu-20.04.deb
+          rm OpenStudio-3.5.1+22e1db7be5-Ubuntu-20.04.deb
           openstudio openstudio_version
           which openstudio
+      - name: Download and Extract OpenStudio 3.4.0 for ComStock Tests
+        run: |
+          wget -q https://github.com/NREL/OpenStudio/releases/download/v3.4.0/OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04.tar.gz
+          tar xzf OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04.tar.gz
+          rm OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04.tar.gz
       - name: Install buildstockbatch
         run: |
           cd buildstockbatch

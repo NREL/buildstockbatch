@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import pathlib
 import pytest
@@ -19,7 +20,9 @@ from buildstockbatch.test.shared_testing_stuff import (
     resstock_directory / "project_testing" / "testing_upgrades.yml",
 ], ids=lambda x: x.stem)
 @resstock_required
-def test_resstock_local_batch(project_filename):
+def test_resstock_local_batch(project_filename, monkeypatch):
+    if 'OPENSTUDIO_RESSTOCK' in os.environ:
+        monkeypatch.setenv('OPENSTUDIO_EXE', os.environ['OPENSTUDIO_RESSTOCK'])
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
@@ -87,7 +90,9 @@ def test_resstock_local_batch(project_filename):
     comstock_directory / "ymls" / "bsb-integration-test-baseline.yml",
 ], ids=lambda x: x.stem)
 @comstock_required
-def test_comstock_local_batch(project_filename):
+def test_comstock_local_batch(project_filename, monkeypatch):
+    if 'OPENSTUDIO_COMSTOCK' in os.environ:
+        monkeypatch.setenv('OPENSTUDIO_EXE', os.environ['OPENSTUDIO_COMSTOCK'])
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
@@ -105,7 +110,7 @@ def test_comstock_local_batch(project_filename):
     n_datapoints = df.shape[0]
 
     # Run the simulations
-    batch.run_batch(n_jobs=1)
+    batch.run_batch()
 
     # Make sure all the files are there
     out_path = pathlib.Path(batch.output_dir)
