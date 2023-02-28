@@ -12,6 +12,7 @@ This object contains the code required for execution of local batch simulations
 
 import argparse
 from dask.distributed import Client, LocalCluster
+from distutils.version import StrictVersion
 import functools
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -58,8 +59,36 @@ class LocalBatch(BuildStockBatchBase):
                 print(f'local_gemfile_path = {local_gemfile_path}')
                 raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
 
+            # Check the bundler version
+            proc_output = subprocess.run(
+                ['gem', 'list'],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+            proc_output = subprocess.run(
+                [self.openstudio_exe(), 'gem_list'],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            openstudio_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+            common_bundler_versions = set(ruby_bundler_versions).intersection(openstudio_bundler_versions)
+            if common_bundler_versions:
+                # Use the most recent bundler that is in both
+                openstudio_bundler_version = sorted(common_bundler_versions, key=StrictVersion)[-1]
+            else:
+                # Install the bundler that's in openstudio
+                openstudio_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
+                subprocess.run(
+                    ['gem', 'install', 'bundler', '-v', openstudio_bundler_version],
+                    check=True
+                )
+
             # Clear and create the buildstock/resources/.custom_gems dir to store gems
             gems_install_path = pathlib.Path(self.buildstock_dir, 'resources', '.custom_gems')
+            # FIXME: remove this to keep existing gems around for efficiency
             if gems_install_path.exists():
                 shutil.rmtree(gems_install_path)
             gems_install_path.mkdir(parents=True)
@@ -70,7 +99,7 @@ class LocalBatch(BuildStockBatchBase):
             logger.debug('Running bundle install')
             proc_output = subprocess.run(
                 [
-                    "bundle",
+                    "bundle", f"_{openstudio_bundler_version}_",
                     "install",
                     '--path', str(gems_install_path),
                     '--gemfile', str(copied_gemfile_path),
@@ -100,6 +129,16 @@ class LocalBatch(BuildStockBatchBase):
                 f_out.write(proc_output.stdout)
             logger.debug(f'Review custom gems list at: {gem_list_log}')
             proc_output.check_returncode()
+
+    @staticmethod
+    def _get_gem_versions_from_gem_list(gem_name, gem_list_txt):
+        gem_versions_txt = re.search(
+            rf"^{gem_name} \((.*)\)",
+            gem_list_txt,
+            re.MULTILINE
+        ).group(1).strip()
+        gem_versions = re.findall(r"[\d\.]+", gem_versions_txt)
+        return gem_versions
 
     @classmethod
     def validate_project(cls, project_file):
