@@ -87,8 +87,8 @@ class LocalBatch(BuildStockBatchBase):
             proc_output = subprocess.run(
                 [
                     self.openstudio_exe(),
-                    "--bundle", copied_gemfile_path,
-                    "--bundle_path", gems_install_path,
+                    "--bundle", str(copied_gemfile_path),
+                    "--bundle_path", str(gems_install_path),
                     "--bundle_without", "native_ext",
                     "gem_list"
                 ],
