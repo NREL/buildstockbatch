@@ -68,8 +68,8 @@ jobs:
           flake8 buildstockbatch --count --statistics --exit-zero
       - name: Run PyTest and Coverage
         run: |
+          export OPENSTUDIO_COMSTOCK="$(pwd)/OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04/usr/local/openstudio-3.4.0/bin/openstudio"
           cd buildstockbatch
-          export OPENSTUDIO_COMSTOCK="${GITHUB_WORKSPACE}/OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04/usr/local/openstudio-3.4.0/bin/openstudio"
           pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport
       - name: Save logs on failure
         if: ${{ failure() }}
