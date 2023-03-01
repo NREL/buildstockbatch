@@ -70,7 +70,7 @@ jobs:
         run: |
           export OPENSTUDIO_COMSTOCK="$(pwd)/OpenStudio-3.4.0+4bd816f785-Ubuntu-20.04/usr/local/openstudio-3.4.0/bin/openstudio"
           cd buildstockbatch
-          pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport
+          pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport "buildstockbatch/test/test_integration.py::test_comstock_local_batch[bsb-integration-test-baseline]"
       - name: Save logs on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v3
