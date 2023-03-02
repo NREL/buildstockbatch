@@ -71,9 +71,9 @@ class EagleBatch(BuildStockBatchBase):
         logger.debug('Output directory = {}'.format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
 
-    @staticmethod
-    def validate_project(project_file):
-        super(EagleBatch, EagleBatch).validate_project(project_file)
+    @classmethod
+    def validate_project(cls, project_file):
+        super(cls, cls).validate_project(project_file)
         # Eagle specific validation goes here
 
     @property
