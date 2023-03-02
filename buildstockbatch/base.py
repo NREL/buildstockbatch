@@ -17,6 +17,7 @@ import logging
 from lxml import objectify
 import os
 import pandas as pd
+import numpy as np
 import re
 import requests
 import shutil
@@ -215,7 +216,7 @@ class BuildStockBatchBase(object):
 
             tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
-                schedules = pd.read_csv(schedules_filepath)
+                schedules = pd.read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
