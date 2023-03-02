@@ -3,7 +3,7 @@
 """
 buildstockbatch.base
 ~~~~~~~~~~~~~~~
-This is the base class mixed into the deployment specific classes (i.e. eagle, localdocker)
+This is the base class mixed into the deployment specific classes (i.e. eagle, local)
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -20,6 +20,7 @@ import pandas as pd
 import re
 import requests
 import shutil
+import subprocess
 import tempfile
 import yamale
 import zipfile
@@ -90,6 +91,10 @@ class BuildStockBatchBase(object):
         # Select a sampler
         Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
         return Sampler(self, **self.cfg['sampler'].get('args', {}))
+
+    @staticmethod
+    def openstudio_exe():
+        return os.environ.get("OPENSTUDIO_EXE", "openstudio")
 
     def path_rel_to_projectfile(self, x):
         return path_rel_to_file(self.project_filename, x)
@@ -196,7 +201,7 @@ class BuildStockBatchBase(object):
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
-                if file.endswith('schedules.csv'):
+                if re.match(r".*schedules.*\.csv", file):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
 
         if os.path.isfile(timeseries_filepath):
@@ -249,21 +254,21 @@ class BuildStockBatchBase(object):
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir, ignore_errors=True)
 
-    @staticmethod
-    def validate_project(project_file):
-        assert BuildStockBatchBase.validate_project_schema(project_file)
-        assert BuildStockBatchBase.validate_sampler(project_file)
-        assert BuildStockBatchBase.validate_workflow_generator(project_file)
-        assert BuildStockBatchBase.validate_misc_constraints(project_file)
-        assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
-        assert BuildStockBatchBase.validate_reference_scenario(project_file)
-        assert BuildStockBatchBase.validate_options_lookup(project_file)
-        assert BuildStockBatchBase.validate_logic(project_file)
-        assert BuildStockBatchBase.validate_measure_references(project_file)
-        assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
-        assert BuildStockBatchBase.validate_resstock_or_comstock_version(project_file)
-        assert BuildStockBatchBase.validate_openstudio_version(project_file)
-        assert BuildStockBatchBase.validate_number_of_options(project_file)
+    @classmethod
+    def validate_project(cls, project_file):
+        assert cls.validate_project_schema(project_file)
+        assert cls.validate_sampler(project_file)
+        assert cls.validate_workflow_generator(project_file)
+        assert cls.validate_misc_constraints(project_file)
+        assert cls.validate_xor_nor_schema_keys(project_file)
+        assert cls.validate_reference_scenario(project_file)
+        assert cls.validate_options_lookup(project_file)
+        assert cls.validate_logic(project_file)
+        assert cls.validate_measure_references(project_file)
+        assert cls.validate_postprocessing_spec(project_file)
+        assert cls.validate_resstock_or_comstock_version(project_file)
+        assert cls.validate_openstudio_version(project_file)
+        assert cls.validate_number_of_options(project_file)
         logger.info('Base Validation Successful')
         return True
 
@@ -274,6 +279,31 @@ class BuildStockBatchBase(object):
             return os.path.abspath(buildstock_dir)
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+
+    @classmethod
+    def validate_openstudio_path(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        os_version = cfg.get('os_version', cls.DEFAULT_OS_VERSION)
+        os_sha = cfg.get('os_sha', cls.DEFAULT_OS_SHA)
+        try:
+            proc_out = subprocess.run(
+                [cls.openstudio_exe(), "openstudio_version"],
+                capture_output=True,
+                text=True
+            )
+        except FileNotFoundError:
+            raise ValidationError(f"Cannot find openstudio at `{cls.openstudio_exe()}`")
+        if proc_out.returncode != 0:
+            raise ValidationError(f"OpenStudio failed with the following error {proc_out.stderr}")
+        actual_os_version, actual_os_sha = proc_out.stdout.strip().split("+")
+        if os_version != actual_os_version:
+            raise ValidationError(f"OpenStudio version is {actual_os_version}, expected is {os_version}")
+        if os_sha != actual_os_sha:
+            raise ValidationError(
+                f"OpenStudio version is correct at {os_version}, but the shas don't match. "
+                "Got {actual_os_sha}, expected {os_sha}"
+            )
+        return True
 
     @staticmethod
     def validate_sampler(project_file):

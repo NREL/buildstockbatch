@@ -139,7 +139,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             retain_stdout_expandobject: bool(required=False)
             retain_schedules_csv: bool(required=False)
             debug: bool(required=False)
-        """
+        """  # noqa E501
         workflow_generator_args = cfg['workflow_generator']['args']
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
