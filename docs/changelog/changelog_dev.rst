@@ -21,3 +21,9 @@ Development Changelog
         :tickets: 300
 
         Remove docker dependency for local runs.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 353
+
+        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
