@@ -10,6 +10,7 @@ This object contains the code required for generating the set of simulations to 
 import docker
 import logging
 import os
+import pathlib
 import shutil
 import subprocess
 import sys
@@ -105,6 +106,27 @@ class ResidentialQuotaSampler(BuildStockSampler):
         subprocess.run(args, check=True, env=os.environ, cwd=self.parent().output_dir)
         logger.debug("Singularity sampling completed.")
         return self.csv_path
+
+    def _run_sampling_local_openstudio(self):
+        subprocess.run(
+            [
+                self.parent().openstudio_exe(),
+                str(pathlib.Path('resources', 'run_sampling.rb')),
+                '-p', self.cfg['project_directory'],
+                '-n', str(self.n_datapoints),
+                '-o', 'buildstock.csv'
+            ],
+            cwd=self.buildstock_dir,
+            check=True
+        )
+        destination_filename = pathlib.Path(self.csv_path)
+        if destination_filename.exists():
+            os.remove(destination_filename)
+        shutil.move(
+            pathlib.Path(self.buildstock_dir, 'resources', 'buildstock.csv'),
+            destination_filename
+        )
+        return destination_filename
 
 
 class ResidentialQuotaDownselectSampler(DownselectSamplerBase):

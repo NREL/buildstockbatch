@@ -92,7 +92,7 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'buildstock_docker=buildstockbatch.localdocker:main',
+            'buildstock_local=buildstockbatch.local:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
             'buildstock_aws=buildstockbatch.aws.aws:main'
         ]
@@ -108,5 +108,6 @@ setuptools.setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11'
     ]
 )

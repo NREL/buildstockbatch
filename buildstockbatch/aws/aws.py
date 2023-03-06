@@ -17,6 +17,7 @@ import collections
 import csv
 from dask.distributed import Client
 from dask_cloudprovider.aws import FargateCluster
+import docker
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import hashlib
@@ -39,11 +40,10 @@ import time
 import tqdm
 import io
 
-from buildstockbatch.localdocker import DockerBatchBase
-from buildstockbatch.base import ValidationError
+from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch import postprocessing
-from ..utils import log_error_details, get_project_configuration
+from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -1068,6 +1068,29 @@ class AwsBatchEnv(AwsJobBase):
                 pass
             else:
                 raise error
+
+
+class DockerBatchBase(BuildStockBatchBase):
+
+    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+
+        self.docker_client = docker.DockerClient.from_env()
+        try:
+            self.docker_client.ping()
+        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
+            logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
+            raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
+
+    @staticmethod
+    def validate_project(project_file):
+        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
+
+    @property
+    def docker_image(self):
+        return 'nrel/openstudio:{}'.format(self.os_version)
 
 
 class AwsBatch(DockerBatchBase):

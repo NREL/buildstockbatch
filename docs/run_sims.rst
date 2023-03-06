@@ -1,18 +1,12 @@
 Running a Project
 -----------------
 
-Local (Docker)
-~~~~~~~~~~~~~~
+Local
+~~~~~
 
-Running the simulations locally uses Docker. Docker needs to be configured to use all
-(or most) of the CPUs on your machine. To do so, click on the Docker icon by the clock. It
-looks like a little whale with boxes on its back. Select "Preferences..." and "Advanced".
-Slide the CPUs available to Docker to the number of concurrent simulations you want to run
-(probably all of them).
+Running a project file is straightforward. Call the ``buildstock_local`` command line tool as follows:
 
-Running a project file is straightforward. Call the ``buildstock_docker`` command line tool as follows:
-
-.. command-output:: buildstock_docker --help
+.. command-output:: buildstock_local --help
    :ellipsis: 0,8
 
 .. warning::
@@ -23,7 +17,7 @@ Running a project file is straightforward. Call the ``buildstock_docker`` comman
 
 .. warning::
 
-    Running the simulation with ``postprocessonly`` when there is already postprocessed results from previous run will
+    Running the simulation with ``--postprocessonly`` when there is already postprocessed results from previous run will
     overwrite those results.
 
 Eagle
