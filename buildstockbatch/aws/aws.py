@@ -380,6 +380,12 @@ class AwsBatchEnv(AwsJobBase):
 
         self.nat_gateway_id = nat_response['NatGateway']['NatGatewayId']
 
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.nat_gateway_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
+        )
+
         logger.info("NAT Gateway created.")
 
         # Create a new private route table
