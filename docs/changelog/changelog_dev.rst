@@ -28,3 +28,9 @@ Development Changelog
         :tickets: 352
 
         Fix an issue with schedules datatype that was causing the crash of postporcessing at the final step.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 353
+
+        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
