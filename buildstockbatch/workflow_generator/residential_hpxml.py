@@ -403,7 +403,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     'hpxml_path': '../../run/home.xml',
                     'output_dir': '../../run',
                     'debug': debug,
-                    'add_component_loads': add_component_loads
+                    'add_component_loads': add_component_loads,
+                    'skip_validation': True
                 }
             }
         ])

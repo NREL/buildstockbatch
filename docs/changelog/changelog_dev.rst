@@ -21,3 +21,16 @@ Development Changelog
         :tickets: 300
 
         Remove docker dependency for local runs.
+
+    .. change::
+        :tags: general, bugfix
+        :pullreq: 355
+        :tickets: 352
+
+        Fix an issue with schedules datatype that was causing the crash of postporcessing at the final step.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 353
+
+        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
