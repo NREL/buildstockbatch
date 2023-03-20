@@ -152,6 +152,7 @@ class AwsBatchEnv(AwsJobBase):
         self.service_role_arn = None
         self.instance_profile_arn = None
         self.job_queue_arn = None
+        self.s3_gateway_endpoint = None
 
         logger.propagate = False
 
@@ -438,7 +439,20 @@ class AwsBatchEnv(AwsJobBase):
                     logger.info("Nat Gateway not yet created. Sleeping...")
                 else:
                     raise
+            
+        gateway_response = self.ec2.create_vpc_endpoint(
+            VpcId=self.vpc_id,
+            ServiceName='com.amazonaws.us-west-2.s3',
+            RouteTableIds=[self.priv_route_table_id],
+            SubnetId=[self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
+            SecurityGroupIds=[self.batch_security_group],
+            PrivateDnsEnabled=True,
+            VpcEndpointType='Gateway',
+            PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}'
+        )
 
+        self.s3_gateway_endpoint = gateway_response['VpcEndpoint']['VpcEndpointId']
+        
     def generate_name_value_inputs(self, var_dictionary):
         """
         Helper to properly format more easily used dictionaries.
@@ -924,6 +938,25 @@ class AwsBatchEnv(AwsJobBase):
 
         for vpc in response['Vpcs']:
             this_vpc = vpc['VpcId']
+
+            s3gw_response = self.ec2.describe_vpc_endpoints(
+                Filters=[
+                    {
+                        'Name': 'vpc-id',
+                        'Values': [
+                            this_vpc
+                        ]
+                    }
+                ]
+            )
+            
+            for s3gw in s3gw_response['VpcEndpoints']:
+                this_s3gw = s3gw['VpcEndpointId']
+
+                if s3gw['State'] != 'deleted':
+                    self.ec2.delete_nat_gateway(
+                        VpcEndpointIds=this_s3gw
+                    )
 
             ng_response = self.ec2.describe_nat_gateways(
                 Filters=[
