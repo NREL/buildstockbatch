@@ -444,9 +444,6 @@ class AwsBatchEnv(AwsJobBase):
             VpcId=self.vpc_id,
             ServiceName='com.amazonaws.us-west-2.s3',
             RouteTableIds=[self.priv_route_table_id],
-            SubnetId=[self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
-            SecurityGroupIds=[self.batch_security_group],
-            PrivateDnsEnabled=True,
             VpcEndpointType='Gateway',
             PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}'
         )
@@ -954,8 +951,8 @@ class AwsBatchEnv(AwsJobBase):
                 this_s3gw = s3gw['VpcEndpointId']
 
                 if s3gw['State'] != 'deleted':
-                    self.ec2.delete_nat_gateway(
-                        VpcEndpointIds=this_s3gw
+                    self.ec2.delete_vpc_endpoints(
+                        VpcEndpointIds=[this_s3gw]
                     )
 
             ng_response = self.ec2.describe_nat_gateways(
