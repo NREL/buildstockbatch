@@ -99,6 +99,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_total_consumptions: bool(required=False)
             include_timeseries_fuel_consumptions: bool(required=False)
             include_timeseries_end_use_consumptions: bool(required=False)
+            include_timeseries_system_use_consumptions: bool(required=False)
             include_timeseries_emissions: bool(required=False)
             include_timeseries_emission_fuels: bool(required=False)
             include_timeseries_emission_end_uses: bool(required=False)
@@ -343,6 +344,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
             sim_out_rep_args['timeseries_num_decimal_places'] = 3
+
+        if 'include_timeseries_system_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_system_use_consumptions'] = False
 
         sim_out_rep_args.update(workflow_args['simulation_output_report'])
 
