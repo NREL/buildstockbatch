@@ -3,7 +3,7 @@ import pathlib
 import pytest
 import shutil
 
-from buildstockbatch.localdocker import LocalDockerBatch
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 
 
@@ -15,8 +15,8 @@ from buildstockbatch.test.shared_testing_stuff import resstock_directory, ressto
 ], ids=lambda x: x.stem)
 @resstock_required
 def test_resstock_local_batch(project_filename):
-    LocalDockerBatch.validate_project(str(project_filename))
-    batch = LocalDockerBatch(str(project_filename))
+    LocalBatch.validate_project(str(project_filename))
+    batch = LocalBatch(str(project_filename))
 
     # Get the number of upgrades
     n_upgrades = len(batch.cfg.get("upgrades", []))
