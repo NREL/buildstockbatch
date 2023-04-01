@@ -7,7 +7,7 @@ sampler: include('sampler-spec', required=True)
 workflow_generator: include('workflow-generator-spec', required=True)
 eagle: include('hpc-spec', required=False)
 aws: include('aws-spec', required=False)
-output_directory: str(required=False)
+output_directory: regex('^.*\/[a-z][a-z0-9_]*\/?$', required=False)
 sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
 os_version: str(required=False)
@@ -121,5 +121,5 @@ s3-aws-postprocessing-spec:
 
 athena-aws-postprocessing-spec:
   glue_service_role: str(required=False)
-  database_name: str(required=True)
+  database_name: regex('^[a-z][a-z0-9_]*$', required=True)
   max_crawling_time: num(requried=False)
