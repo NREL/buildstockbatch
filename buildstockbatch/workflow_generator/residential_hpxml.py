@@ -99,6 +99,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_total_consumptions: bool(required=False)
             include_timeseries_fuel_consumptions: bool(required=False)
             include_timeseries_end_use_consumptions: bool(required=False)
+            include_timeseries_system_use_consumptions: bool(required=False)
             include_timeseries_emissions: bool(required=False)
             include_timeseries_emission_fuels: bool(required=False)
             include_timeseries_emission_end_uses: bool(required=False)
@@ -337,6 +338,51 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
         measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
         sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
+        if 'include_annual_total_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_total_consumptions'] = True
+
+        if 'include_annual_fuel_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_fuel_consumptions'] = True
+
+        if 'include_annual_end_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_end_use_consumptions'] = True
+
+        if 'include_annual_system_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_system_use_consumptions'] = False
+
+        if 'include_annual_emissions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emissions'] = True
+
+        if 'include_annual_emission_fuels' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emission_fuels'] = True
+
+        if 'include_annual_emission_end_uses' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emission_end_uses'] = True
+
+        if 'include_annual_total_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_total_loads'] = True
+
+        if 'include_annual_unmet_hours' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_unmet_hours'] = True
+
+        if 'include_annual_peak_fuels' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_peak_fuels'] = True
+
+        if 'include_annual_peak_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_peak_loads'] = True
+
+        if 'include_annual_component_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_component_loads'] = True
+
+        if 'include_annual_hot_water_uses' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_hot_water_uses'] = True
+
+        if 'include_annual_hvac_summary' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_hvac_summary'] = True
+
+        if 'include_timeseries_system_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_system_use_consumptions'] = False
 
         if 'include_timeseries_unmet_hours' in sim_out_rep_args_avail:
             sim_out_rep_args['include_timeseries_unmet_hours'] = False
