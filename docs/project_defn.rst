@@ -129,9 +129,7 @@ following properties:
 Output Directory
 ~~~~~~~~~~~~~~~~
 
-``output_directory`` specifies where the outputs of the simulation should be stored. The last folder in the path will be
- used as the table name in Athena (if aws configuration is present under postprocessing) so it needs to be lowercase,
- start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
+``output_directory``: specifies where the outputs of the simulation should be stored. The last folder in the path will be used as the table name in Athena (if aws configuration is present under postprocessing) so needs to be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
 
 .. _eagle-config:
 
