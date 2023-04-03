@@ -129,7 +129,9 @@ following properties:
 Output Directory
 ~~~~~~~~~~~~~~~~
 
-``output_directory`` specifies where the outputs of the simulation should be stored.
+``output_directory`` specifies where the outputs of the simulation should be stored. The last folder in the path will be
+ used as the table name in Athena (if aws configuration is present under postprocessing) so it needs to be lowercase,
+ start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`
 
 .. _eagle-config:
 
@@ -289,7 +291,7 @@ The configuration options for postprocessing and AWS upload are:
                present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
                name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default".
                For help, consult the `AWS documentation for Glue Service Roles <https://docs.aws.amazon.com/glue/latest/dg/create-an-iam-role.html>`_.
-            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
+            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name. Database name must be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`
             *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
                before aborting it.
 
