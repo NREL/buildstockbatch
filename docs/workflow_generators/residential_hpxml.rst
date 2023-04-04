@@ -97,7 +97,6 @@ Arguments
   - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for the total building.
   - ``include_timeseries_fuel_consumptions``: Generates timeseries energy consumptions for each fuel type (in kBtu for fossil fuels and kWh for electricity).
   - ``include_timeseries_end_use_consumptions``: Generates timeseries energy consumptions for each end use type (in kBtu for fossil fuels and kWh for electricity).
-  - ``include_timeseries_system_use_consumptions``: Generates timeseries energy consumptions for each HVAC and water heating system.
   - ``include_timeseries_emissions``: Generates timeseries emissions (e.g., CO2). Requires the appropriate HPXML inputs to be specified.
   - ``include_timeseries_emission_fuels``: Generates timeseries emissions for each fuel type. Requires the appropriate HPXML inputs to be specified.
   - ``include_timeseries_emission_end_uses``: Generates timeseries emissions for each end use. Requires the appropriate HPXML inputs to be specified.

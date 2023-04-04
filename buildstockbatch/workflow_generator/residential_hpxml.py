@@ -99,7 +99,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_total_consumptions: bool(required=False)
             include_timeseries_fuel_consumptions: bool(required=False)
             include_timeseries_end_use_consumptions: bool(required=False)
-            include_timeseries_system_use_consumptions: bool(required=False)
             include_timeseries_emissions: bool(required=False)
             include_timeseries_emission_fuels: bool(required=False)
             include_timeseries_emission_end_uses: bool(required=False)

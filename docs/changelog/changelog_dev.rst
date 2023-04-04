@@ -45,6 +45,6 @@ Development Changelog
         :tags: general, feature
         :pullreq: 363
 
-        Adds ``include_timeseries_system_use_consumptions`` argument to the Residential HPXML Workflow Generator.
-        Fixes all ``include_annual_foo`` arguments to true (except for ``include_annual_system_use_consumptions``
-        which is fixed to false).
+        For the Residential HPXML Workflow Generator, fixes all ``include_annual_foo`` arguments to true (except
+        for ``include_annual_system_use_consumptions`` which is fixed to false). Also fixes
+        ``include_timeseries_system_use_consumptions`` to false.
