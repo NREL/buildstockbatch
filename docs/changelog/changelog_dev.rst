@@ -40,3 +40,11 @@ Development Changelog
         :pullreq: 362
 
         Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 363
+
+        Adds ``include_timeseries_system_use_consumptions`` argument to the Residential HPXML Workflow Generator.
+        Fixes all ``include_annual_foo`` arguments to true (except for ``include_annual_system_use_consumptions``
+        which is fixed to false).
