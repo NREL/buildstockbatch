@@ -2,6 +2,7 @@ from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
 from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
+from buildstockbatch.test.shared_testing_stuff import resstock_directory
 import pytest
 
 
@@ -322,7 +323,7 @@ def test_residential_hpxml(mocker):
     building_id = 1
     upgrade_idx = 0
     cfg = {
-        'buildstock_directory': '../',
+        'buildstock_directory': resstock_directory,
         'baseline': {
             'n_buildings_represented': 100
         },
