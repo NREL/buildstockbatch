@@ -152,7 +152,8 @@ class AwsBatchEnv(AwsJobBase):
         self.service_role_arn = None
         self.instance_profile_arn = None
         self.job_queue_arn = None
-        self.s3_gateway_endpoint = None
+        self.s3_gateway_endpoint_id = None
+        self.prefix_list_id = None
 
         logger.propagate = False
 
@@ -442,13 +443,25 @@ class AwsBatchEnv(AwsJobBase):
             
         gateway_response = self.ec2.create_vpc_endpoint(
             VpcId=self.vpc_id,
-            ServiceName='com.amazonaws.us-west-2.s3',
-            RouteTableIds=[self.priv_route_table_id],
+            ServiceName=f'com.amazonaws.{self.region}.s3',
+            RouteTableIds=[self.priv_route_table_id, self.pub_route_table_id],
             VpcEndpointType='Gateway',
-            PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}'
+            PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}',
         )
 
-        self.s3_gateway_endpoint = gateway_response['VpcEndpoint']['VpcEndpointId']
+        logger.info("S3 gateway created for VPC.")
+
+        self.s3_gateway_endpoint_id = gateway_response['VpcEndpoint']['VpcEndpointId']
+
+        backoff(
+            self.ec2.create_tags,
+            Resources=[
+                self.s3_gateway_endpoint_id
+            ],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
+        )
+
+
         
     def generate_name_value_inputs(self, var_dictionary):
         """
