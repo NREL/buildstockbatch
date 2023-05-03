@@ -40,3 +40,9 @@ Development Changelog
         :pullreq: 362
 
         Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
+    
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 365
+
+        Upload buildstock.csv to S3 during postprocessing
