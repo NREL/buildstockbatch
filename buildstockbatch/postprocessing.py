@@ -637,7 +637,8 @@ def upload_results(aws_conf, output_dir, results_dir):
         full_path = buildstock_dir.joinpath(filepath)
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(s3_bucket)
-        s3key = Path(s3_prefix_output).joinpath(filepath).as_posix()
+        s3_prefix_output_new = s3_prefix_output+ '/' + 'buildstock_csv' + '/'
+        s3key = Path(s3_prefix_output_new).joinpath(filepath).as_posix()
         bucket.upload_file(str(full_path), str(s3key))
 
     dask.compute(map(dask.delayed(upload_file), all_files))
