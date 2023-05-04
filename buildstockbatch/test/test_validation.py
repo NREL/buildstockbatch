@@ -157,6 +157,7 @@ def test_bad_measures(project_file):
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml'),
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2-with-anchors.yml')
 ])
 def test_good_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
