@@ -1,0 +1,51 @@
+schema_version: '0.3'
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+weather_files_url: https://fake-url
+baseline:
+  n_buildings_represented: 81221016
+
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 30
+
+workflow_generator:
+  type: residential_default
+  args:
+    simulation_output:
+      include_enduse_subcategories: true
+    timeseries_csv_export:
+      reporting_frequency: Timestep
+      include_enduse_subcategories: true
+      output_variables:
+        - Zone Mean Air Temperature
+    reporting_measures:
+      - measure_dir_name: ReportingMeasure1
+
+references:
+  vintage_logic: &vintage_logic
+      - or:
+        - Insulation Slab|Good Option
+        - Insulation Slab|None
+      - not: Insulation Wall|Good Option
+      - and:
+          - Vintage|1960s||Vintage|1960s
+          - Vintage|1980s
+
+upgrades:
+  - upgrade_name: cool upgrade
+    options:
+      - option: Vintage<1940
+  - upgrade_name: good upgrade
+    options:
+      - option: Vintage|<1940
+        apply_logic: *vintage_logic
+        costs:
+          - value: 0.9
+            multiplier: Fixed (1)
+      - option: Insulation Finished Basement|Good Option
+        apply_logic:
+          - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1960s||Vintage|1940s
+    reference_scenario: cool upgrade
