@@ -49,7 +49,7 @@ To use your own custom weather files for a specific location, this can be done i
 - Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
 
 References
-~~~~~~~
+~~~~~~~~~~
 This is a throwaway section where you can define YAML anchors so that these can be used elsewhere in the yaml. Things defined here have no impact in the simulation and is purely used for anchor definitions.
 
 Sampler
