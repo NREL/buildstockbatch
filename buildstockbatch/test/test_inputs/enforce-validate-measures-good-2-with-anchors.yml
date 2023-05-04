@@ -40,7 +40,7 @@ upgrades:
   - upgrade_name: good upgrade
     options:
       - option: Vintage|<1940
-        apply_logic: **vintage_logic
+        apply_logic: *vintage_logic
         costs:
           - value: 0.9
             multiplier: Fixed (1)
