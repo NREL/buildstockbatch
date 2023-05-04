@@ -14,6 +14,7 @@ os_version: str(required=False)
 os_sha: str(required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
+references: map(required=False)
 ---
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
