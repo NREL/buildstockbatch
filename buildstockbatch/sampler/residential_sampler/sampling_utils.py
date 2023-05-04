@@ -10,6 +10,7 @@ import random
 from collections import Counter, defaultdict
 from typing import Union, TypedDict
 random.seed(42)
+from buildstockbatch.utils import log_error_details, get_error_details
 
 
 TSVTuple = tuple[dict[tuple[str, ...], list[float]], list[str], list[str]]
@@ -105,7 +106,7 @@ def get_marginal_prob(initial_prob: float, count: int) -> float:
     """
     return initial_prob * count - math.floor(initial_prob * count)
 
-
+log_error_details("sampler_tsv_issues.txt")
 def get_issues(samples: list[str], probs: list[float], opts: list[str]) -> list[str]:
     """Find if the actual samples and reference samples are equivalent. For them to be equivalent:
     1. there are no more than 1 sample difference for any options and sum of differences (extra and deficit) is zero.
@@ -171,8 +172,9 @@ def get_issues(samples: list[str], probs: list[float], opts: list[str]) -> list[
 
     return issues
 
-
+log_error_details("sampler_tsv_issues.txt")
 def get_tsv_issues(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame) -> list[str]:
+    print("Getting TSV Issues")
     group2probs, dep_cols, opt_cols = tsv_tuple
     issues: list[str] = []
     if not dep_cols:
@@ -188,8 +190,13 @@ def get_tsv_issues(param: str, tsv_tuple: TSVTuple, sample_df: pd.DataFrame) -> 
             group_key = group_key if isinstance(group_key, tuple) else (group_key,)
             probs = group2probs[group_key]
             samples = sub_df[param].values
-            current_issues = [f"In {group_key} {issue}" for issue in get_issues(
-                samples=samples, probs=probs[:-1], opts=opt_cols)]
+            try:
+                current_issues = [f"In {group_key} {issue}" for issue in get_issues(
+                    samples=samples, probs=probs[:-1], opts=opt_cols)]
+            except Exception:
+                print(f"Error in {param} {group_key}. Error: {get_error_details()}")
+                time.sleep(1)
+                raise
             issues.extend(current_issues)
     if issues:
         print(f"{param} has {len(issues)} issues.")

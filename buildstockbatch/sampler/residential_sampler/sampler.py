@@ -6,7 +6,7 @@ import multiprocessing
 import click
 import pathlib
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
-
+from buildstockbatch.utils import log_error_details
 
 def get_param_graph(param2dep: dict[str, list[str]]) -> nx.DiGraph:
     param2dep_graph = nx.DiGraph()
@@ -40,7 +40,7 @@ def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num
         sample_size_list = []
         index_list = []
         for group_key, indexes in grouped_df.groups.items():
-            group_key = group_key if isinstance(group_key, tuple) else (group_key,)
+            group_key = group_key if isinstance(group_key, tuple) else (str(group_key),)
             index_list.append(indexes)
             probs = group2values[group_key]
             prob_list.append(probs)
@@ -179,6 +179,7 @@ def verify(buildstock_file: str, project: str, output: str):
        This gives absolute distribution error for group as 0.15, 0.15 and 0.3. Hence, max_group_error is 0.3 and
        total_group_eror is 0.6
     """
+    print("Verifying buildstock.csv file.")
     buildstock_df = pd.read_csv(buildstock_file)
     buildstock_df = buildstock_df.astype(str)
     issues_dict = get_all_tsv_issues(buildstock_df, pathlib.Path(project))
@@ -192,15 +193,15 @@ def verify(buildstock_file: str, project: str, output: str):
         click.echo(click.style("Buildstock.csv is correct.", fg='green'))
     click.echo("Now calculating max sampling error.")
     error_df = get_all_tsv_max_errors(sample_df=buildstock_df, project_dir=pathlib.Path(project))
-    error_df = error_df.sort_values(by=['total_option_error'], key=lambda x: abs(x), ascending=False)
+    error_df = error_df.sort_values(by=['options_error_l2norm'], key=lambda x: abs(x), ascending=False)
     click.echo("Top 10 TSVs with maximum option sampling errors")
     click.echo(error_df.head(10))
     error_df.to_csv(output)
-    error_df = error_df.sort_values(by=['total_group_error'], key=lambda x: abs(x), ascending=False)
+    error_df = error_df.sort_values(by=['groups_error_l2norm'], key=lambda x: abs(x), ascending=False)
     click.echo("Top 10 TSVs with maximum group sampling errors")
     click.echo(error_df.head(10))
 
-
+log_error_details("sampler_error.txt")
 def main() -> None:
     cli()
 
