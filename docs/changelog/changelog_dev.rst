@@ -42,6 +42,12 @@ Development Changelog
         Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
 
     .. change::
+        :tags: validation, feature
+        :pullreq: 366
+
+        Add a references section in the yaml schema to allow defining the anchors at a single place.
+
+    .. change::
         :tags: general, feature
         :pullreq: 363
 
