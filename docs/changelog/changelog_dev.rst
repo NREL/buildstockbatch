@@ -46,3 +46,12 @@ Development Changelog
         :pullreq: 366
 
         Add a references section in the yaml schema to allow defining the anchors at a single place.
+
+    .. change::
+        :tags: comstock, changed, validation, eagle
+        :pullreq: 350
+
+        Allows up to 8 hours per simulation in the ``minutes_per_sim`` validator
+        under the ``eagle`` section of a configuation YAML. This is required to
+        allow long-running ComStock models to be segmented into their own YAML
+        to allow for more efficient use of HPC resources.

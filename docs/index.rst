@@ -28,7 +28,7 @@ supercomputer, Eagle.
 Updates & Changelog
 ===================
 
-:doc:`Migration from 2023.01.0 to 2023.03.0 <changelog/migration_2023_03_0>`
+:doc:`Migration from 0.19 to 0.20 <changelog/migration_0_20>`
 
 .. toctree::
    :maxdepth: 2
