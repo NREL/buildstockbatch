@@ -34,3 +34,15 @@ Development Changelog
         :pullreq: 353
 
         Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: validation, feature
+        :pullreq: 362
+
+        Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
+
+    .. change::
+        :tags: validation, feature
+        :pullreq: 366
+
+        Add a references section in the yaml schema to allow defining the anchors at a single place.

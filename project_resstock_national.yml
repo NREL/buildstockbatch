@@ -5,13 +5,16 @@ output_directory: /scratch/nmerket/national_test_outputs2
 # weather_files_url: https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
 weather_files_path: /shared-projects/buildstock/weather/BuildStock_TMY3_FIPS.zip  # Relative to this file or absolute path to zipped weather files
 
+references:
+    logic: &my_logic
+      - Geometry Building Type RECS|Single-Family Detached
+      - Vacancy Status|Occupied
+
 sampler:
   type: residential_quota_downselect
   args:
     n_datapoints: 350000
-    logic:
-      - Geometry Building Type RECS|Single-Family Detached
-      - Vacancy Status|Occupied
+    logic: *my_logic
     resample: false
 
 workflow_generator:
