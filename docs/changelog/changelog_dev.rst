@@ -46,3 +46,11 @@ Development Changelog
         :pullreq: 366
 
         Add a references section in the yaml schema to allow defining the anchors at a single place.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 351
+
+        For the Residential HPXML Workflow Generator, add a new ``simple_filepath`` argument
+        for pointing to user-specified CSV file of utility rates. The CSV file can contain utility rates
+        mapped by State, or any other parameter.
