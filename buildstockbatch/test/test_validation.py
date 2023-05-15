@@ -10,7 +10,7 @@ This file contains the code required to test validation methods across
 :license: BSD-3
 """
 
-
+import inspect
 import os
 import pytest
 import types
@@ -18,7 +18,7 @@ import tempfile
 import json
 import pathlib
 from buildstockbatch.eagle import EagleBatch
-from buildstockbatch.localdocker import LocalDockerBatch
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 from buildstockbatch.utils import get_project_configuration
@@ -38,20 +38,20 @@ def filter_logs(logs, level):
     return filtered_logs
 
 
-def test_base_validation_is_static():
-    assert isinstance(BuildStockBatchBase.validate_project, types.FunctionType)
+def test_base_validation_is_classmethod():
+    assert inspect.ismethod(BuildStockBatchBase.validate_project)
 
 
 def test_base_schema_validation_is_static():
     assert isinstance(BuildStockBatchBase.validate_project_schema, types.FunctionType)
 
 
-def test_eagle_validation_is_static():
-    assert isinstance(EagleBatch.validate_project, types.FunctionType)
+def test_eagle_validation_is_classmethod():
+    assert inspect.ismethod(EagleBatch.validate_project)
 
 
-def test_local_docker_validation_is_static():
-    assert isinstance(LocalDockerBatch.validate_project, types.FunctionType)
+def test_local_docker_validation_is_classmethod():
+    assert inspect.ismethod(LocalBatch.validate_project)
 
 
 def test_complete_schema_passes_validation():
@@ -157,6 +157,7 @@ def test_bad_measures(project_file):
 
 @pytest.mark.parametrize("project_file", [
     os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml'),
+    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2-with-anchors.yml')
 ])
 def test_good_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
@@ -282,7 +283,7 @@ def test_number_of_options_apply_upgrade():
         with open(new_proj_filename, "w") as f:
             json.dump(cfg, f)
         with pytest.raises(ValidationError):
-            LocalDockerBatch.validate_number_of_options(str(new_proj_filename))
+            LocalBatch.validate_number_of_options(str(new_proj_filename))
 
 
 @resstock_required

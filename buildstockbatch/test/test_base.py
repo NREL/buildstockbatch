@@ -17,9 +17,9 @@ import yaml
 
 import buildstockbatch
 from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.local import LocalBatch
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
-from buildstockbatch.utils import ContainerRuntime
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -407,11 +407,10 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
             }
         }
     })
-    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
-    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
-    mocker.patch.object(BuildStockBatchBase, 'CONTAINER_RUNTIME', ContainerRuntime.DOCKER)
+    mocker.patch.object(LocalBatch, 'weather_dir', None)
+    mocker.patch.object(LocalBatch, 'results_dir', results_dir)
 
-    bsb = BuildStockBatchBase(project_filename)
+    bsb = LocalBatch(project_filename)
     sampling_output_csv = bsb.sampler.run_sampling()
     df2 = pd.read_csv(sampling_output_csv)
     pd.testing.assert_frame_equal(df, df2)
@@ -424,4 +423,4 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
         yaml.dump(cfg, f)
 
     with pytest.raises(ValidationError, match=r"sample_file doesn't exist"):
-        BuildStockBatchBase(project_filename).sampler.run_sampling()
+        LocalBatch(project_filename).sampler.run_sampling()
