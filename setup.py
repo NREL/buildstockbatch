@@ -69,7 +69,6 @@ setuptools.setup(
             'buildstock_aws=buildstockbatch.aws.aws:main'
         ]
     },
-    cmdclass={'test': PyTest},
     license='BSD-3',
     classifiers=[
         'Development Status :: 3 - Alpha',
