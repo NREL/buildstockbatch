@@ -55,3 +55,9 @@ Development Changelog
         under the ``eagle`` section of a configuation YAML. This is required to
         allow long-running ComStock models to be segmented into their own YAML
         to allow for more efficient use of HPC resources.
+
+    .. change::
+        :tags: resstock, workflow generator, deprecated
+        :pullreq: 370
+
+        Removing the ``residential_default`` workflow generator.
