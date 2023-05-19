@@ -82,11 +82,7 @@ def basic_residential_project_file():
                             "include_timeseries_airflows": True,
                             "include_timeseries_weather": True
                         },
-                        "reporting_measures": [
-                            {
-                                "measure_dir_name": "QOIReport"
-                            }
-                        ],
+                        "reporting_measures": [],
                         "server_directory_cleanup": {
                             "retain_in_idf": False,
                             "retain_schedules_csv": False
