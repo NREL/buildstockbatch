@@ -37,6 +37,7 @@ Development
    :titlesonly:
 
    changelog_dev
+   migration_dev
 
 Older Migration Guides
 ----------------------
