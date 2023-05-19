@@ -24,6 +24,7 @@ from buildstockbatch.test.shared_testing_stuff import resstock_directory, ressto
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
+from yamale.yamale_error import YamaleError
 import logging
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -138,18 +139,10 @@ def test_bad_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
         try:
             BuildStockBatchBase.validate_workflow_generator(project_file)
-        except ValidationError as er:
+        except (ValidationError, YamaleError) as er:
             er = str(er)
-            warning_logs = filter_logs(logs, 'WARNING')
-            assert "Required argument calendar_year for" in warning_logs
-            assert "ReportingMeasure2 does not exist" in er
-            assert "Wrong argument value type for begin_day_of_month" in er
-            assert "Found unexpected argument key output_variable" in er
-            assert "Found unexpected argument value Huorly" in er
-            assert "Fixed(1)" in er
-            assert "Required argument include_enduse_subcategories" in er
-            assert "Found unexpected argument key include_enduse_subcategory" in er
-
+            assert "'1.5' is not a int" in er
+            assert "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')" in er
         else:
             raise Exception("measures_and_arguments was supposed to raise ValidationError for"
                             " enforce-validate-measures-bad.yml")

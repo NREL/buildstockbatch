@@ -44,15 +44,53 @@ def basic_residential_project_file():
                     }
                 },
                 'workflow_generator': {
-                    'type': 'residential_default',
+                    'type': 'residential_hpxml',
                     'args': {
-                        'timeseries_csv_export': {
-                            'reporting_frequency': 'Hourly',
-                            'include_enduse_subcategories': True
+                        "build_existing_model": {
+                            "simulation_control_timestep": 60,
+                            "simulation_control_run_period_begin_month": 1,
+                            "simulation_control_run_period_begin_day_of_month": 1,
+                            "simulation_control_run_period_end_month": 12,
+                            "simulation_control_run_period_end_day_of_month": 31,
+                            "simulation_control_run_period_calendar_year": 2007
                         },
-                        'simulation_output': {
-                            'include_enduse_subcategories': True
+                        "emissions": [
+                            {
+                                "scenario_name": "LRMER_MidCase_15",
+                                "type": "CO2e",
+                                "elec_folder": "data/cambium/LRMER_MidCase_15"
+                            }
+                        ],
+                        "utility_bills": [
+                            {
+                                "scenario_name": "Bills"
+                            }
+                        ],
+                        "simulation_output_report": {
+                            "timeseries_frequency": "hourly",
+                            "include_timeseries_total_consumptions": True,
+                            "include_timeseries_fuel_consumptions": True,
+                            "include_timeseries_end_use_consumptions": True,
+                            "include_timeseries_emissions": True,
+                            "include_timeseries_emission_fuels": True,
+                            "include_timeseries_emission_end_uses": True,
+                            "include_timeseries_hot_water_uses": True,
+                            "include_timeseries_total_loads": True,
+                            "include_timeseries_component_loads": True,
+                            "include_timeseries_unmet_hours": True,
+                            "include_timeseries_zone_temperatures": True,
+                            "include_timeseries_airflows": True,
+                            "include_timeseries_weather": True
                         },
+                        "reporting_measures": [
+                            {
+                                "measure_dir_name": "QOIReport"
+                            }
+                        ],
+                        "server_directory_cleanup": {
+                            "retain_in_idf": False,
+                            "retain_schedules_csv": False
+                        }
                     }
                 },
                 'baseline': {

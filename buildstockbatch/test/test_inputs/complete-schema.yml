@@ -10,7 +10,7 @@ sampler:
     logic: HVAC System Heating Natural Gas|Gas Furnace, 60% AFUE
     resample: False
 workflow_generator:
-  type: residential_default
+  type: residential_hpxml
   args:
     measures_to_ignore:
       - ResidentialConstructionsSlab

@@ -16,5 +16,4 @@ and documentation updates. See :doc:`changelog_0_21` for details.
 Schema Updates
 ==============
 
-Minor updates were made to the residential workflow generator. See
-:doc:`../workflow_generators/residential_default` for details.
+Minor updates were made to the residential workflow generator.
