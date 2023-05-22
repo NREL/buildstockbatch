@@ -20,12 +20,14 @@ import pathlib
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
+from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
 from yamale.yamale_error import YamaleError
 import logging
+import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
@@ -88,24 +90,25 @@ def test_xor_violations_fail(project_file, expected):
             assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
-@pytest.mark.parametrize("project_file,expected", [
-    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
-    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
+@pytest.mark.parametrize("project_file, base_expected, eagle_expected", [
+    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError, ValidationError),
+    (os.path.join(example_yml_dir, 'complete-schema.yml'), True, True),
+    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True, ValidationError)
 ])
-def test_validation_integration(project_file, expected):
+def test_validation_integration(project_file, base_expected, eagle_expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True):
-        if expected is not True:
-            with pytest.raises(expected):
-                BuildStockBatchBase.validate_project(project_file)
-        else:
-            assert BuildStockBatchBase.validate_project(project_file)
+        for cls, expected in [(BuildStockBatchBase, base_expected), (EagleBatch, eagle_expected)]:
+            if expected is not True:
+                with pytest.raises(expected):
+                    cls.validate_project(project_file)
+            else:
+                assert cls.validate_project(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
@@ -286,3 +289,18 @@ def test_validate_resstock_or_comstock_version(mocker):
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     with pytest.raises(ValidationError):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
+def test_validate_eagle_output_directory():
+    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
+        EagleBatch.validate_output_directory_eagle(str(minimal_yml))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for output_directory in ('/scratch/username/out_dir', '/projects/projname/out_dir'):
+            with open(minimal_yml, 'r') as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+            cfg['output_directory'] = output_directory
+            temp_yml = pathlib.Path(tmpdir, 'temp.yml')
+            with open(temp_yml, 'w') as f:
+                yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+            EagleBatch.validate_output_directory_eagle(str(temp_yml))

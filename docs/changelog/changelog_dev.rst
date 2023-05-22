@@ -60,4 +60,6 @@ Development Changelog
         :tags: resstock, workflow generator, deprecated
         :pullreq: 370
 
-        Removing the ``residential_default`` workflow generator.
+        Removing the ``residential_default`` workflow generator and adding a
+        validtor to eagle.py to ensure the output directory is on a Lustre
+        filesystem directory.
