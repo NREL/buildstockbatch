@@ -28,3 +28,30 @@ Development Changelog
         :tickets: 352
 
         Fix an issue with schedules datatype that was causing the crash of postporcessing at the final step.
+
+    .. change::
+        :tags: workflow, feature
+        :pullreq: 353
+
+        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
+
+    .. change::
+        :tags: validation, feature
+        :pullreq: 362
+
+        Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
+
+    .. change::
+        :tags: validation, feature
+        :pullreq: 366
+
+        Add a references section in the yaml schema to allow defining the anchors at a single place.
+
+    .. change::
+        :tags: comstock, changed, validation, eagle
+        :pullreq: 350
+
+        Allows up to 8 hours per simulation in the ``minutes_per_sim`` validator
+        under the ``eagle`` section of a configuation YAML. This is required to
+        allow long-running ComStock models to be segmented into their own YAML
+        to allow for more efficient use of HPC resources.

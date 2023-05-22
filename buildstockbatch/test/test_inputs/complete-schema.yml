@@ -1,6 +1,6 @@
 buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
-output_directory: /scratch/epresent/YAML1s
+output_directory: /scratch/epresent/yaml1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
 schema_version: '0.3'
 sampler:
@@ -97,5 +97,5 @@ postprocessing:
       prefix: buildstock-athena/new
     athena:
       glue_service_role: service-role/AWSGlueServiceRole-default
-      database_name: new-buildstock-analysis
+      database_name: new_buildstock_analysis
       max_crawling_time: 300
