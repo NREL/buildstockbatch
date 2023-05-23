@@ -8,7 +8,7 @@ sampler:
   args:
     n_datapoints: 30
 workflow_generator:
-  type: residential_default
+  type: residential_hpxml
 baseline:
   n_buildings_represented: 30
 schema_version: '0.3'

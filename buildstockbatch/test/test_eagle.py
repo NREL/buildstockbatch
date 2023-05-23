@@ -106,10 +106,12 @@ def test_singularity_image_download_url(basic_residential_project_file):
 
 
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
+@patch('buildstockbatch.eagle.EagleBatch.validate_output_directory_eagle')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, mock_validate_options, basic_residential_project_file,
-                  monkeypatch):
+def test_user_cli(mock_subprocess, mock_validate_output_directory_eagle, mock_validate_options,
+                  basic_residential_project_file, monkeypatch):
     mock_validate_options.return_value = True
+    mock_validate_output_directory_eagle.return_value = True
 
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)

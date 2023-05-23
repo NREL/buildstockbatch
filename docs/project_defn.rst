@@ -1,23 +1,25 @@
 Project Definition
 ------------------
 
-Most of the project definition happens in a project folder in the
-checked out copy of the resstock or comstock repo. However, for this library to
-work, a separate project YAML file provides the details needed for the
-batch run. An example file is in this repo as
-``project_resstock_national.yml`` as shown below.
+Most of the project definition happens in a project folder in the checked out
+copy of the ResStock or ComStock repo as well as a project configuration file
+that defines how the project will be run. The project file (also known as the
+"yaml" file) is the primary input for buildstockbatch. Some examples of project
+files are:
 
-.. include:: ../project_resstock_national.yml
-   :code: yaml
+- `ResStock National Baseline <https://github.com/NREL/resstock/blob/develop/project_national/national_baseline.yml>`_
+- `ResStock National with Upgrades <https://github.com/NREL/resstock/blob/develop/project_national/national_upgrades.yml>`_
 
-The next few paragraphs will describe each section of the file and what it does.
+Similar project files can be found in the ComStock repo.
+
+The next few paragraphs will describe each section of the project file and what it does.
 
 Reference the project
 ~~~~~~~~~~~~~~~~~~~~~
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_ or ComStock
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
