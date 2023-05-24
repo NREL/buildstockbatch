@@ -57,6 +57,14 @@ Development Changelog
         to allow for more efficient use of HPC resources.
 
     .. change::
+        :tags: general, feature
+        :pullreq: 363
+
+        For the Residential HPXML Workflow Generator, fixes all ``include_annual_foo`` arguments to true (except
+        for ``include_annual_system_use_consumptions`` which is fixed to false). Also fixes
+        ``include_timeseries_system_use_consumptions`` to false.
+
+    .. change::
         :tags: resstock, workflow generator, deprecated
         :pullreq: 370
 

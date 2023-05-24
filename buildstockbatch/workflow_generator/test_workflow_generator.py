@@ -1,6 +1,7 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
+from buildstockbatch.test.shared_testing_stuff import resstock_directory
 
 
 def test_apply_logic_recursion():
@@ -42,7 +43,7 @@ def test_residential_hpxml(mocker):
     building_id = 1
     upgrade_idx = 0
     cfg = {
-        'buildstock_directory': '../',
+        'buildstock_directory': resstock_directory,
         'baseline': {
             'n_buildings_represented': 100
         },
@@ -99,21 +100,36 @@ def test_residential_hpxml(mocker):
     simulation_output_step = steps[3]
     assert simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput'
     assert simulation_output_step['arguments']['timeseries_frequency'] == 'hourly'
+    # assert simulation_output_step['arguments']['include_annual_total_consumptions'] is True
+    # assert simulation_output_step['arguments']['include_annual_fuel_consumptions'] is True
+    # assert simulation_output_step['arguments']['include_annual_end_use_consumptions'] is True
+    # assert simulation_output_step['arguments']['include_annual_system_use_consumptions'] is False
+    # assert simulation_output_step['arguments']['include_annual_emissions'] is True
+    # assert simulation_output_step['arguments']['include_annual_emission_fuels'] is True
+    # assert simulation_output_step['arguments']['include_annual_emission_end_uses'] is True
+    # assert simulation_output_step['arguments']['include_annual_total_loads'] is True
+    # assert simulation_output_step['arguments']['include_annual_unmet_hours'] is True
+    # assert simulation_output_step['arguments']['include_annual_peak_fuels'] is True
+    # assert simulation_output_step['arguments']['include_annual_peak_loads'] is True
+    # assert simulation_output_step['arguments']['include_annual_component_loads'] is True
+    # assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
+    # assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
+    # assert simulation_output_step['arguments']['include_timeseries_system_use_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emissions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_fuels'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_end_uses'] is False
     assert simulation_output_step['arguments']['include_timeseries_hot_water_uses'] is False
     assert simulation_output_step['arguments']['include_timeseries_total_loads'] is True
     assert simulation_output_step['arguments']['include_timeseries_component_loads'] is False
-    # assert simulation_output_step['arguments']['include_timeseries_unmet_hours'] is False
+    assert simulation_output_step['arguments']['include_timeseries_unmet_hours'] is False
     assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
     assert simulation_output_step['arguments']['include_timeseries_airflows'] is False
     assert simulation_output_step['arguments']['include_timeseries_weather'] is False
     assert simulation_output_step['arguments']['timeseries_timestamp_convention'] == 'end'
-    # assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
+    assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
     assert simulation_output_step['arguments']['add_timeseries_dst_column'] is True
     assert simulation_output_step['arguments']['add_timeseries_utc_column'] is True
 
