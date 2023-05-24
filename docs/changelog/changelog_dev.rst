@@ -63,3 +63,11 @@ Development Changelog
         For the Residential HPXML Workflow Generator, fixes all ``include_annual_foo`` arguments to true (except
         for ``include_annual_system_use_consumptions`` which is fixed to false). Also fixes
         ``include_timeseries_system_use_consumptions`` to false.
+
+    .. change::
+        :tags: resstock, workflow generator, deprecated
+        :pullreq: 370
+
+        Removing the ``residential_default`` workflow generator and adding a
+        validator to eagle.py to ensure the output directory is on a Lustre
+        filesystem directory.
