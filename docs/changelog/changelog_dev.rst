@@ -71,3 +71,10 @@ Development Changelog
         Removing the ``residential_default`` workflow generator and adding a
         validator to eagle.py to ensure the output directory is on a Lustre
         filesystem directory.
+
+    .. change::
+
+        :tags: resstock, openstudio
+        :pullreq: 368
+
+        Updating default OpenStudio version to 3.6.1
