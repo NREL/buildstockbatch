@@ -41,7 +41,8 @@ from buildstockbatch.utils import (
     get_error_details,
     ContainerRuntime,
     path_rel_to_file,
-    get_project_configuration
+    get_project_configuration,
+    read_csv
 )
 from buildstockbatch import postprocessing
 from buildstockbatch.__version__ import __version__ as bsb_version
@@ -91,7 +92,8 @@ class EagleBatch(BuildStockBatchBase):
         cfg = get_project_configuration(project_file)
         output_dir = path_rel_to_file(project_file, cfg['output_directory'])
         if not (output_dir.startswith('/scratch') or output_dir.startswith('/projects')):
-            raise ValidationError(f"`output_directory` must be in /scratch or /projects, `output_directory` = {output_dir}")
+            raise ValidationError(f"`output_directory` must be in /scratch or /projects,"
+                                  f" `output_directory` = {output_dir}")
 
     @property
     def output_dir(self):
@@ -196,7 +198,7 @@ class EagleBatch(BuildStockBatchBase):
             return
 
         # Determine the number of simulations expected to be executed
-        df = pd.read_csv(buildstock_csv_filename, index_col=0)
+        df = read_csv(buildstock_csv_filename, index_col=0)
 
         # find out how many buildings there are to simulate
         building_ids = df.index.tolist()

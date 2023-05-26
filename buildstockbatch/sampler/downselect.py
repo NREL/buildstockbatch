@@ -12,11 +12,11 @@ import logging
 import math
 import numpy as np
 import os
-import pandas as pd
 import shutil
 
 from .base import BuildStockSampler
 from buildstockbatch.exc import ValidationError
+from buildstockbatch.utils import read_csv
 
 logger = logging.getLogger(__name__)
 
@@ -107,7 +107,7 @@ class DownselectSamplerBase(BuildStockSampler):
             n_samples_init = 350000
             init_sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_samples_init, **self.sub_kw)
             buildstock_csv_filename = init_sampler.run_sampling()
-            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df = read_csv(buildstock_csv_filename, index_col=0)
             df_new = df[self.downselect_logic(df, self.logic)]
             downselected_n_samples_init = df_new.shape[0]
             n_samples = math.ceil(self.n_datapoints * n_samples_init / downselected_n_samples_init)
@@ -120,7 +120,7 @@ class DownselectSamplerBase(BuildStockSampler):
         with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + '_orig.csv.gz', 'wb') as f_out:
             with open(buildstock_csv_filename, 'rb') as f_in:
                 shutil.copyfileobj(f_in, f_out)
-        df = pd.read_csv(buildstock_csv_filename, index_col=0, dtype='str')
+        df = read_csv(buildstock_csv_filename, index_col=0, dtype='str')
         df_new = df[self.downselect_logic(df, self.logic)]
         if len(df_new.index) == 0:
             raise RuntimeError('There are no buildings left after the down select!')

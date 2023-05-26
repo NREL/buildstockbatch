@@ -20,7 +20,6 @@ import pathlib
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
-from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
@@ -139,7 +138,7 @@ def test_good_reference_scenario(project_file):
 ])
 def test_bad_measures(project_file):
 
-    with LogCapture(level=logging.INFO) as logs:
+    with LogCapture(level=logging.INFO) as _:
         try:
             BuildStockBatchBase.validate_workflow_generator(project_file)
         except (ValidationError, YamaleError) as er:

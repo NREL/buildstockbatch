@@ -20,6 +20,7 @@ from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
+from buildstockbatch.utils import read_csv
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -51,7 +52,7 @@ def test_reference_scenario(basic_residential_project_file):
 
     # test results.csv files
     test_path = os.path.join(results_dir, 'results_csvs')
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).set_index('building_id').sort_index()
+    test_csv = read_csv(os.path.join(test_path, 'results_up01.csv.gz')).set_index('building_id').sort_index()
     assert len(test_csv['apply_upgrade.reference_scenario'].unique()) == 1
     assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
 
@@ -79,16 +80,16 @@ def test_combine_files_flexible(basic_residential_project_file, mocker):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
     test_path = os.path.join(results_dir, 'results_csvs')
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
+    test_csv = read_csv(os.path.join(test_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
         sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
+    reference_csv = read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
         sort_values('buildingid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
     pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
+    test_csv = read_csv(os.path.join(test_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
         sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
+    reference_csv = read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
         sort_values('buildingid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
     pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
@@ -186,15 +187,15 @@ def test_combine_files(basic_residential_project_file):
     reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
     test_path = os.path.join(results_dir, 'results_csvs')
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).sort_values('building_id').reset_index()\
+    test_csv = read_csv(os.path.join(test_path, 'results_up00.csv.gz')).sort_values('building_id').reset_index()\
         .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).sort_values('building_id')\
+    reference_csv = read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).sort_values('building_id')\
         .reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).sort_values('building_id').reset_index()\
+    test_csv = read_csv(os.path.join(test_path, 'results_up01.csv.gz')).sort_values('building_id').reset_index()\
         .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).sort_values('building_id')\
+    reference_csv = read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).sort_values('building_id')\
         .reset_index().drop(columns=['index'])
     pd.testing.assert_frame_equal(test_csv, reference_csv)
 
@@ -398,7 +399,7 @@ def test_skipping_baseline(basic_residential_project_file):
 
 def test_provide_buildstock_csv(basic_residential_project_file, mocker):
     buildstock_csv = os.path.join(here, 'buildstock.csv')
-    df = pd.read_csv(buildstock_csv)
+    df = read_csv(buildstock_csv)
     project_filename, results_dir = basic_residential_project_file({
         'sampler': {
             'type': 'precomputed',
@@ -412,9 +413,9 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
 
     bsb = LocalBatch(project_filename)
     sampling_output_csv = bsb.sampler.run_sampling()
-    df2 = pd.read_csv(sampling_output_csv)
+    df2 = read_csv(sampling_output_csv)
     pd.testing.assert_frame_equal(df, df2)
-
+    assert (df['Geometry Shared Walls'] == "None").all()  # Verify None is being read properly
     # Test file missing
     with open(project_filename, 'r') as f:
         cfg = yaml.safe_load(f)

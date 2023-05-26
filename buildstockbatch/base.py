@@ -16,7 +16,6 @@ from fsspec.implementations.local import LocalFileSystem
 import logging
 from lxml import objectify
 import os
-import pandas as pd
 import numpy as np
 import re
 import requests
@@ -36,7 +35,7 @@ from buildstockbatch import (
     postprocessing
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
-from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.utils import path_rel_to_file, get_project_configuration, read_csv
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
@@ -192,7 +191,7 @@ class BuildStockBatchBase(object):
         timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
         if os.path.isfile(timeseries_filepath):
-            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            units_dict = read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
             skiprows = [1]
         else:
             timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
@@ -208,15 +207,15 @@ class BuildStockBatchBase(object):
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
-            cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
+            cols = read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
 
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
-                schedules = pd.read_csv(schedules_filepath, dtype=np.float64)
+                schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
@@ -302,7 +301,7 @@ class BuildStockBatchBase(object):
         if os_sha != actual_os_sha:
             raise ValidationError(
                 f"OpenStudio version is correct at {os_version}, but the shas don't match. "
-                "Got {actual_os_sha}, expected {os_sha}"
+                f"Got {actual_os_sha}, expected {os_sha}"
             )
         return True
 
