@@ -282,7 +282,7 @@ def test_run_building_process(mocker,  basic_residential_project_file):
 
     # Check that buildstock.csv was trimmed properly
     local_buildstock_df = read_csv(results_dir / 'local_housing_characteristics_dir' / 'buildstock.csv', dtype=str)
-    unique_buildings = {x[0] for x in job_json['batch']}
+    unique_buildings = {str(x[0]) for x in job_json['batch']}
     assert len(unique_buildings) == len(local_buildstock_df)
     assert unique_buildings == set(local_buildstock_df['Building'])
 
