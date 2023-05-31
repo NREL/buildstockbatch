@@ -22,7 +22,7 @@ Residential HPXML Workflow Changes
 Two new optional arguments were added to the Residential HPXML Workflow
 Generator: ``timeseries_num_decimal_places`` and
 ``include_timeseries_unmet_hours``. See
-:doc:`../workflow_generators/residential_default` for details about their usage.
+:doc:`../workflow_generators/residential_hpxml` for details about their usage.
 
 Schema Updates
 ==============
