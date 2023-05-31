@@ -399,7 +399,7 @@ def test_skipping_baseline(basic_residential_project_file):
 
 def test_provide_buildstock_csv(basic_residential_project_file, mocker):
     buildstock_csv = os.path.join(here, 'buildstock.csv')
-    df = read_csv(buildstock_csv)
+    df = read_csv(buildstock_csv, dtype=str)
     project_filename, results_dir = basic_residential_project_file({
         'sampler': {
             'type': 'precomputed',
@@ -413,7 +413,7 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
 
     bsb = LocalBatch(project_filename)
     sampling_output_csv = bsb.sampler.run_sampling()
-    df2 = read_csv(sampling_output_csv)
+    df2 = read_csv(sampling_output_csv, dtype=str)
     pd.testing.assert_frame_equal(df, df2)
     assert (df['Geometry Shared Walls'] == "None").all()  # Verify None is being read properly
     # Test file missing

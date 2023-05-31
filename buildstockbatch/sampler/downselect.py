@@ -107,7 +107,7 @@ class DownselectSamplerBase(BuildStockSampler):
             n_samples_init = 350000
             init_sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_samples_init, **self.sub_kw)
             buildstock_csv_filename = init_sampler.run_sampling()
-            df = read_csv(buildstock_csv_filename, index_col=0)
+            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
             df_new = df[self.downselect_logic(df, self.logic)]
             downselected_n_samples_init = df_new.shape[0]
             n_samples = math.ceil(self.n_datapoints * n_samples_init / downselected_n_samples_init)

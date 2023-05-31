@@ -231,7 +231,7 @@ class LocalBatch(BuildStockBatchBase):
         shutil.copytree(buildstock_path / "resources", lib_path / "resources")
         shutil.copytree(project_path / "housing_characteristics", lib_path / "housing_characteristics")
 
-        df = read_csv(buildstock_csv_filename, index_col=0)
+        df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
         self.validate_buildstock_csv(self.project_filename, df)
 
         building_ids = df.index.tolist()

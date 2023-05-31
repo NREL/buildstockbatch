@@ -321,7 +321,7 @@ class BuildStockBatchBase(object):
                 sample_file = os.path.join(os.path.dirname(project_file), sample_file)
             else:
                 sample_file = os.path.abspath(sample_file)
-            buildstock_df = read_csv(sample_file)
+            buildstock_df = read_csv(sample_file, dtype=str)
             BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
 
