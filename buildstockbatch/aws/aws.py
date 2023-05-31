@@ -1858,6 +1858,7 @@ class AwsBatch(DockerBatchBase):
 
             # Collect simulations to queue
             df = read_csv(buildstock_csv_filename, index_col=0)
+            self.validate_buildstock_csv(self.project_filename, df)
             building_ids = df.index.tolist()
             n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)

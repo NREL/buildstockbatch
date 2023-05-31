@@ -199,6 +199,7 @@ class EagleBatch(BuildStockBatchBase):
 
         # Determine the number of simulations expected to be executed
         df = read_csv(buildstock_csv_filename, index_col=0)
+        self.validate_buildstock_csv(self.project_filename, df)
 
         # find out how many buildings there are to simulate
         building_ids = df.index.tolist()

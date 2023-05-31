@@ -314,7 +314,38 @@ class BuildStockBatchBase(object):
         except AttributeError:
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
         args = cfg['sampler']['args']
-        return Sampler.validate_args(project_file, **args)
+        Sampler.validate_args(project_file, **args)
+        if issubclass(Sampler, sampler.PrecomputedSampler):
+            sample_file = cfg['sampler']['args']['sample_file']
+            if not os.path.isabs(sample_file):
+                sample_file = os.path.join(os.path.dirname(project_file), sample_file)
+            else:
+                sample_file = os.path.abspath(sample_file)
+            buildstock_df = read_csv(sample_file)
+            BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+        return True
+
+
+    @staticmethod
+    def validate_buildstock_csv(project_file, buildstock_df):
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        # verify that all the Columns in buildstock_df only have values available in param_option_dict
+        # param_option_dict has format: {column_name: [valid_option1, valid_option2, ...], ...}
+        errors = []
+        for column in buildstock_df.columns:
+            if column in {'Building'}:
+                continue
+            if column not in param_option_dict:
+                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                continue
+            for option in buildstock_df[column].unique():
+                if option not in param_option_dict[column]:
+                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
+                                  f'in options_lookup.tsv')
+        if errors:
+            raise ValidationError('\n'.join(errors))
+
+        return True
 
     @classmethod
     def validate_workflow_generator(cls, project_file):
