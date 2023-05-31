@@ -163,7 +163,7 @@ New Spec:
 
     schema_version: '0.3'
     workflow_generator:
-      type: residential_default
+      type: residential_hpxml
       args:
         timeseries_csv_export:
           reporting_frequency: Hourly
