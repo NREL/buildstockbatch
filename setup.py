@@ -58,7 +58,7 @@ setuptools.setup(
         'pyyaml',
         'requests',
         'numpy>=1.20.0',
-        'pandas>=1.0.0,!=1.0.4',
+        'pandas>=1.0.0,<2.0,!=1.0.4',
         'joblib',
         'pyarrow>=3.0.0',
         'dask[complete]>=2022.2.0',
