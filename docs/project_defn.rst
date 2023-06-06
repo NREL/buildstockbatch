@@ -1,23 +1,25 @@
 Project Definition
 ------------------
 
-Most of the project definition happens in a project folder in the
-checked out copy of the resstock or comstock repo. However, for this library to
-work, a separate project YAML file provides the details needed for the
-batch run. An example file is in this repo as
-``project_resstock_national.yml`` as shown below.
+Most of the project definition happens in a project folder in the checked out
+copy of the ResStock or ComStock repo as well as a project configuration file
+that defines how the project will be run. The project file (also known as the
+"yaml" file) is the primary input for buildstockbatch. Some examples of project
+files are:
 
-.. include:: ../project_resstock_national.yml
-   :code: yaml
+- `ResStock National Baseline <https://github.com/NREL/resstock/blob/develop/project_national/national_baseline.yml>`_
+- `ResStock National with Upgrades <https://github.com/NREL/resstock/blob/develop/project_national/national_upgrades.yml>`_
 
-The next few paragraphs will describe each section of the file and what it does.
+Similar project files can be found in the ComStock repo.
+
+The next few paragraphs will describe each section of the project file and what it does.
 
 Reference the project
 ~~~~~~~~~~~~~~~~~~~~~
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_ or ComStock
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
@@ -47,6 +49,10 @@ To use your own custom weather files for a specific location, this can be done i
 - Rename the filename references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder to match your custom weather file names. For example, in the options_lookup tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To update the weather file for this location, the `weather_file_name` field needs to be updated to match your new name specified.
 
 - Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
+
+References
+~~~~~~~~~~
+This is a throwaway section where you can define YAML anchors so that these can be used elsewhere in the yaml. Things defined here have no impact in the simulation and is purely used for anchor definitions.
 
 Sampler
 ~~~~~~~
@@ -129,7 +135,7 @@ following properties:
 Output Directory
 ~~~~~~~~~~~~~~~~
 
-``output_directory`` specifies where the outputs of the simulation should be stored.
+``output_directory``: specifies where the outputs of the simulation should be stored. The last folder in the path will be used as the table name in Athena (if aws configuration is present under postprocessing) so needs to be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
 
 .. _eagle-config:
 
@@ -289,7 +295,7 @@ The configuration options for postprocessing and AWS upload are:
                present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
                name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default".
                For help, consult the `AWS documentation for Glue Service Roles <https://docs.aws.amazon.com/glue/latest/dg/create-an-iam-role.html>`_.
-            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
+            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name. Database name must be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
             *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
                before aborting it.
 

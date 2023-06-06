@@ -1,6 +1,6 @@
 buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
-output_directory: /scratch/epresent/YAML1s
+output_directory: /scratch/epresent/yaml1s
 weather_files_path: /shared-projects/buildstock/weather/project_resstock_national_weather.zip
 weather_files_url: s3://my-bucket/weather.zip
 sampler:
@@ -8,7 +8,7 @@ sampler:
   args:
     n_datapoints: 30
 workflow_generator:
-  type: residential_default
+  type: residential_hpxml
 baseline:
   n_buildings_represented: 30
 schema_version: '0.3'

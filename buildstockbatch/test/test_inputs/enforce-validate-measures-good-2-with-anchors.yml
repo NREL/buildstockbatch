@@ -16,7 +16,7 @@ workflow_generator:
     build_existing_model:
       simulation_control_timestep: 60
       simulation_control_run_period_begin_month: 1
-      simulation_control_run_period_begin_day_of_month: 1.5 # intentional bad input data type for unit testing input validation
+      simulation_control_run_period_begin_day_of_month: 1
       simulation_control_run_period_end_month: 12
       simulation_control_run_period_end_day_of_month: 31
       simulation_control_run_period_calendar_year: 2007
@@ -30,7 +30,7 @@ workflow_generator:
       - scenario_name: Bills
 
     simulation_output_report:
-      timeseries_frequency: huorly # intentionally misspelled for unit testing input validation
+      timeseries_frequency: hourly
       include_timeseries_total_consumptions: true
       include_timeseries_fuel_consumptions: true
       include_timeseries_end_use_consumptions: true
@@ -52,23 +52,29 @@ workflow_generator:
       retain_in_idf: false
       retain_schedules_csv: false
 
+references:
+  vintage_logic: &vintage_logic
+      - or:
+        - Insulation Slab|Good Option
+        - Insulation Slab|None
+      - not: Insulation Wall|Good Option
+      - and:
+          - Vintage|1960s||Vintage|1960s
+          - Vintage|1980s
+
 upgrades:
+  - upgrade_name: cool upgrade
+    options:
+      - option: Vintage<1940
   - upgrade_name: good upgrade
     options:
       - option: Vintage|<1940
-        apply_logic:
-            - or:
-              - Insulation Slab|Good Option
-              - Insulation Slab|None
-            - not: Insulation Wall|Good Option
-            - and:
-                - Vintage|1960s||Vintage|1960s
-                - Vintage|1980s
+        apply_logic: *vintage_logic
         costs:
           - value: 0.9
-            multiplier: Fixed(1)
-
+            multiplier: Fixed (1)
       - option: Insulation Finished Basement|Good Option
         apply_logic:
           - Insulation Unfinished Basement|Extra Argument
-    reference_scenario: non-existing upgrade
+    package_apply_logic: Vintage|1960s||Vintage|1940s
+    reference_scenario: cool upgrade
