@@ -33,7 +33,7 @@ def test_resstock_local_batch(project_filename, monkeypatch):
         batch.cfg["upgrades"] = batch.cfg["upgrades"][0:2]
         n_upgrades = 2
 
-    # Modify the number of datapoints so we're not here all day. Make CI run again
+    # Modify the number of datapoints so we're not here all day.
     if n_upgrades == 0:
         n_datapoints = 4
     else:
