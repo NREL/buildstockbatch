@@ -36,9 +36,16 @@ import yaml
 import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
-from buildstockbatch.utils import log_error_details, get_error_details, ContainerRuntime
+from buildstockbatch.utils import (
+    log_error_details,
+    get_error_details,
+    ContainerRuntime,
+    path_rel_to_file,
+    get_project_configuration
+)
 from buildstockbatch import postprocessing
 from buildstockbatch.__version__ import __version__ as bsb_version
+from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -75,13 +82,20 @@ class EagleBatch(BuildStockBatchBase):
     def validate_project(cls, project_file):
         super(cls, cls).validate_project(project_file)
         # Eagle specific validation goes here
+        cls.validate_output_directory_eagle(project_file)
+        logger.info("Eagle Validation Successful")
+        return True
+
+    @classmethod
+    def validate_output_directory_eagle(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        output_dir = path_rel_to_file(project_file, cfg['output_directory'])
+        if not (output_dir.startswith('/scratch') or output_dir.startswith('/projects')):
+            raise ValidationError(f"`output_directory` must be in /scratch or /projects, `output_directory` = {output_dir}")
 
     @property
     def output_dir(self):
-        output_dir = self.cfg.get(
-            'output_directory',
-            os.path.join('/scratch/{}'.format(os.environ.get('USER', 'user')), os.path.basename(self.project_dir))
-        )
+        output_dir = path_rel_to_file(self.project_filename, self.cfg['output_directory'])
         return output_dir
 
     @property

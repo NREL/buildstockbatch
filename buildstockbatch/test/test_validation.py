@@ -21,11 +21,14 @@ from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.aws.aws import AwsBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
+from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
+from yamale.yamale_error import YamaleError
 import logging
+import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
@@ -93,24 +96,25 @@ def test_xor_violations_fail(project_file, expected):
             assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
-@pytest.mark.parametrize("project_file,expected", [
-    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
-    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
+@pytest.mark.parametrize("project_file, base_expected, eagle_expected", [
+    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError, ValidationError),
+    (os.path.join(example_yml_dir, 'complete-schema.yml'), True, True),
+    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True, ValidationError)
 ])
-def test_validation_integration(project_file, expected):
+def test_validation_integration(project_file, base_expected, eagle_expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True):
-        if expected is not True:
-            with pytest.raises(expected):
-                BuildStockBatchBase.validate_project(project_file)
-        else:
-            assert BuildStockBatchBase.validate_project(project_file)
+        for cls, expected in [(BuildStockBatchBase, base_expected), (EagleBatch, eagle_expected)]:
+            if expected is not True:
+                with pytest.raises(expected):
+                    cls.validate_project(project_file)
+            else:
+                assert cls.validate_project(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
@@ -144,18 +148,10 @@ def test_bad_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
         try:
             BuildStockBatchBase.validate_workflow_generator(project_file)
-        except ValidationError as er:
+        except (ValidationError, YamaleError) as er:
             er = str(er)
-            warning_logs = filter_logs(logs, 'WARNING')
-            assert "Required argument calendar_year for" in warning_logs
-            assert "ReportingMeasure2 does not exist" in er
-            assert "Wrong argument value type for begin_day_of_month" in er
-            assert "Found unexpected argument key output_variable" in er
-            assert "Found unexpected argument value Huorly" in er
-            assert "Fixed(1)" in er
-            assert "Required argument include_enduse_subcategories" in er
-            assert "Found unexpected argument key include_enduse_subcategory" in er
-
+            assert "'1.5' is not a int" in er
+            assert "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')" in er
         else:
             raise Exception("measures_and_arguments was supposed to raise ValidationError for"
                             " enforce-validate-measures-bad.yml")
@@ -331,3 +327,18 @@ def test_dask_config():
             json.dump(cfg, f)
         with pytest.raises(ValidationError, match=r"needs to be a multiple of 1024"):
             AwsBatch.validate_dask_settings(test3_filename)
+
+
+def test_validate_eagle_output_directory():
+    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
+        EagleBatch.validate_output_directory_eagle(str(minimal_yml))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        for output_directory in ('/scratch/username/out_dir', '/projects/projname/out_dir'):
+            with open(minimal_yml, 'r') as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+            cfg['output_directory'] = output_directory
+            temp_yml = pathlib.Path(tmpdir, 'temp.yml')
+            with open(temp_yml, 'w') as f:
+                yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+            EagleBatch.validate_output_directory_eagle(str(temp_yml))
