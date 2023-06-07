@@ -13,6 +13,7 @@ from buildstockbatch.test.shared_testing_stuff import (
     comstock_directory,
     comstock_required
 )
+from buildstockbatch.utils import openstudio_exe
 
 
 @pytest.mark.parametrize("project_filename", [
@@ -94,11 +95,11 @@ def test_resstock_local_batch(project_filename, monkeypatch):
 @comstock_required
 @patch('buildstockbatch.utils.openstudio_exe')
 def test_comstock_local_batch(mock_openstudio_exe, project_filename):
-    print(f"Before mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+    print(f"Before mock LocalBatch.openstudio_exe: {openstudio_exe()}")
 
     mock_openstudio_exe.return_value = os.environ['OPENSTUDIO_COMSTOCK']
 
-    print(f"After mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+    print(f"After mock LocalBatch.openstudio_exe: {openstudio_exe()}")
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
