@@ -183,6 +183,8 @@ class LocalBatch(BuildStockBatchBase):
         with open(sim_path / 'in.osw', 'w') as f:
             json.dump(osw, f, indent=4)
 
+        print(f"in run_building cls.openstudio_exe: {cls.openstudio_exe()}")
+
         run_cmd = [
             cls.openstudio_exe(),
             'run',

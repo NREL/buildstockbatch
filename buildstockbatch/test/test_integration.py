@@ -97,6 +97,8 @@ def test_comstock_local_batch(project_filename, monkeypatch):
         monkeypatch.setenv('OPENSTUDIO_EXE', os.environ['OPENSTUDIO_COMSTOCK'])
     print(f"After change OPENSTUDIO_EXE {os.environ['OPENSTUDIO_EXE']}")
 
+    print(f"LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
