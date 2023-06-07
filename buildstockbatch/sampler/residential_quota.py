@@ -19,6 +19,7 @@ import time
 from .base import BuildStockSampler
 from .downselect import DownselectSamplerBase
 from buildstockbatch.exc import ValidationError
+from buildstockbatch.utils import openstudio_exe
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class ResidentialQuotaSampler(BuildStockSampler):
     def _run_sampling_local_openstudio(self):
         subprocess.run(
             [
-                self.parent().openstudio_exe(),
+                openstudio_exe(),
                 str(pathlib.Path('resources', 'run_sampling.rb')),
                 '-p', self.cfg['project_directory'],
                 '-n', str(self.n_datapoints),
