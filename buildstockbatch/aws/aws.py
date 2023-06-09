@@ -1565,8 +1565,18 @@ class AwsBatch(DockerBatchBase):
                 with open(sim_dir / 'os_stdout.log', 'w') as f_out:
                     try:
                         logger.debug('Running {}'.format(sim_id))
+                        cli_cmd = ['openstudio', 'run', '-w', 'in.osw']
+                        if cfg.get('baseline', dict()).get('custom_gems', False):
+                            cli_cmd = [
+                                'openstudio',
+                                '--bundle', '/var/oscli/Gemfile',
+                                '--bundle_path', '/var/oscli/gems',
+                                '--bundle_without', 'native_ext',
+                                'run', '-w', 'in.osw',
+                                '--debug'
+                            ]
                         subprocess.run(
-                            ['openstudio', 'run', '-w', 'in.osw'],
+                            cli_cmd,
                             check=True,
                             stdout=f_out,
                             stderr=subprocess.STDOUT,
