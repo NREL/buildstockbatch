@@ -1194,13 +1194,67 @@ class AwsBatch(DockerBatchBase):
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
-        logger.debug('Building docker image')
-        self.docker_client.images.build(
+
+        # Make the buildstock/resources/.aws_docker_image dir to store logs
+        local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.aws_docker_image')
+        if not os.path.exists(local_log_dir):
+            os.makedirs(local_log_dir)
+
+        # Determine whether or not to build the image with custom gems bundled in
+        if self.cfg.get('baseline', dict()).get('custom_gems', False):
+            # Ensure the custom Gemfile exists in the buildstock dir
+            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
+            if not os.path.exists(local_gemfile_path):
+                raise AttributeError(f'baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}')
+
+            # Copy the custom Gemfile into the buildstockbatch repo
+            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
+            new_gemfile_path = os.path.join(bsb_root, 'Gemfile')
+            shutil.copyfile(local_gemfile_path, new_gemfile_path)
+            logger.info(f'Copying custom Gemfile from {local_gemfile_path}')
+
+            # Choose the custom-gems stage in the Dockerfile,
+            # which runs bundle install to build custom gems into the image
+            stage = 'buildstockbatch-custom-gems'
+        else:
+            # Choose the base stage in the Dockerfile,
+            # which stops before bundling custom gems into the image
+            stage = 'buildstockbatch'
+
+        logger.debug(f'Building docker image stage: {stage}')
+        img, build_logs = self.docker_client.images.build(
             path=str(root_path),
             tag=self.docker_image,
             rm=True,
+            target=stage,
             platform="linux/amd64"
         )
+        build_image_log = os.path.join(local_log_dir, 'build_image.log')
+        with open(build_image_log, 'w') as f_out:
+            f_out.write('Built image')
+            # for line in build_logs:
+            #     for k, v in line.items():
+            #         f_out.write(f'{k}: {v}')
+        logger.debug(f'Review docker image build log: {build_image_log}')
+
+        # Report gems included in the docker image.
+        # The OpenStudio Docker image installs the default gems
+        # to /var/oscli/gems, and the custom docker image
+        # overwrites these with the custom gems.
+        list_gems_cmd = 'openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems ' \
+                        '--bundle_without native_ext gem_list'
+        container_output = self.docker_client.containers.run(
+            self.docker_image,
+            list_gems_cmd,
+            remove=True,
+            name='list_gems'
+        )
+        gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
+        with open(gem_list_log, 'wb') as f_out:
+            f_out.write(container_output)
+        for line in container_output.decode().split('\n'):
+            logger.debug(line)
+        logger.debug(f'Review custom gems list at: {gem_list_log}')
 
     def push_image(self):
         """
