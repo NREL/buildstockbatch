@@ -1221,21 +1221,37 @@ class AwsBatch(DockerBatchBase):
             # which stops before bundling custom gems into the image
             stage = 'buildstockbatch'
 
-        logger.debug(f'Building docker image stage: {stage}')
+        logger.info(f'Building docker image stage: {stage} from OpenStudio {self.os_version}')
         img, build_logs = self.docker_client.images.build(
             path=str(root_path),
             tag=self.docker_image,
             rm=True,
             target=stage,
-            platform="linux/amd64"
+            platform="linux/amd64",
+            buildargs={'OS_VER': self.os_version}
         )
         build_image_log = os.path.join(local_log_dir, 'build_image.log')
+        build_image_log = f'C:/Scratch/ComStock/efforts/aws_testing/build_image_{stage}.log'
         with open(build_image_log, 'w') as f_out:
             f_out.write('Built image')
-            # for line in build_logs:
-            #     for k, v in line.items():
-            #         f_out.write(f'{k}: {v}')
+            for line in build_logs:
+                for itm_type, item_msg in line.items():
+                    if itm_type in ['stream', 'status']:
+                        try:
+                            f_out.write(f'{item_msg}')
+                        except UnicodeEncodeError:
+                            pass
         logger.debug(f'Review docker image build log: {build_image_log}')
+
+        # Report and confirm the openstudio version from the image
+        os_ver_cmd = 'openstudio openstudio_version'
+        container_output = self.docker_client.containers.run(
+            self.docker_image,
+            os_ver_cmd,
+            remove=True,
+            name='list_openstudio_version'
+        )
+        assert self.os_version in container_output.decode()
 
         # Report gems included in the docker image.
         # The OpenStudio Docker image installs the default gems
