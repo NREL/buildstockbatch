@@ -78,6 +78,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             wood_value: num(required=False)
         utility-bill-scenario-spec:
             scenario_name: str(required=True)
+            simple_filepath: str(required=False)
             elec_fixed_charge: num(required=False)
             elec_marginal_rate: num(required=False)
             gas_fixed_charge: num(required=False)
@@ -288,10 +289,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             for arg, item in emissions_map:
                 bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in emissions])
 
+        buildstock_dir = self.cfg['buildstock_directory']
+        measures_dir = os.path.join(buildstock_dir, 'measures')
+        measure_path = os.path.join(measures_dir, 'BuildExistingModel')
+        bld_exist_model_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
         if 'utility_bills' in workflow_args:
             utility_bills = workflow_args['utility_bills']
             utility_bills_map = [
                 ['utility_bill_scenario_names', 'scenario_name'],
+                ['utility_bill_simple_filepaths', 'simple_filepath'],
                 ['utility_bill_electricity_fixed_charges', 'elec_fixed_charge'],
                 ['utility_bill_electricity_marginal_rates', 'elec_marginal_rate'],
                 ['utility_bill_natural_gas_fixed_charges', 'gas_fixed_charge'],
@@ -312,7 +319,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']
             ]
             for arg, item in utility_bills_map:
-                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
+                if arg in bld_exist_model_args_avail:
+                    bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
@@ -333,7 +341,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'add_timeseries_utc_column': True
         }
 
-        buildstock_dir = self.cfg['buildstock_directory']
         measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
         measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
         sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))

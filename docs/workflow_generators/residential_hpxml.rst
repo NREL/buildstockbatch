@@ -68,6 +68,7 @@ Arguments
 - ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
 
   - ``scenario_name``: Name of the utility bills scenario.
+  - ``simple_filepath``: File with all fixed charges / marginal rates for each option of a chosen parameter (e.g., State).
   - ``elec_fixed_charge``: Monthly fixed charge for electricity.
   - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
   - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
