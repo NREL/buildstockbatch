@@ -3,7 +3,6 @@ import gzip
 import json
 import logging
 import os
-import pandas as pd
 import pathlib
 import re
 import tarfile
@@ -13,7 +12,7 @@ from unittest.mock import patch, MagicMock
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.utils import get_project_configuration
+from buildstockbatch.utils import get_project_configuration, read_csv
 
 postprocessing.performance_report = MagicMock()
 
@@ -58,7 +57,7 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
     postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
     for upgrade_id in (0, 1):
-        df = pd.read_csv(str(results_dir / 'results_csvs' / f'results_up{upgrade_id:02d}.csv.gz'))
+        df = read_csv(str(results_dir / 'results_csvs' / f'results_up{upgrade_id:02d}.csv.gz'))
         assert (df['reporting_measure1.column_1'] == 1).all()
         assert (df['reporting_measure1.column_2'] == 2).all()
         assert (df['reporting_measure2.column_3'] == 3).all()
