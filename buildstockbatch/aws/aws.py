@@ -1230,7 +1230,6 @@ class AwsBatch(DockerBatchBase):
             buildargs={'OS_VER': self.os_version}
         )
         build_image_log = os.path.join(local_log_dir, 'build_image.log')
-        build_image_log = f'C:/Scratch/ComStock/efforts/aws_testing/build_image_{stage}.log'
         with open(build_image_log, 'w') as f_out:
             f_out.write('Built image')
             for line in build_logs:
