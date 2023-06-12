@@ -68,6 +68,7 @@ Arguments
 - ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
 
   - ``scenario_name``: Name of the utility bills scenario.
+  - ``simple_filepath``: File with all fixed charges / marginal rates for each option of a chosen parameter (e.g., State).
   - ``elec_fixed_charge``: Monthly fixed charge for electricity.
   - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
   - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
@@ -94,7 +95,7 @@ Arguments
   See :ref:`hpxml-sim-output-report-defaults` for current defaults.
 
   - ``timeseries_frequency``: The frequency at which to report timeseries output data. Using 'none' will disable timeseries outputs. Valid choices are 'none', 'timestep', 'hourly', 'daily', and 'monthly'.
-  - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for building total.
+  - ``include_timeseries_total_consumptions``: Generates timeseries energy consumptions for the total building.
   - ``include_timeseries_fuel_consumptions``: Generates timeseries energy consumptions for each fuel type (in kBtu for fossil fuels and kWh for electricity).
   - ``include_timeseries_end_use_consumptions``: Generates timeseries energy consumptions for each end use type (in kBtu for fossil fuels and kWh for electricity).
   - ``include_timeseries_emissions``: Generates timeseries emissions (e.g., CO2). Requires the appropriate HPXML inputs to be specified.
