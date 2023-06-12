@@ -16,6 +16,14 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
+        :tags: bugfix, feature
+        :pullreq: 374
+        :tickets: 373
+
+        Add read_csv function to utils to handle parsing "None" correctly with pandas > 2.0+. Also add a validator for
+        buildstock_csv that checks if all the entries are available in the options_lookup.tsv.
+
+    .. change::
         :tags: general, feature
         :pullreq: 351
 
