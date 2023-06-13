@@ -1223,7 +1223,7 @@ class AwsBatch(DockerBatchBase):
 
         # Check that the version is greater than 3.4.0
         if parse(self.os_version) <= parse('3.4.0'):
-            raise RuntimeError(f'OpenStudio version must be > 3.4.0 for AWS because 3.4.0 and below '
+            raise RuntimeError('OpenStudio version must be > 3.4.0 for AWS because 3.4.0 and below '
                                'used Ubuntu 18.04 which includes Python 3.6, not compatible with buildstockbatch')
 
         logger.info(f'Building docker image stage: {stage} from OpenStudio {self.os_version}')
