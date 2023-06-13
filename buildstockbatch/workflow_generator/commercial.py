@@ -174,3 +174,26 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 osw['steps'].append(reporting_measure)
 
         return osw
+
+
+class CommercialAwsWorkflowGenerator(CommercialDefaultWorkflowGenerator):
+
+    def reporting_measures(self):
+        """Return a list of reporting measures to include in outputs"""
+        workflow_args = self.cfg['workflow_generator'].get('args', {})
+
+        # reporting_measures needs to return the ClassName in measure.rb, but
+        # measure_dir_name in ComStock doesn't always match the ClassName
+        measures_dir = os.path.join('/var/simdata/openstudio', 'measures')
+        measure_class_names = []
+        for m in workflow_args.get('reporting_measures', []):
+            measure_dir_name = m['measure_dir_name']
+            measure_path = os.path.join(measures_dir, measure_dir_name)
+            root = get_measure_xml(os.path.join(measure_path, 'measure.xml'))
+            measure_class_name = root.find('./class_name').text
+            # Don't include OpenStudioResults, it has too many registerValues for ComStock
+            if measure_class_name == 'OpenStudioResults':
+                continue
+            measure_class_names.append(measure_class_name)
+
+        return measure_class_names
