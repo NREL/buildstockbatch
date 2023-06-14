@@ -92,44 +92,42 @@ def test_resstock_local_batch(project_filename, monkeypatch):
     comstock_directory / "ymls" / "bsb-integration-test-baseline.yml",
 ], ids=lambda x: x.stem)
 @comstock_required
-@patch('buildstockbatch.base.BuildStockBatchBase.openstudio_exe')
-def test_comstock_local_batch(mock_openstudio_exe, project_filename):
+def test_comstock_local_batch(project_filename):
     print(f"Before mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+    with patch.object(LocalBatch, 'openstudio_exe', return_value=os.environ['OPENSTUDIO_COMSTOCK']):
+        print(f"After mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
 
-    mock_openstudio_exe.return_value = os.environ['OPENSTUDIO_COMSTOCK']
+        LocalBatch.validate_project(str(project_filename))
+        batch = LocalBatch(str(project_filename))
 
-    print(f"After mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
-    LocalBatch.validate_project(str(project_filename))
-    batch = LocalBatch(str(project_filename))
+        # Use the already downloaded weather file if it exists
+        local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
+        if local_weather_file.exists():
+            del batch.cfg["weather_files_url"]
+            batch.cfg["weather_files_path"] = str(local_weather_file)
 
-    # Use the already downloaded weather file if it exists
-    local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
-    if local_weather_file.exists():
-        del batch.cfg["weather_files_url"]
-        batch.cfg["weather_files_path"] = str(local_weather_file)
+        # Get the number of upgrades
+        n_upgrades = len(batch.cfg.get("upgrades", []))
 
-    # Get the number of upgrades
-    n_upgrades = len(batch.cfg.get("upgrades", []))
+        # Get the number of datapoints
+        df = pd.read_csv(batch.sampler.buildstock_csv, usecols=["Building", "climate_zone"])
+        n_datapoints = df.shape[0]
 
-    # Get the number of datapoints
-    df = pd.read_csv(batch.sampler.buildstock_csv, usecols=["Building", "climate_zone"])
-    n_datapoints = df.shape[0]
+        # Run the simulations
+        batch.run_batch()
 
-    # Run the simulations
-    batch.run_batch()
+        # Make sure all the files are there
+        out_path = pathlib.Path(batch.output_dir)
+        simout_path = out_path / "simulation_output"
+        assert (simout_path / "results_job0.json.gz").exists()
+        assert (simout_path / "simulations_job0.tar.gz").exists()
 
-    # Make sure all the files are there
-    out_path = pathlib.Path(batch.output_dir)
-    simout_path = out_path / "simulation_output"
-    assert (simout_path / "results_job0.json.gz").exists()
-    assert (simout_path / "simulations_job0.tar.gz").exists()
+        for upgrade_id in range(0, n_upgrades + 1):
+            for bldg_id in range(1, n_datapoints + 1):
+                assert (simout_path / "timeseries" / f"up{upgrade_id:02d}" / f"bldg{bldg_id:07d}.parquet").exists()
 
-    for upgrade_id in range(0, n_upgrades + 1):
-        for bldg_id in range(1, n_datapoints + 1):
-            assert (simout_path / "timeseries" / f"up{upgrade_id:02d}" / f"bldg{bldg_id:07d}.parquet").exists()
-
-    # Results postprocessing
-    batch.process_results()
+        # Results postprocessing
+        batch.process_results()
 
     assert not (simout_path / "timeseries").exists()
     assert not (simout_path / "results_job0.json.gz").exists()
