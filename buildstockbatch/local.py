@@ -58,9 +58,16 @@ class LocalBatch(BuildStockBatchBase):
                 print(f'local_gemfile_path = {local_gemfile_path}')
                 raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
 
+            # Change executables based on operating system
+            gem_exe = 'gem'
+            bundler_exe = 'bundle'
+            if os.name == 'nt':
+                gem_exe = 'gem.cmd'
+                bundler_exe = 'bundle.cmd'
+
             # Check the bundler version
             proc_output = subprocess.run(
-                ['gem', 'list'],
+                [gem_exe, 'list'],
                 check=True,
                 capture_output=True,
                 text=True
@@ -81,24 +88,22 @@ class LocalBatch(BuildStockBatchBase):
                 # Install the bundler that's in openstudio
                 openstudio_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
                 subprocess.run(
-                    ['gem', 'install', 'bundler', '-v', openstudio_bundler_version],
+                    [gem_exe, 'install', 'bundler', '-v', openstudio_bundler_version],
                     check=True
                 )
 
-            # Clear and create the buildstock/resources/.custom_gems dir to store gems
-            gems_install_path = pathlib.Path(self.buildstock_dir, 'resources', '.custom_gems')
-            # FIXME: remove this to keep existing gems around for efficiency
-            if gems_install_path.exists():
-                shutil.rmtree(gems_install_path)
-            gems_install_path.mkdir(parents=True)
+            # Clear and create the buildstock/.custom_gems dir to store gems
+            gems_install_path = pathlib.Path(self.buildstock_dir, '.custom_gems')
+            if not gems_install_path.exists():
+                gems_install_path.mkdir(parents=True)
 
             # Run bundler to install the custom gems
             copied_gemfile_path = gems_install_path / "Gemfile"
             shutil.copy2(local_gemfile_path, copied_gemfile_path)
-            logger.debug('Running bundle install')
+            logger.debug(f'Installing custom gems to {gems_install_path}')
             proc_output = subprocess.run(
                 [
-                    "bundle", f"_{openstudio_bundler_version}_",
+                    bundler_exe, f"_{openstudio_bundler_version}_",
                     "install",
                     '--path', str(gems_install_path),
                     '--gemfile', str(copied_gemfile_path),
@@ -189,7 +194,7 @@ class LocalBatch(BuildStockBatchBase):
         ]
 
         if cfg.get('baseline', dict()).get('custom_gems', False):
-            custom_gem_dir = buildstock_path / 'resources' / '.custom_gems'
+            custom_gem_dir = buildstock_path / '.custom_gems'
             run_cmd = [
                 cls.openstudio_exe(),
                 '--bundle', str(custom_gem_dir / 'Gemfile'),
