@@ -33,7 +33,7 @@ setuptools.setup(
         'pyyaml',
         'requests',
         'numpy',
-        'pandas',
+        'pandas>=2',
         'joblib',
         'pyarrow',
         'dask[complete]>=2022.10.0',

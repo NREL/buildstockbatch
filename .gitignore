@@ -16,3 +16,4 @@ coverage/
 build/
 .env
 .ruby-version
+.history
