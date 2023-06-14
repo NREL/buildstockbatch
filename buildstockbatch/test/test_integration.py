@@ -3,7 +3,6 @@ import pandas as pd
 import pathlib
 import pytest
 import shutil
-from unittest.mock import patch
 
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.test.shared_testing_stuff import (
@@ -91,13 +90,14 @@ def test_resstock_local_batch(project_filename, monkeypatch):
     comstock_directory / "ymls" / "bsb-integration-test-baseline.yml",
 ], ids=lambda x: x.stem)
 @comstock_required
-def test_comstock_local_batch(project_filename, mocker):
-    print(f"Before mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+def test_comstock_local_batch(project_filename, monkeypatch):
+    print(f"Before change OPENSTUDIO_EXE {os.environ['OPENSTUDIO_EXE']}")
     if 'OPENSTUDIO_COMSTOCK' in os.environ:
         print(f"Found OPENSTUDIO_COMSTOCK {os.environ['OPENSTUDIO_COMSTOCK']}")
-        patch.object(LocalBatch, 'openstudio_exe', os.environ['OPENSTUDIO_COMSTOCK'])
+        monkeypatch.setenv('OPENSTUDIO_EXE', os.environ['OPENSTUDIO_COMSTOCK'])
+    print(f"After change OPENSTUDIO_EXE {os.environ['OPENSTUDIO_EXE']}")
 
-    print(f"After mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
+    print(f"LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
 
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))

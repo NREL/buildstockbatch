@@ -246,8 +246,6 @@ class LocalBatch(BuildStockBatchBase):
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         buildstock_csv_filename = self.sampler.run_sampling()
 
-        logger.error(f"in run_batch LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
-
         logger.error(f"in run_batch os.environ: {os.environ}")
 
         if sampling_only:
