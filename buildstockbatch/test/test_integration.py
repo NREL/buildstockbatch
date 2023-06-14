@@ -5,7 +5,6 @@ import pytest
 import shutil
 from unittest.mock import patch
 
-from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.test.shared_testing_stuff import (
     resstock_directory,
@@ -96,7 +95,7 @@ def test_comstock_local_batch(project_filename, mocker):
     print(f"Before mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
     if 'OPENSTUDIO_COMSTOCK' in os.environ:
         print(f"Found OPENSTUDIO_COMSTOCK {os.environ['OPENSTUDIO_COMSTOCK']}")
-        mocker.patch.object(BuildStockBatchBase, 'openstudio_exe', os.environ['OPENSTUDIO_COMSTOCK'])
+        patch.object(LocalBatch, 'openstudio_exe', os.environ['OPENSTUDIO_COMSTOCK'])
 
     print(f"After mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
 
