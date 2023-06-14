@@ -79,21 +79,59 @@ class LocalBatch(BuildStockBatchBase):
                 print(f"local_gemfile_path = {local_gemfile_path}")
                 raise AttributeError("baseline:custom_gems = True, but did not find Gemfile in /resources directory")
 
-            # Make the buildstock/resources/.custom_gems dir to store logs
-            local_log_dir = os.path.join(self.buildstock_dir, "resources", ".custom_gems")
-            if not os.path.exists(local_log_dir):
-                os.makedirs(local_log_dir)
+            # Change executables based on operating system
+            gem_exe = 'gem'
+            bundler_exe = 'bundle'
+            if os.name == 'nt':
+                gem_exe = 'gem.cmd'
+                bundler_exe = 'bundle.cmd'
+
+            # Check the bundler version
+            proc_output = subprocess.run(
+                [gem_exe, 'list'],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+            proc_output = subprocess.run(
+                [self.openstudio_exe(), 'gem_list'],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            openstudio_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+            common_bundler_versions = set(ruby_bundler_versions).intersection(openstudio_bundler_versions)
+            if common_bundler_versions:
+                # Use the most recent bundler that is in both
+                openstudio_bundler_version = sorted(common_bundler_versions, key=StrictVersion)[-1]
+            else:
+                # Install the bundler that's in openstudio
+                openstudio_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
+                subprocess.run(
+                    [gem_exe, 'install', 'bundler', '-v', openstudio_bundler_version],
+                    check=True
+                )
+
+            # Clear and create the buildstock/.custom_gems dir to store gems
+            gems_install_path = pathlib.Path(self.buildstock_dir, '.custom_gems')
+            if not gems_install_path.exists():
+                gems_install_path.mkdir(parents=True)
 
             # Run bundler to install the custom gems
-            mnt_gemfile_path = f"{mnt_gem_dir}/Gemfile"
-            bundle_install_cmd = f'/bin/bash -c "cp {mnt_gemfile_path_orig} {mnt_gemfile_path} && bundle install --path={mnt_gem_dir} --gemfile={mnt_gemfile_path}"'  # noqa: E501
-            logger.debug(f"Running {bundle_install_cmd}")
-            container_output = docker_client.containers.run(
-                self.docker_image,
-                bundle_install_cmd,
-                remove=True,
-                volumes=docker_volume_mounts,
-                name="install_custom_gems",
+            copied_gemfile_path = gems_install_path / "Gemfile"
+            shutil.copy2(local_gemfile_path, copied_gemfile_path)
+            logger.debug(f'Installing custom gems to {gems_install_path}')
+            proc_output = subprocess.run(
+                [
+                    bundler_exe, f"_{openstudio_bundler_version}_",
+                    "install",
+                    '--path', str(gems_install_path),
+                    '--gemfile', str(copied_gemfile_path),
+                    "--without", "native_ext",
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT
             )
             with open(os.path.join(local_log_dir, "bundle_install_output.log"), "wb") as f_out:
                 f_out.write(container_output)
@@ -174,16 +212,16 @@ class LocalBatch(BuildStockBatchBase):
             "in.osw",
         ]
 
-        # FIXME: Custom gems
-        # if cfg.get('baseline', dict()).get('custom_gems', False):
-        #     run_cmd = [
-        #         'openstudio',
-        #         '--bundle', f'{mnt_custom_gem_dir}/Gemfile',
-        #         '--bundle_path', f'{mnt_custom_gem_dir}',
-        #         '--bundle_without', 'native_ext',
-        #         'run', '-w', 'in.osw',
-        #         '--debug'
-        #     ]
+        if cfg.get('baseline', dict()).get('custom_gems', False):
+            custom_gem_dir = buildstock_path / '.custom_gems'
+            run_cmd = [
+                cls.openstudio_exe(),
+                '--bundle', str(custom_gem_dir / 'Gemfile'),
+                '--bundle_path', str(custom_gem_dir),
+                '--bundle_without', 'native_ext',
+                'run', '-w', 'in.osw',
+                '--debug'
+            ]
 
         if measures_only:
             # if cfg.get('baseline', dict()).get('custom_gems', False):
