@@ -120,8 +120,6 @@ class LocalBatch(BuildStockBatchBase):
             proc_output.check_returncode()
             print(proc_output)
 
-            return True
-
             # Report out custom gems loaded by OpenStudio CLI
             proc_output = subprocess.run(
                 [
@@ -134,6 +132,7 @@ class LocalBatch(BuildStockBatchBase):
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT
             )
+            print(proc_output)
             gem_list_log = gems_install_path / 'openstudio_gem_list_output.log'
             with open(gem_list_log, 'wb') as f_out:
                 f_out.write(proc_output.stdout)
