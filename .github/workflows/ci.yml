@@ -66,7 +66,6 @@ jobs:
       #     limit-access-to-users: nmerket,asparke2
       - name: Run PyTest and Coverage
         run: |
-          export OPENSTUDIO_EXE="$(pwd)/OpenStudio-3.6.1+bb9481519e-Ubuntu-20.04-x86_64/usr/local/openstudio-3.6.1/bin/openstudio"
           cd buildstockbatch
           pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport -k "test_resstock_local_batch[national_baseline] or test_comstock_local_batch"
       - name: Save logs on failure
