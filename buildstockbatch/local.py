@@ -72,6 +72,7 @@ class LocalBatch(BuildStockBatchBase):
                 capture_output=True,
                 text=True
             )
+            print(proc_output)
             ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
             proc_output = subprocess.run(
                 [self.openstudio_exe(), 'gem_list'],
@@ -79,6 +80,7 @@ class LocalBatch(BuildStockBatchBase):
                 capture_output=True,
                 text=True
             )
+            print(proc_output)
             openstudio_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
             common_bundler_versions = set(ruby_bundler_versions).intersection(openstudio_bundler_versions)
             if common_bundler_versions:
@@ -87,10 +89,11 @@ class LocalBatch(BuildStockBatchBase):
             else:
                 # Install the bundler that's in openstudio
                 openstudio_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
-                subprocess.run(
+                proc_output = subprocess.run(
                     [gem_exe, 'install', 'bundler', '-v', openstudio_bundler_version],
                     check=True
                 )
+                print(proc_output)
 
             # Clear and create the buildstock/.custom_gems dir to store gems
             gems_install_path = pathlib.Path(self.buildstock_dir, '.custom_gems')
@@ -115,6 +118,9 @@ class LocalBatch(BuildStockBatchBase):
             with open(gems_install_path / 'bundle_install_output.log', 'wb') as f_out:
                 f_out.write(proc_output.stdout)
             proc_output.check_returncode()
+            print(proc_output)
+
+            return True
 
             # Report out custom gems loaded by OpenStudio CLI
             proc_output = subprocess.run(
