@@ -336,12 +336,14 @@ class BuildStockBatchBase(object):
             if column in {'Building'}:
                 continue
             if column not in param_option_dict:
-                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                # In ComStock, some columns in the buildstock.csv are intermediate steps in the sampling
+                # and are not used by the options_lookup.tsv.
+                logger.warning(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
-                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
-                                  f'in options_lookup.tsv')
+                    logger.warning(f'Option {option} in column {column} of buildstock_csv is not available '
+                                   f'in options_lookup.tsv')
         if errors:
             raise ValidationError('\n'.join(errors))
 
