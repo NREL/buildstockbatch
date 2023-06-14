@@ -91,12 +91,8 @@ def test_resstock_local_batch(project_filename, monkeypatch):
 ], ids=lambda x: x.stem)
 @comstock_required
 def test_comstock_local_batch(project_filename, monkeypatch):
-    print(f"Before change OPENSTUDIO_EXE {os.environ['OPENSTUDIO_EXE']}")
     if 'OPENSTUDIO_COMSTOCK' in os.environ:
-        print(f"Found OPENSTUDIO_COMSTOCK {os.environ['OPENSTUDIO_COMSTOCK']}")
         monkeypatch.setenv('OPENSTUDIO_EXE', os.environ['OPENSTUDIO_COMSTOCK'])
-    print(f"After change OPENSTUDIO_EXE {os.environ['OPENSTUDIO_EXE']}")
-
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
