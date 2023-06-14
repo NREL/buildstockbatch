@@ -30,7 +30,7 @@ import tarfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
-from buildstockbatch.utils import log_error_details, ContainerRuntime, openstudio_exe
+from buildstockbatch.utils import log_error_details, ContainerRuntime
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ class LocalBatch(BuildStockBatchBase):
             )
             ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
             proc_output = subprocess.run(
-                [openstudio_exe(), 'gem_list'],
+                [self.openstudio_exe(), 'gem_list'],
                 check=True,
                 capture_output=True,
                 text=True
@@ -115,7 +115,7 @@ class LocalBatch(BuildStockBatchBase):
             # Report out custom gems loaded by OpenStudio CLI
             proc_output = subprocess.run(
                 [
-                    openstudio_exe(),
+                    self.openstudio_exe(),
                     "--bundle", str(copied_gemfile_path),
                     "--bundle_path", str(gems_install_path),
                     "--bundle_without", "native_ext",
@@ -183,12 +183,12 @@ class LocalBatch(BuildStockBatchBase):
         with open(sim_path / 'in.osw', 'w') as f:
             json.dump(osw, f, indent=4)
 
-        logger.error(f"in run_building cls.openstudio_exe: {openstudio_exe()}")
+        logger.error(f"in run_building cls.openstudio_exe: {cls.openstudio_exe()}")
 
         logger.error(f"in run_building os.environ: {os.environ}")
 
         run_cmd = [
-            openstudio_exe(),
+            cls.openstudio_exe(),
             'run',
             '-w', 'in.osw',
         ]
@@ -196,7 +196,7 @@ class LocalBatch(BuildStockBatchBase):
         if cfg.get('baseline', dict()).get('custom_gems', False):
             custom_gem_dir = buildstock_path / 'resources' / '.custom_gems'
             run_cmd = [
-                openstudio_exe(),
+                cls.openstudio_exe(),
                 '--bundle', str(custom_gem_dir / 'Gemfile'),
                 '--bundle_path', str(custom_gem_dir),
                 '--bundle_without', 'native_ext',
@@ -246,7 +246,7 @@ class LocalBatch(BuildStockBatchBase):
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         buildstock_csv_filename = self.sampler.run_sampling()
 
-        logger.error(f"in run_batch LocalBatch.openstudio_exe: {openstudio_exe()}")
+        logger.error(f"in run_batch LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
 
         logger.error(f"in run_batch os.environ: {os.environ}")
 

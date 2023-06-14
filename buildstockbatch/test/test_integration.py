@@ -92,7 +92,7 @@ def test_resstock_local_batch(project_filename, monkeypatch):
     comstock_directory / "ymls" / "bsb-integration-test-baseline.yml",
 ], ids=lambda x: x.stem)
 @comstock_required
-@patch('buildstockbatch.utils.openstudio_exe')
+@patch('buildstockbatch.base.BuildStockBatchBase.openstudio_exe')
 def test_comstock_local_batch(mock_openstudio_exe, project_filename):
     print(f"Before mock LocalBatch.openstudio_exe: {LocalBatch.openstudio_exe()}")
 

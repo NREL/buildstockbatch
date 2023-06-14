@@ -106,7 +106,3 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
         return run_with_error_capture
 
     return log_error_decorator
-
-
-def openstudio_exe():
-    return os.environ.get("OPENSTUDIO_EXE", "openstudio")

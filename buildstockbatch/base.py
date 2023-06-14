@@ -36,7 +36,7 @@ from buildstockbatch import (
     postprocessing
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
-from buildstockbatch.utils import path_rel_to_file, get_project_configuration, openstudio_exe
+from buildstockbatch.utils import path_rel_to_file, get_project_configuration
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
@@ -92,6 +92,10 @@ class BuildStockBatchBase(object):
         # Select a sampler
         Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
         return Sampler(self, **self.cfg['sampler'].get('args', {}))
+
+    @staticmethod
+    def openstudio_exe():
+        return os.environ.get("OPENSTUDIO_EXE", "openstudio")
 
     def path_rel_to_projectfile(self, x):
         return path_rel_to_file(self.project_filename, x)
@@ -284,12 +288,12 @@ class BuildStockBatchBase(object):
         os_sha = cfg.get('os_sha', cls.DEFAULT_OS_SHA)
         try:
             proc_out = subprocess.run(
-                [openstudio_exe(), "openstudio_version"],
+                [cls.openstudio_exe(), "openstudio_version"],
                 capture_output=True,
                 text=True
             )
         except FileNotFoundError:
-            raise ValidationError(f"Cannot find openstudio at `{openstudio_exe()}`")
+            raise ValidationError(f"Cannot find openstudio at `{cls.openstudio_exe()}`")
         if proc_out.returncode != 0:
             raise ValidationError(f"OpenStudio failed with the following error {proc_out.stderr}")
         actual_os_version, actual_os_sha = proc_out.stdout.strip().split("+")
