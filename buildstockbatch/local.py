@@ -183,9 +183,7 @@ class LocalBatch(BuildStockBatchBase):
         with open(sim_path / 'in.osw', 'w') as f:
             json.dump(osw, f, indent=4)
 
-        logger.error(f"in run_building cls.openstudio_exe: {cls.openstudio_exe()}")
-
-        logger.error(f"in run_building os.environ: {os.environ}")
+        print(f"in run_building cls.openstudio_exe: {cls.openstudio_exe()}")
 
         run_cmd = [
             cls.openstudio_exe(),
@@ -245,8 +243,6 @@ class LocalBatch(BuildStockBatchBase):
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         buildstock_csv_filename = self.sampler.run_sampling()
-
-        logger.error(f"in run_batch os.environ: {os.environ}")
 
         if sampling_only:
             return
