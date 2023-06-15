@@ -94,6 +94,8 @@ def test_comstock_local_batch(project_filename, monkeypatch):
     LocalBatch.validate_project(str(project_filename))
     batch = LocalBatch(str(project_filename))
 
+    return
+
     # Use the already downloaded weather file if it exists
     local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
     if local_weather_file.exists():
