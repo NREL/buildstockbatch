@@ -117,7 +117,7 @@ class LocalBatch(BuildStockBatchBase):
             )
             with open(gems_install_path / 'bundle_install_output.log', 'wb') as f_out:
                 f_out.write(proc_output.stdout)
-            # proc_output.check_returncode()
+            proc_output.check_returncode()
             print(proc_output)
 
             # Report out custom gems loaded by OpenStudio CLI
@@ -137,7 +137,7 @@ class LocalBatch(BuildStockBatchBase):
             with open(gem_list_log, 'wb') as f_out:
                 f_out.write(proc_output.stdout)
             logger.debug(f'Review custom gems list at: {gem_list_log}')
-            # proc_output.check_returncode()
+            proc_output.check_returncode()
 
     @staticmethod
     def _get_gem_versions_from_gem_list(gem_name, gem_list_txt):
