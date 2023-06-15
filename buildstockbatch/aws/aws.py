@@ -1195,8 +1195,8 @@ class AwsBatch(DockerBatchBase):
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
 
-        # Make the buildstock/resources/.aws_docker_image dir to store logs
-        local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.aws_docker_image')
+        # Make the buildstock/.aws_docker_image dir to store logs
+        local_log_dir = os.path.join(self.buildstock_dir, '.aws_docker_image')
         if not os.path.exists(local_log_dir):
             os.makedirs(local_log_dir)
 
