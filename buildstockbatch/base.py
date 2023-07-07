@@ -69,6 +69,9 @@ class BuildStockBatchBase(object):
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f'project_directory = {self.project_dir} is not a directory.')
 
+        if self.cfg['workflow_generator']['type'] == 'residential_hpxml_hes':
+            self.os_hescore_dir = self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory']
+
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get('os_version', self.DEFAULT_OS_VERSION)
@@ -856,7 +859,7 @@ class BuildStockBatchBase(object):
     def process_results(self, skip_combine=False, force_upload=False):
         self.get_dask_client()  # noqa: F841
 
-        if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+        if 'residential_hpxml' in self.cfg['workflow_generator']['type']:
             if 'simulation_output_report' in self.cfg['workflow_generator']['args'].keys():
                 if 'timeseries_frequency' in self.cfg['workflow_generator']['args']['simulation_output_report'].keys():
                     do_timeseries = \

@@ -44,7 +44,7 @@ def get_measure_arguments(xml_path):
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
     @classmethod
-    def validate(cls, cfg):
+    def get_yml_schema(cls):
         """Validate arguments
 
         :param cfg: project configuration
@@ -141,9 +141,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             retain_schedules_csv: bool(required=False)
             debug: bool(required=False)
         """  # noqa E501
-        workflow_generator_args = cfg['workflow_generator']['args']
         schema_yml = re.sub(r'^ {8}', '', schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser='ruamel')
+        return schema
+
+    @classmethod
+    def validate(cls, cfg):
+        schema = cls.get_yml_schema()
+        workflow_generator_args = cfg['workflow_generator']['args']
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser='ruamel')
         yamale.validate(schema, data, strict=True)
         return cls.validate_measures_and_arguments(cfg)
