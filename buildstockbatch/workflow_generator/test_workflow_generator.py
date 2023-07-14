@@ -1,5 +1,6 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
+from buildstockbatch.workflow_generator.residential_hpxml_hes import ResidentialHpxmlHesWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
 from buildstockbatch.test.shared_testing_stuff import resstock_directory
 

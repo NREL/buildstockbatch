@@ -328,7 +328,6 @@ class BuildStockBatchBase(object):
             BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
 
-
     @staticmethod
     def validate_buildstock_csv(project_file, buildstock_df):
         param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
