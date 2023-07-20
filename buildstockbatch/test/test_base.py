@@ -301,6 +301,7 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
 
     # check if all the files are properly uploaded
     source_path = os.path.join(results_dir, 'parquet')
+    buildstock_dir = os.path.join(results_dir, 'housing_characteristics')
     s3_path = s3_prefix + '/' + OUTPUT_FOLDER_NAME + '/'
 
     s3_file_path = s3_path + 'baseline/results_up00.parquet'
@@ -332,6 +333,11 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'buildstock_csv/buildstock.csv'
+    source_file_path_tst = os.path.join(buildstock_dir, 'buildstock.csv')
+    assert (source_file_path_tst, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path_tst, s3_file_path))
 
     assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
 

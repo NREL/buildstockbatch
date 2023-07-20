@@ -608,9 +608,8 @@ def upload_results(aws_conf, output_dir, results_dir):
         all_files.append(file.relative_to(parquet_dir))
     for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
         all_files.append(file.relative_to(parquet_dir))
-    buildstock_csv = []   
     for file in buildstock_dir.glob('buildstock.csv'):
-        buildstock_csv.append(file.relative_to(buildstock_dir))
+        buildstock_csv = file.relative_to(buildstock_dir)
 
     s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
@@ -641,8 +640,9 @@ def upload_results(aws_conf, output_dir, results_dir):
         s3key = Path(s3_prefix_output_new).joinpath(filepath).as_posix()
         bucket.upload_file(str(full_path), str(s3key))
 
-    dask.compute(map(dask.delayed(upload_file), all_files))
-    dask.compute(map(dask.delayed(upload_buildstock_csv), buildstock_csv))
+    tasks = list(map(dask.delayed(upload_file), all_files))
+    tasks.append(dask.delayed(upload_buildstock_csv)(buildstock_csv))
+    dask.compute(tasks)
     logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}")
     return s3_bucket, s3_prefix_output
 
