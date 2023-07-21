@@ -31,7 +31,7 @@ def basic_residential_project_file():
                             os.path.join(output_directory, 'simulation_output', '..', '..', 'job0.json'))
 
             #os.mkdir(os.path.join(output_directory, 'housing_characteristics'))
-            #os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
+            os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
             shutil.copytree(
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'housing_characteristics'), 
                 os.path.join(output_directory, 'housing_characteristics')
