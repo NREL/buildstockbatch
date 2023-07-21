@@ -26,7 +26,6 @@ import json
 import logging
 import math
 import os
-import pandas as pd
 import pathlib
 import random
 from s3fs import S3FileSystem
@@ -42,7 +41,7 @@ import zipfile
 from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
-from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
+from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration, read_csv
 
 logger = logging.getLogger(__name__)
 
@@ -1858,7 +1857,8 @@ class AwsBatch(DockerBatchBase):
                 json.dump(self.cfg, f)
 
             # Collect simulations to queue
-            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
+            self.validate_buildstock_csv(self.project_filename, df)
             building_ids = df.index.tolist()
             n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
