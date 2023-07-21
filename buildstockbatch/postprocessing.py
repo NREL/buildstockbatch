@@ -608,6 +608,7 @@ def upload_results(aws_conf, output_dir, results_dir):
         all_files.append(file.relative_to(parquet_dir))
     for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
         all_files.append(file.relative_to(parquet_dir))
+    buildstock_csv = ''
     for file in buildstock_dir.glob('buildstock.csv'):
         buildstock_csv = file.relative_to(buildstock_dir)
 
