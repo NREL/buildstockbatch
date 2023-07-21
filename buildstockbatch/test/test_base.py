@@ -14,6 +14,7 @@ import shutil
 import tempfile
 from unittest.mock import patch, MagicMock, PropertyMock
 import yaml
+from pathlib import Path
 
 import buildstockbatch
 from buildstockbatch.base import BuildStockBatchBase
@@ -302,7 +303,7 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
 
     # check if all the files are properly uploaded
     source_path = os.path.join(results_dir, 'parquet')
-    buildstock_dir = os.path.join(results_dir, 'housing_characteristics')
+    buildstock_dir = Path(results_dir).parent.joinpath('housing_characteristics')
     s3_path = s3_prefix + '/' + OUTPUT_FOLDER_NAME + '/'
 
     s3_file_path = s3_path + 'baseline/results_up00.parquet'

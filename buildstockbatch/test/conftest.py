@@ -3,6 +3,7 @@ import pytest
 import shutil
 import tempfile
 import yaml
+from pathlib import Path
 
 OUTPUT_FOLDER_NAME = 'output'
 
@@ -34,7 +35,7 @@ def basic_residential_project_file():
             os.mkdir(os.path.join(buildstock_directory, project_directory, 'housing_characteristics'))
             shutil.copytree(
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'housing_characteristics'), 
-                os.path.join(output_directory, 'housing_characteristics')
+                os.path.join(Path(output_directory).parent.joinpath('housing_characteristics'))
             )
             cfg = {
                 'buildstock_directory': buildstock_directory,
