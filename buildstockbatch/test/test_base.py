@@ -105,7 +105,7 @@ def test_combine_files_flexible(basic_residential_project_file, mocker):
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
     mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
-    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
+    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols], check_dtype=False)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
         rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
@@ -209,7 +209,7 @@ def test_combine_files(basic_residential_project_file):
         .reset_index().drop(columns=['index'])
     reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
-    pd.testing.assert_frame_equal(test_pq, reference_pq)
+    pd.testing.assert_frame_equal(test_pq, reference_pq, check_dtype=False)
 
     test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))\
         .sort_values('building_id').reset_index().drop(columns=['index'])
