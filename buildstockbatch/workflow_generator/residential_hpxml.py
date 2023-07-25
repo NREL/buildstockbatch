@@ -79,6 +79,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         utility-bill-scenario-spec:
             scenario_name: str(required=True)
             simple_filepath: str(required=False)
+            detailed_filepath: str(required=False)
             elec_fixed_charge: num(required=False)
             elec_marginal_rate: num(required=False)
             gas_fixed_charge: num(required=False)
@@ -299,6 +300,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             utility_bills_map = [
                 ['utility_bill_scenario_names', 'scenario_name'],
                 ['utility_bill_simple_filepaths', 'simple_filepath'],
+                ['utility_bill_detailed_filepaths', 'detailed_filepath'],
                 ['utility_bill_electricity_fixed_charges', 'elec_fixed_charge'],
                 ['utility_bill_electricity_marginal_rates', 'elec_marginal_rate'],
                 ['utility_bill_natural_gas_fixed_charges', 'gas_fixed_charge'],
