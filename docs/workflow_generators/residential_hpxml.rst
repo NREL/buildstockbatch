@@ -59,7 +59,7 @@ Arguments
 
   - ``scenario_name``: Name of the emissions scenario.
   - ``type``: Type of emission (e.g., CO2e, NOx, etc.).
-  - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Path is relative to buildstock_directory's `resources`_ folder. File names must contain GEA region names.
+  - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Folder path is relative to buildstock_directory's `resources`_ folder. File names must contain GEA region names.
   - ``gas_value``: Annual emissions factor for natural gas. Units are lb/MBtu (million Btu).
   - ``propane_value``: Annual emissions factor for propane. Units are lb/MBtu (million Btu).
   - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
