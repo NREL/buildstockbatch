@@ -20,6 +20,7 @@ Configuration Example
 
         utility_bills:
           - scenario_name: Bills1
+            gas_marginal_rate: 1.05
             pv_compensation_type: NetMetering
 
         simulation_output_report:
@@ -68,8 +69,8 @@ Arguments
 - ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
 
   - ``scenario_name``: Name of the utility bills scenario.
-  - ``simple_filepath``: File with all fixed charges / marginal rates for each option of a chosen parameter (e.g., State). These will override any fixed charges / marginal rates specified in the YML file. File path is relative to buildstock_directory's `resources`_ folder.
-  - ``detailed_filepath``: File with electricity tariff path for each option of a chosen parameter (e.g., County). File may also contain all fixed charges / marginal rates. File path is relative to buildstock_directory's `resources`_ folder. Electricity tariff paths are relative to the parent folder of ``detailed_filepath``.
+  - ``simple_filepath``: File with all fixed charge / marginal rate / PV argument values for each option of a chosen parameter (e.g., State). These will override any fixed charge / marginal rate / PV argument values specified in the YML file. Any blank fields will be defaulted. File path is relative to buildstock_directory's `resources`_ folder.
+  - ``detailed_filepath``: File with electricity tariff path for each option of a chosen parameter (e.g., County). File may also contain all fixed charge / marginal rate / PV argument values. These will override any fixed charge / marginal rate / PV argument values specified in the YML file. Any blank fields will be defaulted. File path is relative to buildstock_directory's `resources`_ folder. Electricity tariff paths are relative to the parent folder of the ``detailed_filepath`` file.
   - ``elec_fixed_charge``: Monthly fixed charge for electricity.
   - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
   - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
