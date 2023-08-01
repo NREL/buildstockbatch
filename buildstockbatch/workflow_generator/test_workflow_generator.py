@@ -114,6 +114,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_annual_component_loads'] is True
     assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
     assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
+    assert simulation_output_step['arguments']['include_annual_resilience'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True

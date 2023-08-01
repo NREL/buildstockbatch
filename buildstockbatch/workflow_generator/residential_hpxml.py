@@ -388,6 +388,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         if 'include_annual_hvac_summary' in sim_out_rep_args_avail:
             sim_out_rep_args['include_annual_hvac_summary'] = True
 
+        if 'include_annual_resilience' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_resilience'] = True
+
         if 'include_timeseries_system_use_consumptions' in sim_out_rep_args_avail:
             sim_out_rep_args['include_timeseries_system_use_consumptions'] = False
 
