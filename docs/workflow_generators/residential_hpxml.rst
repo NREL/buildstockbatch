@@ -108,6 +108,7 @@ Arguments
   - ``include_timeseries_zone_temperatures``: Generates timeseries average temperatures (in deg-F) for each space modeled (e.g., living space, attic, garage, basement, crawlspace, etc.). 
   - ``include_timeseries_airflows``: Generates timeseries airflow rates (in cfm) for infiltration, mechanical ventilation (including clothes dryer exhaust), natural ventilation, whole house fans.
   - ``include_timeseries_weather``: Generates timeseries weather file data including outdoor temperatures, relative humidity, wind speed, and solar.
+  - ``include_timeseries_resilience``: Generates timeseries resilience outputs.
   - ``timeseries_timestamp_convention``: Determines whether timeseries timestamps use the start-of-timestep or end-of-timestep convention. Valid choices are 'start' and 'end'.
   - ``timeseries_num_decimal_places``: Allows overriding the default number of decimal places for timeseries output.
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
