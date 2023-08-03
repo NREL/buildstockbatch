@@ -412,6 +412,9 @@ class EagleBatch(BuildStockBatchBase):
                 env_vars = dict(os.environ)
                 env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
                 logger.debug('\n'.join(map(str, args)))
+                max_time_min = cfg.get('max_minutes_per_sim', 525600)
+                max_time_s = max_time_min * 60
+                start_time = dt.datetime.now()
                 with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
                     try:
                         subprocess.run(
@@ -422,7 +425,23 @@ class EagleBatch(BuildStockBatchBase):
                             stderr=subprocess.STDOUT,
                             cwd=cls.local_output_dir,
                             env=env_vars,
+                            timeout=max_time_s
                         )
+                    except subprocess.TimeoutExpired:
+                        end_time = dt.datetime.now()
+                        msg = f'Terminated {sim_id} after reaching max time of {max_time_min} minutes'
+                        f_out.write(f'[{end_time.now()} ERROR] {msg}')
+                        logger.warning(msg)
+                        with open(os.path.join(sim_dir, 'out.osw'), 'w') as out_osw:
+                            out_msg = {
+                                'started_at': start_time.strftime('%Y%m%dT%H%M%SZ'),
+                                'completed_at': end_time.strftime('%Y%m%dT%H%M%SZ'),
+                                'completed_status': 'Fail',
+                                'timeout': msg
+                            }
+                            out_osw.write(json.dumps(out_msg, indent=3))
+                        with open(os.path.join(sim_dir, 'run', 'out.osw'), 'a') as run_log:
+                            run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
                     except subprocess.CalledProcessError:
                         pass
                     finally:
