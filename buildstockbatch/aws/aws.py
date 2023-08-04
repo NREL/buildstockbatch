@@ -27,7 +27,6 @@ import json
 import logging
 import math
 import os
-import pandas as pd
 import pathlib
 import random
 from s3fs import S3FileSystem
@@ -39,11 +38,12 @@ import re
 import time
 import tqdm
 import io
+from packaging.version import parse
 
 from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch import postprocessing
-from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
+from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration, read_csv
 
 logger = logging.getLogger(__name__)
 
@@ -1195,8 +1195,8 @@ class AwsBatch(DockerBatchBase):
         if not (root_path / 'Dockerfile').exists():
             raise RuntimeError(f'The needs to be run from the root of the repo, found {root_path}')
 
-        # Make the buildstock/resources/.aws_docker_image dir to store logs
-        local_log_dir = os.path.join(self.buildstock_dir, 'resources', '.aws_docker_image')
+        # Make the buildstock/.aws_docker_image dir to store logs
+        local_log_dir = os.path.join(self.buildstock_dir, '.aws_docker_image')
         if not os.path.exists(local_log_dir):
             os.makedirs(local_log_dir)
 
@@ -1208,7 +1208,7 @@ class AwsBatch(DockerBatchBase):
                 raise AttributeError(f'baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}')
 
             # Copy the custom Gemfile into the buildstockbatch repo
-            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
+            bsb_root = os.path.abspath(os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir))
             new_gemfile_path = os.path.join(bsb_root, 'Gemfile')
             shutil.copyfile(local_gemfile_path, new_gemfile_path)
             logger.info(f'Copying custom Gemfile from {local_gemfile_path}')
@@ -1220,6 +1220,11 @@ class AwsBatch(DockerBatchBase):
             # Choose the base stage in the Dockerfile,
             # which stops before bundling custom gems into the image
             stage = 'buildstockbatch'
+
+        # Check that the version is greater than 3.4.0
+        if parse(self.os_version) <= parse('3.4.0'):
+            raise RuntimeError('OpenStudio version must be > 3.4.0 for AWS because 3.4.0 and below '
+                               'used Ubuntu 18.04 which includes Python 3.6, not compatible with buildstockbatch')
 
         logger.info(f'Building docker image stage: {stage} from OpenStudio {self.os_version}')
         img, build_logs = self.docker_client.images.build(
@@ -1267,8 +1272,8 @@ class AwsBatch(DockerBatchBase):
         gem_list_log = os.path.join(local_log_dir, 'openstudio_gem_list_output.log')
         with open(gem_list_log, 'wb') as f_out:
             f_out.write(container_output)
-        for line in container_output.decode().split('\n'):
-            logger.debug(line)
+        # for line in container_output.decode().split('\n'):
+        #     logger.debug(line)
         logger.debug(f'Review custom gems list at: {gem_list_log}')
 
     def push_image(self):
@@ -1341,8 +1346,40 @@ class AwsBatch(DockerBatchBase):
             weather_path = tmppath / 'weather'
             os.makedirs(weather_path)
 
+            # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+            logger.debug('Determining weather files to upload based on options_lookup.tsv and buildstock.csv')
+            with open(buildstock_path / 'resources' / 'options_lookup.tsv', 'r', encoding='utf-8') as f:
+                tsv_reader = csv.reader(f, delimiter='\t')
+                next(tsv_reader)  # skip headers
+                param_name = None
+                epws_by_option = {}
+                for row in tsv_reader:
+                    row_has_epw = [x.endswith('.epw') for x in row[2:]]
+                    if sum(row_has_epw):
+                        if row[0] != param_name and param_name is not None:
+                            raise RuntimeError(f'The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}')  # noqa: E501
+                        epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                        param_name = row[0]
+                        option_name = row[1]
+                        epws_by_option[option_name] = epw_filename
+
+            # Look through the buildstock.csv to find the appropriate location and epw
+            epw_filenames = set()
+            with open(project_path / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
+                csv_reader = csv.DictReader(f)
+                for row in csv_reader:
+                    epw_filenames.add(epws_by_option[row[param_name]])
+                    epw_filenames.add(epws_by_option[row[param_name]].replace('.epw', '.ddy'))
+                    epw_filenames.add(epws_by_option[row[param_name]].replace('.epw', '.stat'))
+            # Upload the empty.epw file in order for OS CLI to start running osw correctly
+            epw_filenames.add('empty.epw')
+            epw_filenames.add('empty.ddy')
+            epw_filenames.add('empty.stat')
+
             # Determine the unique weather files
-            epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            # epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            # epw_filenames += list(filter(lambda x: x.endswith('.ddy'), os.listdir(self.weather_dir)))
+            # epw_filenames += list(filter(lambda x: x.endswith('.stat'), os.listdir(self.weather_dir)))
             logger.debug('Calculating hashes for weather files')
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
                 delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
@@ -1367,7 +1404,8 @@ class AwsBatch(DockerBatchBase):
                 json.dump(self.cfg, f)
 
             # Collect simulations to queue
-            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
+            self.validate_buildstock_csv(self.project_filename, df)
             building_ids = df.index.tolist()
             n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
@@ -1550,6 +1588,10 @@ class AwsBatch(DockerBatchBase):
             for row in csv_reader:
                 if int(row['Building']) in building_ids:
                     epws_to_download.add(epws_by_option[row[param_name]])
+                    epws_to_download.add(epws_by_option[row[param_name]].replace('.epw', '.ddy'))
+                    epws_to_download.add(epws_by_option[row[param_name]].replace('.epw', '.stat'))
+        # Copy the empty.epw file in order for OS CLI to start running osw correctly
+        epws_to_download.add('empty.epw')
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
