@@ -313,9 +313,13 @@ class BuildStockBatchBase(object):
             Sampler = BuildStockBatchBase.get_sampler_class(sampler_name)
         except AttributeError:
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
+        if sampler_name == 'precomputed':
+            logger.warning("Sampler type 'precomputed' is deprecated, use residential_precomputed or "
+                           "commercial_precomputed instead. Only the residential_precomputed sampler "
+                           "supports buildstock_csv validation.")
         args = cfg['sampler']['args']
         Sampler.validate_args(project_file, **args)
-        if issubclass(Sampler, sampler.PrecomputedSampler):
+        if issubclass(Sampler, sampler.ResidentialPrecomputedSampler):
             sample_file = cfg['sampler']['args']['sample_file']
             if not os.path.isabs(sample_file):
                 sample_file = os.path.join(os.path.dirname(project_file), sample_file)
@@ -324,7 +328,6 @@ class BuildStockBatchBase(object):
             buildstock_df = read_csv(sample_file, dtype=str)
             BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
-
 
     @staticmethod
     def validate_buildstock_csv(project_file, buildstock_df):
@@ -336,14 +339,12 @@ class BuildStockBatchBase(object):
             if column in {'Building'}:
                 continue
             if column not in param_option_dict:
-                # In ComStock, some columns in the buildstock.csv are intermediate steps in the sampling
-                # and are not used by the options_lookup.tsv.
-                logger.warning(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
-                    logger.warning(f'Option {option} in column {column} of buildstock_csv is not available '
-                                   f'in options_lookup.tsv')
+                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
+                                  'in options_lookup.tsv')
         if errors:
             raise ValidationError('\n'.join(errors))
 

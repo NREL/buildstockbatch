@@ -20,9 +20,8 @@ import pathlib
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
-import pandas as pd
 from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
-from buildstockbatch.utils import get_project_configuration, read_csv
+from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
 from yamale.yamale_error import YamaleError
@@ -32,6 +31,7 @@ import yaml
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
 resources_dir = os.path.join(here, 'test_inputs', 'test_openstudio_buildstock', 'resources')
+
 
 def filter_logs(logs, level):
     filtered_logs = ''
@@ -309,7 +309,7 @@ def test_validate_eagle_output_directory():
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file({
         'sampler': {
-            'type': 'precomputed',
+            'type': 'residential_precomputed',
             'args': {
                 'sample_file': str(os.path.join(resources_dir, 'buildstock_good.csv'))
             }
@@ -317,10 +317,11 @@ def test_validate_sampler_good_buildstock(basic_residential_project_file):
     })
     assert BuildStockBatchBase.validate_sampler(project_filename)
 
+
 def test_validate_sampler_bad_buildstock(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file({
         'sampler': {
-            'type': 'precomputed',
+            'type': 'residential_precomputed',
             'args': {
                 'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
             }
@@ -336,3 +337,32 @@ def test_validate_sampler_bad_buildstock(basic_residential_project_file):
         assert 'Column Insulation in buildstock_csv is not available in options_lookup.tsv' in er
     else:
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
+
+
+def test_validate_sampler_bad_buildstock_commercial(basic_residential_project_file):
+    # Commercial precomputed sampler should not perform builstock_csv validation so it should pass
+    project_filename, _ = basic_residential_project_file({
+        'sampler': {
+            'type': 'commercial_precomputed',
+            'args': {
+                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
+            }
+        }
+    })
+    BuildStockBatchBase.validate_sampler(project_filename)
+
+
+def test_validate_sampler_bad_buildstock_precomputed(basic_residential_project_file):
+    # precomputed sampler should pass but raise depreciation warning
+    project_filename, _ = basic_residential_project_file({
+        'sampler': {
+            'type': 'precomputed',
+            'args': {
+                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
+            }
+        }
+    })
+    with LogCapture(level=logging.WARNING) as logs:
+        BuildStockBatchBase.validate_sampler(project_filename)
+        warning_logs = filter_logs(logs, 'WARNING')
+        assert "Sampler type 'precomputed' is deprecated" in warning_logs
