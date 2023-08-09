@@ -14,3 +14,11 @@ Development Changelog
         This is an example change. Please copy and paste it - for valid tags please refer to ``conf.py`` in the docs
         directory. ``pullreq`` should be set to the appropriate pull request number and ``tickets`` to any related
         github issues. These will be automatically linked in the documentation.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 386
+        :tickets: 256
+
+        No longer automatically downloads the appropriate singularity image from
+        S3. Also added validation to ensure the image is in the correct location.
