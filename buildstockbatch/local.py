@@ -127,7 +127,7 @@ class LocalBatch(BuildStockBatchBase):
         return self._weather_dir
 
     @classmethod
-    def run_building(cls, buildstock_dir, weather_dir, os_hescore_dir, results_dir, measures_only,
+    def run_building(cls, buildstock_dir, weather_dir, results_dir, measures_only,
                      n_datapoints, cfg, i, upgrade_idx=None):
 
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -242,7 +242,6 @@ class LocalBatch(BuildStockBatchBase):
             delayed(self.run_building),
             self.buildstock_dir,
             self.weather_dir,
-            self.os_hescore_dir,
             self.results_dir,
             measures_only,
             n_datapoints,

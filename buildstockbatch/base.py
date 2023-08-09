@@ -71,6 +71,8 @@ class BuildStockBatchBase(object):
 
         if self.cfg['workflow_generator']['type'] == 'residential_hpxml_hes':
             self.os_hescore_dir = self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory']
+        else:
+            self.os_hescore_dir = None
 
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.

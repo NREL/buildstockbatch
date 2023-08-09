@@ -295,7 +295,7 @@ class EagleBatch(BuildStockBatchBase):
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(self.output_dir, self.cfg, args['n_datapoints'], i, upgrade_idx)
+                return self.run_building(self.output_dir, self.cfg, self.os_hescore_dir, args['n_datapoints'], i, upgrade_idx)
             except Exception:
                 with open(traceback_file_path, 'a') as f:
                     txt = get_error_details()
@@ -341,7 +341,7 @@ class EagleBatch(BuildStockBatchBase):
         logger.info('batch complete')
 
     @classmethod
-    def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
+    def run_building(cls, output_dir, cfg, os_hescore_dir, n_datapoints, i, upgrade_idx=None):
 
         fs = LocalFileSystem()
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
@@ -390,7 +390,10 @@ class EagleBatch(BuildStockBatchBase):
                     runscript.append('ln -s /resources /var/simdata/openstudio/resources')
                     src = os.path.join(cls.local_buildstock_dir, 'resources/hpxml-measures')
                     container_mount = '/resources/hpxml-measures'
-                    args.extend(['-B', '{}:{}:ro'.format(src, container_mount)])
+                    args.extend(['-B', f'{src}:{container_mount}:ro'])
+ 
+                if os_hescore_dir:
+                    args.extend(['-B', "/projects/hescore/weather:/opt/OpenStudio-HEScore/weather:ro"])
 
                 # Build the openstudio command that will be issued within the
                 # singularity container If custom gems are to be used in the
@@ -412,7 +415,7 @@ class EagleBatch(BuildStockBatchBase):
                 env_vars = dict(os.environ)
                 env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
                 logger.debug('\n'.join(map(str, args)))
-                with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                with open(os.path.join(sim_dir, 'openstudio_output.log'), 'w') as f_out:
                     try:
                         subprocess.run(
                             args,
