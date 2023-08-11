@@ -215,8 +215,8 @@ class LocalBatch(BuildStockBatchBase):
                 out_osw.write(json.dumps(out_msg, indent=3))
             with open(sim_path / 'run' / 'run.log', 'a') as run_log:
                 run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
-        finally:
             time.sleep(20)  # Wait for EnergyPlus to release file locks
+        finally:
             fs = LocalFileSystem()
             cls.cleanup_sim_dir(
                 sim_dir,
