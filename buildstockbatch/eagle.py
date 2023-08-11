@@ -320,6 +320,7 @@ class EagleBatch(BuildStockBatchBase):
             json.dump(dpouts, f)
 
         # Compress simulation results
+        time.sleep(10)  # Allow results JSON to finish writing
         simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
         logger.info(f'Compressing simulation outputs to {simout_filename}')
         local_sim_out_dir = self.local_output_dir / 'simulation_output'
@@ -442,6 +443,7 @@ class EagleBatch(BuildStockBatchBase):
                             out_osw.write(json.dumps(out_msg, indent=3))
                         with open(os.path.join(sim_dir, 'run', 'out.osw'), 'a') as run_log:
                             run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        time.sleep(60)  # Wait for EnergyPlus to release file locks and data_point.zip to finish
                     except subprocess.CalledProcessError:
                         pass
                     finally:
