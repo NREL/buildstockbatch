@@ -421,6 +421,8 @@ class EagleBatch(BuildStockBatchBase):
                             out_osw.write(json.dumps(out_msg, indent=3))
                         with open(os.path.join(sim_dir, 'run', 'out.osw'), 'a') as run_log:
                             run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        with open(os.path.join(sim_dir, 'run', 'failed.job'), 'w') as failed_job:
+                            failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
                         time.sleep(60)  # Wait for EnergyPlus to release file locks and data_point.zip to finish
                     except subprocess.CalledProcessError:
                         pass
