@@ -227,6 +227,12 @@ def read_results_json(fs, filename, all_cols=None):
         with gzip.open(f1, 'rt', encoding='utf-8') as f2:
             dpouts = json.load(f2)
     df = pd.DataFrame(dpouts)
+
+    # Cast booleans to strings so that NaN values are preserved and we don't get mixed bool/object datatypes
+    cols_to_cast = [c for c in df.columns if df[c].dtype == bool]
+    for c in cols_to_cast:
+        df.loc[:, c] = df.loc[:, c].astype(str)
+
     df['job_id'] = int(re.search(r'results_job(\d+)\.json\.gz', filename).group(1))
     if all_cols is not None:
         for missing_col in set(all_cols).difference(df.columns.values):
