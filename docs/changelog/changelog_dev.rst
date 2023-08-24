@@ -59,3 +59,11 @@ Development Changelog
         :pullreq: 365
 
         Upload buildstock.csv to S3 during postprocessing
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 386
+        :tickets: 256
+
+        No longer automatically downloads the appropriate singularity image from
+        S3. Also added validation to ensure the image is in the correct location.
