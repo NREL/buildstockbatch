@@ -36,3 +36,11 @@ Development Changelog
         Split the the precomputed sampler into residential and commerical version because only the residential version
         needs the buildstock_csv validation. Also add deprecation warning if 'precomputed' sampler is used instead of
         'residential_precomputed' or 'commercial_precomputed'.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 386
+        :tickets: 256
+
+        No longer automatically downloads the appropriate singularity image from
+        S3. Also added validation to ensure the image is in the correct location.

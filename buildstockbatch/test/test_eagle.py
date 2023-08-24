@@ -31,7 +31,6 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
     cfg = get_project_configuration(project_filename)
 
     with patch.object(EagleBatch, 'weather_dir', None), \
-            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'), \
             patch.object(EagleBatch, 'create_osw', return_value=osw_dict), \
             patch.object(EagleBatch, 'make_sim_dir', return_value=('bldg0000001up00', sim_path)), \
             patch.object(EagleBatch, 'local_scratch', tmp_path):
@@ -97,21 +96,15 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert called_kw['input'].decode('utf-8').find(' --measures_only') > -1
 
 
-def test_singularity_image_download_url(basic_residential_project_file):
-    project_filename, _ = basic_residential_project_file()
-    with patch.object(EagleBatch, 'weather_dir', None):
-        url = EagleBatch(project_filename).singularity_image_url
-        r = requests.head(url, timeout=30)
-        assert r.status_code == requests.codes.ok
-
-
 @patch('buildstockbatch.base.BuildStockBatchBase.validate_options_lookup')
 @patch('buildstockbatch.eagle.EagleBatch.validate_output_directory_eagle')
+@patch('buildstockbatch.eagle.EagleBatch.validate_singularity_image_eagle')
 @patch('buildstockbatch.eagle.subprocess')
-def test_user_cli(mock_subprocess, mock_validate_output_directory_eagle, mock_validate_options,
-                  basic_residential_project_file, monkeypatch):
+def test_user_cli(mock_subprocess, mock_validate_singularity_image_eagle, mock_validate_output_directory_eagle, 
+                  mock_validate_options, basic_residential_project_file, monkeypatch):
     mock_validate_options.return_value = True
     mock_validate_output_directory_eagle.return_value = True
+    mock_validate_singularity_image_eagle.return_value = True
 
     project_filename, results_dir = basic_residential_project_file()
     shutil.rmtree(results_dir)
@@ -181,8 +174,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
     monkeypatch.setenv('CONDA_PREFIX', 'something')
     monkeypatch.setenv('SLURM_JOB_QOS', 'high')
 
-    with patch.object(EagleBatch, 'weather_dir', None), \
-            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'):
+    with patch.object(EagleBatch, 'weather_dir', None):
         batch = EagleBatch(project_filename)
         for i in range(1, 11):
             pathlib.Path(results_dir, 'job{:03d}.json'.format(i)).touch()
@@ -196,8 +188,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
     mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
     mock_subprocess.PIPE = None
 
-    with patch.object(EagleBatch, 'weather_dir', None), \
-            patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg'):
+    with patch.object(EagleBatch, 'weather_dir', None):
         batch = EagleBatch(project_filename)
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
@@ -231,7 +222,6 @@ def test_run_building_process(mocker,  basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.subprocess')
 
     mocker.patch.object(EagleBatch, 'local_buildstock_dir', results_dir / 'local_buildstock_dir')
-    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
     mocker.patch.object(EagleBatch, 'local_weather_dir', results_dir / 'local_weather_dir')
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
     mocker.patch.object(EagleBatch, 'local_housing_characteristics_dir',
@@ -318,7 +308,6 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     mocker.patch('buildstockbatch.eagle.Parallel', sequential_parallel)
     mocker.patch('buildstockbatch.eagle.subprocess')
 
-    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
     mocker.patch.object(EagleBatch, 'run_building', raise_error)
     mocker.patch.object(EagleBatch, 'local_output_dir', results_dir)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
@@ -341,7 +330,6 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file()
     os.makedirs(os.path.join(results_dir, 'results_csvs'))
     os.makedirs(os.path.join(results_dir, 'parquet'))
-    mocker.patch.object(EagleBatch, 'singularity_image', '/path/to/singularity.simg')
     mocker.patch.object(EagleBatch, 'weather_dir', None)
     mocker.patch.object(EagleBatch, 'results_dir', results_dir)
     process_results_mocker = mocker.patch.object(BuildStockBatchBase, 'process_results')
