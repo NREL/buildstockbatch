@@ -179,6 +179,8 @@ def verify(buildstock_file: str, project: str, output: str):
        This gives absolute distribution error for group as 0.15, 0.15 and 0.3. Hence, max_group_error is 0.3 and
        total_group_eror is 0.6
        \b
+       ----------------------
+       \b
        Caution about downsampling through slicing
        \b
        A downsampled buildstock.csv created by selecting a subset of rows from the original buildstock.csv file
@@ -187,7 +189,10 @@ def verify(buildstock_file: str, project: str, output: str):
        full buildstock.csv file can have very skewed distribution of some characteristics, and it will not pass the
        verification because the skewed distribution cannot be justified by the probabilities in the TSV.
 
-       Consider this slightly modified example (in this case Fan.tsv has no depenendency on Bedrooms.tsv)
+       \b
+       Consider this slightly modified example (in this case Fan.tsv has no dependency on Bedrooms.tsv)
+
+       \b
        Bedrooms.tsv
        ----------
        Option=1    Option=2    Option=3    Option=4    Option=5    sampling_probability
@@ -201,9 +206,9 @@ def verify(buildstock_file: str, project: str, output: str):
        AC.tsv
        ----------
        Dependency=Fan       Option=Yes    Option=No    sampling_probability
-                    None           0.9          0.1                    0.35
-                Standard           0.8          0.2                    0.35
-                 Premium           0.1          0.9                    0.3
+                 None              0.9          0.1                    0.35
+             Standard              0.8          0.2                    0.35
+              Premium              0.1          0.9                    0.30
        \b
        Quota sampling in the above project for 10 samples can generate a buildstock.csv that looks like this:
        buildstock.csv
@@ -231,7 +236,7 @@ def verify(buildstock_file: str, project: str, output: str):
        samples are very skewed from the expected distribution in the TSV file. Even if we update the Bedrooms.tsv to
        only have Bedrooms=3 as shown below, the downsampled buildstock.csv will still not pass the verification
        for Fan.tsv.
-
+       \b
        In order to create a downsampled buildstock.csv file that passes the verification, we need to rerun the sampler
        with correct number of samples and updated TSV required for the downsampled buildstock.csv file. For example,
        we can update the Bedrooms.tsv to only have Bedrooms=3 as follows:
@@ -249,7 +254,7 @@ def verify(buildstock_file: str, project: str, output: str):
               *         3         Standard      Yes
        \b
        This buildstock.csv file will pass the verification for all TSVs.
-
+       \b
        Please note that not passing the verification does not mean that the buildstock.csv file is necessarily
        wrong. It just means that the buildstock.csv file has a skewed distribution from what one would expect based
        on the probabilities in the TSVs. The skew will be larger for smaller slices. For example, if we downsample
