@@ -121,7 +121,7 @@ def verify(buildstock_file: str, project: str, output: str):
        \b
        In addition to correctness verification, it also calculates the sample probability distribution error for the
        options in each TSVs between the BUILDSTOCK_FILE and what one would expect based on the probabilities. It also
-       calculates smapling errors for each group in the TSV. An example is provided below to explain the error
+       calculates sampling errors for each group in the TSV. An example is provided below to explain the error
        calculation further.
        Consider a project with three TSVs.
        Bedrooms.tsv
@@ -131,16 +131,16 @@ def verify(buildstock_file: str, project: str, output: str):
        \b
        Fan.tsv
        ----------
-       Dependency=param1    Option=None    Option=Standard    Option=Premium    sampling_probability
-                      1            0.35              0.35                0.3                     0.2
-                      2            0.35              0.35                0.3                     0.2
-                      3            0.35              0.35                0.3                     0.2
-                      4            0.35              0.35                0.3                     0.2
-                      5            0.35              0.35                0.3                     0.2
+       Dependency=Bedrooms    Option=None    Option=Standard    Option=Premium    sampling_probability
+                        1            0.35              0.35                0.3                     0.2
+                        2            0.35              0.35                0.3                     0.2
+                        3            0.35              0.35                0.3                     0.2
+                        4            0.35              0.35                0.3                     0.2
+                        5            0.35              0.35                0.3                     0.2
        \b
        AC.tsv
        ----------
-       Dependency=param2    Option=Yes    Option=No    sampling_probability
+       Dependency=Fan       Option=Yes    Option=No    sampling_probability
                     None           0.9          0.1                    0.35
                 Standard           0.8          0.2                    0.35
                  Premium           0.1          0.9                    0.3
