@@ -383,6 +383,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     logger.info(f"Gathering all the parquet files in {glob_str}")
     concat_files = fs.glob(glob_str)
     logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
+    parquet_root_dir = Path(parquet_root_dir).as_posix()
     create_metadata_file(concat_files, root_dir=parquet_root_dir, engine='pyarrow', fs=fs)
     logger.info(f"_metadata file written to {parquet_root_dir}")
 
@@ -445,7 +446,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             else:
                 logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
-    if do_timeseries:
         # Sort the columns
         all_ts_cols_sorted = ['building_id'] + sorted(x for x in all_ts_cols if x.startswith('time'))
         all_ts_cols.difference_update(all_ts_cols_sorted)
@@ -473,11 +473,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f"Processing upgrade {upgrade_id}. ")
         df = dask.compute(results_df_groups.get_group(upgrade_id))[0]
         logger.info(f"Obtained results_df for {upgrade_id} with {len(df)} datapoints. ")
-        df.sort_index(inplace=True)
         df.rename(columns=to_camelcase, inplace=True)
         df = clean_up_results_df(df, cfg, keep_upgrade_id=True)
         del df['upgrade']
         df.set_index('building_id', inplace=True)
+        df.sort_index(inplace=True)
         schema = None
         partition_df = df[df_partition_columns].copy()
         partition_df.rename(columns={df_c: c for df_c, c in zip(df_partition_columns, partition_columns)},
@@ -503,7 +503,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         logger.info(f'Writing {csv_filename}')
         with fs.open(csv_filename, 'wb') as f:
             with gzip.open(f, 'wt', encoding='utf-8') as gf:
-                df.to_csv(gf, index=True, line_terminator='\n')
+                df.to_csv(gf, index=True, lineterminator='\n')
 
         # Write Parquet
         if upgrade_id == 0:
@@ -538,7 +538,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size)))[0])
 
             # Determine how many files should be in each partition and group the files
-            parquet_memory = int(cfg['eagle'].get('postprocessing', {}).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
+            parquet_memory = int(cfg.get('eagle', {}).get('postprocessing', {}
+                                                          ).get('parquet_memory_mb', MAX_PARQUET_MEMORY))
             logger.info(f"Max parquet memory: {parquet_memory} MB")
             max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             partition_df = partition_df.loc[ts_bldg_ids].copy()

@@ -3,31 +3,6 @@
 from codecs import open
 import os
 import setuptools
-from setuptools.command.test import test as testing_cmd
-import sys
-
-
-class PyTest(testing_cmd):
-    user_options = [('pytest-args=', 'a', "Arguments to pass into py.test")]
-
-    def initialize_options(self):
-        testing_cmd.initialize_options(self)
-        try:
-            from multiprocessing import cpu_count
-            self.pytest_args = ['-n', str(cpu_count()), '--boxed']
-        except (ImportError, NotImplementedError):
-            self.pytest_args = ['-n', '1', '--boxed']
-
-    def finalize_options(self):
-        testing_cmd.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        import pytest
-
-        errno = pytest.main(self.pytest_args)
-        sys.exit(errno)
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -57,52 +32,48 @@ setuptools.setup(
     install_requires=[
         'pyyaml',
         'requests',
-        'numpy>=1.20.0',
-        'pandas>=1.0.0,!=1.0.4',
+        'numpy',
+        'pandas>=2',
         'joblib',
-        'pyarrow>=3.0.0',
-        'dask[complete]>=2022.2.0',
+        'pyarrow',
+        'dask[complete]>=2022.10.0',
         'docker',
-        'boto3>=1.10.44',
-        's3fs>=0.4.0,<0.5.0',
-        'fsspec>=0.6.0',
-        'docutils<0.15,>=0.10',
-        'yamale>=2.0',
-        'ruamel.yaml>=0.15.0',
-        'testfixtures',
+        's3fs[boto3]',
+        'fsspec',
+        'yamale',
+        'ruamel.yaml',
         'awsretry',
         'jinja2<3.1.0',
         'networkx',
         'colorama',
         'click'
+        'lxml'
     ],
     extras_require={
         'dev': [
-            'pytest>=2.8.0',
+            'pytest',
             'pytest-mock',
             'pytest-cov',
-            'codecov',
+            'testfixtures',
             'Sphinx',
-            'sphinx_rtd_theme',
+            'sphinx_rtd_theme>=1.1.0',
             'sphinx-autobuild',
             'sphinxcontrib-programoutput',
             'sphinx_paramlinks',
             'changelog',
             'flake8',
-            'coverage',
             'rope',
             'doc8'
         ]
     },
     entry_points={
         'console_scripts': [
-            'buildstock_docker=buildstockbatch.localdocker:main',
+            'buildstock_local=buildstockbatch.local:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
             'buildstock_aws=buildstockbatch.aws.aws:main',
             'resstock_sampler=buildstockbatch.sampler.residential_sampler.sampler:main'
         ]
     },
-    cmdclass={'test': PyTest},
     license='BSD-3',
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -110,9 +81,9 @@ setuptools.setup(
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11'
     ]
 )

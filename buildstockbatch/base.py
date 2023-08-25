@@ -3,7 +3,7 @@
 """
 buildstockbatch.base
 ~~~~~~~~~~~~~~~
-This is the base class mixed into the deployment specific classes (i.e. eagle, localdocker)
+This is the base class mixed into the deployment specific classes (i.e. eagle, local)
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -14,10 +14,13 @@ from dask.distributed import Client
 import difflib
 from fsspec.implementations.local import LocalFileSystem
 import logging
+from lxml import objectify
 import os
-import pandas as pd
+import numpy as np
+import re
 import requests
 import shutil
+import subprocess
 import tempfile
 import yamale
 import zipfile
@@ -32,7 +35,7 @@ from buildstockbatch import (
     postprocessing
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
-from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.utils import path_rel_to_file, get_project_configuration, read_csv
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
@@ -41,8 +44,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.4.0'
-    DEFAULT_OS_SHA = '4bd816f785'
+    DEFAULT_OS_VERSION = '3.6.1'
+    DEFAULT_OS_SHA = 'bb9481519e'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -88,6 +91,10 @@ class BuildStockBatchBase(object):
         # Select a sampler
         Sampler = self.get_sampler_class(self.cfg['sampler']['type'])
         return Sampler(self, **self.cfg['sampler'].get('args', {}))
+
+    @staticmethod
+    def openstudio_exe():
+        return os.environ.get("OPENSTUDIO_EXE", "openstudio")
 
     def path_rel_to_projectfile(self, x):
         return path_rel_to_file(self.project_filename, x)
@@ -184,7 +191,7 @@ class BuildStockBatchBase(object):
         timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
         if os.path.isfile(timeseries_filepath):
-            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            units_dict = read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
             skiprows = [1]
         else:
             timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
@@ -194,21 +201,21 @@ class BuildStockBatchBase(object):
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
-                if file.endswith('schedules.csv'):
+                if re.match(r".*schedules.*\.csv", file):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
 
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
-            cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
+            cols = read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
 
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
-                schedules = pd.read_csv(schedules_filepath)
+                schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
@@ -247,20 +254,21 @@ class BuildStockBatchBase(object):
         if os.path.isdir(reports_dir):
             shutil.rmtree(reports_dir, ignore_errors=True)
 
-    @staticmethod
-    def validate_project(project_file):
-        assert BuildStockBatchBase.validate_project_schema(project_file)
-        assert BuildStockBatchBase.validate_sampler(project_file)
-        assert BuildStockBatchBase.validate_workflow_generator(project_file)
-        assert BuildStockBatchBase.validate_misc_constraints(project_file)
-        assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
-        assert BuildStockBatchBase.validate_reference_scenario(project_file)
-        assert BuildStockBatchBase.validate_options_lookup(project_file)
-        assert BuildStockBatchBase.validate_logic(project_file)
-        assert BuildStockBatchBase.validate_measure_references(project_file)
-        assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
-        assert BuildStockBatchBase.validate_resstock_version(project_file)
-        assert BuildStockBatchBase.validate_openstudio_version(project_file)
+    @classmethod
+    def validate_project(cls, project_file):
+        assert cls.validate_project_schema(project_file)
+        assert cls.validate_sampler(project_file)
+        assert cls.validate_workflow_generator(project_file)
+        assert cls.validate_misc_constraints(project_file)
+        assert cls.validate_xor_nor_schema_keys(project_file)
+        assert cls.validate_reference_scenario(project_file)
+        assert cls.validate_options_lookup(project_file)
+        assert cls.validate_logic(project_file)
+        assert cls.validate_measure_references(project_file)
+        assert cls.validate_postprocessing_spec(project_file)
+        assert cls.validate_resstock_or_comstock_version(project_file)
+        assert cls.validate_openstudio_version(project_file)
+        assert cls.validate_number_of_options(project_file)
         logger.info('Base Validation Successful')
         return True
 
@@ -272,6 +280,31 @@ class BuildStockBatchBase(object):
         else:
             return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
 
+    @classmethod
+    def validate_openstudio_path(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        os_version = cfg.get('os_version', cls.DEFAULT_OS_VERSION)
+        os_sha = cfg.get('os_sha', cls.DEFAULT_OS_SHA)
+        try:
+            proc_out = subprocess.run(
+                [cls.openstudio_exe(), "openstudio_version"],
+                capture_output=True,
+                text=True
+            )
+        except FileNotFoundError:
+            raise ValidationError(f"Cannot find openstudio at `{cls.openstudio_exe()}`")
+        if proc_out.returncode != 0:
+            raise ValidationError(f"OpenStudio failed with the following error {proc_out.stderr}")
+        actual_os_version, actual_os_sha = proc_out.stdout.strip().split("+")
+        if os_version != actual_os_version:
+            raise ValidationError(f"OpenStudio version is {actual_os_version}, expected is {os_version}")
+        if os_sha != actual_os_sha:
+            raise ValidationError(
+                f"OpenStudio version is correct at {os_version}, but the shas don't match. "
+                f"Got {actual_os_sha}, expected {os_sha}"
+            )
+        return True
+
     @staticmethod
     def validate_sampler(project_file):
         cfg = get_project_configuration(project_file)
@@ -281,7 +314,38 @@ class BuildStockBatchBase(object):
         except AttributeError:
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
         args = cfg['sampler']['args']
-        return Sampler.validate_args(project_file, **args)
+        Sampler.validate_args(project_file, **args)
+        if issubclass(Sampler, sampler.PrecomputedSampler):
+            sample_file = cfg['sampler']['args']['sample_file']
+            if not os.path.isabs(sample_file):
+                sample_file = os.path.join(os.path.dirname(project_file), sample_file)
+            else:
+                sample_file = os.path.abspath(sample_file)
+            buildstock_df = read_csv(sample_file, dtype=str)
+            BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+        return True
+
+
+    @staticmethod
+    def validate_buildstock_csv(project_file, buildstock_df):
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        # verify that all the Columns in buildstock_df only have values available in param_option_dict
+        # param_option_dict has format: {column_name: [valid_option1, valid_option2, ...], ...}
+        errors = []
+        for column in buildstock_df.columns:
+            if column in {'Building'}:
+                continue
+            if column not in param_option_dict:
+                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                continue
+            for option in buildstock_df[column].unique():
+                if option not in param_option_dict[column]:
+                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
+                                  f'in options_lookup.tsv')
+        if errors:
+            raise ValidationError('\n'.join(errors))
+
+        return True
 
     @classmethod
     def validate_workflow_generator(cls, project_file):
@@ -671,7 +735,7 @@ class BuildStockBatchBase(object):
         return True  # Only print the warning, but always pass the validation
 
     @staticmethod
-    def validate_resstock_version(project_file):
+    def validate_resstock_or_comstock_version(project_file):
         """
         Checks the minimum required version of BuildStockBatch against the version being used
         """
@@ -683,17 +747,77 @@ class BuildStockBatchBase(object):
             with open(buildstock_rb, 'r') as f:
                 for line in f:
                     line = line.strip()
-                    for tool in ['ResStock_Version', 'BuildStockBatch_Version']:
+                    for tool in ['ResStock_Version', 'ComStock_Version', 'BuildStockBatch_Version']:
                         if line.startswith(tool):
                             lhs, rhs = line.split('=')
                             version, _ = rhs.split('#')
                             versions[tool] = eval(version.strip())
-            ResStock_Version = versions['ResStock_Version']
             BuildStockBatch_Version = versions['BuildStockBatch_Version']
             if bsb_version < BuildStockBatch_Version:
+                if 'ResStock_Version' in versions.keys():
+                    stock_version = versions['ResStock_Version']
+                elif 'ComStock_Version' in versions.keys():
+                    stock_version = versions['ComStock_Version']
+                else:
+                    stock_version = 'Unknown'
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
-                    f" for ResStock version {ResStock_Version}. Found {bsb_version}"
+                    f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
                 raise ValidationError(val_err)
+
+        return True
+
+    @staticmethod
+    def validate_number_of_options(project_file):
+        """Checks that there aren't more options than are allowed in the ApplyUpgrade measure.
+
+        :param project_file: path to project file
+        :type project_file: str
+        :raises ValidationError: if there are more options defined than there are in the measure.
+        :return: whether validation passes or not
+        :rtype: bool
+        """
+        cfg = get_project_configuration(project_file)
+        measure_xml_filename = os.path.join(
+            cfg["buildstock_directory"], "measures", "ApplyUpgrade", "measure.xml"
+        )
+        if os.path.exists(measure_xml_filename):
+            measure_xml_tree = objectify.parse(measure_xml_filename)
+            measure_xml = measure_xml_tree.getroot()
+            n_options_in_measure = 0
+            n_costs_per_option_in_measure = 0
+            for argument in measure_xml.arguments.argument:
+                m_option = re.match(r"^option_(\d+)$", str(argument.name))
+                if m_option:
+                    option_number = int(m_option.group(1))
+                    n_options_in_measure = max(option_number, n_options_in_measure)
+                m_costs = re.match(r"^option_(\d+)_cost_(\d+)_value", str(argument.name))
+                if m_costs:
+                    cost_number = int(m_costs.group(2))
+                    n_costs_per_option_in_measure = max(cost_number, n_costs_per_option_in_measure)
+            n_options_in_cfg = 0
+            n_costs_in_cfg = 0
+            for upgrade in cfg.get("upgrades", []):
+                options = upgrade.get("options", [])
+                n_options = len(options)
+                n_costs = max(len(option.get("costs", [])) for option in options)
+                n_options_in_cfg = max(n_options, n_options_in_cfg)
+                n_costs_in_cfg = max(n_costs, n_costs_in_cfg)
+            err_msgs = []
+            if n_options_in_cfg > n_options_in_measure:
+                err_msgs.append(
+                    f"There are {n_options_in_cfg} options in an upgrade in your project file and only "
+                    f"{n_options_in_measure} in the ApplyUpgrade measure."
+                )
+            if n_costs_in_cfg > n_costs_per_option_in_measure:
+                err_msgs.append(
+                    f"There are {n_costs_in_cfg} costs on an option in your project file and only "
+                    f"{n_costs_per_option_in_measure} in the ApplyUpgrade measure."
+                )
+            if err_msgs:
+                err_msgs.append(
+                    "See https://github.com/NREL/buildstockbatch/wiki/Adding-Options-to-the-ApplyUpgrade-measure"
+                )
+                raise ValidationError("\n".join(err_msgs))
 
         return True
 
@@ -719,7 +843,7 @@ class BuildStockBatchBase(object):
                             versions[tool] = eval(version.strip())
             OS_HPXML_Version = versions['OS_HPXML_Version']
             OS_Version = versions['OS_Version']
-            if os_version != OS_Version:
+            if not os_version.startswith(OS_Version):
                 val_err = f"OS version {OS_Version} is required" \
                     f" for OS-HPXML version {OS_HPXML_Version}. Found {os_version}"
                 raise ValidationError(val_err)

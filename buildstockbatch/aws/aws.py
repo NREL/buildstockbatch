@@ -16,6 +16,7 @@ import boto3
 from botocore.exceptions import ClientError
 import collections
 import csv
+import docker
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import hashlib
@@ -25,7 +26,6 @@ import json
 import logging
 import math
 import os
-import pandas as pd
 import pathlib
 import random
 from s3fs import S3FileSystem
@@ -38,11 +38,10 @@ import time
 import io
 import zipfile
 
-from buildstockbatch.localdocker import DockerBatchBase
-from buildstockbatch.base import ValidationError
+from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch import postprocessing
-from ..utils import log_error_details, get_project_configuration
+from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration, read_csv
 
 logger = logging.getLogger(__name__)
 
@@ -1658,6 +1657,29 @@ class AwsSNS(AwsJobBase):
         logger.info(f"Simple notifications topic {self.sns_state_machine_topic} deleted.")
 
 
+class DockerBatchBase(BuildStockBatchBase):
+
+    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
+
+    def __init__(self, project_filename):
+        super().__init__(project_filename)
+
+        self.docker_client = docker.DockerClient.from_env()
+        try:
+            self.docker_client.ping()
+        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
+            logger.error('The docker server did not respond, make sure Docker Desktop is started then retry.')
+            raise RuntimeError('The docker server did not respond, make sure Docker Desktop is started then retry.')
+
+    @staticmethod
+    def validate_project(project_file):
+        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
+
+    @property
+    def docker_image(self):
+        return 'nrel/openstudio:{}'.format(self.os_version)
+
+
 class AwsBatch(DockerBatchBase):
 
     def __init__(self, project_filename):
@@ -1835,7 +1857,8 @@ class AwsBatch(DockerBatchBase):
                 json.dump(self.cfg, f)
 
             # Collect simulations to queue
-            df = pd.read_csv(buildstock_csv_filename, index_col=0)
+            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
+            self.validate_buildstock_csv(self.project_filename, df)
             building_ids = df.index.tolist()
             n_datapoints = len(building_ids)
             n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)

@@ -1,23 +1,25 @@
 Project Definition
 ------------------
 
-Most of the project definition happens in a project folder in the
-checked out copy of the resstock or comstock repo. However, for this library to
-work, a separate project YAML file provides the details needed for the
-batch run. An example file is in this repo as
-``project_resstock_national.yml`` as shown below.
+Most of the project definition happens in a project folder in the checked out
+copy of the ResStock or ComStock repo as well as a project configuration file
+that defines how the project will be run. The project file (also known as the
+"yaml" file) is the primary input for buildstockbatch. Some examples of project
+files are:
 
-.. include:: ../project_resstock_national.yml
-   :code: yaml
+- `ResStock National Baseline <https://github.com/NREL/resstock/blob/develop/project_national/national_baseline.yml>`_
+- `ResStock National with Upgrades <https://github.com/NREL/resstock/blob/develop/project_national/national_upgrades.yml>`_
 
-The next few paragraphs will describe each section of the file and what it does.
+Similar project files can be found in the ComStock repo.
+
+The next few paragraphs will describe each section of the project file and what it does.
 
 Reference the project
 ~~~~~~~~~~~~~~~~~~~~~
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_ or ComStock
   repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
@@ -48,6 +50,10 @@ To use your own custom weather files for a specific location, this can be done i
 
 - Rename your custom .epw weather file to match the references in your local `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_ in the ``resources`` folder.
 
+References
+~~~~~~~~~~
+This is a throwaway section where you can define YAML anchors so that these can be used elsewhere in the yaml. Things defined here have no impact in the simulation and is purely used for anchor definitions.
+
 Sampler
 ~~~~~~~
 
@@ -77,11 +83,14 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: **VERY ADVANCED FEATURE - NOT SUPPORTED - ONLY ATTEMPT USING SINGULARITY CONTAINERS ON EAGLE** This
-  activates the ``bundle`` and ``bundle_path`` interfaces in the OpenStudio CLI to allow for custom gem packages (needed
-  to support rapid development of the standards gem.) This actually works extraordinarily well if the singularity
-  image is properly configured but that's easier said than done. The la100 branch on the nrel/docker-openstudio repo
-  is a starting place if this is required.
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE AND LOCAL DOCKER** When true, buildstockbatch will
+  call the OpenStudio CLI commands with the  ``bundle`` and ``bundle_path`` options. These options tell the CLI
+  to load a custom set of gems rather than those included in the OpenStudio CLI. For both Eagle
+  and local Docker runs, these gems are first specified in the ``buildstock\resources\Gemfile``.
+  For Eagle, when the Singularity image is built, these gems are added to the image.
+  For local Docker, when the containers are started, the gems specified in the Gemfile are installed into a Docker
+  volume on the local computer. This volume is mounted by each container as models are run, so each run
+  uses the custom gems.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -126,7 +135,9 @@ following properties:
 Output Directory
 ~~~~~~~~~~~~~~~~
 
-``output_directory`` specifies where the outputs of the simulation should be stored.
+``output_directory``: specifies where the outputs of the simulation should be stored. The last folder in the path will be used as the table name in Athena (if aws configuration is present under postprocessing) so needs to be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
+
+.. _eagle-config:
 
 Eagle Configuration
 ~~~~~~~~~~~~~~~~~~~
@@ -144,13 +155,15 @@ the Eagle supercomputer.
 *  ``postprocessing``: Eagle configuration for the postprocessing step
 
     *  ``time``: Maximum time in minutes to allocate postprocessing job
-    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing job into. Max supported is 32.
-                      Default is 2.
-    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36. Default is 18. Try reducing this if you
-                    get OOM error.
-    *  ``node_memory_mb``: The memory (in MB) to request for eagle node for postprocessing. The valid values are
-                           85248, 180224 and 751616. Default is 85248.
-    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in memory. Default is 1000.
+    *  ``n_workers``: Number of eagle nodes to parallelize the postprocessing
+       job into. Max supported is 32. Default is 2.
+    *  ``n_procs``: Number of CPUs to use within each eagle nodes. Max is 36.
+       Default is 18. Try reducing this if you get OOM error.
+    *  ``node_memory_mb``: The memory (in MB) to request for eagle node for
+       postprocessing. The valid values are 85248, 180224 and 751616. Default is
+       85248.
+    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in
+       memory. Default is 1000.
 
 .. _aws-config:
 
@@ -192,7 +205,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
     * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
     * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``. 
+    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
       Increase this for a large dataset. Default: 2.
     * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
@@ -227,7 +240,7 @@ are horizontally concatenated with the time series files before aggregation,
 making sure the schedule values are properly lined up with the timestamps in the
 `same way that EnergyPlus handles ScheduleFiles
 <https://github.com/NREL/resstock/issues/469#issuecomment-697849076>`_.
-   
+
 
 Uploading to AWS Athena
 .......................
@@ -264,9 +277,10 @@ The configuration options for postprocessing and AWS upload are:
       must match the parameters found in options_lookup.tsv. This allows for efficient athena queries. Only recommended
       for moderate or large sized runs (ndatapoints > 10K)
 
-    * ``aws``: (optional) configuration related to uploading to and managing data in amazon web services. For this to
-       work, please `configure aws. <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
-       Including this key will cause your datasets to be uploaded to AWS, omitting it will cause them not to be uploaded.
+    * ``aws``: (optional) configuration related to uploading to and managing
+      data in amazon web services. For this to work, please `configure aws`_.
+      Including this key will cause your datasets to be uploaded to AWS,
+      omitting it will cause them not to be uploaded.
 
         *  ``region_name``: The name of the aws region to use for database creation and other services.
         *  ``s3``: Configurations for data upload to Amazon S3 data storage service.
@@ -281,6 +295,8 @@ The configuration options for postprocessing and AWS upload are:
                present for the user that grants rights to Glue crawler to read s3 and create database catalogue. The
                name of that IAM role must be provided here. Default is: "service-role/AWSGlueServiceRole-default".
                For help, consult the `AWS documentation for Glue Service Roles <https://docs.aws.amazon.com/glue/latest/dg/create-an-iam-role.html>`_.
-            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name.
+            *  ``database_name``: The name of the Athena database to which the data is to be placed. All tables in the database will be prefixed with the output directory name. Database name must be lowercase, start from letters and contain only letters, numbers and underscore character. `Athena requirement. <https://docs.aws.amazon.com/athena/latest/ug/glue-best-practices.html#schema-names>`_
             *  ``max_crawling_time``: The maximum time in seconds to wait for the glue crawler to catalogue the data
                before aborting it.
+
+.. _configure aws: https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration

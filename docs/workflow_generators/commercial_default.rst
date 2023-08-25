@@ -41,6 +41,9 @@ Configuration Example
         - measure_dir_name: simulation_settings_check
           arguments:
             run_sim_settings_checks: true
+        timeseries_csv_export:
+          reporting_frequency: Timestep
+          inc_output_variables: false
 
 
 Arguments

@@ -9,7 +9,7 @@ can be used to run the simulations locally, on Amazon Web Services, or on NREL's
 supercomputers.
 
 For information how to install and run simulations please read the
-[documentation](https://nrel.github.io/buildstockbatch/).
+[documentation](https://buildstockbatch.readthedocs.io/).
 
 ## Disclaimer
 

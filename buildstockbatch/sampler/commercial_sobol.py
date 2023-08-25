@@ -21,7 +21,7 @@ from warnings import warn
 
 from .sobol_lib import i4_sobol_generate
 from .base import BuildStockSampler
-from buildstockbatch.utils import ContainerRuntime
+from buildstockbatch.utils import ContainerRuntime, read_csv
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
@@ -43,7 +43,7 @@ class CommercialSobolSampler(BuildStockSampler):
         if self.container_runtime == ContainerRuntime.SINGULARITY:
             self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
         else:
-            assert self.container_runtime == ContainerRuntime.DOCKER
+            assert self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO)
             self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
         self.n_datapoints = n_datapoints
 
@@ -81,7 +81,7 @@ class CommercialSobolSampler(BuildStockSampler):
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
             if '.tsv' in tsv_file:
-                tsv_df = pd.read_csv(os.path.join(self.buildstock_dir, tsv_file), sep='\t')
+                tsv_df = read_csv(os.path.join(self.buildstock_dir, tsv_file), sep='\t')
                 dependency_columns = [item for item in list(tsv_df) if 'Dependency=' in item]
                 tsv_df[dependency_columns] = tsv_df[dependency_columns].astype('str')
                 tsv_hash[tsv_file.replace('.tsv', '')] = tsv_df
