@@ -8,6 +8,7 @@ import pathlib
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
 from buildstockbatch.utils import log_error_details, read_csv
 
+
 def get_param_graph(param2dep: dict[str, list[str]]) -> nx.DiGraph:
     param2dep_graph = nx.DiGraph()
     for param, dep_list in param2dep.items():
@@ -282,7 +283,8 @@ def verify(buildstock_file: str, project: str, output: str):
     click.echo("Top 10 TSVs with maximum group sampling errors")
     click.echo(error_df.head(10))
 
-log_error_details("sampler_error.txt")
+
+@log_error_details("sampler_error.txt")
 def main() -> None:
     cli()
 
