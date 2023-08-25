@@ -162,12 +162,14 @@ def get_issues(samples: list[str], probs: list[float], opts: list[str]) -> list[
             continue
         if pos_diff_prob == 0:
             issue = f"{pos_opt} has one sample more ({act_sample2count[pos_opt]}) than reference, and {neg_opt} "\
-                f"has one sample less ({act_sample2count[pos_opt]}), but the marginal probability is 0 for {pos_opt} "\
+                f"has one sample less ({act_sample2count[neg_opt]}), but the marginal probability is 0 for {pos_opt} "\
                 f"so it can't have an extra sample in expense of {neg_opt} when nsamples is {nsamples}"
             issues.append(issue)
         elif abs(pos_diff_prob - neg_diff_prob) >= 1e-9:
-            issue = f"{pos_opt} has one sample more than reference, and {neg_opt} "\
-                f"has one sample less, but their marginal probabilities are not equal."
+            issue = f"{pos_opt} has one sample more ({act_sample2count[pos_opt]}) than reference, and {neg_opt} "\
+                f"has one sample less ({act_sample2count[neg_opt]}), but their marginal probabilities are not equal "\
+                f"({pos_diff_prob} and {neg_diff_prob}). {pos_opt} can't have an extra sample in expense of "\
+                f" {neg_opt}. nsamples is {nsamples}"
             issues.append(issue)
 
     return issues

@@ -6,7 +6,7 @@ import multiprocessing
 import click
 import pathlib
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
-from buildstockbatch.utils import log_error_details
+from buildstockbatch.utils import log_error_details, read_csv
 
 def get_param_graph(param2dep: dict[str, list[str]]) -> nx.DiGraph:
     param2dep_graph = nx.DiGraph()
@@ -178,9 +178,85 @@ def verify(buildstock_file: str, project: str, output: str):
        0.35, 0.35 and 0.3. The actual sample distribution we have for [(None,), (Standard,), (Premium,)] is 0.5, 0.5, 0.
        This gives absolute distribution error for group as 0.15, 0.15 and 0.3. Hence, max_group_error is 0.3 and
        total_group_eror is 0.6
+       \b
+       Caution about downsampling through slicing
+       \b
+       A downsampled buildstock.csv created by selecting a subset of rows from the original buildstock.csv file
+       WILL NOT pass the verification. This is because only the full buildstock.csv file is expected to have the
+       distribution of various characteristics to closely follow the probabilities in the TSV. A random slice of the
+       full buildstock.csv file can have very skewed distribution of some characteristics, and it will not pass the
+       verification because the skewed distribution cannot be justified by the probabilities in the TSV.
+
+       Consider this slightly modified example (in this case Fan.tsv has no depenendency on Bedrooms.tsv)
+       Bedrooms.tsv
+       ----------
+       Option=1    Option=2    Option=3    Option=4    Option=5    sampling_probability
+            0.2         0.2         0.2         0.2         0.2                     1.0
+       \b
+       Fan.tsv
+       ----------
+        Option=None    Option=Standard    Option=Premium    sampling_probability
+               0.35              0.35                0.3                     0.2
+       \b
+       AC.tsv
+       ----------
+       Dependency=Fan       Option=Yes    Option=No    sampling_probability
+                    None           0.9          0.1                    0.35
+                Standard           0.8          0.2                    0.35
+                 Premium           0.1          0.9                    0.3
+       \b
+       Quota sampling in the above project for 10 samples can generate a buildstock.csv that looks like this:
+       buildstock.csv
+       -------------
+       Building  Bedrooms         Fan           AC
+              *         1         Premium       No
+              *         1         None          Yes
+              *         2         Standard      Yes
+              *         2         None          Yes
+              *         3         Premium       No
+              *         3         Premium       No
+              *         4         Standard      Yes
+              *         4         None          Yes
+              *         5         Standard      No
+              *         5         None          Yes
+       \b
+       If we downsample this buildstock.csv to 2 samples for only Bedrooms=3, we get the following buildstock.csv
+       buildstock.csv
+       -------------
+       Building  Bedrooms         Fan           AC
+              *         3         Premium       No
+              *         3         Premium       No
+       \b
+       This downsampled buildstock.csv will not pass the verification for Fan.tsv and Bedrooms.tsv because the
+       samples are very skewed from the expected distribution in the TSV file. Even if we update the Bedrooms.tsv to
+       only have Bedrooms=3 as shown below, the downsampled buildstock.csv will still not pass the verification
+       for Fan.tsv.
+
+       In order to create a downsampled buildstock.csv file that passes the verification, we need to rerun the sampler
+       with correct number of samples and updated TSV required for the downsampled buildstock.csv file. For example,
+       we can update the Bedrooms.tsv to only have Bedrooms=3 as follows:
+       Bedrooms.tsv
+       ----------
+       Option=1    Option=2    Option=3    Option=4    Option=5    sampling_probability
+            0.0         0.0         1.0         0.0         0.0                     1.0
+       \b
+       and rerun the sampler with nsamples=2. This will give us
+       a buildstock.csv file that looks like this:
+       buildstock.csv
+       -------------
+       Building  Bedrooms         Fan           AC
+              *         3         None          Yes
+              *         3         Standard      Yes
+       \b
+       This buildstock.csv file will pass the verification for all TSVs.
+
+       Please note that not passing the verification does not mean that the buildstock.csv file is necessarily
+       wrong. It just means that the buildstock.csv file has a skewed distribution from what one would expect based
+       on the probabilities in the TSVs. The skew will be larger for smaller slices. For example, if we downsample
+       the buildstock.csv file to 100 samples, the skew will be much smaller than if we downsample to 2 samples.
     """
     print("Verifying buildstock.csv file.")
-    buildstock_df = pd.read_csv(buildstock_file)
+    buildstock_df = read_csv(buildstock_file, dtype=str)
     buildstock_df = buildstock_df.astype(str)
     issues_dict = get_all_tsv_issues(buildstock_df, pathlib.Path(project))
     issues_found = False

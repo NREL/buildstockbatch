@@ -19,6 +19,8 @@ def test_get_samples() -> None:
     samples = get_samples(probs=[0.5, 0.5], options=["Yes", "No"], num_samples=1)
     assert samples in [['No'], ['Yes']]
 
+    samples = get_samples(probs=[0.2]*5, options=["A", "B", "C", "D", "E"], num_samples=2)
+    assert sorted(samples) == ['A', 'B']
     # probabilities may not exactly sum to 1
     samples = get_samples(probs=[0.49, 0.49], options=["Yes", "No"], num_samples=4)
     assert sorted(samples) == ['No', 'No', 'Yes', 'Yes']
@@ -62,6 +64,10 @@ def test_get_issues() -> None:
     assert len(get_issues(["Yes", "No"], [0.75, 0.25], ["Yes", "No"])) == 0
     assert len(get_issues(["Yes", "Yes"], [0.75, 0.25], ["Yes", "No"])) == 0
     assert len(get_issues(["Yes", "Yes", "No"], [0.75, 0.25], ["Yes", "No"])) == 0
+
+    issues = get_issues(["A", "A"], [0.2, 0.2], ["A", "B"])
+    assert len(issues) == 1
+    assert "marginal probability is 0 for A" in issues[0]
 
     issues = get_issues(["Yes", "Yes", "Yes"], [0.75, 0.25], ["Yes", "No"])
     assert len(issues) == 1
@@ -137,8 +143,8 @@ def test_get_tsv_issues():
         tsv_tuple = read_char_tsv(tsv_file)
         issues = get_tsv_issues(param='Fan', tsv_tuple=tsv_tuple, sample_df=sample_df)
         assert len(issues) == 2
-        assert "Premium has one sample more than reference" in issues[0]
-        assert "Premium has one sample more than reference" in issues[1]
+        assert "Premium has one sample more" in issues[0]
+        assert "Premium has one sample more" in issues[1]
 
 
 def test_sample_param():
@@ -213,6 +219,60 @@ def test_get_all_tsv_issues() -> None:
     assert len(issues_dict) == 3
     for param, issues in issues_dict.items():
         assert issues == []
+
+    sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
+                              'Ceiling Fan': ['None', 'Standard', 'None', 'Standard', 'None', 'Standard', 'None',
+                                              'Standard', 'None', 'Standard'],
+                              'Uses AC': ['No', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'Yes', 'No']
+                              })  # this should pass too
+    issues_dict = get_all_tsv_issues(sample_df=sample_df, project_dir=project_dir)
+    assert len(issues_dict) == 3
+    for param, issues in issues_dict.items():
+        assert issues == []
+
+
+def test_get_all_tsv_issues2() -> None:
+    project_dir = pathlib.Path(__file__).parent / 'project_sampling_test2'
+    sample_df = pd.DataFrame({'Bedrooms': ['1', '1', '2', '2', '3', '3', '4', '4', '5', '5'],
+                              'Ceiling Fan': ['Premium', 'None', 'Standard', 'None', 'Premium', 'Premium', 'Standard',
+                                              'None', 'Standard', 'None'],
+                              'Uses AC': ['No', 'Yes', 'Yes', 'Yes', 'No', 'No', 'Yes', 'Yes', 'No', 'Yes']
+                              })
+    issues_dict = get_all_tsv_issues(sample_df=sample_df, project_dir=project_dir)
+    assert len(issues_dict) == 3
+    for param, issues in issues_dict.items():
+        assert issues == []
+
+    tsv_file = pathlib.Path(__file__).parent / 'project_sampling_test2' / 'housing_characteristics' / 'Ceiling Fan.tsv'
+    ac_file = pathlib.Path(__file__).parent / 'project_sampling_test2' / 'housing_characteristics' / 'Uses AC.tsv'
+    bedroom_file = pathlib.Path(__file__).parent / 'project_sampling_test2' / 'housing_characteristics' / 'Bedrooms.tsv'
+    ceiling_fan_tuple = read_char_tsv(tsv_file)
+    ac_tuple = read_char_tsv(ac_file)
+    bedroom_tuple = read_char_tsv(bedroom_file)
+
+    # Demonstrate that downsampling by taking a random slice can fail the verification
+
+    # if the slice happen to have same distribution as the whole df, it will pass verification
+    sub_df = sample_df[sample_df['Bedrooms'] == '5']
+    tsv_issues = get_tsv_issues(param='Ceiling Fan', tsv_tuple=ceiling_fan_tuple, sample_df=sub_df)
+    assert len(tsv_issues) == 0
+
+    # but if the slice has different distribution, it will fail the verification for the characteristic
+    sub_df = sample_df[sample_df['Bedrooms'] == '3']
+    """
+      Bedrooms      Ceiling Fan     Uses AC
+            3           Premium          No
+            3           Premium          No
+    """
+    tsv_issues = get_tsv_issues(param='Ceiling Fan', tsv_tuple=ceiling_fan_tuple, sample_df=sub_df)
+    assert len(tsv_issues) > 0
+    assert "Difference of more than 1 samples for option Premium" in tsv_issues[0]
+    tsv_issues = get_tsv_issues(param='Bedrooms', tsv_tuple=bedroom_tuple, sample_df=sub_df)
+    assert len(tsv_issues) > 0
+    assert "Difference of more than 1 samples for option 3" in tsv_issues[0]
+    # it should still pass for the other characteristic for which the slice has the correct distribution
+    tsv_issues = get_tsv_issues(param='Uses AC', tsv_tuple=ac_tuple, sample_df=sub_df)
+    assert len(tsv_issues) == 0
 
 
 def test_get_tsv_errors() -> None:
