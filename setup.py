@@ -46,7 +46,7 @@ setuptools.setup(
         'jinja2<3.1.0',
         'networkx',
         'colorama',
-        'click'
+        'click',
         'lxml'
     ],
     extras_require={

@@ -7,6 +7,8 @@ import click
 import pathlib
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
 from buildstockbatch.utils import log_error_details, read_csv
+import random
+random.seed(42)
 
 
 def get_param_graph(param2dep: dict[str, list[str]]) -> nx.DiGraph:
@@ -26,10 +28,12 @@ def get_topological_param_list(param2dep: dict[str, list[str]]) -> list[str]:
 
 def get_topological_generations(param2dep: dict[str, list[str]]) -> list[tuple[int, list[str]]]:
     param2dep_graph = get_param_graph(param2dep)
-    return list(enumerate(nx.topological_generations(param2dep_graph)))
+    return list(sorted(enumerate(nx.topological_generations(param2dep_graph))))
 
 
-def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num_samples: int) -> list[str]:
+def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num_samples: int,
+                 random_seed: int) -> list[str]:
+    random.seed(random_seed)
     start_time = time.time()
     group2values, dep_cols, opt_cols = param_tuple
     if not dep_cols:
@@ -68,7 +72,9 @@ def sample_all(project_path, num_samples) -> pd.DataFrame:
             results = []
             for param in params:
                 _, dep_cols, _ = param2tsv[param]
-                res = pool.apply_async(sample_param, (param2tsv[param], sample_df[dep_cols], param, num_samples))
+                seed = random.randint(0, 10**10)
+                res = pool.apply_async(sample_param,
+                                       (param2tsv[param], sample_df[dep_cols], param, num_samples, seed))
                 results.append(res)
             st = time.time()
             samples_dict = {param: res_val.get() for param, res_val in zip(params, results)}
