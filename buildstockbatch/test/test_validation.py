@@ -102,7 +102,8 @@ def test_validation_integration(project_file, base_expected, eagle_expected):
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True):
+            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True), \
+            patch.object(EagleBatch, 'validate_singularity_image_eagle', lambda _: True):
         for cls, expected in [(BuildStockBatchBase, base_expected), (EagleBatch, eagle_expected)]:
             if expected is not True:
                 with pytest.raises(expected):
@@ -304,6 +305,19 @@ def test_validate_eagle_output_directory():
             with open(temp_yml, 'w') as f:
                 yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
             EagleBatch.validate_output_directory_eagle(str(temp_yml))
+
+
+def test_validate_singularity_image_eagle(mocker, basic_residential_project_file):
+    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(minimal_yml, 'r') as f:
+            cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        cfg['sys_image_dir'] = tmpdir
+        temp_yml = pathlib.Path(tmpdir, 'temp.yml')
+        with open(temp_yml, 'w') as f:
+            yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+        with pytest.raises(ValidationError, match=r"image does not exist"):
+            EagleBatch.validate_singularity_image_eagle(str(temp_yml))
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
