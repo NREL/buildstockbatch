@@ -6,6 +6,7 @@ import multiprocessing
 import click
 import pathlib
 from .sampling_utils import get_param2tsv, get_samples, TSVTuple, get_all_tsv_issues, get_all_tsv_max_errors
+from .sampling_utils import get_error_details
 from buildstockbatch.utils import log_error_details, read_csv
 import random
 random.seed(42)
@@ -33,29 +34,37 @@ def get_topological_generations(param2dep: dict[str, list[str]]) -> list[tuple[i
 
 def sample_param(param_tuple: TSVTuple, sample_df: pd.DataFrame, param: str, num_samples: int,
                  random_seed: int) -> list[str]:
-    random.seed(random_seed)
-    start_time = time.time()
-    group2values, dep_cols, opt_cols = param_tuple
-    if not dep_cols:
-        probs = group2values[()]
-        samples = get_samples(probs, opt_cols, num_samples)
-    else:
-        grouped_df = sample_df.groupby(dep_cols, sort=False)
-        prob_list = []
-        sample_size_list = []
-        index_list = []
-        for group_key, indexes in grouped_df.groups.items():
-            group_key = group_key if isinstance(group_key, tuple) else (str(group_key),)
-            index_list.append(indexes)
-            probs = group2values[group_key]
-            prob_list.append(probs)
-            sample_size_list.append(len(indexes))
+    print(f"Sampling {param} with {num_samples} samples")
+    try:
+        random.seed(random_seed)
+        start_time = time.time()
+        group2values, dep_cols, opt_cols = param_tuple
+        if not dep_cols:
+            probs = group2values[()]
+            samples = get_samples(probs, opt_cols, num_samples)
+        else:
+            grouped_df = sample_df.groupby(dep_cols, sort=False)
+            prob_list = []
+            sample_size_list = []
+            index_list = []
+            for group_key, indexes in grouped_df.groups.items():
+                group_key = group_key if isinstance(group_key, tuple) else (str(group_key),)
+                index_list.append(indexes)
+                probs = group2values[group_key]
+                prob_list.append(probs)
+                sample_size_list.append(len(indexes))
 
-        samples_list = map(get_samples, prob_list, it.cycle([opt_cols]), sample_size_list)
-        flat_samples = []
-        for indexes, samples in zip(index_list, samples_list):
-            flat_samples.extend(list(zip(indexes, samples)))
-        samples = [s[1] for s in sorted(flat_samples)]
+            samples_list = map(get_samples, prob_list, it.cycle([opt_cols]), sample_size_list)
+            flat_samples = []
+            for indexes, samples in zip(index_list, samples_list):
+                flat_samples.extend(list(zip(indexes, samples)))
+            samples = [s[1] for s in sorted(flat_samples)]
+    except Exception:
+        print(f"Prininting error for {param}")
+        text = "\n" + "#" * 20 + "\n"
+        text += get_error_details()
+        print(text)
+        raise
     print(f"Returning samples for {param} in {time.time() - start_time:.2f}s")
     return samples
 
