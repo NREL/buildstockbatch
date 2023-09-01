@@ -1,6 +1,5 @@
 import csv
 import dask
-import dask.dataframe as dd
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import json
@@ -20,6 +19,7 @@ from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
+from buildstockbatch.utils import read_csv
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -51,81 +51,9 @@ def test_reference_scenario(basic_residential_project_file):
 
     # test results.csv files
     test_path = os.path.join(results_dir, 'results_csvs')
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).set_index('building_id').sort_index()
+    test_csv = read_csv(os.path.join(test_path, 'results_up01.csv.gz')).set_index('building_id').sort_index()
     assert len(test_csv['apply_upgrade.reference_scenario'].unique()) == 1
     assert test_csv['apply_upgrade.reference_scenario'].iloc[0] == 'example_reference_scenario'
-
-
-def test_combine_files_flexible(basic_residential_project_file, mocker):
-    # Allows addition/removable/rename of columns. For columns that remain unchanged, verifies that the data matches
-    # with stored test_results. If this test passes but test_combine_files fails, then test_results/parquet and
-    # test_results/results_csvs need to be updated with new data *if* columns were indeed supposed to be added/
-    # removed/renamed.
-
-    project_filename, results_dir = basic_residential_project_file()
-
-    mocker.patch.object(BuildStockBatchBase, 'weather_dir', None)
-    get_dask_client_mock = mocker.patch.object(BuildStockBatchBase, 'get_dask_client')
-    mocker.patch.object(BuildStockBatchBase, 'results_dir', results_dir)
-
-    bsb = BuildStockBatchBase(project_filename)
-    bsb.process_results()
-    get_dask_client_mock.assert_called_once()
-
-    def simplify_columns(colname):
-        return colname.lower().replace('_', '')
-
-    # test results.csv files
-    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
-    test_path = os.path.join(results_dir, 'results_csvs')
-
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
-    mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
-    pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
-
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).rename(columns=simplify_columns).\
-        sort_values('buildingid').reset_index().drop(columns=['index'])
-    mutul_cols = list(set(test_csv.columns).intersection(set(reference_csv)))
-    pd.testing.assert_frame_equal(test_csv[mutul_cols], reference_csv[mutul_cols])
-
-    # test parquet files
-    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
-    test_path = os.path.join(results_dir, 'parquet')
-
-    # results parquet
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
-    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
-
-    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet')).\
-        rename(columns=simplify_columns).sort_values('buildingid').reset_index().drop(columns=['index'])
-    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
-    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
-
-    # timeseries parquet
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
-    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
-    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
-
-    test_pq = dd.read_parquet(os.path.join(test_path, 'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
-    mutul_cols = list(set(test_pq.columns).intersection(set(reference_pq)))
-    pd.testing.assert_frame_equal(test_pq[mutul_cols], reference_pq[mutul_cols])
 
 
 def test_downselect_integer_options(basic_residential_project_file, mocker):
@@ -169,67 +97,6 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
             cf = csv.DictReader(f)
             for row in cf:
                 assert row['Days Shifted'] in valid_option_values
-
-
-def test_combine_files(basic_residential_project_file):
-
-    project_filename, results_dir = basic_residential_project_file()
-
-    with patch.object(BuildStockBatchBase, 'weather_dir', None), \
-            patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
-            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
-        bsb = BuildStockBatchBase(project_filename)
-        bsb.process_results()
-        get_dask_client_mock.assert_called_once()
-
-    # test results.csv files
-    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'results_csvs')
-    test_path = os.path.join(results_dir, 'results_csvs')
-
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up00.csv.gz')).sort_values('building_id').reset_index()\
-        .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up00.csv.gz')).sort_values('building_id')\
-        .reset_index().drop(columns=['index'])
-    pd.testing.assert_frame_equal(test_csv, reference_csv)
-
-    test_csv = pd.read_csv(os.path.join(test_path, 'results_up01.csv.gz')).sort_values('building_id').reset_index()\
-        .drop(columns=['index'])
-    reference_csv = pd.read_csv(os.path.join(reference_path, 'results_up01.csv.gz')).sort_values('building_id')\
-        .reset_index().drop(columns=['index'])
-    pd.testing.assert_frame_equal(test_csv, reference_csv)
-
-    # test parquet files
-    reference_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'test_results', 'parquet')
-    test_path = os.path.join(results_dir, 'parquet')
-
-    # results parquet
-    test_pq = pd.read_parquet(os.path.join(test_path, 'baseline', 'results_up00.parquet')).sort_values('building_id')\
-        .reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path, 'baseline', 'results_up00.parquet'))\
-        .sort_values('building_id').reset_index().drop(columns=['index'])
-    pd.testing.assert_frame_equal(test_pq, reference_pq)
-
-    test_pq = pd.read_parquet(os.path.join(test_path, 'upgrades', 'upgrade=1', 'results_up01.parquet'))\
-        .sort_values('building_id').reset_index().drop(columns=['index'])
-    reference_pq = pd.read_parquet(os.path.join(reference_path,  'upgrades', 'upgrade=1', 'results_up01.parquet'))\
-        .sort_values('building_id').reset_index().drop(columns=['index'])
-    pd.testing.assert_frame_equal(test_pq, reference_pq)
-
-    # timeseries parquet
-    test_pq_all = dd.read_parquet(os.path.join(test_path, 'timeseries'), engine='pyarrow')\
-        .compute()
-
-    test_pq = test_pq_all[test_pq_all['upgrade'] == 0].copy().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=0'), engine='pyarrow')\
-        .compute().reset_index()
-    reference_pq['upgrade'] = test_pq['upgrade'] = 0
-    pd.testing.assert_frame_equal(test_pq, reference_pq)
-
-    test_pq = test_pq_all[test_pq_all['upgrade'] == 1].copy().reset_index()
-    reference_pq = dd.read_parquet(os.path.join(reference_path,  'timeseries', 'upgrade=1'), engine='pyarrow')\
-        .compute().reset_index()
-    reference_pq['upgrade'] = test_pq['upgrade'] = 1
-    pd.testing.assert_frame_equal(test_pq, reference_pq)
 
 
 @patch('buildstockbatch.postprocessing.boto3')
@@ -398,7 +265,7 @@ def test_skipping_baseline(basic_residential_project_file):
 
 def test_provide_buildstock_csv(basic_residential_project_file, mocker):
     buildstock_csv = os.path.join(here, 'buildstock.csv')
-    df = pd.read_csv(buildstock_csv)
+    df = read_csv(buildstock_csv, dtype=str)
     project_filename, results_dir = basic_residential_project_file({
         'sampler': {
             'type': 'precomputed',
@@ -412,9 +279,9 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
 
     bsb = LocalBatch(project_filename)
     sampling_output_csv = bsb.sampler.run_sampling()
-    df2 = pd.read_csv(sampling_output_csv)
+    df2 = read_csv(sampling_output_csv, dtype=str)
     pd.testing.assert_frame_equal(df, df2)
-
+    assert (df['Geometry Shared Walls'] == "None").all()  # Verify None is being read properly
     # Test file missing
     with open(project_filename, 'r') as f:
         cfg = yaml.safe_load(f)

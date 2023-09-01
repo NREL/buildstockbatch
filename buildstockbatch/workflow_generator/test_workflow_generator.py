@@ -100,24 +100,24 @@ def test_residential_hpxml(mocker):
     simulation_output_step = steps[3]
     assert simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput'
     assert simulation_output_step['arguments']['timeseries_frequency'] == 'hourly'
-    # assert simulation_output_step['arguments']['include_annual_total_consumptions'] is True
-    # assert simulation_output_step['arguments']['include_annual_fuel_consumptions'] is True
-    # assert simulation_output_step['arguments']['include_annual_end_use_consumptions'] is True
-    # assert simulation_output_step['arguments']['include_annual_system_use_consumptions'] is False
-    # assert simulation_output_step['arguments']['include_annual_emissions'] is True
-    # assert simulation_output_step['arguments']['include_annual_emission_fuels'] is True
-    # assert simulation_output_step['arguments']['include_annual_emission_end_uses'] is True
-    # assert simulation_output_step['arguments']['include_annual_total_loads'] is True
-    # assert simulation_output_step['arguments']['include_annual_unmet_hours'] is True
-    # assert simulation_output_step['arguments']['include_annual_peak_fuels'] is True
-    # assert simulation_output_step['arguments']['include_annual_peak_loads'] is True
-    # assert simulation_output_step['arguments']['include_annual_component_loads'] is True
-    # assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
-    # assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
+    assert simulation_output_step['arguments']['include_annual_total_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_fuel_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_end_use_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_system_use_consumptions'] is False
+    assert simulation_output_step['arguments']['include_annual_emissions'] is True
+    assert simulation_output_step['arguments']['include_annual_emission_fuels'] is True
+    assert simulation_output_step['arguments']['include_annual_emission_end_uses'] is True
+    assert simulation_output_step['arguments']['include_annual_total_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_unmet_hours'] is True
+    assert simulation_output_step['arguments']['include_annual_peak_fuels'] is True
+    assert simulation_output_step['arguments']['include_annual_peak_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_component_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
+    assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
-    # assert simulation_output_step['arguments']['include_timeseries_system_use_consumptions'] is False
+    assert simulation_output_step['arguments']['include_timeseries_system_use_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emissions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_fuels'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_end_uses'] is False
