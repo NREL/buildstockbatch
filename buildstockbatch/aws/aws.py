@@ -261,14 +261,16 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.priv_vpc_subnet_id_1
             ],
             Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.priv_vpc_subnet_id_2
             ],
@@ -300,7 +302,8 @@ class AwsBatchEnv(AwsJobBase):
 
         self.pub_vpc_subnet_id = pub_response['Subnet']['SubnetId']
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.pub_vpc_subnet_id
             ],
@@ -1626,6 +1629,7 @@ class AwsBatch(DockerBatchBase):
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         m = 1024
         self.dask_cluster = FargateCluster(
+            region_name=self.region,
             fargate_spot=True,
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",
