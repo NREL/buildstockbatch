@@ -57,11 +57,3 @@ class PrecomputedSampler(BuildStockSampler):
         if self.csv_path != self.buildstock_csv:
             shutil.copy(self.buildstock_csv, self.csv_path)
         return self.csv_path
-
-
-class ResidentialPrecomputedSampler(PrecomputedSampler):
-    pass
-
-
-class CommercialPrecomputedSampler(PrecomputedSampler):
-    pass

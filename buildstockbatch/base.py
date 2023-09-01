@@ -313,20 +313,16 @@ class BuildStockBatchBase(object):
             Sampler = BuildStockBatchBase.get_sampler_class(sampler_name)
         except AttributeError:
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
-        if sampler_name == 'precomputed':
-            logger.warning("Sampler type 'precomputed' is deprecated, use residential_precomputed or "
-                           "commercial_precomputed instead. Only the residential_precomputed sampler "
-                           "supports buildstock_csv validation.")
         args = cfg['sampler']['args']
         Sampler.validate_args(project_file, **args)
-        if issubclass(Sampler, sampler.ResidentialPrecomputedSampler):
+        if issubclass(Sampler, sampler.PrecomputedSampler):
             sample_file = cfg['sampler']['args']['sample_file']
             if not os.path.isabs(sample_file):
                 sample_file = os.path.join(os.path.dirname(project_file), sample_file)
             else:
                 sample_file = os.path.abspath(sample_file)
             buildstock_df = read_csv(sample_file, dtype=str)
-            BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+            return BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
 
     @staticmethod
@@ -341,6 +337,8 @@ class BuildStockBatchBase(object):
             if column not in param_option_dict:
                 errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
+            if "*" in param_option_dict[column]:
+                continue  # skip validating options when wildcard is present
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
                     errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
@@ -416,8 +414,12 @@ class BuildStockBatchBase(object):
                         invalid_chars = ''.join(invalid_chars)
                         if invalid_chars:
                             invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
-
+                    param_name, opt_name = row['Parameter Name'], row['Option Name']
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
+                    if opt_name == '*' and row['Measure Dir']:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot pass arguments to measure.\n"
+                    if "*" in param_option_dict[param_name] and len(param_option_dict[param_name]) > 1:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot be mixed with other options\n"
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
@@ -564,7 +566,6 @@ class BuildStockBatchBase(object):
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
                             invalid_options_lookup_str + "*"*80 + "\n" + error_message
-
         if not error_message:
             return True
         else:

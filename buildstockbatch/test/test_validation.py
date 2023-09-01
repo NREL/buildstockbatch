@@ -203,6 +203,10 @@ def test_bad_options_validation(project_file):
         assert "Insulation Slat" in er
         assert "Vintage|1960s|Vintage|1960s" in er
         assert "Vintage|1960s||Vintage|1940s&&Vintage|1980s" in er
+        assert "Wall Insulation: '*' cannot pass arguments to measure." in er
+        assert "Wall Insulation: '*' cannot be mixed with other options" in er
+        assert "Ceiling Insulation: '*' cannot be mixed with other options" in er
+        assert "Floor Insulation: '*' cannot be mixed with other options" in er
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
@@ -323,7 +327,7 @@ def test_validate_singularity_image_eagle(mocker, basic_residential_project_file
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file({
         'sampler': {
-            'type': 'residential_precomputed',
+            'type': 'precomputed',
             'args': {
                 'sample_file': str(os.path.join(resources_dir, 'buildstock_good.csv'))
             }
@@ -335,7 +339,7 @@ def test_validate_sampler_good_buildstock(basic_residential_project_file):
 def test_validate_sampler_bad_buildstock(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file({
         'sampler': {
-            'type': 'residential_precomputed',
+            'type': 'precomputed',
             'args': {
                 'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
             }
@@ -349,34 +353,6 @@ def test_validate_sampler_bad_buildstock(basic_residential_project_file):
         assert 'Option TX in column State of buildstock_csv is not available in options_lookup.tsv' in er
         assert 'Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv' in er
         assert 'Column Insulation in buildstock_csv is not available in options_lookup.tsv' in er
+        assert 'Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv' in er
     else:
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
-
-
-def test_validate_sampler_bad_buildstock_commercial(basic_residential_project_file):
-    # Commercial precomputed sampler should not perform builstock_csv validation so it should pass
-    project_filename, _ = basic_residential_project_file({
-        'sampler': {
-            'type': 'commercial_precomputed',
-            'args': {
-                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
-            }
-        }
-    })
-    BuildStockBatchBase.validate_sampler(project_filename)
-
-
-def test_validate_sampler_bad_buildstock_precomputed(basic_residential_project_file):
-    # precomputed sampler should pass but raise depreciation warning
-    project_filename, _ = basic_residential_project_file({
-        'sampler': {
-            'type': 'precomputed',
-            'args': {
-                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
-            }
-        }
-    })
-    with LogCapture(level=logging.WARNING) as logs:
-        BuildStockBatchBase.validate_sampler(project_filename)
-        warning_logs = filter_logs(logs, 'WARNING')
-        assert "Sampler type 'precomputed' is deprecated" in warning_logs
