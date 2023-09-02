@@ -53,7 +53,7 @@ hpc-postprocessing-spec:
 
 
 sampler-spec:
-  type: enum('residential_quota', 'residential_quota_downselect', 'precomputed', 'residential_precomputed', 'commercial_precomputed', 'commercial_sobol', required=True)
+  type: enum('residential_quota', 'residential_quota_downselect', 'precomputed', 'commercial_sobol', required=True)
   args: map(key=regex(r'^[a-zA-Z_]\w*$', name='valid variable name'), required=False)
 
 workflow-generator-spec:
