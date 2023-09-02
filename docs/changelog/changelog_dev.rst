@@ -23,13 +23,6 @@ Development Changelog
         Removing broken postprocessing tests.
 
     .. change::
-        :tags: general, feature
-        :pullreq: 387
-        :tickets: 385
-
-        Removing broken postprocessing tests.
-
-    .. change::
         :tags: general, bugfix
         :pullreq: 384
 
