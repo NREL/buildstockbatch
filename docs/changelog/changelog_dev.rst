@@ -16,49 +16,11 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: general, feature
-        :pullreq: 349
-        :tickets: 300
-
-        Remove docker dependency for local runs.
-
-    .. change::
         :tags: general, bugfix
         :pullreq: 387
         :tickets: 385
 
         Removing broken postprocessing tests.
-
-    .. change::
-        :tags: general, bugfix
-        :pullreq: 355
-        :tickets: 352
-
-        Fix an issue with schedules datatype that was causing the crash of postporcessing at the final step.
-
-    .. change::
-        :tags: workflow, feature
-        :pullreq: 353
-
-        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
-
-    .. change::
-        :tags: validation, feature
-        :pullreq: 362
-
-        Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
-
-    .. change::
-        :tags: validation, feature
-        :pullreq: 366
-
-        Add a references section in the yaml schema to allow defining the anchors at a single place.
-
-    .. change::
-        :tags: postprocessing, feature
-        :pullreq: 365
-
-        Upload buildstock.csv to S3 during postprocessing
 
     .. change::
         :tags: bugfix
@@ -67,3 +29,9 @@ Development Changelog
 
         No longer automatically downloads the appropriate singularity image from
         S3. Also added validation to ensure the image is in the correct location.
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 365
+
+        Upload buildstock.csv to S3 during postprocessing
