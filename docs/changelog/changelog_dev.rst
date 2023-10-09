@@ -21,3 +21,11 @@ Development Changelog
         :tickets: 385
 
         Removing broken postprocessing tests.
+
+    .. change::
+        :tags: bugfix
+        :pullreq: 386
+        :tickets: 256
+
+        No longer automatically downloads the appropriate singularity image from
+        S3. Also added validation to ensure the image is in the correct location.
