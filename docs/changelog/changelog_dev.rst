@@ -29,3 +29,11 @@ Development Changelog
 
         No longer automatically downloads the appropriate singularity image from
         S3. Also added validation to ensure the image is in the correct location.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 383
+
+        For the Residential HPXML Workflow Generator, fixes new ``include_annual_resilience`` argument to true and
+        adds a new optional ``include_timeseries_resilience`` argument that defaults to false. Also fixes new
+        ``include_annual_bills`` argument to true and ``include_monthly_bills`` argument to false.
