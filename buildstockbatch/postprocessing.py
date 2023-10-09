@@ -592,10 +592,9 @@ def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False)
         fs.rm(ts_in_dir, recursive=True)
 
 
-def upload_results(aws_conf, output_dir, results_dir):
+def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
     logger.info("Uploading the parquet files to s3")
 
-    buildstock_dir = Path(results_dir).parent.joinpath('housing_characteristics')
     output_folder_name = Path(output_dir).name
     parquet_dir = Path(results_dir).joinpath('parquet')
     ts_dir = parquet_dir / 'timeseries'
@@ -608,9 +607,6 @@ def upload_results(aws_conf, output_dir, results_dir):
         all_files.append(file.relative_to(parquet_dir))
     for file in [*ts_dir.glob('_common_metadata'), *ts_dir.glob('_metadata')]:
         all_files.append(file.relative_to(parquet_dir))
-    buildstock_csv = ''
-    for file in buildstock_dir.glob('buildstock.csv'):
-        buildstock_csv = file.relative_to(buildstock_dir)
 
     s3_prefix = aws_conf.get('s3', {}).get('prefix', '').rstrip('/')
     s3_bucket = aws_conf.get('s3', {}).get('bucket', None)
@@ -626,23 +622,24 @@ def upload_results(aws_conf, output_dir, results_dir):
         logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
         raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix_output}")
 
-    def upload_file(filepath):
-        full_path = parquet_dir.joinpath(filepath)
+    def upload_file(filepath, s3key=None):
+        full_path = filepath if filepath.is_absolute() else parquet_dir.joinpath(filepath)
         s3 = boto3.resource('s3')
         bucket = s3.Bucket(s3_bucket)
-        s3key = Path(s3_prefix_output).joinpath(filepath).as_posix()
-        bucket.upload_file(str(full_path), str(s3key))
-    
-    def upload_buildstock_csv(filepath):
-        full_path = buildstock_dir.joinpath(filepath)
-        s3 = boto3.resource('s3')
-        bucket = s3.Bucket(s3_bucket)
-        s3_prefix_output_new = s3_prefix_output+ '/' + 'buildstock_csv' + '/'
-        s3key = Path(s3_prefix_output_new).joinpath(filepath).as_posix()
+        if s3key is None:
+            s3key = Path(s3_prefix_output).joinpath(filepath).as_posix()
         bucket.upload_file(str(full_path), str(s3key))
 
     tasks = list(map(dask.delayed(upload_file), all_files))
-    tasks.append(dask.delayed(upload_buildstock_csv)(buildstock_csv))
+    if buildstock_csv_filename is not None:
+        buildstock_csv_filepath = Path(buildstock_csv_filename)
+        if buildstock_csv_filepath.exists():
+            tasks.append(dask.delayed(upload_file)(
+                buildstock_csv_filepath,
+                f"{s3_prefix_output}buildstock_csv/{buildstock_csv_filepath.name}"
+            ))
+        else:
+            logger.warning(f"{buildstock_csv_filename} doesn't exist, can't upload.")
     dask.compute(tasks)
     logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}")
     return s3_bucket, s3_prefix_output
