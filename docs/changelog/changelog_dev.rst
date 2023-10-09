@@ -29,3 +29,11 @@ Development Changelog
 
         No longer automatically downloads the appropriate singularity image from
         S3. Also added validation to ensure the image is in the correct location.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 382
+
+        For the Residential HPXML Workflow Generator, add a new ``detailed_filepath`` argument
+        for pointing to user-specified TSV file of electricity tariff file paths. The TSV file can contain
+        utility rates mapped by State, or any other parameter.
