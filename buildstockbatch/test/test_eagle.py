@@ -194,7 +194,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
 
 
-def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file):
+def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file, monkeypatch):
     mock_subprocess = mocker.patch('buildstockbatch.eagle.subprocess')
     mocker.patch.object(EagleBatch, 'weather_dir', None)
     mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
@@ -209,6 +209,7 @@ def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file):
         }
     })
     shutil.rmtree(results_dir)
+    monkeypatch.setenv('CONDA_PREFIX', 'something')
 
     batch = EagleBatch(project_filename)
     for i in range(1, 11):
