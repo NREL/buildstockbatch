@@ -51,3 +51,11 @@ Development Changelog
         :pullreq: 365
 
         Upload buildstock.csv to S3 during postprocessing
+
+    .. change::
+        :tags: eagle, bugfix
+        :pullreq: 398
+        :tickets: 390
+
+        No longer errors out with a "no space left on device" when using the
+        ``weather_files_url`` on Eagle.
