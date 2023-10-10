@@ -32,6 +32,14 @@ Development Changelog
 
     .. change::
         :tags: general, feature
+        :pullreq: 382
+
+        For the Residential HPXML Workflow Generator, add a new ``detailed_filepath`` argument
+        for pointing to user-specified TSV file of electricity tariff file paths. The TSV file can contain
+        utility rates mapped by State, or any other parameter.
+
+    .. change::
+        :tags: general, feature
         :pullreq: 383
 
         For the Residential HPXML Workflow Generator, fixes new ``include_annual_resilience`` argument to true and

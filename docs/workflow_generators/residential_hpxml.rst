@@ -20,6 +20,7 @@ Configuration Example
 
         utility_bills:
           - scenario_name: Bills1
+            gas_marginal_rate: 1.05
             pv_compensation_type: NetMetering
 
         simulation_output_report:
@@ -59,7 +60,7 @@ Arguments
 
   - ``scenario_name``: Name of the emissions scenario.
   - ``type``: Type of emission (e.g., CO2e, NOx, etc.).
-  - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Path is relative to buildstock_directory's resources folder. File names must contain GEA region names.
+  - ``elec_folder``: Folder of schedule files with hourly electricity emissions factors values. Units are kg/MWh. Folder path is relative to buildstock_directory's `resources`_ folder. File names must contain GEA region names.
   - ``gas_value``: Annual emissions factor for natural gas. Units are lb/MBtu (million Btu).
   - ``propane_value``: Annual emissions factor for propane. Units are lb/MBtu (million Btu).
   - ``oil_value``: Annual emissions factor for fuel oil. Units are lb/MBtu (million Btu).
@@ -68,7 +69,8 @@ Arguments
 - ``utility_bills`` (optional): Add these arguments to the `BuildExistingModel`_ measure for performing utility bill calculations.
 
   - ``scenario_name``: Name of the utility bills scenario.
-  - ``simple_filepath``: File with all fixed charges / marginal rates for each option of a chosen parameter (e.g., State).
+  - ``simple_filepath``: TSV file with all fixed charge / marginal rate / PV argument values for each option of a chosen parameter (e.g., State). These will override any fixed charge / marginal rate / PV argument values specified in the YML file. Any blank fields will be defaulted. File path is relative to buildstock_directory's `resources`_ folder.
+  - ``detailed_filepath``: TSV file with electricity tariff path for each option of a chosen parameter (e.g., County). File may also contain all fixed charge / marginal rate / PV argument values. These will override any fixed charge / marginal rate / PV argument values specified in the YML file. Any blank fields will be defaulted. File path is relative to buildstock_directory's `resources`_ folder. Electricity tariff paths are relative to the parent folder of the ``detailed_filepath`` file.
   - ``elec_fixed_charge``: Monthly fixed charge for electricity.
   - ``elec_marginal_rate``: Marginal rate for electricity. Units are $/kWh.
   - ``gas_fixed_charge``: Monthly fixed charge for natural gas.
@@ -137,6 +139,7 @@ Arguments
 .. _BuildExistingModel: https://github.com/NREL/resstock/blob/develop/measures/BuildExistingModel/measure.xml
 .. _ReportSimulationOutput: https://github.com/NREL/resstock/blob/develop/resources/hpxml-measures/ReportSimulationOutput/measure.xml
 .. _ServerDirectoryCleanup: https://github.com/NREL/resstock/blob/develop/measures/ServerDirectoryCleanup/measure.xml
+.. _resources: https://github.com/NREL/resstock/blob/develop/resources
 
 .. _hpxml-build-existing-model-defaults:
 
