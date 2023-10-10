@@ -110,6 +110,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
+            include_timeseries_resilience: bool(required=False)
             timeseries_timestamp_convention: enum('start', 'end', required=False)
             timeseries_num_decimal_places: int(required=False)
             add_timeseries_dst_column: bool(required=False)
@@ -387,11 +388,17 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         if 'include_annual_hvac_summary' in sim_out_rep_args_avail:
             sim_out_rep_args['include_annual_hvac_summary'] = True
 
+        if 'include_annual_resilience' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_resilience'] = True
+
         if 'include_timeseries_system_use_consumptions' in sim_out_rep_args_avail:
             sim_out_rep_args['include_timeseries_system_use_consumptions'] = False
 
         if 'include_timeseries_unmet_hours' in sim_out_rep_args_avail:
             sim_out_rep_args['include_timeseries_unmet_hours'] = False
+
+        if 'include_timeseries_resilience' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_resilience'] = False
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
             sim_out_rep_args['timeseries_num_decimal_places'] = 3
@@ -402,6 +409,18 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             output_variables = sim_out_rep_args['output_variables']
             sim_out_rep_args['user_output_variables'] = ','.join([str(s.get('name')) for s in output_variables])
             sim_out_rep_args.pop('output_variables')
+
+        util_bills_rep_args = {}
+
+        measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
+        measure_path = os.path.join(measures_dir, 'ReportUtilityBills')
+        util_bills_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
+        if 'include_annual_bills' in util_bills_rep_args_avail:
+            util_bills_rep_args['include_annual_bills'] = True
+
+        if 'include_monthly_bills' in util_bills_rep_args_avail:
+            util_bills_rep_args['include_monthly_bills'] = False
 
         osw = {
             'id': sim_id,
@@ -474,7 +493,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'ReportUtilityBills',
-                'arguments': {}
+                'arguments': util_bills_rep_args
             },
             {
                 'measure_dir_name': 'UpgradeCosts',
