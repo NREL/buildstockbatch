@@ -3,6 +3,7 @@ import pytest
 import shutil
 import tempfile
 import yaml
+from pathlib import Path
 
 OUTPUT_FOLDER_NAME = 'output'
 
