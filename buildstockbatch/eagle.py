@@ -426,7 +426,6 @@ class EagleBatch(BuildStockBatchBase):
 
     def queue_jobs(self, array_ids=None, hipri=False):
         eagle_cfg = self.cfg['eagle']
-        minutes_per_sim = eagle_cfg.get('minutes_per_sim', 3)
         with open(os.path.join(self.output_dir, 'job001.json'), 'r') as f:
             job_json = json.load(f)
             n_sims_per_job = len(job_json['batch'])
@@ -444,6 +443,7 @@ class EagleBatch(BuildStockBatchBase):
 
         # Estimate the wall time in minutes
         cores_per_node = 36
+        minutes_per_sim = eagle_cfg['minutes_per_sim']
         walltime = math.ceil(math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim)
 
         # Queue up simulations
