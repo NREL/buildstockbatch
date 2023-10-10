@@ -16,7 +16,7 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: general, feature
+        :tags: general, bugfix
         :pullreq: 387
         :tickets: 385
 
@@ -45,3 +45,9 @@ Development Changelog
         For the Residential HPXML Workflow Generator, fixes new ``include_annual_resilience`` argument to true and
         adds a new optional ``include_timeseries_resilience`` argument that defaults to false. Also fixes new
         ``include_annual_bills`` argument to true and ``include_monthly_bills`` argument to false.
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 365
+
+        Upload buildstock.csv to S3 during postprocessing

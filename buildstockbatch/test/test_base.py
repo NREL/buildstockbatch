@@ -13,13 +13,14 @@ import shutil
 import tempfile
 from unittest.mock import patch, MagicMock, PropertyMock
 import yaml
+from pathlib import Path
 
 import buildstockbatch
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.postprocessing import write_dataframe_as_parquet
-from buildstockbatch.utils import read_csv
+from buildstockbatch.utils import read_csv, ContainerRuntime
 
 dask.config.set(scheduler='synchronous')
 here = os.path.dirname(os.path.abspath(__file__))
@@ -128,10 +129,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
     mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ['a', 'b', 'c']]
     project_filename, results_dir = basic_residential_project_file(upload_config)
+    buildstock_csv_path = Path(results_dir).parent / 'openstudio_buildstock' / 'project_resstock_national' / 'housing_characteristics' / 'buildstock.csv'  # noqa: E501
+    shutil.copy2(
+        Path(__file__).parent / 'test_results' / 'housing_characteristics' / 'buildstock.csv',
+        buildstock_csv_path
+    )
     with patch.object(BuildStockBatchBase, 'weather_dir', None), \
             patch.object(BuildStockBatchBase, 'output_dir', results_dir), \
             patch.object(BuildStockBatchBase, 'get_dask_client') as get_dask_client_mock, \
-            patch.object(BuildStockBatchBase, 'results_dir', results_dir):
+            patch.object(BuildStockBatchBase, 'results_dir', results_dir), \
+            patch.object(BuildStockBatchBase, 'CONTAINER_RUNTIME', ContainerRuntime.LOCAL_OPENSTUDIO):
         bsb = BuildStockBatchBase(project_filename)
         bsb.process_results()
         get_dask_client_mock.assert_called_once()
@@ -197,6 +204,11 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
 
     s3_file_path = s3_path + 'timeseries/_metadata'
     source_file_path = os.path.join(source_path, 'timeseries', '_metadata')
+    assert (source_file_path, s3_file_path) in files_uploaded
+    files_uploaded.remove((source_file_path, s3_file_path))
+
+    s3_file_path = s3_path + 'buildstock_csv/buildstock.csv'
+    source_file_path = str(buildstock_csv_path)
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
