@@ -54,7 +54,8 @@ Development Changelog
 
     .. change::
         :tags: feature
-        :pullreq: 
+        :pullreq: 396
+        :tickets: 377
 
         Allow fractional ``eagle.minutes_per_sim`` for simulations that run less
         than a minute. Making that it a required input.

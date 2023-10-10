@@ -3,7 +3,6 @@ import json
 import os
 import pandas as pd
 import pathlib
-import requests
 import shutil
 import tarfile
 from unittest.mock import patch
@@ -193,6 +192,32 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
         batch.queue_post_processing()
         mock_subprocess.run.assert_called_once()
         assert '--qos=high' in mock_subprocess.run.call_args[0][0]
+
+
+def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file):
+    mock_subprocess = mocker.patch('buildstockbatch.eagle.subprocess')
+    mocker.patch.object(EagleBatch, 'weather_dir', None)
+    mock_subprocess.run.return_value.stdout = 'Submitted batch job 1\n'
+    mock_subprocess.PIPE = None
+    project_filename, results_dir = basic_residential_project_file(update_args={
+        'eagle': {
+            'sampling': {
+                'time': 20
+            },
+            'account': 'testaccount',
+            'minutes_per_sim': 0.5
+        }
+    })
+    shutil.rmtree(results_dir)
+
+    batch = EagleBatch(project_filename)
+    for i in range(1, 11):
+        pathlib.Path(results_dir, 'job{:03d}.json'.format(i)).touch()
+    with open(os.path.join(results_dir, 'job001.json'), 'w') as f:
+        json.dump({'batch': list(range(1000))}, f)
+    batch.queue_jobs()
+    mock_subprocess.run.assert_called_once()
+    assert '--time=14' in mock_subprocess.run.call_args[0][0]
 
 
 def test_run_building_process(mocker,  basic_residential_project_file):
