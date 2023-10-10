@@ -51,3 +51,11 @@ Development Changelog
         :pullreq: 365
 
         Upload buildstock.csv to S3 during postprocessing
+
+    .. change::
+        :tags: eagle, bugfix
+        :tickets: 393
+        :pullreq: 397
+
+        Updating validation for Eagle output directory to include
+        ``/lustre/eaglefs`` directories.

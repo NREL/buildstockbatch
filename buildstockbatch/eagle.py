@@ -94,7 +94,7 @@ class EagleBatch(BuildStockBatchBase):
     def validate_output_directory_eagle(cls, project_file):
         cfg = get_project_configuration(project_file)
         output_dir = path_rel_to_file(project_file, cfg['output_directory'])
-        if not (output_dir.startswith('/scratch') or output_dir.startswith('/projects')):
+        if not re.match(r"/(lustre/eaglefs/)?(scratch|projects)", output_dir):
             raise ValidationError(f"`output_directory` must be in /scratch or /projects,"
                                   f" `output_directory` = {output_dir}")
 
@@ -102,7 +102,7 @@ class EagleBatch(BuildStockBatchBase):
     def validate_singularity_image_eagle(cls, project_file):
         cfg = get_project_configuration(project_file)
         singularity_image = cls.get_singularity_image(
-            cfg, 
+            cfg,
             cfg.get('os_version', cls.DEFAULT_OS_VERSION),
             cfg.get('os_sha', cls.DEFAULT_OS_SHA)
         )
