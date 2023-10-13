@@ -61,6 +61,13 @@ Development Changelog
         than a minute. Making that it a required input.
 
     .. change::
+        :tags: comstock, workflow
+        :pullreq: 399
+
+        Remove default addition of SimulationOutputReport from ComStock workflow generator to avoid multiple instances
+        when also included in YML. SimulationOutputReport measure must be included in YML to be added to workflow.
+
+    .. change::
         :tags: eagle, bugfix
         :tickets: 393
         :pullreq: 397
