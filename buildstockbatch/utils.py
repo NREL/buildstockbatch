@@ -18,7 +18,7 @@ class ContainerRuntime(enum.Enum):
 
 def read_csv(csv_file_path, **kwargs) -> pd.DataFrame:
     default_na_values = pd._libs.parsers.STR_NA_VALUES
-    df = pd.read_csv(csv_file_path, na_values=list(default_na_values - {"None"}), keep_default_na=False, **kwargs)
+    df = pd.read_csv(csv_file_path, na_values=list(default_na_values - {"None", "NA"}), keep_default_na=False, **kwargs)
     return df
 
 
