@@ -297,7 +297,13 @@ def test_validate_eagle_output_directory():
     with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
         EagleBatch.validate_output_directory_eagle(str(minimal_yml))
     with tempfile.TemporaryDirectory() as tmpdir:
-        for output_directory in ('/scratch/username/out_dir', '/projects/projname/out_dir'):
+        dirs_to_try = [
+            '/scratch/username/out_dir',
+            '/projects/projname/out_dir',
+            '/lustre/eaglefs/scratch/username/out_dir',
+            '/lustre/eaglefs/projects/projname/out_dir'
+        ]
+        for output_directory in dirs_to_try:
             with open(minimal_yml, 'r') as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
             cfg['output_directory'] = output_directory
