@@ -94,7 +94,7 @@ class EagleBatch(BuildStockBatchBase):
     def validate_output_directory_eagle(cls, project_file):
         cfg = get_project_configuration(project_file)
         output_dir = path_rel_to_file(project_file, cfg['output_directory'])
-        if not (output_dir.startswith('/scratch') or output_dir.startswith('/projects')):
+        if not re.match(r"/(lustre/eaglefs/)?(scratch|projects)", output_dir):
             raise ValidationError(f"`output_directory` must be in /scratch or /projects,"
                                   f" `output_directory` = {output_dir}")
 
@@ -102,7 +102,7 @@ class EagleBatch(BuildStockBatchBase):
     def validate_singularity_image_eagle(cls, project_file):
         cfg = get_project_configuration(project_file)
         singularity_image = cls.get_singularity_image(
-            cfg, 
+            cfg,
             cfg.get('os_version', cls.DEFAULT_OS_VERSION),
             cfg.get('os_sha', cls.DEFAULT_OS_SHA)
         )
@@ -426,7 +426,6 @@ class EagleBatch(BuildStockBatchBase):
 
     def queue_jobs(self, array_ids=None, hipri=False):
         eagle_cfg = self.cfg['eagle']
-        minutes_per_sim = eagle_cfg.get('minutes_per_sim', 3)
         with open(os.path.join(self.output_dir, 'job001.json'), 'r') as f:
             job_json = json.load(f)
             n_sims_per_job = len(job_json['batch'])
@@ -444,6 +443,7 @@ class EagleBatch(BuildStockBatchBase):
 
         # Estimate the wall time in minutes
         cores_per_node = 36
+        minutes_per_sim = eagle_cfg['minutes_per_sim']
         walltime = math.ceil(math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim)
 
         # Queue up simulations

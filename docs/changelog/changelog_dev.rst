@@ -53,6 +53,29 @@ Development Changelog
         Upload buildstock.csv to S3 during postprocessing
 
     .. change::
+        :tags: feature
+        :pullreq: 396
+        :tickets: 377
+
+        Allow fractional ``eagle.minutes_per_sim`` for simulations that run less
+        than a minute. Making that it a required input.
+
+    .. change::
+        :tags: comstock, workflow
+        :pullreq: 399
+
+        Remove default addition of SimulationOutputReport from ComStock workflow generator to avoid multiple instances
+        when also included in YML. SimulationOutputReport measure must be included in YML to be added to workflow.
+
+    .. change::
+        :tags: eagle, bugfix
+        :tickets: 393
+        :pullreq: 397
+
+        Updating validation for Eagle output directory to include
+        ``/lustre/eaglefs`` directories.
+
+    .. change::
         :tags: eagle, bugfix
         :pullreq: 398
         :tickets: 390
