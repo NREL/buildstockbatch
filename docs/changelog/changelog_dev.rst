@@ -53,6 +53,14 @@ Development Changelog
         Upload buildstock.csv to S3 during postprocessing
 
     .. change::
+        :tags: feature
+        :pullreq: 396
+        :tickets: 377
+
+        Allow fractional ``eagle.minutes_per_sim`` for simulations that run less
+        than a minute. Making that it a required input.
+
+    .. change::
         :tags: eagle, bugfix
         :tickets: 393
         :pullreq: 397
