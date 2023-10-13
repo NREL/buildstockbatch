@@ -59,3 +59,26 @@ Development Changelog
 
         Allow fractional ``eagle.minutes_per_sim`` for simulations that run less
         than a minute. Making that it a required input.
+
+    .. change::
+        :tags: comstock, workflow
+        :pullreq: 399
+
+        Remove default addition of SimulationOutputReport from ComStock workflow generator to avoid multiple instances
+        when also included in YML. SimulationOutputReport measure must be included in YML to be added to workflow.
+
+    .. change::
+        :tags: eagle, bugfix
+        :tickets: 393
+        :pullreq: 397
+
+        Updating validation for Eagle output directory to include
+        ``/lustre/eaglefs`` directories.
+
+    .. change::
+        :tags: eagle, bugfix
+        :pullreq: 398
+        :tickets: 390
+
+        No longer errors out with a "no space left on device" when using the
+        ``weather_files_url`` on Eagle.

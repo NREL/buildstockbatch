@@ -143,15 +143,6 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 list(map(lambda x: x['measure_dir_name'] == 'BuildExistingModel', osw['steps'])).index(True)
             osw['steps'].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
-        # Always-added reporting measures
-        osw['steps'].extend([
-            {
-                "measure_dir_name": "SimulationOutputReport",
-                "arguments": {},
-                "measure_type": "ReportingMeasure"
-            }
-        ])
-
         if 'timeseries_csv_export' in workflow_args:
             timeseries_csv_export_args = {
                 'reporting_frequency': 'Timestep',
