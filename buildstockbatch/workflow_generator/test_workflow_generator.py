@@ -114,6 +114,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_annual_component_loads'] is True
     assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
     assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
+    assert simulation_output_step['arguments']['include_annual_resilience'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
@@ -128,6 +129,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
     assert simulation_output_step['arguments']['include_timeseries_airflows'] is False
     assert simulation_output_step['arguments']['include_timeseries_weather'] is False
+    assert simulation_output_step['arguments']['include_timeseries_resilience'] is False
     assert simulation_output_step['arguments']['timeseries_timestamp_convention'] == 'end'
     assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
     assert simulation_output_step['arguments']['add_timeseries_dst_column'] is True
@@ -136,8 +138,10 @@ def test_residential_hpxml(mocker):
     hpxml_output_step = steps[4]
     assert hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput'
 
-    hpxml_output_step = steps[5]
-    assert hpxml_output_step['measure_dir_name'] == 'ReportUtilityBills'
+    utility_bills_step = steps[5]
+    assert utility_bills_step['measure_dir_name'] == 'ReportUtilityBills'
+    assert utility_bills_step['arguments']['include_annual_bills'] is True
+    assert utility_bills_step['arguments']['include_monthly_bills'] is False
 
     upgrade_costs_step = steps[6]
     assert upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts'
