@@ -109,7 +109,7 @@ class BuildStockBatchBase(object):
         else:
             logger.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
-            with tempfile.TemporaryFile() as f:
+            with tempfile.TemporaryFile(dir=os.environ.get('LOCAL_SCRATCH')) as f:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)

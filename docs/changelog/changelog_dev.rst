@@ -74,3 +74,11 @@ Development Changelog
 
         Updating validation for Eagle output directory to include
         ``/lustre/eaglefs`` directories.
+
+    .. change::
+        :tags: eagle, bugfix
+        :pullreq: 398
+        :tickets: 390
+
+        No longer errors out with a "no space left on device" when using the
+        ``weather_files_url`` on Eagle.
