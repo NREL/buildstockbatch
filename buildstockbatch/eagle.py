@@ -298,7 +298,8 @@ class EagleBatch(BuildStockBatchBase):
             json.dump(dpouts, f)
 
         # Compress simulation results
-        time.sleep(60)  # Allow results JSON to finish writing
+        if self.cfg.get('max_minutes_per_sim') is not None:
+            time.sleep(60)  # Allow results JSON to finish writing
         simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
         logger.info(f'Compressing simulation outputs to {simout_filename}')
         local_sim_out_dir = self.local_output_dir / 'simulation_output'
