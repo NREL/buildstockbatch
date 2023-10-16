@@ -298,6 +298,8 @@ class EagleBatch(BuildStockBatchBase):
             json.dump(dpouts, f)
 
         # Compress simulation results
+        if self.cfg.get('max_minutes_per_sim') is not None:
+            time.sleep(60)  # Allow results JSON to finish writing
         simout_filename = lustre_sim_out_dir / f'simulations_job{job_array_number}.tar.gz'
         logger.info(f'Compressing simulation outputs to {simout_filename}')
         local_sim_out_dir = self.local_output_dir / 'simulation_output'
@@ -390,7 +392,13 @@ class EagleBatch(BuildStockBatchBase):
                 env_vars = dict(os.environ)
                 env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
                 logger.debug('\n'.join(map(str, args)))
-                with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                max_time_min = cfg.get('max_minutes_per_sim')
+                if max_time_min is not None:
+                    subprocess_kw = {"timeout": max_time_min * 60}
+                else:
+                    subprocess_kw = {}
+                start_time = dt.datetime.now()
+                with open(os.path.join(sim_dir, 'openstudio_output.log'), 'w') as f_out:
                     try:
                         subprocess.run(
                             args,
@@ -400,7 +408,26 @@ class EagleBatch(BuildStockBatchBase):
                             stderr=subprocess.STDOUT,
                             cwd=cls.local_output_dir,
                             env=env_vars,
+                            **subprocess_kw
                         )
+                    except subprocess.TimeoutExpired:
+                        end_time = dt.datetime.now()
+                        msg = f'Terminated {sim_id} after reaching max time of {max_time_min} minutes'
+                        f_out.write(f'[{end_time.now()} ERROR] {msg}')
+                        logger.warning(msg)
+                        with open(os.path.join(sim_dir, 'out.osw'), 'w') as out_osw:
+                            out_msg = {
+                                'started_at': start_time.strftime('%Y%m%dT%H%M%SZ'),
+                                'completed_at': end_time.strftime('%Y%m%dT%H%M%SZ'),
+                                'completed_status': 'Fail',
+                                'timeout': msg
+                            }
+                            out_osw.write(json.dumps(out_msg, indent=3))
+                        with open(os.path.join(sim_dir, 'run', 'out.osw'), 'a') as run_log:
+                            run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        with open(os.path.join(sim_dir, 'run', 'failed.job'), 'w') as failed_job:
+                            failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        time.sleep(60)  # Wait for EnergyPlus to release file locks and data_point.zip to finish
                     except subprocess.CalledProcessError:
                         pass
                     finally:
