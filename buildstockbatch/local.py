@@ -185,60 +185,64 @@ class LocalBatch(BuildStockBatchBase):
         env_vars.update(os.environ)
         env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
 
-        max_time_min = cfg.get('max_minutes_per_sim', 525600)
-        max_time_s = max_time_min * 60
+        max_time_min = cfg.get('max_minutes_per_sim')
+        if max_time_min is not None:
+            subprocess_kw = {"timeout": max_time_min * 60}
+        else:
+            subprocess_kw = {}
         start_time = dt.datetime.now()
-        try:
-            proc_output = subprocess.run(
-                run_cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                env=env_vars,
-                cwd=sim_dir,
-                timeout=max_time_s
-            )
-            with open(sim_path / 'openstudio_output.log', 'wb') as f_out:
-                f_out.write(proc_output.stdout)
-        except subprocess.TimeoutExpired:
-            end_time = dt.datetime.now()
-            msg = f'Terminated {sim_id} after reaching max time of {max_time_min} minutes'
-            logger.warning(msg)
-            with open(sim_path / 'openstudio_output.log', 'w') as f_out:
+        with open(sim_path / 'openstudio_output.log', 'w') as f_out:
+            try:
+                subprocess.run(
+                    run_cmd,
+                    check=True,
+                    stdout=f_out,
+                    stderr=subprocess.STDOUT,
+                    env=env_vars,
+                    cwd=sim_dir,
+                    **subprocess_kw
+                )
+            except subprocess.TimeoutExpired:
+                end_time = dt.datetime.now()
+                msg = f'Terminated {sim_id} after reaching max time of {max_time_min} minutes'
+                logger.warning(msg)
                 f_out.write(msg)
-            with open(sim_path / 'out.osw', 'w') as out_osw:
-                out_msg = {
-                    'started_at': start_time.strftime('%Y%m%dT%H%M%SZ'),
-                    'completed_at': end_time.strftime('%Y%m%dT%H%M%SZ'),
-                    'completed_status': 'Fail',
-                    'timeout': msg
-                }
-                out_osw.write(json.dumps(out_msg, indent=3))
-            with open(sim_path / 'run' / 'run.log', 'a') as run_log:
-                run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
-            with open(sim_path / 'run' / 'failed.job', 'w') as failed_job:
-                failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
-            time.sleep(20)  # Wait for EnergyPlus to release file locks
-        finally:
-            fs = LocalFileSystem()
-            cls.cleanup_sim_dir(
-                sim_dir,
-                fs,
-                f"{results_dir}/simulation_output/timeseries",
-                upgrade_id,
-                i
-            )
+                with open(sim_path / 'out.osw', 'w') as out_osw:
+                    out_msg = {
+                        'started_at': start_time.strftime('%Y%m%dT%H%M%SZ'),
+                        'completed_at': end_time.strftime('%Y%m%dT%H%M%SZ'),
+                        'completed_status': 'Fail',
+                        'timeout': msg
+                    }
+                    out_osw.write(json.dumps(out_msg, indent=3))
+                with open(sim_path / 'run' / 'run.log', 'a') as run_log:
+                    run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                with open(sim_path / 'run' / 'failed.job', 'w') as failed_job:
+                    failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                time.sleep(20)  # Wait for EnergyPlus to release file locks
+            except subprocess.CalledProcessError:
+                pass
+            finally:
+                fs = LocalFileSystem()
+                cls.cleanup_sim_dir(
+                    sim_dir,
+                    fs,
+                    f"{results_dir}/simulation_output/timeseries",
+                    upgrade_id,
+                    i
+                )
 
-            # Clean up symlinks
-            for directory in ('measures', 'lib', 'weather'):
-                (sim_path / directory).unlink()
-            if resources_path:
-                (resources_path / 'hpxml-measures').unlink()
-                resources_path.rmdir()
+                # Clean up symlinks
+                for directory in ('measures', 'lib', 'weather'):
+                    (sim_path / directory).unlink()
+                if resources_path:
+                    (resources_path / 'hpxml-measures').unlink()
+                    resources_path.rmdir()
 
-            # Read data_point_out.json
-            reporting_measures = cls.get_reporting_measures(cfg)
-            dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
-            return dpout
+                # Read data_point_out.json
+                reporting_measures = cls.get_reporting_measures(cfg)
+                dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
+                return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         buildstock_csv_filename = self.sampler.run_sampling()

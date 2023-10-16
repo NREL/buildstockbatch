@@ -391,10 +391,13 @@ class EagleBatch(BuildStockBatchBase):
                 env_vars = dict(os.environ)
                 env_vars['SINGULARITYENV_BUILDSTOCKBATCH_VERSION'] = bsb_version
                 logger.debug('\n'.join(map(str, args)))
-                max_time_min = cfg.get('max_minutes_per_sim', 525600)
-                max_time_s = max_time_min * 60
+                max_time_min = cfg.get('max_minutes_per_sim')
+                if max_time_min is not None:
+                    subprocess_kw = {"timeout": max_time_min * 60}
+                else:
+                    subprocess_kw = {}
                 start_time = dt.datetime.now()
-                with open(os.path.join(sim_dir, 'singularity_output.log'), 'w') as f_out:
+                with open(os.path.join(sim_dir, 'openstudio_output.log'), 'w') as f_out:
                     try:
                         subprocess.run(
                             args,
@@ -404,7 +407,7 @@ class EagleBatch(BuildStockBatchBase):
                             stderr=subprocess.STDOUT,
                             cwd=cls.local_output_dir,
                             env=env_vars,
-                            timeout=max_time_s
+                            **subprocess_kw
                         )
                     except subprocess.TimeoutExpired:
                         end_time = dt.datetime.now()
