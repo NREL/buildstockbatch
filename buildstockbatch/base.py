@@ -322,9 +322,8 @@ class BuildStockBatchBase(object):
             else:
                 sample_file = os.path.abspath(sample_file)
             buildstock_df = read_csv(sample_file, dtype=str)
-            BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+            return BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
-
 
     @staticmethod
     def validate_buildstock_csv(project_file, buildstock_df):
@@ -338,10 +337,12 @@ class BuildStockBatchBase(object):
             if column not in param_option_dict:
                 errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
+            if "*" in param_option_dict[column]:
+                continue  # skip validating options when wildcard is present
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
                     errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
-                                  f'in options_lookup.tsv')
+                                  'in options_lookup.tsv')
         if errors:
             raise ValidationError('\n'.join(errors))
 
@@ -413,8 +414,12 @@ class BuildStockBatchBase(object):
                         invalid_chars = ''.join(invalid_chars)
                         if invalid_chars:
                             invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
-
+                    param_name, opt_name = row['Parameter Name'], row['Option Name']
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
+                    if opt_name == '*' and row['Measure Dir']:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot pass arguments to measure.\n"
+                    if "*" in param_option_dict[param_name] and len(param_option_dict[param_name]) > 1:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot be mixed with other options\n"
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
@@ -561,7 +566,6 @@ class BuildStockBatchBase(object):
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
                             invalid_options_lookup_str + "*"*80 + "\n" + error_message
-
         if not error_message:
             return True
         else:
