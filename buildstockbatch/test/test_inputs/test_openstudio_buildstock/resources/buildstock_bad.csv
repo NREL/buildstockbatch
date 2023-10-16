@@ -1,6 +1,6 @@
-Building,Bedroom,Location,Vintage,State,Insulation Wall,Insulation
-1,1,AL_Mobile-Rgnl.AP.722230,1940-1950,CO,Good Option,None
-2,2,AL_Mobile-Rgnl.AP.722230,1940s,CO,Good Option,None
-3,2,AL_Mobile-Rgnl.AP.722230,2010s,VA,Good Option,None
-4,2,AL_Mobile-Rgnl.AP.722230,2000s,TX,,None
-5,3,AL_Mobile-Rgnl.AP.722230,1970s,VA,,None
+Building,Bedroom,Location,Vintage,State,Insulation Wall,Insulation,ZipPlusCode
+1,1,AL_Mobile-Rgnl.AP.722230,1940-1950,CO,Good Option,None,36608
+2,2,AL_Mobile-Rgnl.AP.722230,1940s,CO,Good Option,None,36601
+3,2,AL_Mobile-Rgnl.AP.722230,2010s,VA,Good Option,None,36601
+4,2,AL_Mobile-Rgnl.AP.722230,2000s,TX,,None,36604
+5,3,AL_Mobile-Rgnl.AP.722230,1970s,VA,,None,36604
