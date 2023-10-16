@@ -215,6 +215,7 @@ class LocalBatch(BuildStockBatchBase):
                         'timeout': msg
                     }
                     out_osw.write(json.dumps(out_msg, indent=3))
+                (sim_path / 'run').mkdir(exist_ok=True)
                 with open(sim_path / 'run' / 'run.log', 'a') as run_log:
                     run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
                 with open(sim_path / 'run' / 'failed.job', 'w') as failed_job:
