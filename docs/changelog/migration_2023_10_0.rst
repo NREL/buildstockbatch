@@ -36,4 +36,6 @@ terminated.
 Residential HPXML Workflor Generator Changes
 ============================================
 
-Joe, can you please fill this out?
+Updates were made to workflow generator arguments to add new ``detailed_filepath``
+and ``include_timeseries_resilience`` arguments, see
+:doc:`../workflow_generators/residential_hpxml` for details.
