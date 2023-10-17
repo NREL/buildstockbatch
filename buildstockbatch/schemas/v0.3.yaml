@@ -6,6 +6,7 @@ weather_files_url: str(required=False)
 sampler: include('sampler-spec', required=True)
 workflow_generator: include('workflow-generator-spec', required=True)
 eagle: include('hpc-spec', required=False)
+gcp: include('gcp-spec', required=False)
 aws: include('aws-spec', required=False)
 output_directory: regex('^(.*\/)?[a-z][a-z0-9_]*\/?$', required=True)
 sys_image_dir: str(required=False)
@@ -17,6 +18,16 @@ upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
 references: map(required=False)
 ---
+gcp-spec:
+  job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
+  region: str(required=True)
+  artifact_registry: include('gcp-ar-spec', required=True)
+  batch_array_size: num(min=1, max=10000, required=True)
+  notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', name='email', required=True)
+
+gcp-ar-spec:
+  repository: str(required=True)
+
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
   s3: include('s3-aws-postprocessing-spec', required=True)
