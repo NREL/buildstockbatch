@@ -106,10 +106,12 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
             try:
                 return func(*args, **kwargs)
             except Exception:
+                print("Prininting error")
                 with open(output_file, "a") as f:
                     text = "\n" + "#" * 20 + "\n"
                     text += get_error_details()
                     f.write(text)
+                    print(text)
                 raise
         return run_with_error_capture
 

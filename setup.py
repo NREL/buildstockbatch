@@ -24,7 +24,7 @@ setuptools.setup(
     long_description_content_type='text/markdown',
     url=metadata['__url__'],
     packages=setuptools.find_packages(),
-    python_requires='>=3.8',
+    python_requires='>=3.9',
     package_data={
         'buildstockbatch': ['*.sh', 'schemas/*.yaml'],
         '': ['LICENSE']
@@ -43,6 +43,10 @@ setuptools.setup(
         'yamale',
         'ruamel.yaml',
         'awsretry',
+        'jinja2<3.1.0',
+        'networkx',
+        'colorama',
+        'click',
         'lxml'
     ],
     extras_require={
@@ -66,7 +70,8 @@ setuptools.setup(
         'console_scripts': [
             'buildstock_local=buildstockbatch.local:main',
             'buildstock_eagle=buildstockbatch.eagle:user_cli',
-            'buildstock_aws=buildstockbatch.aws.aws:main'
+            'buildstock_aws=buildstockbatch.aws.aws:main',
+            'resstock_sampler=buildstockbatch.sampler.residential_sampler.sampler:main'
         ]
     },
     license='BSD-3',
