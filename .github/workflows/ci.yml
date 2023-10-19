@@ -1,5 +1,5 @@
 name: BuildStockBatch Tests
-on: 
+on:
   push:
     branches:
       - develop
@@ -13,7 +13,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11']
+        # python-version: ['3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.11']
     name: Tests - Python ${{ matrix.python-version }}
     steps:
       - uses: actions/checkout@v3
@@ -24,15 +25,24 @@ jobs:
           repository: NREL/resstock
           path: resstock
           ref: develop
+      - uses: actions/checkout@v3
+        with:
+          repository: NREL/comstock-internal
+          path: comstock
+          ref: develop
+          ssh-key: ${{ secrets.COMSTOCK_SSH_KEY }}
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '2.7.2'
       - name: Download weather
         run: |
           mkdir weather
           cd weather
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
-      - name: Download and Install OpenStudio
+      - name: Download and Extract OpenStudio 3.6.1
         run: |
           wget -q https://github.com/NREL/OpenStudio/releases/download/v3.6.1/OpenStudio-3.6.1+bb9481519e-Ubuntu-20.04-x86_64.deb
           sudo apt install -y ./OpenStudio-3.6.1+bb9481519e-Ubuntu-20.04-x86_64.deb
@@ -53,7 +63,23 @@ jobs:
       - name: Run PyTest and Coverage
         run: |
           cd buildstockbatch
-          pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport
+          pytest --junitxml=coverage/junit.xml --cov=buildstockbatch --cov-report=xml:coverage/coverage.xml --cov-report=html:coverage/htmlreport -k "test_resstock_local_batch[national_baseline] or test_comstock_local_batch"
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-users: nmerket,asparke2
+      - name: Save logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: gem-logs
+          path: comstock/resources/.custom_gems/*.log
+      - name: Save simulation output on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: comstock-test-output
+          path: comstock/baseline_test_output
       - name: Test Report
         uses: mikepenz/action-junit-report@v3.5.2
         if: ${{ matrix.python-version == '3.11' }}

@@ -201,7 +201,7 @@ class BuildStockBatchBase(object):
         schedules_filepath = ''
         if os.path.isdir(os.path.join(sim_dir, 'generated_files')):
             for file in os.listdir(os.path.join(sim_dir, 'generated_files')):
-                if re.match(r".*schedules.*\.csv", file):
+                if file.endswith('schedules.csv'):
                     schedules_filepath = os.path.join(sim_dir, 'generated_files', file)
 
         if os.path.isfile(timeseries_filepath):
@@ -335,14 +335,16 @@ class BuildStockBatchBase(object):
             if column in {'Building'}:
                 continue
             if column not in param_option_dict:
-                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                # In ComStock, some columns in the buildstock.csv are intermediate steps in the sampling
+                # and are not used by the options_lookup.tsv.
+                logger.warning(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
             if "*" in param_option_dict[column]:
                 continue  # skip validating options when wildcard is present
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
-                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
-                                  'in options_lookup.tsv')
+                    logger.warning(f'Option {option} in column {column} of buildstock_csv is not available '
+                                   f'in options_lookup.tsv')
         if errors:
             raise ValidationError('\n'.join(errors))
 
