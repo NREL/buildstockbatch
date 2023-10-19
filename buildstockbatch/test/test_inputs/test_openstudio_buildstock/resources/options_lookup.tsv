@@ -19,6 +19,7 @@ County	County2
 Bedroom	1															
 Bedroom	2															
 Bedroom	3															
+Zipcode	*															
 Insulation Slab	None															
 Insulation Slab	Good Option	ResidentialConstructionsSlab	perimeter_r=0	perimeter_width=0	whole_r=0	gap_r=0	exterior_r=0	exterior_depth=0								
 Insulation Slab	Missing Argument	ResidentialConstructionsSlab	perimeter_r=0	perimeter_width=0	whole_r=10	gap_r=5	exterior_r=0									

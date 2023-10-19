@@ -146,8 +146,8 @@ Under the ``eagle`` key is a list of configuration for running the batch job on
 the Eagle supercomputer.
 
 *  ``n_jobs``: Number of eagle jobs to parallelize the simulation into
-*  ``minutes_per_sim``: Maximum allocated simulation time in minutes
-*  ``account``: Eagle allocation account to charge the job to
+*  ``minutes_per_sim``: Required. Maximum allocated simulation time in minutes.
+*  ``account``: Required. Eagle allocation account to charge the job to.
 *  ``sampling``: Configuration for the sampling in eagle
 
     *  ``time``: Maximum time in minutes to allocate to sampling job

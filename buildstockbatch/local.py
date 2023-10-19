@@ -12,6 +12,7 @@ This object contains the code required for execution of local batch simulations
 
 import argparse
 from dask.distributed import Client, LocalCluster
+import datetime as dt
 import docker
 import functools
 from fsspec.implementations.local import LocalFileSystem
@@ -26,6 +27,7 @@ import re
 import shutil
 import subprocess
 import tarfile
+import time
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch import postprocessing
@@ -183,36 +185,65 @@ class LocalBatch(BuildStockBatchBase):
         env_vars.update(os.environ)
         env_vars['BUILDSTOCKBATCH_VERSION'] = bsb_version
 
-        proc_output = subprocess.run(
-            run_cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            env=env_vars,
-            cwd=sim_dir,
-        )
-        with open(sim_path / 'openstudio_output.log', 'wb') as f_out:
-            f_out.write(proc_output.stdout)
+        max_time_min = cfg.get('max_minutes_per_sim')
+        if max_time_min is not None:
+            subprocess_kw = {"timeout": max_time_min * 60}
+        else:
+            subprocess_kw = {}
+        start_time = dt.datetime.now()
+        with open(sim_path / 'openstudio_output.log', 'w') as f_out:
+            try:
+                subprocess.run(
+                    run_cmd,
+                    check=True,
+                    stdout=f_out,
+                    stderr=subprocess.STDOUT,
+                    env=env_vars,
+                    cwd=sim_dir,
+                    **subprocess_kw
+                )
+            except subprocess.TimeoutExpired:
+                end_time = dt.datetime.now()
+                msg = f'Terminated {sim_id} after reaching max time of {max_time_min} minutes'
+                logger.warning(msg)
+                f_out.write(msg)
+                with open(sim_path / 'out.osw', 'w') as out_osw:
+                    out_msg = {
+                        'started_at': start_time.strftime('%Y%m%dT%H%M%SZ'),
+                        'completed_at': end_time.strftime('%Y%m%dT%H%M%SZ'),
+                        'completed_status': 'Fail',
+                        'timeout': msg
+                    }
+                    out_osw.write(json.dumps(out_msg, indent=3))
+                (sim_path / 'run').mkdir(exist_ok=True)
+                with open(sim_path / 'run' / 'run.log', 'a') as run_log:
+                    run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                with open(sim_path / 'run' / 'failed.job', 'w') as failed_job:
+                    failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                time.sleep(20)  # Wait for EnergyPlus to release file locks
+            except subprocess.CalledProcessError:
+                pass
+            finally:
+                fs = LocalFileSystem()
+                cls.cleanup_sim_dir(
+                    sim_dir,
+                    fs,
+                    f"{results_dir}/simulation_output/timeseries",
+                    upgrade_id,
+                    i
+                )
 
-        fs = LocalFileSystem()
-        cls.cleanup_sim_dir(
-            sim_dir,
-            fs,
-            f"{results_dir}/simulation_output/timeseries",
-            upgrade_id,
-            i
-        )
+                # Clean up symlinks
+                for directory in ('measures', 'lib', 'weather'):
+                    (sim_path / directory).unlink()
+                if resources_path:
+                    (resources_path / 'hpxml-measures').unlink()
+                    resources_path.rmdir()
 
-        # Clean up symlinks
-        for directory in ('measures', 'lib', 'weather'):
-            (sim_path / directory).unlink()
-        if resources_path:
-            (resources_path / 'hpxml-measures').unlink()
-            resources_path.rmdir()
-
-        # Read data_point_out.json
-        reporting_measures = cls.get_reporting_measures(cfg)
-        dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
-        return dpout
+                # Read data_point_out.json
+                reporting_measures = cls.get_reporting_measures(cfg)
+                dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
+                return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
         buildstock_csv_filename = self.sampler.run_sampling()
@@ -257,6 +288,7 @@ class LocalBatch(BuildStockBatchBase):
             n_jobs = -1
         dpouts = Parallel(n_jobs=n_jobs, verbose=10)(all_sims)
 
+        time.sleep(10)
         shutil.rmtree(lib_path)
 
         sim_out_path = pathlib.Path(self.results_dir, 'simulation_output')
