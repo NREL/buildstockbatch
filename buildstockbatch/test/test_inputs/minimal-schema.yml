@@ -1,6 +1,7 @@
 buildstock_directory: here
 project_directory: there
 weather_files_path: over-yonder
+output_directory: somewhere
 sampler:
   type: residential_quota
   args:

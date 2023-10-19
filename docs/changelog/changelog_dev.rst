@@ -16,42 +16,78 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: general, feature
-        :pullreq: 349
-        :tickets: 300
+        :tags: general, bugfix
+        :pullreq: 387
+        :tickets: 385
 
-        Remove docker dependency for local runs.
+        Removing broken postprocessing tests.
 
     .. change::
         :tags: general, bugfix
-        :pullreq: 355
-        :tickets: 352
+        :pullreq: 384
 
-        Fix an issue with schedules datatype that was causing the crash of postporcessing at the final step.
-
-    .. change::
-        :tags: workflow, feature
-        :pullreq: 353
-
-        Avoid unnecessarily validating the HPXML file twice after having slightly changed the ``residential_hpxml`` workflow.
+        Introduce '*' as a valid option name in options_lookup.tsv to indicate a
+        parameter that can take any option and don't need to pass arguments to 
+        measures. Enables buildstock.csv validation for ComStock without blowing
+        up the size of the options_lookup.tsv file.
 
     .. change::
-        :tags: validation, feature
-        :pullreq: 362
+        :tags: bugfix
+        :pullreq: 386
+        :tickets: 256
 
-        Enforce Athena database name and table name to follow strict alphanumeric only naming convention.
-
-    .. change::
-        :tags: validation, feature
-        :pullreq: 366
-
-        Add a references section in the yaml schema to allow defining the anchors at a single place.
+        No longer automatically downloads the appropriate singularity image from
+        S3. Also added validation to ensure the image is in the correct location.
 
     .. change::
-        :tags: comstock, changed, validation, eagle
-        :pullreq: 350
+        :tags: general, feature
+        :pullreq: 382
 
-        Allows up to 8 hours per simulation in the ``minutes_per_sim`` validator
-        under the ``eagle`` section of a configuation YAML. This is required to
-        allow long-running ComStock models to be segmented into their own YAML
-        to allow for more efficient use of HPC resources.
+        For the Residential HPXML Workflow Generator, add a new ``detailed_filepath`` argument
+        for pointing to user-specified TSV file of electricity tariff file paths. The TSV file can contain
+        utility rates mapped by State, or any other parameter.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 383
+
+        For the Residential HPXML Workflow Generator, fixes new ``include_annual_resilience`` argument to true and
+        adds a new optional ``include_timeseries_resilience`` argument that defaults to false. Also fixes new
+        ``include_annual_bills`` argument to true and ``include_monthly_bills`` argument to false.
+
+    .. change::
+        :tags: postprocessing, feature
+        :pullreq: 365
+
+        Upload buildstock.csv to S3 during postprocessing
+
+    .. change::
+        :tags: feature
+        :pullreq: 396
+        :tickets: 377
+
+        Allow fractional ``eagle.minutes_per_sim`` for simulations that run less
+        than a minute. Making that it a required input.
+
+    .. change::
+        :tags: comstock, workflow
+        :pullreq: 399
+
+        Remove default addition of SimulationOutputReport from ComStock workflow generator to avoid multiple instances
+        when also included in YML. SimulationOutputReport measure must be included in YML to be added to workflow.
+
+    .. change::
+        :tags: eagle, bugfix
+        :tickets: 393
+        :pullreq: 397
+
+        Updating validation for Eagle output directory to include
+        ``/lustre/eaglefs`` directories.
+
+    .. change::
+        :tags: eagle, bugfix
+        :pullreq: 398
+        :tickets: 390
+
+        No longer errors out with a "no space left on device" when using the
+        ``weather_files_url`` on Eagle.

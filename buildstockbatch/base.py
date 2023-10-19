@@ -16,7 +16,6 @@ from fsspec.implementations.local import LocalFileSystem
 import logging
 from lxml import objectify
 import os
-import pandas as pd
 import numpy as np
 import re
 import requests
@@ -36,7 +35,7 @@ from buildstockbatch import (
     postprocessing
 )
 from buildstockbatch.exc import SimulationExists, ValidationError
-from buildstockbatch.utils import path_rel_to_file, get_project_configuration
+from buildstockbatch.utils import path_rel_to_file, get_project_configuration, read_csv
 from buildstockbatch.__version__ import __version__ as bsb_version
 
 logger = logging.getLogger(__name__)
@@ -45,8 +44,8 @@ logger = logging.getLogger(__name__)
 class BuildStockBatchBase(object):
 
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = '3.5.1'
-    DEFAULT_OS_SHA = '22e1db7be5'
+    DEFAULT_OS_VERSION = '3.6.1'
+    DEFAULT_OS_SHA = 'bb9481519e'
     CONTAINER_RUNTIME = None
     LOGO = '''
      _ __         _     __,              _ __
@@ -110,7 +109,7 @@ class BuildStockBatchBase(object):
         else:
             logger.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
-            with tempfile.TemporaryFile() as f:
+            with tempfile.TemporaryFile(dir=os.environ.get('LOCAL_SCRATCH')) as f:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)
@@ -192,7 +191,7 @@ class BuildStockBatchBase(object):
         timeseries_filepath = os.path.join(sim_dir, 'run', 'results_timeseries.csv')
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
         if os.path.isfile(timeseries_filepath):
-            units_dict = pd.read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
+            units_dict = read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
             skiprows = [1]
         else:
             timeseries_filepath = os.path.join(sim_dir, 'run', 'enduse_timeseries.csv')
@@ -208,15 +207,15 @@ class BuildStockBatchBase(object):
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ['time', 'Time', 'TimeDST', 'TimeUTC']
-            cols = pd.read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
+            cols = read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
                 logger.error(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
                 raise RuntimeError(f'Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.')
 
-            tsdf = pd.read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             if os.path.isfile(schedules_filepath):
-                schedules = pd.read_csv(schedules_filepath, dtype=np.float64)
+                schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f'schedules_{x}', inplace=True)
                 schedules['TimeDST'] = tsdf['Time']
                 tsdf = tsdf.merge(schedules, how='left', on='TimeDST')
@@ -302,7 +301,7 @@ class BuildStockBatchBase(object):
         if os_sha != actual_os_sha:
             raise ValidationError(
                 f"OpenStudio version is correct at {os_version}, but the shas don't match. "
-                "Got {actual_os_sha}, expected {os_sha}"
+                f"Got {actual_os_sha}, expected {os_sha}"
             )
         return True
 
@@ -315,7 +314,39 @@ class BuildStockBatchBase(object):
         except AttributeError:
             raise ValidationError(f'Sampler class `{sampler_name}` is not available.')
         args = cfg['sampler']['args']
-        return Sampler.validate_args(project_file, **args)
+        Sampler.validate_args(project_file, **args)
+        if issubclass(Sampler, sampler.PrecomputedSampler):
+            sample_file = cfg['sampler']['args']['sample_file']
+            if not os.path.isabs(sample_file):
+                sample_file = os.path.join(os.path.dirname(project_file), sample_file)
+            else:
+                sample_file = os.path.abspath(sample_file)
+            buildstock_df = read_csv(sample_file, dtype=str)
+            return BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+        return True
+
+    @staticmethod
+    def validate_buildstock_csv(project_file, buildstock_df):
+        param_option_dict, _ = BuildStockBatchBase.get_param_option_dict(project_file)
+        # verify that all the Columns in buildstock_df only have values available in param_option_dict
+        # param_option_dict has format: {column_name: [valid_option1, valid_option2, ...], ...}
+        errors = []
+        for column in buildstock_df.columns:
+            if column in {'Building'}:
+                continue
+            if column not in param_option_dict:
+                errors.append(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
+                continue
+            if "*" in param_option_dict[column]:
+                continue  # skip validating options when wildcard is present
+            for option in buildstock_df[column].unique():
+                if option not in param_option_dict[column]:
+                    errors.append(f'Option {option} in column {column} of buildstock_csv is not available '
+                                  'in options_lookup.tsv')
+        if errors:
+            raise ValidationError('\n'.join(errors))
+
+        return True
 
     @classmethod
     def validate_workflow_generator(cls, project_file):
@@ -383,8 +414,12 @@ class BuildStockBatchBase(object):
                         invalid_chars = ''.join(invalid_chars)
                         if invalid_chars:
                             invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
-
+                    param_name, opt_name = row['Parameter Name'], row['Option Name']
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
+                    if opt_name == '*' and row['Measure Dir']:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot pass arguments to measure.\n"
+                    if "*" in param_option_dict[param_name] and len(param_option_dict[param_name]) > 1:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot be mixed with other options\n"
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
@@ -531,7 +566,6 @@ class BuildStockBatchBase(object):
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
                             invalid_options_lookup_str + "*"*80 + "\n" + error_message
-
         if not error_message:
             return True
         else:
@@ -851,7 +885,7 @@ class BuildStockBatchBase(object):
 
             aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
             if 's3' in aws_conf or 'aws' in self.cfg:
-                s3_bucket, s3_prefix = self.upload_results(aws_conf, self.output_dir, self.results_dir)
+                s3_bucket, s3_prefix = self.upload_results(aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path)
                 if 'athena' in aws_conf:
                     postprocessing.create_athena_tables(
                         aws_conf,

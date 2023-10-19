@@ -78,6 +78,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             wood_value: num(required=False)
         utility-bill-scenario-spec:
             scenario_name: str(required=True)
+            simple_filepath: str(required=False)
+            detailed_filepath: str(required=False)
             elec_fixed_charge: num(required=False)
             elec_marginal_rate: num(required=False)
             gas_fixed_charge: num(required=False)
@@ -109,6 +111,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             include_timeseries_zone_temperatures: bool(required=False)
             include_timeseries_airflows: bool(required=False)
             include_timeseries_weather: bool(required=False)
+            include_timeseries_resilience: bool(required=False)
             timeseries_timestamp_convention: enum('start', 'end', required=False)
             timeseries_num_decimal_places: int(required=False)
             add_timeseries_dst_column: bool(required=False)
@@ -288,10 +291,17 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             for arg, item in emissions_map:
                 bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in emissions])
 
+        buildstock_dir = self.cfg['buildstock_directory']
+        measures_dir = os.path.join(buildstock_dir, 'measures')
+        measure_path = os.path.join(measures_dir, 'BuildExistingModel')
+        bld_exist_model_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
         if 'utility_bills' in workflow_args:
             utility_bills = workflow_args['utility_bills']
             utility_bills_map = [
                 ['utility_bill_scenario_names', 'scenario_name'],
+                ['utility_bill_simple_filepaths', 'simple_filepath'],
+                ['utility_bill_detailed_filepaths', 'detailed_filepath'],
                 ['utility_bill_electricity_fixed_charges', 'elec_fixed_charge'],
                 ['utility_bill_electricity_marginal_rates', 'elec_marginal_rate'],
                 ['utility_bill_natural_gas_fixed_charges', 'gas_fixed_charge'],
@@ -312,7 +322,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 ['utility_bill_pv_monthly_grid_connection_fees', 'pv_monthly_grid_connection_fee']
             ]
             for arg, item in utility_bills_map:
-                bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
+                if arg in bld_exist_model_args_avail:
+                    bld_exist_model_args[arg] = ','.join([str(s.get(item, '')) for s in utility_bills])
 
         sim_out_rep_args = {
             'timeseries_frequency': 'none',
@@ -333,13 +344,63 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             'add_timeseries_utc_column': True
         }
 
-        buildstock_dir = self.cfg['buildstock_directory']
         measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
         measure_path = os.path.join(measures_dir, 'ReportSimulationOutput')
         sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
 
+        if 'include_annual_total_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_total_consumptions'] = True
+
+        if 'include_annual_fuel_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_fuel_consumptions'] = True
+
+        if 'include_annual_end_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_end_use_consumptions'] = True
+
+        if 'include_annual_system_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_system_use_consumptions'] = False
+
+        if 'include_annual_emissions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emissions'] = True
+
+        if 'include_annual_emission_fuels' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emission_fuels'] = True
+
+        if 'include_annual_emission_end_uses' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_emission_end_uses'] = True
+
+        if 'include_annual_total_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_total_loads'] = True
+
+        if 'include_annual_unmet_hours' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_unmet_hours'] = True
+
+        if 'include_annual_peak_fuels' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_peak_fuels'] = True
+
+        if 'include_annual_peak_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_peak_loads'] = True
+
+        if 'include_annual_component_loads' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_component_loads'] = True
+
+        if 'include_annual_hot_water_uses' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_hot_water_uses'] = True
+
+        if 'include_annual_hvac_summary' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_hvac_summary'] = True
+
+        if 'include_annual_resilience' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_annual_resilience'] = True
+
+        if 'include_timeseries_system_use_consumptions' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_system_use_consumptions'] = False
+
         if 'include_timeseries_unmet_hours' in sim_out_rep_args_avail:
             sim_out_rep_args['include_timeseries_unmet_hours'] = False
+
+        if 'include_timeseries_resilience' in sim_out_rep_args_avail:
+            sim_out_rep_args['include_timeseries_resilience'] = False
 
         if 'timeseries_num_decimal_places' in sim_out_rep_args_avail:
             sim_out_rep_args['timeseries_num_decimal_places'] = 3
@@ -350,6 +411,18 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             output_variables = sim_out_rep_args['output_variables']
             sim_out_rep_args['user_output_variables'] = ','.join([str(s.get('name')) for s in output_variables])
             sim_out_rep_args.pop('output_variables')
+
+        util_bills_rep_args = {}
+
+        measures_dir = os.path.join(buildstock_dir, 'resources/hpxml-measures')
+        measure_path = os.path.join(measures_dir, 'ReportUtilityBills')
+        util_bills_rep_args_avail = get_measure_arguments(os.path.join(measure_path, 'measure.xml'))
+
+        if 'include_annual_bills' in util_bills_rep_args_avail:
+            util_bills_rep_args['include_annual_bills'] = True
+
+        if 'include_monthly_bills' in util_bills_rep_args_avail:
+            util_bills_rep_args['include_monthly_bills'] = False
 
         osw = {
             'id': sim_id,
@@ -422,7 +495,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             },
             {
                 'measure_dir_name': 'ReportUtilityBills',
-                'arguments': {}
+                'arguments': util_bills_rep_args
             },
             {
                 'measure_dir_name': 'UpgradeCosts',

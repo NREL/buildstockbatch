@@ -1,8 +1,7 @@
 from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
-from buildstockbatch.workflow_generator.residential import ResidentialDefaultWorkflowGenerator
 from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
-import pytest
+from buildstockbatch.test.shared_testing_stuff import resstock_directory
 
 
 def test_apply_logic_recursion():
@@ -39,290 +38,12 @@ def test_apply_logic_recursion():
     assert apply_logic == '(!abc&&(def||ghi)&&jkl&&mno)'
 
 
-def test_residential_package_apply(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldg1up1'
-    building_id = 1
-    upgrade_idx = 0
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {}
-        },
-        'upgrades': [
-            {
-                'upgrade_name': 'upgrade 1',
-                'options': [
-                    {
-                        'option': 'option name',
-                        'lifetime': 10,
-                        'apply_logic': [
-                            'one',
-                            {'not': 'two'}
-                        ],
-                        'costs': [{
-                            'value': 10,
-                            'multiplier': 'sq.ft.'
-                        }]
-                    }
-                ],
-                'package_apply_logic': ['three', 'four', {'or': ['five', 'six']}]
-            }
-        ]
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    upg_step = osw['steps'][2]
-    assert upg_step['measure_dir_name'] == 'ApplyUpgrade'
-    assert upg_step['arguments']['option_1'] == cfg['upgrades'][0]['options'][0]['option']
-    assert upg_step['arguments']['package_apply_logic'] == WorkflowGeneratorBase.make_apply_logic_arg(cfg['upgrades'][0]['package_apply_logic'])  # noqa E501
-
-
-def test_residential_simulation_controls_config(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {}
-        },
-    }
-    n_datapoints = 10
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    step0 = osw['steps'][0]
-    assert step0['measure_dir_name'] == 'ResidentialSimulationControls'
-    default_args = {
-        'timesteps_per_hr': 6,
-        'begin_month': 1,
-        'begin_day_of_month': 1,
-        'end_month': 12,
-        'end_day_of_month': 31,
-        'calendar_year': 2007
-    }
-    for k, v in default_args.items():
-        assert step0['arguments'][k] == v
-    cfg['workflow_generator']['args']['residential_simulation_controls'] = {
-        'timesteps_per_hr': 2,
-        'begin_month': 7
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    args = osw['steps'][0]['arguments']
-    assert args['timesteps_per_hr'] == 2
-    assert args['begin_month'] == 7
-    for argname in ('begin_day_of_month', 'end_month', 'end_day_of_month', 'calendar_year'):
-        assert args[argname] == default_args[argname]
-
-
-def test_residential_simulation_weight(mocker):
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 1000
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {}
-        }
-    }
-    n_datapoints = 10
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    assert osw['steps'][1]['arguments']['sample_weight'] == pytest.approx(100, abs=1e-6)
-
-
-def test_timeseries_csv_export(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {
-                'timeseries_csv_export': {
-                    'reporting_frequency': 'Timestep',
-                    'output_variables': 'Zone Mean Air Temperature'
-                }
-            }
-        }
-    }
-    n_datapoints = 10
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    timeseries_step = osw['steps'][-2]
-    assert timeseries_step['measure_dir_name'] == 'TimeseriesCSVExport'
-    default_args = {
-        'reporting_frequency': 'Hourly',
-        'include_enduse_subcategories': False,
-        'output_variables': ''
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    args = osw['steps'][-2]['arguments']
-    assert args['reporting_frequency'] == 'Timestep'
-    assert args['output_variables'] == 'Zone Mean Air Temperature'
-    for argname in ('include_enduse_subcategories',):
-        assert args[argname] == default_args[argname]
-
-
-def test_additional_reporting_measures(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {
-                'reporting_measures': [
-                    {'measure_dir_name': 'ReportingMeasure1'},
-                    {'measure_dir_name': 'ReportingMeasure2', 'arguments': {'arg1': 'asdf', 'arg2': 'jkl'}}
-                ]
-            }
-        }
-    }
-    ResidentialDefaultWorkflowGenerator.validate(cfg)
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    reporting_measure_1_step = osw['steps'][-3]
-    assert reporting_measure_1_step['measure_dir_name'] == 'ReportingMeasure1'
-    assert reporting_measure_1_step['arguments'] == {}
-    assert reporting_measure_1_step['measure_type'] == 'ReportingMeasure'
-    reporting_measure_2_step = osw['steps'][-2]
-    assert reporting_measure_2_step['measure_dir_name'] == 'ReportingMeasure2'
-    assert reporting_measure_2_step['arguments']['arg1'] == 'asdf'
-    assert reporting_measure_2_step['arguments']['arg2'] == 'jkl'
-    assert len(reporting_measure_2_step['arguments'])
-    assert reporting_measure_2_step['measure_type'] == 'ReportingMeasure'
-
-
-def test_ignore_measures_argument(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100,
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {
-                'measures_to_ignore': [
-                    'ResidentialApplianceCookingRange',
-                    'ResidentialApplianceDishwasher',
-                    'ResidentialApplianceClothesWasher',
-                    'ResidentialApplianceClothesDryer',
-                    'ResidentialApplianceRefrigerator'
-                ]
-            }
-        }
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    measure_step = None
-    for step in osw['steps']:
-        if step['measure_dir_name'] == 'BuildExistingModel':
-            measure_step = step
-            break
-    assert measure_step is not None, osw
-    assert 'measures_to_ignore' in measure_step['arguments'], measure_step
-    assert measure_step['arguments']['measures_to_ignore'] == 'ResidentialApplianceCookingRange|' + \
-        'ResidentialApplianceDishwasher|ResidentialApplianceClothesWasher|' + \
-        'ResidentialApplianceClothesDryer|ResidentialApplianceRefrigerator', measure_step
-
-
-def test_default_apply_upgrade(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldg1up1'
-    building_id = 1
-    upgrade_idx = 0
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {}
-        },
-        'upgrades': [
-            {
-                'options': [
-                    {
-                        'option': 'Parameter|Option',
-                    }
-                ],
-            }
-        ]
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, 10)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    for step in osw['steps']:
-        if step['measure_dir_name'] == 'ApplyUpgrade':
-            break
-    assert step['measure_dir_name'] == 'ApplyUpgrade'
-    assert len(step['arguments']) == 2
-    assert step['arguments']['run_measure'] == 1
-    assert step['arguments']['option_1'] == 'Parameter|Option'
-
-
-def test_simulation_output(mocker):
-    mocker.patch.object(ResidentialDefaultWorkflowGenerator, 'validate_measures_and_arguments', return_value=True)
-    sim_id = 'bldb1up1'
-    building_id = 1
-    upgrade_idx = None
-    cfg = {
-        'baseline': {
-            'n_buildings_represented': 100
-        },
-        'workflow_generator': {
-            'type': 'residential_default',
-            'args': {
-                'simulation_output': {
-                    'include_enduse_subcategories': True
-                }
-            }
-        }
-    }
-    n_datapoints = 10
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    simulation_output_step = osw['steps'][-2]
-    assert simulation_output_step['measure_dir_name'] == 'SimulationOutputReport'
-    default_args = {
-        'include_enduse_subcategories': False
-    }
-    osw_gen = ResidentialDefaultWorkflowGenerator(cfg, n_datapoints)
-    osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
-    args = osw['steps'][-2]['arguments']
-    for argname in ('include_enduse_subcategories',):
-        assert args[argname] != default_args[argname]
-
-
 def test_residential_hpxml(mocker):
     sim_id = 'bldb1up1'
     building_id = 1
     upgrade_idx = 0
     cfg = {
-        'buildstock_directory': '../',
+        'buildstock_directory': resstock_directory,
         'baseline': {
             'n_buildings_represented': 100
         },
@@ -379,29 +100,48 @@ def test_residential_hpxml(mocker):
     simulation_output_step = steps[3]
     assert simulation_output_step['measure_dir_name'] == 'ReportSimulationOutput'
     assert simulation_output_step['arguments']['timeseries_frequency'] == 'hourly'
+    assert simulation_output_step['arguments']['include_annual_total_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_fuel_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_end_use_consumptions'] is True
+    assert simulation_output_step['arguments']['include_annual_system_use_consumptions'] is False
+    assert simulation_output_step['arguments']['include_annual_emissions'] is True
+    assert simulation_output_step['arguments']['include_annual_emission_fuels'] is True
+    assert simulation_output_step['arguments']['include_annual_emission_end_uses'] is True
+    assert simulation_output_step['arguments']['include_annual_total_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_unmet_hours'] is True
+    assert simulation_output_step['arguments']['include_annual_peak_fuels'] is True
+    assert simulation_output_step['arguments']['include_annual_peak_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_component_loads'] is True
+    assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
+    assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
+    assert simulation_output_step['arguments']['include_annual_resilience'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
+    assert simulation_output_step['arguments']['include_timeseries_system_use_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emissions'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_fuels'] is False
     assert simulation_output_step['arguments']['include_timeseries_emission_end_uses'] is False
     assert simulation_output_step['arguments']['include_timeseries_hot_water_uses'] is False
     assert simulation_output_step['arguments']['include_timeseries_total_loads'] is True
     assert simulation_output_step['arguments']['include_timeseries_component_loads'] is False
-    # assert simulation_output_step['arguments']['include_timeseries_unmet_hours'] is False
+    assert simulation_output_step['arguments']['include_timeseries_unmet_hours'] is False
     assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
     assert simulation_output_step['arguments']['include_timeseries_airflows'] is False
     assert simulation_output_step['arguments']['include_timeseries_weather'] is False
+    assert simulation_output_step['arguments']['include_timeseries_resilience'] is False
     assert simulation_output_step['arguments']['timeseries_timestamp_convention'] == 'end'
-    # assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
+    assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
     assert simulation_output_step['arguments']['add_timeseries_dst_column'] is True
     assert simulation_output_step['arguments']['add_timeseries_utc_column'] is True
 
     hpxml_output_step = steps[4]
     assert hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput'
 
-    hpxml_output_step = steps[5]
-    assert hpxml_output_step['measure_dir_name'] == 'ReportUtilityBills'
+    utility_bills_step = steps[5]
+    assert utility_bills_step['measure_dir_name'] == 'ReportUtilityBills'
+    assert utility_bills_step['arguments']['include_annual_bills'] is True
+    assert utility_bills_step['arguments']['include_monthly_bills'] is False
 
     upgrade_costs_step = steps[6]
     assert upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts'
@@ -428,13 +168,13 @@ def test_com_default_workflow_generator_basic(mocker):
     osw_gen = CommercialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
-    # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
-    assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
-    assert reporting_measure_step['arguments'] == {}
-    assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
+    # Should always get BuildExistingModel
+    reporting_measure_step = osw['steps'][0]
+    assert reporting_measure_step['measure_dir_name'] == 'BuildExistingModel'
+    assert reporting_measure_step['arguments']['number_of_buildings_represented'] == 1
+    assert reporting_measure_step['measure_type'] == 'ModelMeasure'
     # Should not get TimeseriesCSVExport if excluded in args
-    assert len(osw['steps']) == 2
+    assert len(osw['steps']) == 1
 
 
 def test_com_default_workflow_generator_with_timeseries(mocker):
@@ -459,13 +199,13 @@ def test_com_default_workflow_generator_with_timeseries(mocker):
     osw_gen = CommercialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
-    # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
-    assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
-    assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
-    assert reporting_measure_step['arguments'] == {}
+    # Should always get BuildExistingModel
+    reporting_measure_step = osw['steps'][0]
+    assert reporting_measure_step['measure_dir_name'] == 'BuildExistingModel'
+    assert reporting_measure_step['arguments']['number_of_buildings_represented'] == 1
+    assert reporting_measure_step['measure_type'] == 'ModelMeasure'
     # Should get TimeseriesCSVExport if included in args
-    reporting_measure_step = osw['steps'][2]
+    reporting_measure_step = osw['steps'][1]
     assert reporting_measure_step['measure_dir_name'] == 'TimeseriesCSVExport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['reporting_frequency'] == 'Hourly'
@@ -528,21 +268,23 @@ def test_com_default_workflow_generator_extended(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
+    reporting_measure_step = osw['steps'][3]
     assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments'] == {}
+    # Should only be one instance of SimulationOutputReport
+    assert [d['measure_dir_name'] == 'SimulationOutputReport' for d in osw['steps']].count(True) == 1
     # Should get TimeseriesCSVExport if included in args
-    reporting_measure_step = osw['steps'][2]
+    reporting_measure_step = osw['steps'][1]
     assert reporting_measure_step['measure_dir_name'] == 'TimeseriesCSVExport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['reporting_frequency'] == 'Hourly'
     assert reporting_measure_step['arguments']['inc_output_variables'] == 'true'
     # Should have the openstudio report
-    reporting_measure_step = osw['steps'][3]
+    reporting_measure_step = osw['steps'][2]
     assert reporting_measure_step['measure_dir_name'] == 'f8e23017-894d-4bdf-977f-37e3961e6f42'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['building_summary_section'] == 'true'
     assert reporting_measure_step['arguments']['schedules_overview_section'] == 'true'
     # Should have 1 workflow measure plus 9 reporting measures
-    assert len(osw['steps']) == 10
+    assert len(osw['steps']) == 9

@@ -4,6 +4,8 @@ import os
 import logging
 import traceback
 import yaml
+import pandas as pd
+
 
 logger = logging.getLogger(__name__)
 
@@ -12,6 +14,12 @@ class ContainerRuntime(enum.Enum):
     DOCKER = 1
     SINGULARITY = 2
     LOCAL_OPENSTUDIO = 3
+
+
+def read_csv(csv_file_path, **kwargs) -> pd.DataFrame:
+    default_na_values = pd._libs.parsers.STR_NA_VALUES
+    df = pd.read_csv(csv_file_path, na_values=list(default_na_values - {"None", "NA"}), keep_default_na=False, **kwargs)
+    return df
 
 
 def path_rel_to_file(startfile, x):

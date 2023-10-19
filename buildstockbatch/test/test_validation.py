@@ -25,10 +25,13 @@ from buildstockbatch.test.shared_testing_stuff import resstock_directory, ressto
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
+from yamale.yamale_error import YamaleError
 import logging
+import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, 'test_inputs')
+resources_dir = os.path.join(here, 'test_inputs', 'test_openstudio_buildstock', 'resources')
 
 
 def filter_logs(logs, level):
@@ -93,24 +96,26 @@ def test_xor_violations_fail(project_file, expected):
             assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
-@pytest.mark.parametrize("project_file,expected", [
-    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'complete-schema.yml'), True),
-    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True)
+@pytest.mark.parametrize("project_file, base_expected, eagle_expected", [
+    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError, ValueError),
+    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError, ValidationError),
+    (os.path.join(example_yml_dir, 'complete-schema.yml'), True, True),
+    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True, ValidationError)
 ])
-def test_validation_integration(project_file, expected):
+def test_validation_integration(project_file, base_expected, eagle_expected):
     # patch the validate_options_lookup function to always return true for this case
     with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
             patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True):
-        if expected is not True:
-            with pytest.raises(expected):
-                BuildStockBatchBase.validate_project(project_file)
-        else:
-            assert BuildStockBatchBase.validate_project(project_file)
+            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True), \
+            patch.object(EagleBatch, 'validate_singularity_image_eagle', lambda _: True):
+        for cls, expected in [(BuildStockBatchBase, base_expected), (EagleBatch, eagle_expected)]:
+            if expected is not True:
+                with pytest.raises(expected):
+                    cls.validate_project(project_file)
+            else:
+                assert cls.validate_project(project_file)
 
 
 @pytest.mark.parametrize("project_file", [
@@ -141,21 +146,13 @@ def test_good_reference_scenario(project_file):
 ])
 def test_bad_measures(project_file):
 
-    with LogCapture(level=logging.INFO) as logs:
+    with LogCapture(level=logging.INFO) as _:
         try:
             BuildStockBatchBase.validate_workflow_generator(project_file)
-        except ValidationError as er:
+        except (ValidationError, YamaleError) as er:
             er = str(er)
-            warning_logs = filter_logs(logs, 'WARNING')
-            assert "Required argument calendar_year for" in warning_logs
-            assert "ReportingMeasure2 does not exist" in er
-            assert "Wrong argument value type for begin_day_of_month" in er
-            assert "Found unexpected argument key output_variable" in er
-            assert "Found unexpected argument value Huorly" in er
-            assert "Fixed(1)" in er
-            assert "Required argument include_enduse_subcategories" in er
-            assert "Found unexpected argument key include_enduse_subcategory" in er
-
+            assert "'1.5' is not a int" in er
+            assert "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')" in er
         else:
             raise Exception("measures_and_arguments was supposed to raise ValidationError for"
                             " enforce-validate-measures-bad.yml")
@@ -212,6 +209,10 @@ def test_bad_options_validation(project_file):
         assert "Insulation Slat" in er
         assert "Vintage|1960s|Vintage|1960s" in er
         assert "Vintage|1960s||Vintage|1940s&&Vintage|1980s" in er
+        assert "Wall Insulation: '*' cannot pass arguments to measure." in er
+        assert "Wall Insulation: '*' cannot be mixed with other options" in er
+        assert "Ceiling Insulation: '*' cannot be mixed with other options" in er
+        assert "Floor Insulation: '*' cannot be mixed with other options" in er
 
     else:
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
@@ -299,6 +300,74 @@ def test_validate_resstock_or_comstock_version(mocker):
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     with pytest.raises(ValidationError):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
+def test_validate_eagle_output_directory():
+    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
+        EagleBatch.validate_output_directory_eagle(str(minimal_yml))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dirs_to_try = [
+            '/scratch/username/out_dir',
+            '/projects/projname/out_dir',
+            '/lustre/eaglefs/scratch/username/out_dir',
+            '/lustre/eaglefs/projects/projname/out_dir'
+        ]
+        for output_directory in dirs_to_try:
+            with open(minimal_yml, 'r') as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+            cfg['output_directory'] = output_directory
+            temp_yml = pathlib.Path(tmpdir, 'temp.yml')
+            with open(temp_yml, 'w') as f:
+                yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+            EagleBatch.validate_output_directory_eagle(str(temp_yml))
+
+
+def test_validate_singularity_image_eagle(mocker, basic_residential_project_file):
+    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with open(minimal_yml, 'r') as f:
+            cfg = yaml.load(f, Loader=yaml.SafeLoader)
+        cfg['sys_image_dir'] = tmpdir
+        temp_yml = pathlib.Path(tmpdir, 'temp.yml')
+        with open(temp_yml, 'w') as f:
+            yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+        with pytest.raises(ValidationError, match=r"image does not exist"):
+            EagleBatch.validate_singularity_image_eagle(str(temp_yml))
+
+
+def test_validate_sampler_good_buildstock(basic_residential_project_file):
+    project_filename, _ = basic_residential_project_file({
+        'sampler': {
+            'type': 'precomputed',
+            'args': {
+                'sample_file': str(os.path.join(resources_dir, 'buildstock_good.csv'))
+            }
+        }
+    })
+    assert BuildStockBatchBase.validate_sampler(project_filename)
+
+
+def test_validate_sampler_bad_buildstock(basic_residential_project_file):
+    project_filename, _ = basic_residential_project_file({
+        'sampler': {
+            'type': 'precomputed',
+            'args': {
+                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
+            }
+        }
+    })
+    try:
+        BuildStockBatchBase.validate_sampler(project_filename)
+    except ValidationError as er:
+        er = str(er)
+        assert 'Option 1940-1950 in column Vintage of buildstock_csv is not available in options_lookup.tsv' in er
+        assert 'Option TX in column State of buildstock_csv is not available in options_lookup.tsv' in er
+        assert 'Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv' in er
+        assert 'Column Insulation in buildstock_csv is not available in options_lookup.tsv' in er
+        assert 'Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv' in er
+    else:
+        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
 
 
 def test_dask_config():
