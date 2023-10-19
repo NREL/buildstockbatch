@@ -109,7 +109,7 @@ class BuildStockBatchBase(object):
         else:
             logger.debug('Downloading weather files')
             r = requests.get(self.cfg['weather_files_url'], stream=True)
-            with tempfile.TemporaryFile() as f:
+            with tempfile.TemporaryFile(dir=os.environ.get('LOCAL_SCRATCH')) as f:
                 for chunk in r.iter_content(chunk_size=1024):
                     if chunk:
                         f.write(chunk)
@@ -322,9 +322,8 @@ class BuildStockBatchBase(object):
             else:
                 sample_file = os.path.abspath(sample_file)
             buildstock_df = read_csv(sample_file, dtype=str)
-            BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+            return BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
         return True
-
 
     @staticmethod
     def validate_buildstock_csv(project_file, buildstock_df):
@@ -340,6 +339,8 @@ class BuildStockBatchBase(object):
                 # and are not used by the options_lookup.tsv.
                 logger.warning(f'Column {column} in buildstock_csv is not available in options_lookup.tsv')
                 continue
+            if "*" in param_option_dict[column]:
+                continue  # skip validating options when wildcard is present
             for option in buildstock_df[column].unique():
                 if option not in param_option_dict[column]:
                     logger.warning(f'Option {option} in column {column} of buildstock_csv is not available '
@@ -415,8 +416,12 @@ class BuildStockBatchBase(object):
                         invalid_chars = ''.join(invalid_chars)
                         if invalid_chars:
                             invalid_options_lookup_str += f"{col}: '{row[col]}', Invalid chars: '{invalid_chars}' \n"
-
+                    param_name, opt_name = row['Parameter Name'], row['Option Name']
                     param_option_dict[row['Parameter Name']].add(row['Option Name'])
+                    if opt_name == '*' and row['Measure Dir']:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot pass arguments to measure.\n"
+                    if "*" in param_option_dict[param_name] and len(param_option_dict[param_name]) > 1:
+                        invalid_options_lookup_str += f"{param_name}: '*' cannot be mixed with other options\n"
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
@@ -563,7 +568,6 @@ class BuildStockBatchBase(object):
         if invalid_options_lookup_str:
             error_message = "Following option/parameter names(s) have invalid characters in the options_lookup.tsv\n" +\
                             invalid_options_lookup_str + "*"*80 + "\n" + error_message
-
         if not error_message:
             return True
         else:
@@ -873,7 +877,9 @@ class BuildStockBatchBase(object):
 
         aws_conf = self.cfg.get('postprocessing', {}).get('aws', {})
         if 's3' in aws_conf or force_upload:
-            s3_bucket, s3_prefix = postprocessing.upload_results(aws_conf, self.output_dir, self.results_dir)
+            s3_bucket, s3_prefix = postprocessing.upload_results(
+                aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path
+            )
             if 'athena' in aws_conf:
                 postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
 

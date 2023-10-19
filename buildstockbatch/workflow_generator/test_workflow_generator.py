@@ -114,6 +114,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_annual_component_loads'] is True
     assert simulation_output_step['arguments']['include_annual_hot_water_uses'] is True
     assert simulation_output_step['arguments']['include_annual_hvac_summary'] is True
+    assert simulation_output_step['arguments']['include_annual_resilience'] is True
     assert simulation_output_step['arguments']['include_timeseries_total_consumptions'] is True
     assert simulation_output_step['arguments']['include_timeseries_fuel_consumptions'] is False
     assert simulation_output_step['arguments']['include_timeseries_end_use_consumptions'] is True
@@ -128,6 +129,7 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step['arguments']['include_timeseries_zone_temperatures'] is False
     assert simulation_output_step['arguments']['include_timeseries_airflows'] is False
     assert simulation_output_step['arguments']['include_timeseries_weather'] is False
+    assert simulation_output_step['arguments']['include_timeseries_resilience'] is False
     assert simulation_output_step['arguments']['timeseries_timestamp_convention'] == 'end'
     assert simulation_output_step['arguments']['timeseries_num_decimal_places'] == 3
     assert simulation_output_step['arguments']['add_timeseries_dst_column'] is True
@@ -136,8 +138,10 @@ def test_residential_hpxml(mocker):
     hpxml_output_step = steps[4]
     assert hpxml_output_step['measure_dir_name'] == 'ReportHPXMLOutput'
 
-    hpxml_output_step = steps[5]
-    assert hpxml_output_step['measure_dir_name'] == 'ReportUtilityBills'
+    utility_bills_step = steps[5]
+    assert utility_bills_step['measure_dir_name'] == 'ReportUtilityBills'
+    assert utility_bills_step['arguments']['include_annual_bills'] is True
+    assert utility_bills_step['arguments']['include_monthly_bills'] is False
 
     upgrade_costs_step = steps[6]
     assert upgrade_costs_step['measure_dir_name'] == 'UpgradeCosts'
@@ -164,13 +168,13 @@ def test_com_default_workflow_generator_basic(mocker):
     osw_gen = CommercialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
-    # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
-    assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
-    assert reporting_measure_step['arguments'] == {}
-    assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
+    # Should always get BuildExistingModel
+    reporting_measure_step = osw['steps'][0]
+    assert reporting_measure_step['measure_dir_name'] == 'BuildExistingModel'
+    assert reporting_measure_step['arguments']['number_of_buildings_represented'] == 1
+    assert reporting_measure_step['measure_type'] == 'ModelMeasure'
     # Should not get TimeseriesCSVExport if excluded in args
-    assert len(osw['steps']) == 2
+    assert len(osw['steps']) == 1
 
 
 def test_com_default_workflow_generator_with_timeseries(mocker):
@@ -195,13 +199,13 @@ def test_com_default_workflow_generator_with_timeseries(mocker):
     osw_gen = CommercialDefaultWorkflowGenerator(cfg, 10)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
-    # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
-    assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
-    assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
-    assert reporting_measure_step['arguments'] == {}
+    # Should always get BuildExistingModel
+    reporting_measure_step = osw['steps'][0]
+    assert reporting_measure_step['measure_dir_name'] == 'BuildExistingModel'
+    assert reporting_measure_step['arguments']['number_of_buildings_represented'] == 1
+    assert reporting_measure_step['measure_type'] == 'ModelMeasure'
     # Should get TimeseriesCSVExport if included in args
-    reporting_measure_step = osw['steps'][2]
+    reporting_measure_step = osw['steps'][1]
     assert reporting_measure_step['measure_dir_name'] == 'TimeseriesCSVExport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['reporting_frequency'] == 'Hourly'
@@ -264,21 +268,23 @@ def test_com_default_workflow_generator_extended(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     # Should always get SimulationOutputReport
-    reporting_measure_step = osw['steps'][1]
+    reporting_measure_step = osw['steps'][3]
     assert reporting_measure_step['measure_dir_name'] == 'SimulationOutputReport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments'] == {}
+    # Should only be one instance of SimulationOutputReport
+    assert [d['measure_dir_name'] == 'SimulationOutputReport' for d in osw['steps']].count(True) == 1
     # Should get TimeseriesCSVExport if included in args
-    reporting_measure_step = osw['steps'][2]
+    reporting_measure_step = osw['steps'][1]
     assert reporting_measure_step['measure_dir_name'] == 'TimeseriesCSVExport'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['reporting_frequency'] == 'Hourly'
     assert reporting_measure_step['arguments']['inc_output_variables'] == 'true'
     # Should have the openstudio report
-    reporting_measure_step = osw['steps'][3]
+    reporting_measure_step = osw['steps'][2]
     assert reporting_measure_step['measure_dir_name'] == 'f8e23017-894d-4bdf-977f-37e3961e6f42'
     assert reporting_measure_step['measure_type'] == 'ReportingMeasure'
     assert reporting_measure_step['arguments']['building_summary_section'] == 'true'
     assert reporting_measure_step['arguments']['schedules_overview_section'] == 'true'
     # Should have 1 workflow measure plus 9 reporting measures
-    assert len(osw['steps']) == 10
+    assert len(osw['steps']) == 9

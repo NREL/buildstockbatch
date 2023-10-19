@@ -3,6 +3,7 @@ import pytest
 import shutil
 import tempfile
 import yaml
+from pathlib import Path
 
 OUTPUT_FOLDER_NAME = 'output'
 
@@ -103,6 +104,7 @@ def basic_residential_project_file():
                         'time': 20
                     },
                     'account': 'testaccount',
+                    'minutes_per_sim': 1
                 },
                 'schema_version': '0.3'
             }

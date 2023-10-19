@@ -12,6 +12,7 @@ sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
 os_version: str(required=False)
 os_sha: str(required=False)
+max_minutes_per_sim: int(max=1440, required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
 references: map(required=False)
@@ -39,7 +40,7 @@ aws-emr-spec:
 
 hpc-spec:
   account: str(required=True)
-  minutes_per_sim: int(max=480, required=False)
+  minutes_per_sim: num(min=0.05, max=480, required=True)
   n_jobs: int(required=False)
   postprocessing: include('hpc-postprocessing-spec', required=False)
   sampling: include('sampling-spec', required=False)
