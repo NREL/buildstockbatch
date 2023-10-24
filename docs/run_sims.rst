@@ -110,3 +110,55 @@ When the simulation and postprocessing is all complete, run ``buildstock_aws
 --clean your_project_file.yml``. This will clean up all the AWS resources that
 were created on your behalf to run the simulations. Your results will still be
 on S3 and queryable in Athena.
+
+Google Cloud Platform
+~~~~~~~~~~~~~~~~~~~~~
+
+Running a batch on GCP is done by calling the ``buildstock_gcp`` command line
+tool.
+
+.. command-output:: buildstock_gcp --help
+   :ellipsis: 0,8
+
+GCP Specific Project configuration
+..................................
+
+TODO: add more GCP configuration details here
+
+For the project to run on GCP, you will need to add a section to your config
+file, something like this:
+
+.. code-block:: yaml
+
+    gcp:
+      job_identifier: national01
+      gcp_project: myorg_project
+      region: us-central1
+      artifact_registry: buildstockbatch
+      gcs:
+        bucket: mybucket
+        prefix: national01_run01
+      use_spot: true
+      batch_array_size: 10000
+      notifications_email: your_email@somewhere.com
+
+See :ref:`gcp-config` for details.
+
+
+List existing jobs
+..................
+
+Run ``buildstock_gcp --list_jobs your_project_file.yml`` to see a list of all existing
+jobs matching the project specified. This can show you whether a previously-started job
+has completed or is still running.
+
+
+Cleaning up after yourself
+..........................
+
+TODO: Review and update this after implementing cleanup option.
+
+When the simulation and postprocessing is all complete, run ``buildstock_gcp
+--clean your_project_file.yml``. This will clean up all the GCP resources that
+were created to run the specified project. If the project is still running, it
+will be cancelled. Your output files will still be available in GCS.

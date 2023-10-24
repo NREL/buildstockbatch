@@ -218,6 +218,13 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 .. _instance type: https://aws.amazon.com/ec2/instance-types/
 
 
+.. _gcp-config:
+
+GCP Configuration
+~~~~~~~~~~~~~~~~~
+TODO: Add GCP configuration details
+
+
 .. _postprocessing:
 
 Postprocessing
