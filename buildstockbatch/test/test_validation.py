@@ -290,7 +290,7 @@ def test_number_of_options_apply_upgrade():
 @resstock_required
 def test_validate_resstock_or_comstock_version(mocker):
     # Set the version to a 'really old' one so we trigger the version check error
-    mocker.patch("buildstockbatch.base.bsb_version", "0.1")
+    mocker.patch("buildstockbatch.base.bsb_version", "1.0.0")
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     with pytest.raises(ValidationError):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
