@@ -184,6 +184,11 @@ The ``-d`` and ``-e`` flags can also be combined if desired
 Amazon Web Services (Beta)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. warning::
+
+   The AWS version of buildstockbatch is currently broken. A remedy is in
+   progress. Thanks for your patience.
+
 The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.
 The first time you run ``buildstock_aws`` it may take several minutes,

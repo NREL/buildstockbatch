@@ -19,6 +19,7 @@ import os
 import numpy as np
 import re
 import requests
+import semver
 import shutil
 import subprocess
 import tempfile
@@ -747,21 +748,16 @@ class BuildStockBatchBase(object):
 
         buildstock_rb = os.path.join(cfg['buildstock_directory'], 'resources/buildstock.rb')
         if os.path.exists(buildstock_rb):
-            versions = {}
             with open(buildstock_rb, 'r') as f:
-                for line in f:
-                    line = line.strip()
-                    for tool in ['ResStock_Version', 'ComStock_Version', 'BuildStockBatch_Version']:
-                        if line.startswith(tool):
-                            lhs, rhs = line.split('=')
-                            version, _ = rhs.split('#')
-                            versions[tool] = eval(version.strip())
-            BuildStockBatch_Version = versions['BuildStockBatch_Version']
+                versions = dict(
+                    re.findall(r"^\s*(ResStock|ComStock|BuildStockBatch)_Version\s*=\s*'(.+)'", f.read(), re.MULTILINE)
+                )
+            BuildStockBatch_Version = semver.Version.parse(versions['BuildStockBatch'])
             if bsb_version < BuildStockBatch_Version:
-                if 'ResStock_Version' in versions.keys():
-                    stock_version = versions['ResStock_Version']
-                elif 'ComStock_Version' in versions.keys():
-                    stock_version = versions['ComStock_Version']
+                if 'ResStock' in versions.keys():
+                    stock_version = versions['ResStock']
+                elif 'ComStock' in versions.keys():
+                    stock_version = versions['ComStock']
                 else:
                     stock_version = 'Unknown'
                 val_err = f"BuildStockBatch version {BuildStockBatch_Version} or above is required" \
