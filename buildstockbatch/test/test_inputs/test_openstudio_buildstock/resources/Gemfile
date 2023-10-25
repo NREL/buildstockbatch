@@ -14,7 +14,7 @@ ruby "~> 2.7.0"
 gem 'openstudio-extension', '= 0.5.1'
 gem 'openstudio-workflow', '= 2.3.1'
 
-gem 'openstudio-standards', '= 0.2.16'
+gem 'openstudio-standards', '= 0.2.0'  # Deliberately obsolete version to ensure custom gems works as expected
 # gem 'openstudio-standards', git: 'https://github.com/NREL/openstudio-standards.git', ref: '971514ee0a64262a9c81788fd85fc60d8dd69980'
 
 group :native_ext do
