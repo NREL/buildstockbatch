@@ -151,6 +151,8 @@ class AwsBatchEnv(AwsJobBase):
         self.service_role_arn = None
         self.instance_profile_arn = None
         self.job_queue_arn = None
+        self.s3_gateway_endpoint_id = None
+        self.prefix_list_id = None
 
         logger.propagate = False
 
@@ -258,14 +260,16 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.priv_vpc_subnet_id_1
             ],
             Tags=self.get_tags_uppercase(Name=self.job_identifier)
         )
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.priv_vpc_subnet_id_2
             ],
@@ -297,7 +301,8 @@ class AwsBatchEnv(AwsJobBase):
 
         self.pub_vpc_subnet_id = pub_response['Subnet']['SubnetId']
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[
                 self.pub_vpc_subnet_id
             ],
@@ -437,7 +442,29 @@ class AwsBatchEnv(AwsJobBase):
                     logger.info("Nat Gateway not yet created. Sleeping...")
                 else:
                     raise
+            
+        gateway_response = self.ec2.create_vpc_endpoint(
+            VpcId=self.vpc_id,
+            ServiceName=f'com.amazonaws.{self.region}.s3',
+            RouteTableIds=[self.priv_route_table_id, self.pub_route_table_id],
+            VpcEndpointType='Gateway',
+            PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}',
+        )
 
+        logger.info("S3 gateway created for VPC.")
+
+        self.s3_gateway_endpoint_id = gateway_response['VpcEndpoint']['VpcEndpointId']
+
+        backoff(
+            self.ec2.create_tags,
+            Resources=[
+                self.s3_gateway_endpoint_id
+            ],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier)
+        )
+
+
+        
     def generate_name_value_inputs(self, var_dictionary):
         """
         Helper to properly format more easily used dictionaries.
@@ -923,6 +950,25 @@ class AwsBatchEnv(AwsJobBase):
 
         for vpc in response['Vpcs']:
             this_vpc = vpc['VpcId']
+
+            s3gw_response = self.ec2.describe_vpc_endpoints(
+                Filters=[
+                    {
+                        'Name': 'vpc-id',
+                        'Values': [
+                            this_vpc
+                        ]
+                    }
+                ]
+            )
+            
+            for s3gw in s3gw_response['VpcEndpoints']:
+                this_s3gw = s3gw['VpcEndpointId']
+
+                if s3gw['State'] != 'deleted':
+                    self.ec2.delete_vpc_endpoints(
+                        VpcEndpointIds=[this_s3gw]
+                    )
 
             ng_response = self.ec2.describe_nat_gateways(
                 Filters=[
@@ -1662,6 +1708,7 @@ class AwsBatch(DockerBatchBase):
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg['aws'], self.boto3_session)
         m = 1024
         self.dask_cluster = FargateCluster(
+            region_name=self.region,
             fargate_spot=True,
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",

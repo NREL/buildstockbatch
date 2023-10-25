@@ -302,6 +302,38 @@ def test_validate_resstock_or_comstock_version(mocker):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
 
 
+def test_dask_config():
+    orig_filename = os.path.join(example_yml_dir, 'minimal-schema.yml')
+    cfg = get_project_configuration(orig_filename)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfg["aws"] = {
+            "dask": {
+                "scheduler_cpu": 1024,
+                "scheduler_memory": 2048,
+                "worker_cpu": 1024,
+                "worker_memory": 2048,
+                "n_workers": 1
+            }
+        }
+        test1_filename = os.path.join(tmpdir, "test1.yml")
+        with open(test1_filename, "w") as f:
+            json.dump(cfg, f)
+        AwsBatch.validate_dask_settings(test1_filename)
+        cfg["aws"]["dask"]["scheduler_memory"] = 9 * 1024
+        test2_filename = os.path.join(tmpdir, "test2.yml")
+        with open(test2_filename, "w") as f:
+            json.dump(cfg, f)
+        with pytest.raises(ValidationError, match=r"between 2048 and 8192"):
+            AwsBatch.validate_dask_settings(test2_filename)
+        cfg["aws"]["dask"]["scheduler_memory"] = 8 * 1024
+        cfg["aws"]["dask"]["worker_memory"] = 1025
+        test3_filename = os.path.join(tmpdir, "test3.yml")
+        with open(test3_filename, "w") as f:
+            json.dump(cfg, f)
+        with pytest.raises(ValidationError, match=r"needs to be a multiple of 1024"):
+            AwsBatch.validate_dask_settings(test3_filename)
+
+
 def test_validate_eagle_output_directory():
     minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
     with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
@@ -368,35 +400,3 @@ def test_validate_sampler_bad_buildstock(basic_residential_project_file):
         assert 'Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv' in er
     else:
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
-
-
-def test_dask_config():
-    orig_filename = os.path.join(example_yml_dir, 'minimal-schema.yml')
-    cfg = get_project_configuration(orig_filename)
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cfg["aws"] = {
-            "dask": {
-                "scheduler_cpu": 1024,
-                "scheduler_memory": 2048,
-                "worker_cpu": 1024,
-                "worker_memory": 2048,
-                "n_workers": 1
-            }
-        }
-        test1_filename = os.path.join(tmpdir, "test1.yml")
-        with open(test1_filename, "w") as f:
-            json.dump(cfg, f)
-        AwsBatch.validate_dask_settings(test1_filename)
-        cfg["aws"]["dask"]["scheduler_memory"] = 9 * 1024
-        test2_filename = os.path.join(tmpdir, "test2.yml")
-        with open(test2_filename, "w") as f:
-            json.dump(cfg, f)
-        with pytest.raises(ValidationError, match=r"between 2048 and 8192"):
-            AwsBatch.validate_dask_settings(test2_filename)
-        cfg["aws"]["dask"]["scheduler_memory"] = 8 * 1024
-        cfg["aws"]["dask"]["worker_memory"] = 1025
-        test3_filename = os.path.join(tmpdir, "test3.yml")
-        with open(test3_filename, "w") as f:
-            json.dump(cfg, f)
-        with pytest.raises(ValidationError, match=r"needs to be a multiple of 1024"):
-            AwsBatch.validate_dask_settings(test3_filename)
