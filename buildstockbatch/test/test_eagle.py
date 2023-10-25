@@ -8,14 +8,14 @@ import tarfile
 from unittest.mock import patch
 import gzip
 
-from buildstockbatch.eagle import user_cli, EagleBatch
+from buildstockbatch.hpc import user_cli, EagleBatch
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration, read_csv
 
 here = os.path.dirname(os.path.abspath(__file__))
 
 
-@patch("buildstockbatch.eagle.subprocess")
+@patch("buildstockbatch.hpc.subprocess")
 def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_project_file):
     tar_filename = (
         pathlib.Path(__file__).resolve().parent
@@ -100,9 +100,9 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
 
 
 @patch("buildstockbatch.base.BuildStockBatchBase.validate_options_lookup")
-@patch("buildstockbatch.eagle.EagleBatch.validate_output_directory_eagle")
-@patch("buildstockbatch.eagle.EagleBatch.validate_singularity_image_eagle")
-@patch("buildstockbatch.eagle.subprocess")
+@patch("buildstockbatch.hpc.EagleBatch.validate_output_directory_eagle")
+@patch("buildstockbatch.hpc.EagleBatch.validate_singularity_image_eagle")
+@patch("buildstockbatch.hpc.subprocess")
 def test_user_cli(
     mock_subprocess,
     mock_validate_singularity_image_eagle,
@@ -188,7 +188,7 @@ def test_user_cli(
     assert "0" == mock_subprocess.run.call_args[1]["env"]["MEASURESONLY"]
 
 
-@patch("buildstockbatch.eagle.subprocess")
+@patch("buildstockbatch.hpc.subprocess")
 def test_qos_high_job_submit(
     mock_subprocess, basic_residential_project_file, monkeypatch
 ):

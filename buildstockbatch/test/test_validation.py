@@ -17,7 +17,7 @@ import types
 import tempfile
 import json
 import pathlib
-from buildstockbatch.eagle import EagleBatch
+from buildstockbatch.hpc import EagleBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import (

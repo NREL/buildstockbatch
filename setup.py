@@ -66,7 +66,7 @@ setuptools.setup(
     entry_points={
         "console_scripts": [
             "buildstock_local=buildstockbatch.local:main",
-            "buildstock_eagle=buildstockbatch.eagle:user_cli",
+            "buildstock_eagle=buildstockbatch.hpc:user_cli",
             "buildstock_aws=buildstockbatch.aws.aws:main",
         ]
     },

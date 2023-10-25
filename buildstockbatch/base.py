@@ -3,7 +3,7 @@
 """
 buildstockbatch.base
 ~~~~~~~~~~~~~~~
-This is the base class mixed into the deployment specific classes (i.e. eagle, local)
+This is the base class mixed into the deployment specific classes (i.e. kestrel, local)
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
