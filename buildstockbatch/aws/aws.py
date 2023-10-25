@@ -28,7 +28,6 @@ import logging
 import math
 import os
 import pathlib
-import platform
 import random
 from s3fs import S3FileSystem
 import shutil
@@ -1245,11 +1244,7 @@ class AwsBatch(DockerBatchBase):
             path=str(root_path),
             tag=self.docker_image,
             rm=True,
-            platform="linux/amd64",
-            buildargs={
-                'OS_VER': self.os_version,
-                'PYTHON_VER': platform.python_version()
-            }
+            platform="linux/amd64"
         )
 
     def push_image(self):

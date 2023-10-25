@@ -1,20 +1,7 @@
-ARG OS_VER=3.6.1
-ARG PYTHON_VER=3.11.5
+ARG OS_VER=3.5.0
 FROM --platform=linux/amd64 nrel/openstudio:$OS_VER
 
-RUN curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba && \
-    mv bin/micromamba /usr/local/bin/ && \
-    rm -rf bin && \
-    micromamba shell init -s bash -p /opt/micromamba && \
-    micromamba config append channels conda-forge && \
-    micromamba config append channels nodefaults && \
-    micromamba config set channel_priority strict
+RUN sudo apt update && sudo apt install -y python3-pip
+RUN sudo -H pip install --upgrade pip
 COPY . /buildstock-batch/
-RUN eval "$( micromamba shell hook --shell=bash /opt/micromamba )" && \
-    micromamba activate /opt/micromamba && \
-    micromamba install -y python=$PYTHON_VER && \
-    python -m pip install "/buildstock-batch[aws]"
-
-
-
-# sed -i '/[ -z "\$PS1" ] && return/d' /root/.bashrc
+RUN python3 -m pip install "/buildstock-batch[aws]"
