@@ -43,6 +43,7 @@ setuptools.setup(
         'yamale',
         'ruamel.yaml',
         'lxml',
+        'semver',
         'tqdm',
     ],
     extras_require={
