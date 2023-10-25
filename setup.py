@@ -43,7 +43,8 @@ setuptools.setup(
         'yamale',
         'ruamel.yaml',
         'awsretry',
-        'lxml'
+        'lxml',
+        'google-cloud-batch',
     ],
     extras_require={
         'dev': [
