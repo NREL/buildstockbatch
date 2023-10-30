@@ -406,7 +406,7 @@ def test_validate_singularity_image_eagle(mocker, basic_residential_project_file
         with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
         with pytest.raises(ValidationError, match=r"image does not exist"):
-            EagleBatch.validate_singularity_image_eagle(str(temp_yml))
+            EagleBatch.validate_singularity_image_hpc(str(temp_yml))
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
