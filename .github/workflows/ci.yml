@@ -1,5 +1,5 @@
 name: BuildStockBatch Tests
-on: 
+on:
   push:
     branches:
       - develop
@@ -86,3 +86,5 @@ jobs:
         with:
           name: documentation
           path: buildstockbatch/docs/_build/html/
+      - uses: pre-commit-ci/lite-action@v1.0.1
+        if: always()

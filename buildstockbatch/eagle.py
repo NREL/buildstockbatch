@@ -25,7 +25,6 @@ import pandas as pd
 import pathlib
 import random
 import re
-import requests
 import shlex
 import shutil
 import subprocess
