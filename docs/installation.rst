@@ -198,10 +198,10 @@ Shared, one-time GCP setup
 ..........................
 One-time GCP setup shared by all users.
 
-1. If needed, create a GCP Project. The follow steps will occur in that project.
+1. If needed, create a GCP Project. The following steps will occur in that project.
 2. Create a registry in Artifact Registry (to store Docker images).
-3. Create a GCS Bucket (that will store simulation output). Alternatively, each user can create and
-   use their own bucket.
+3. Create a GCS Bucket (that will store simulation and postprocessing output). Alternatively, each
+   user can create and use their own bucket.
 4. Create a Service Account. Alternatively, each user can create their own service account, or each
    user can install the `gcloud CLI <https://cloud.google.com/sdk/docs/install>`_. The following
    documentation will assume use of a Service Account.
@@ -214,15 +214,15 @@ manage BuildStockBatch runs.
 1. Install Docker. This is needed by the script to manage Docker images (pull, push, etc).
 2. Install OpenStudio using the :ref:`local-install` instructions above.
 3. Get BuildStockBatch and set up a Python environment for it using the :ref:`_python` instructions
-   above (create a Python virtual environment, activate the venv, and install buildstockbatch to
-   it).
+   above (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
+   to it).
 4. Download/Clone ResStock or ComStock.
 5. Create and download a `Service Account Key`_ for GCP authentication.
 
     * Add the location of the key file as an environment variable; e.g.,
       ``export GOOGLE_APPLICATION_CREDENTIALS="~/path/to/service-account-key.json"``. This can be
       done at the command line (in which case it will need to be done for every shell session that
-      will run BuildStockBatch and be in effect for only that session), or added to a shell startup
-      script (in which case it will be available to all shell sessions).
+      will run BuildStockBatch, and it will only be in effect for only that session), or added to a
+      shell startup script (in which case it will be available to all shell sessions).
 
 .. _Service Account Key: <https://cloud.google.com/iam/docs/keys-create-delete>
