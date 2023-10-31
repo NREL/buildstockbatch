@@ -247,9 +247,6 @@ on the `GCP Batch <https://cloud.google.com/batch>`_ service.
    to use `Spot VMs <https://cloud.google.com/spot-vms>`_ for data
    simulations, which can reduce costs by up to 91%.
 *  ``batch_array_size``: Number of concurrent simulations to run. Max: 10000.
-*  ``notifications_email``: Email to notify you of simulation completion.
-   You'll receive an email at the beginning where you'll need to accept the
-   subscription to receive further notification emails.
 *  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry
 
     * ``repository``: The name of the GCP Artifact Repository in which Docker images are stored.
