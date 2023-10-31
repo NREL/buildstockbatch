@@ -312,6 +312,23 @@ class EagleBatch(BuildStockBatchBase):
 
         logger.info("batch complete")
 
+        # Remove local scratch files
+        dirs_to_remove = [
+            self.local_project_dir,
+            self.local_buildstock_dir,
+            self.local_weather_dir,
+            self.local_weather_dir,
+            self.local_output_dir,
+            self.local_housing_characteristics_dir,
+        ]
+
+        logger.info(f"Cleaning up {self.local_scratch}")
+        for dir in dirs_to_remove:
+            logger.debug(f"Removing {dir}")
+            shutil.rmtree(dir)
+        logger.debug(f"Removing {self.local_singularity_img}")
+        os.remove(self.local_singularity_img)
+
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
         fs = LocalFileSystem()
