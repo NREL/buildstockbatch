@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class ResidentialQuotaSampler(BuildStockSampler):
-
     def __init__(self, parent, n_datapoints):
         """Residential Quota Sampler
 
@@ -39,68 +38,74 @@ class ResidentialQuotaSampler(BuildStockSampler):
 
     @classmethod
     def validate_args(cls, project_filename, **kw):
-        expected_args = set(['n_datapoints'])
+        expected_args = set(["n_datapoints"])
         for k, v in kw.items():
             expected_args.discard(k)
-            if k == 'n_datapoints':
+            if k == "n_datapoints":
                 if not isinstance(v, int):
-                    raise ValidationError('n_datapoints needs to be an integer')
+                    raise ValidationError("n_datapoints needs to be an integer")
                 if v <= 0:
-                    raise ValidationError('n_datapoints need to be >= 1')
+                    raise ValidationError("n_datapoints need to be >= 1")
             else:
-                raise ValidationError(f'Unknown argument for sampler: {k}')
+                raise ValidationError(f"Unknown argument for sampler: {k}")
         if len(expected_args) > 0:
-            raise ValidationError('The following sampler arguments are required: ' + ', '.join(expected_args))
+            raise ValidationError("The following sampler arguments are required: " + ", ".join(expected_args))
         return True
 
     def _run_sampling_docker(self):
         docker_client = docker.DockerClient.from_env()
         tick = time.time()
         extra_kws = {}
-        if sys.platform.startswith('linux'):
-            extra_kws['user'] = f'{os.getuid()}:{os.getgid()}'
+        if sys.platform.startswith("linux"):
+            extra_kws["user"] = f"{os.getuid()}:{os.getgid()}"
         container_output = docker_client.containers.run(
             self.parent().docker_image,
             [
-                'ruby',
-                'resources/run_sampling.rb',
-                '-p', self.cfg['project_directory'],
-                '-n', str(self.n_datapoints),
-                '-o', 'buildstock.csv'
+                "ruby",
+                "resources/run_sampling.rb",
+                "-p",
+                self.cfg["project_directory"],
+                "-n",
+                str(self.n_datapoints),
+                "-o",
+                "buildstock.csv",
             ],
             remove=True,
-            volumes={
-                self.buildstock_dir: {'bind': '/var/simdata/openstudio', 'mode': 'rw'}
-            },
-            name='buildstock_sampling',
-            **extra_kws
+            volumes={self.buildstock_dir: {"bind": "/var/simdata/openstudio", "mode": "rw"}},
+            name="buildstock_sampling",
+            **extra_kws,
         )
         tick = time.time() - tick
-        for line in container_output.decode('utf-8').split('\n'):
+        for line in container_output.decode("utf-8").split("\n"):
             logger.debug(line)
-        logger.debug('Sampling took {:.1f} seconds'.format(tick))
+        logger.debug("Sampling took {:.1f} seconds".format(tick))
         destination_filename = self.csv_path
         if os.path.exists(destination_filename):
             os.remove(destination_filename)
         shutil.move(
-            os.path.join(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
+            os.path.join(self.buildstock_dir, "resources", "buildstock.csv"),
+            destination_filename,
         )
         return destination_filename
 
     def _run_sampling_singularity(self):
         args = [
-            'singularity',
-            'exec',
-            '--contain',
-            '--home', '{}:/buildstock'.format(self.buildstock_dir),
-            '--bind', '{}:/outbind'.format(os.path.dirname(self.csv_path)),
+            "singularity",
+            "exec",
+            "--contain",
+            "--home",
+            "{}:/buildstock".format(self.buildstock_dir),
+            "--bind",
+            "{}:/outbind".format(os.path.dirname(self.csv_path)),
             self.parent().singularity_image,
-            'ruby',
-            'resources/run_sampling.rb',
-            '-p', self.cfg['project_directory'],
-            '-n', str(self.n_datapoints),
-            '-o', '../../outbind/{}'.format(os.path.basename(self.csv_path))
+            "ruby",
+            "resources/run_sampling.rb",
+            "-p",
+            self.cfg["project_directory"],
+            "-n",
+            str(self.n_datapoints),
+            "-o",
+            "../../outbind/{}".format(os.path.basename(self.csv_path)),
         ]
         logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
         subprocess.run(args, check=True, env=os.environ, cwd=self.parent().output_dir)
@@ -111,20 +116,23 @@ class ResidentialQuotaSampler(BuildStockSampler):
         subprocess.run(
             [
                 self.parent().openstudio_exe(),
-                str(pathlib.Path('resources', 'run_sampling.rb')),
-                '-p', self.cfg['project_directory'],
-                '-n', str(self.n_datapoints),
-                '-o', 'buildstock.csv'
+                str(pathlib.Path("resources", "run_sampling.rb")),
+                "-p",
+                self.cfg["project_directory"],
+                "-n",
+                str(self.n_datapoints),
+                "-o",
+                "buildstock.csv",
             ],
             cwd=self.buildstock_dir,
-            check=True
+            check=True,
         )
         destination_filename = pathlib.Path(self.csv_path)
         if destination_filename.exists():
             os.remove(destination_filename)
         shutil.move(
-            pathlib.Path(self.buildstock_dir, 'resources', 'buildstock.csv'),
-            destination_filename
+            pathlib.Path(self.buildstock_dir, "resources", "buildstock.csv"),
+            destination_filename,
         )
         return destination_filename
 

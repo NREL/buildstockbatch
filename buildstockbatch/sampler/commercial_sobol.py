@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class CommercialSobolSampler(BuildStockSampler):
-
     def __init__(self, parent, n_datapoints):
         """
         Initialize the sampler.
@@ -41,26 +40,29 @@ class CommercialSobolSampler(BuildStockSampler):
         super().__init__(parent)
         self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
         if self.container_runtime == ContainerRuntime.SINGULARITY:
-            self.csv_path = os.path.join(self.output_dir, 'buildstock.csv')
+            self.csv_path = os.path.join(self.output_dir, "buildstock.csv")
         else:
-            assert self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO)
-            self.csv_path = os.path.join(self.project_dir, 'buildstock.csv')
+            assert self.container_runtime in (
+                ContainerRuntime.DOCKER,
+                ContainerRuntime.LOCAL_OPENSTUDIO,
+            )
+            self.csv_path = os.path.join(self.project_dir, "buildstock.csv")
         self.n_datapoints = n_datapoints
 
     @classmethod
     def validate_args(cls, project_filename, **kw):
-        expected_args = set(['n_datapoints'])
+        expected_args = set(["n_datapoints"])
         for k, v in kw.items():
             expected_args.discard(k)
-            if k == 'n_datapoints':
+            if k == "n_datapoints":
                 if not isinstance(v, int):
-                    raise ValidationError('n_datapoints needs to be an integer')
+                    raise ValidationError("n_datapoints needs to be an integer")
                 if v <= 0:
-                    raise ValidationError('n_datapoints need to be >= 1')
+                    raise ValidationError("n_datapoints need to be >= 1")
             else:
-                raise ValidationError(f'Unknown argument for sampler: {k}')
+                raise ValidationError(f"Unknown argument for sampler: {k}")
         if len(expected_args) > 0:
-            raise ValidationError('The following sampler arguments are required: ' + ', '.join(expected_args))
+            raise ValidationError("The following sampler arguments are required: " + ", ".join(expected_args))
         return True
 
     def run_sampling(self):
@@ -74,33 +76,40 @@ class CommercialSobolSampler(BuildStockSampler):
         :param n_datapoints: Number of datapoints to sample from the distributions.
         :return: Absolute path to the output buildstock.csv file
         """
-        sample_number = self.cfg['baseline'].get('n_datapoints', 350000)
+        sample_number = self.cfg["baseline"].get("n_datapoints", 350000)
         if isinstance(self.n_datapoints, int):
             sample_number = self.n_datapoints
-        logging.debug(f'Sampling, number of data points is {sample_number}')
+        logging.debug(f"Sampling, number of data points is {sample_number}")
         tsv_hash = {}
         for tsv_file in os.listdir(self.buildstock_dir):
-            if '.tsv' in tsv_file:
-                tsv_df = read_csv(os.path.join(self.buildstock_dir, tsv_file), sep='\t')
-                dependency_columns = [item for item in list(tsv_df) if 'Dependency=' in item]
-                tsv_df[dependency_columns] = tsv_df[dependency_columns].astype('str')
-                tsv_hash[tsv_file.replace('.tsv', '')] = tsv_df
+            if ".tsv" in tsv_file:
+                tsv_df = read_csv(os.path.join(self.buildstock_dir, tsv_file), sep="\t")
+                dependency_columns = [item for item in list(tsv_df) if "Dependency=" in item]
+                tsv_df[dependency_columns] = tsv_df[dependency_columns].astype("str")
+                tsv_hash[tsv_file.replace(".tsv", "")] = tsv_df
         dependency_hash, attr_order = self._com_order_tsvs(tsv_hash)
         sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), sample_number)
         csv_path = self.csv_path
-        header = 'Building,'
+        header = "Building,"
         for item in attr_order:
-            header += str(item) + ','
-        header = header[0:-1] + '\n'
-        with open(csv_path, 'w') as fd:
+            header += str(item) + ","
+        header = header[0:-1] + "\n"
+        with open(csv_path, "w") as fd:
             fd.write(header)
         manager = Manager()
         lock = manager.Lock()
-        logger.info('Beginning sampling process')
+        logger.info("Beginning sampling process")
         n_jobs = cpu_count() * 2
         Parallel(n_jobs=n_jobs, verbose=5)(
-            delayed(self._com_execute_sample)(tsv_hash, dependency_hash, attr_order, sample_matrix, index, csv_path,
-                                              lock)
+            delayed(self._com_execute_sample)(
+                tsv_hash,
+                dependency_hash,
+                attr_order,
+                sample_matrix,
+                index,
+                csv_path,
+                lock,
+            )
             for index in range(sample_number)
         )
         return csv_path
@@ -127,8 +136,9 @@ class CommercialSobolSampler(BuildStockSampler):
         """
         dependency_hash = {}
         for attr in tsv_hash.keys():
-            dependency_hash[attr] = [item.replace('Dependency=', '') for item in list(tsv_hash[attr]) if
-                                     'Dependency=' in item]
+            dependency_hash[attr] = [
+                item.replace("Dependency=", "") for item in list(tsv_hash[attr]) if "Dependency=" in item
+            ]
         attr_order = []
         for attr in dependency_hash.keys():
             if dependency_hash[attr]:
@@ -149,11 +159,19 @@ class CommercialSobolSampler(BuildStockSampler):
             elif max_iterations > 0:
                 max_iterations -= 1
             else:
-                raise RuntimeError('Unable to resolve the dependency tree within the set iteration limit')
+                raise RuntimeError("Unable to resolve the dependency tree within the set iteration limit")
         return dependency_hash, attr_order
 
     @staticmethod
-    def _com_execute_sample(tsv_hash, dependency_hash, attr_order, sample_matrix, sample_index, csv_path, lock):
+    def _com_execute_sample(
+        tsv_hash,
+        dependency_hash,
+        attr_order,
+        sample_matrix,
+        sample_index,
+        csv_path,
+        lock,
+    ):
         """
         This function evaluates a single point in the sample matrix with the provided TSV files & persists the result\
         of the sample to the CSV file specified. The provided lock ensures the file is not corrupted by multiple\
@@ -174,27 +192,31 @@ class CommercialSobolSampler(BuildStockSampler):
             tsv_lkup = tsv_hash[attr]
             tsv_dist_val = sample_vector[attr_index]
             for dependency in sample_dependency_hash[attr]:
-                tsv_lkup = tsv_lkup.loc[tsv_lkup.loc[:, 'Dependency=' + dependency] ==
-                                        sample_dependency_hash[dependency]]
-                tsv_lkup = tsv_lkup.drop('Dependency=' + dependency, axis=1)
+                tsv_lkup = tsv_lkup.loc[
+                    tsv_lkup.loc[:, "Dependency=" + dependency] == sample_dependency_hash[dependency]
+                ]
+                tsv_lkup = tsv_lkup.drop("Dependency=" + dependency, axis=1)
             if tsv_lkup.shape[0] == 0:
-                warn('TSV lookup reduced to 0 for {}, index {}, dep hash {}'.format(attr, sample_index,
-                                                                                    sample_dependency_hash))
+                warn(
+                    "TSV lookup reduced to 0 for {}, index {}, dep hash {}".format(
+                        attr, sample_index, sample_dependency_hash
+                    )
+                )
                 return
             if tsv_lkup.shape[0] != 1:
-                raise RuntimeError('Unable to reduce tsv for {} to 1 row, index {}'.format(attr, sample_index))
+                raise RuntimeError("Unable to reduce tsv for {} to 1 row, index {}".format(attr, sample_index))
             tsv_lkup_cdf = tsv_lkup.values.cumsum() > tsv_dist_val
-            option_values = [item.replace('Option=', '') for item in list(tsv_lkup) if 'Option=' in item]
+            option_values = [item.replace("Option=", "") for item in list(tsv_lkup) if "Option=" in item]
             attr_result = list(compress(option_values, tsv_lkup_cdf))[0]
             sample_dependency_hash[attr] = attr_result
             result_vector.append(attr_result)
-        csv_row = str(sample_index + 1) + ','
+        csv_row = str(sample_index + 1) + ","
         for item in result_vector:
-            csv_row += str(item) + ','
-        csv_row = csv_row[0:-1] + '\n'
+            csv_row += str(item) + ","
+        csv_row = csv_row[0:-1] + "\n"
         lock.acquire()
         try:
-            with open(csv_path, 'a') as fd:
+            with open(csv_path, "a") as fd:
                 fd.write(csv_row)
         finally:
             lock.release()

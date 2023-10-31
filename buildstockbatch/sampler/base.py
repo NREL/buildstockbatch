@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class BuildStockSampler(object):
-
     csv_path = None
 
     @staticmethod
@@ -48,10 +47,13 @@ class BuildStockSampler(object):
         :param parent: The BuildStockBatchBase object that owns this sampler.
         """
         self.parent = weakref.ref(parent)  # This removes circular references and allows garbage collection to work.
-        if self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO):
-            self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
+        if self.container_runtime in (
+            ContainerRuntime.DOCKER,
+            ContainerRuntime.LOCAL_OPENSTUDIO,
+        ):
+            self.csv_path = os.path.join(self.project_dir, "housing_characteristics", "buildstock.csv")
         elif self.container_runtime == ContainerRuntime.SINGULARITY:
-            self.csv_path = os.path.join(self.parent().output_dir, 'housing_characteristics', 'buildstock.csv')
+            self.csv_path = os.path.join(self.parent().output_dir, "housing_characteristics", "buildstock.csv")
         else:
             self.csv_path = None
 
