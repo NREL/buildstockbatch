@@ -17,7 +17,7 @@ import types
 import tempfile
 import json
 import pathlib
-from buildstockbatch.hpc import EagleBatch
+from buildstockbatch.hpc import EagleBatch, SlurmBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import (
@@ -128,7 +128,7 @@ def test_validation_integration(project_file, base_expected, eagle_expected):
     ), patch.object(BuildStockBatchBase, "validate_workflow_generator", lambda _: True), patch.object(
         BuildStockBatchBase, "validate_postprocessing_spec", lambda _: True
     ), patch.object(
-        EagleBatch, "validate_singularity_image_eagle", lambda _: True
+        SlurmBatch, "validate_singularity_image_hpc", lambda _: True
     ):
         for cls, expected in [
             (BuildStockBatchBase, base_expected),

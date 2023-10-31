@@ -8,7 +8,7 @@ import tarfile
 from unittest.mock import patch
 import gzip
 
-from buildstockbatch.hpc import user_cli, EagleBatch
+from buildstockbatch.hpc import eagle_cli, EagleBatch
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration, read_csv
 
@@ -92,9 +92,22 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         assert called_kw["input"].decode("utf-8").find(" --measures_only") > -1
 
 
+def _test_env_vars_passed(
+    mock_subprocess, env_vars_to_check=["PROJECTFILE", "MY_CONDA_ENV", "MEASURESONLY", "SAMPLINGONLY"]
+):
+    export_found = False
+    for arg in mock_subprocess.run.call_args[0][0]:
+        if arg.startswith("--export"):
+            export_found = True
+            break
+    assert export_found
+    exported_env_vars = set(arg.split("=", maxsplit=1)[1].split(","))
+    assert exported_env_vars.issuperset(env_vars_to_check)
+
+
 @patch("buildstockbatch.base.BuildStockBatchBase.validate_options_lookup")
 @patch("buildstockbatch.hpc.EagleBatch.validate_output_directory_eagle")
-@patch("buildstockbatch.hpc.EagleBatch.validate_singularity_image_eagle")
+@patch("buildstockbatch.hpc.SlurmBatch.validate_singularity_image_hpc")
 @patch("buildstockbatch.hpc.subprocess")
 def test_user_cli(
     mock_subprocess,
@@ -112,14 +125,14 @@ def test_user_cli(
     shutil.rmtree(results_dir)
     monkeypatch.setenv("CONDA_PREFIX", "something")
     argv = [project_filename]
-    user_cli(argv)
+    eagle_cli(argv)
     mock_subprocess.run.assert_called_once()
     eagle_sh = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "eagle.sh"))
     assert mock_subprocess.run.call_args[0][0][-1] == eagle_sh
     assert "--time=20" in mock_subprocess.run.call_args[0][0]
     assert "--account=testaccount" in mock_subprocess.run.call_args[0][0]
     assert "--nodes=1" in mock_subprocess.run.call_args[0][0]
-    assert "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY" in mock_subprocess.run.call_args[0][0]
+    _test_env_vars_passed(mock_subprocess)
     assert "--output=sampling.out" in mock_subprocess.run.call_args[0][0]
     assert "--qos=high" not in mock_subprocess.run.call_args[0][0]
     assert "0" == mock_subprocess.run.call_args[1]["env"]["MEASURESONLY"]
@@ -127,12 +140,12 @@ def test_user_cli(
     mock_subprocess.reset_mock()
     shutil.rmtree(results_dir)
     argv = ["--hipri", project_filename]
-    user_cli(argv)
+    eagle_cli(argv)
     mock_subprocess.run.assert_called_once()
     assert "--time=20" in mock_subprocess.run.call_args[0][0]
     assert "--account=testaccount" in mock_subprocess.run.call_args[0][0]
     assert "--nodes=1" in mock_subprocess.run.call_args[0][0]
-    assert "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY" in mock_subprocess.run.call_args[0][0]
+    _test_env_vars_passed(mock_subprocess)
     assert "--output=sampling.out" in mock_subprocess.run.call_args[0][0]
     assert "--qos=high" in mock_subprocess.run.call_args[0][0]
     assert "0" == mock_subprocess.run.call_args[1]["env"]["MEASURESONLY"]
@@ -140,13 +153,13 @@ def test_user_cli(
 
     mock_subprocess.reset_mock()
     shutil.rmtree(results_dir)
-    argv = ["--measures_only", project_filename]
-    user_cli(argv)
+    argv = ["--measuresonly", project_filename]
+    eagle_cli(argv)
     mock_subprocess.run.assert_called_once()
     assert "--time=20" in mock_subprocess.run.call_args[0][0]
     assert "--account=testaccount" in mock_subprocess.run.call_args[0][0]
     assert "--nodes=1" in mock_subprocess.run.call_args[0][0]
-    assert "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY" in mock_subprocess.run.call_args[0][0]
+    _test_env_vars_passed(mock_subprocess)
     assert "--output=sampling.out" in mock_subprocess.run.call_args[0][0]
     assert "--qos=high" not in mock_subprocess.run.call_args[0][0]
     assert "1" == mock_subprocess.run.call_args[1]["env"]["MEASURESONLY"]
@@ -155,12 +168,12 @@ def test_user_cli(
     mock_subprocess.reset_mock()
     shutil.rmtree(results_dir)
     argv = ["--samplingonly", project_filename]
-    user_cli(argv)
+    eagle_cli(argv)
     mock_subprocess.run.assert_called_once()
     assert "--time=20" in mock_subprocess.run.call_args[0][0]
     assert "--account=testaccount" in mock_subprocess.run.call_args[0][0]
     assert "--nodes=1" in mock_subprocess.run.call_args[0][0]
-    assert "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY" in mock_subprocess.run.call_args[0][0]
+    _test_env_vars_passed(mock_subprocess)
     assert "--output=sampling.out" in mock_subprocess.run.call_args[0][0]
     assert "--qos=high" not in mock_subprocess.run.call_args[0][0]
     assert "1" == mock_subprocess.run.call_args[1]["env"]["SAMPLINGONLY"]
@@ -198,7 +211,7 @@ def test_qos_high_job_submit(mock_subprocess, basic_residential_project_file, mo
 
 
 def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file, monkeypatch):
-    mock_subprocess = mocker.patch("buildstockbatch.eagle.subprocess")
+    mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
     mocker.patch.object(EagleBatch, "weather_dir", None)
     mock_subprocess.run.return_value.stdout = "Submitted batch job 1\n"
     mock_subprocess.PIPE = None
@@ -255,9 +268,9 @@ def test_run_building_process(mocker, basic_residential_project_file):
         kw2["n_jobs"] = 1
         return joblib.Parallel(**kw2)
 
-    mocker.patch("buildstockbatch.eagle.shutil.copy2")
-    mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
-    mocker.patch("buildstockbatch.eagle.subprocess")
+    mocker.patch("buildstockbatch.hpc.shutil.copy2")
+    mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
+    mocker.patch("buildstockbatch.hpc.subprocess")
 
     mocker.patch.object(EagleBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir")
     mocker.patch.object(EagleBatch, "local_weather_dir", results_dir / "local_weather_dir")
@@ -340,9 +353,9 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
         kw2["n_jobs"] = 1
         return joblib.Parallel(**kw2)
 
-    mocker.patch("buildstockbatch.eagle.shutil.copy2")
-    mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
-    mocker.patch("buildstockbatch.eagle.subprocess")
+    mocker.patch("buildstockbatch.hpc.shutil.copy2")
+    mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
+    mocker.patch("buildstockbatch.hpc.subprocess")
 
     mocker.patch.object(EagleBatch, "run_building", raise_error)
     mocker.patch.object(EagleBatch, "local_output_dir", results_dir)
