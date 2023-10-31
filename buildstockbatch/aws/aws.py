@@ -65,9 +65,7 @@ def upload_directory_to_s3(local_directory, bucket, prefix):
                 if filename.startswith("."):
                     continue
                 local_filepath = pathlib.Path(dirpath, filename)
-                s3_key = pathlib.PurePosixPath(
-                    prefix, local_filepath.relative_to(local_dir_abs)
-                )
+                s3_key = pathlib.PurePosixPath(prefix, local_filepath.relative_to(local_dir_abs))
                 yield local_filepath, s3_key
 
     logger.debug("Uploading {} => {}/{}".format(local_dir_abs, bucket, prefix))
@@ -147,9 +145,7 @@ class AwsBatchEnv(AwsJobBase):
                 {
                     "Effect": "Allow",
                     "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-                    "Resource": [
-                        f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"
-                    ],
+                    "Resource": [f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"],
                 },
                 {
                     "Effect": "Allow",
@@ -294,9 +290,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the public subnet
 
-        pub_response = self.ec2.create_subnet(
-            CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id
-        )
+        pub_response = self.ec2.create_subnet(CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
 
         logger.info("EIP allocated.")
 
@@ -327,9 +321,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create an internet gateway
 
-        self.ec2.attach_internet_gateway(
-            InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id
-        )
+        self.ec2.attach_internet_gateway(InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
 
         logger.info("Internet Gateway attached.")
 
@@ -364,9 +356,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create a NAT Gateway
 
-        nat_response = self.ec2.create_nat_gateway(
-            AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id
-        )
+        nat_response = self.ec2.create_nat_gateway(AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id)
 
         self.nat_gateway_id = nat_response["NatGateway"]["NatGatewayId"]
 
@@ -387,14 +377,10 @@ class AwsBatchEnv(AwsJobBase):
 
         # Associate the private route to the private subnet
 
-        self.ec2.associate_route_table(
-            RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1
-        )
+        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1)
         logger.info("Route table associated with subnet.")
 
-        self.ec2.associate_route_table(
-            RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2
-        )
+        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2)
         logger.info("Route table associated with subnet.")
 
         # Associate the NAT gateway with the private route
@@ -435,9 +421,7 @@ class AwsBatchEnv(AwsJobBase):
             self.batch_service_role_name,
             "batch",
             f"Service role for Batch environment {self.job_identifier}",
-            managed_policie_arns=[
-                "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
-            ],
+            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"],
         )
 
         # Instance Role for Batch compute environment
@@ -446,17 +430,13 @@ class AwsBatchEnv(AwsJobBase):
             self.batch_instance_role_name,
             "ec2",
             f"Instance role for Batch compute environment {self.job_identifier}",
-            managed_policie_arns=[
-                "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
-            ],
+            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"],
         )
 
         # Instance Profile
 
         try:
-            response = self.iam.create_instance_profile(
-                InstanceProfileName=self.batch_instance_profile_name
-            )
+            response = self.iam.create_instance_profile(InstanceProfileName=self.batch_instance_profile_name)
 
             self.instance_profile_arn = response["InstanceProfile"]["Arn"]
 
@@ -470,9 +450,7 @@ class AwsBatchEnv(AwsJobBase):
         except Exception as e:
             if "EntityAlreadyExists" in str(e):
                 logger.info("ECS Instance Profile not created - already exists")
-                response = self.iam.get_instance_profile(
-                    InstanceProfileName=self.batch_instance_profile_name
-                )
+                response = self.iam.get_instance_profile(InstanceProfileName=self.batch_instance_profile_name)
                 self.instance_profile_arn = response["InstanceProfile"]["Arn"]
 
         # ECS Task Policy
@@ -577,9 +555,7 @@ class AwsBatchEnv(AwsJobBase):
                 self.batch_spot_service_role_name,
                 "spotfleet",
                 f"Spot Fleet role for Batch compute environment {self.job_identifier}",
-                managed_policie_arns=[
-                    "arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"
-                ],
+                managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"],
             )
 
     def create_compute_environment(self, maxCPUs=10000):
@@ -623,15 +599,11 @@ class AwsBatchEnv(AwsJobBase):
                 serviceRole=self.service_role_arn,
             )
 
-            logger.info(
-                f"Compute environment {self.batch_compute_environment_name} created."
-            )
+            logger.info(f"Compute environment {self.batch_compute_environment_name} created.")
 
         except Exception as e:
             if "Object already exists" in str(e):
-                logger.info(
-                    f"Compute environment {self.batch_compute_environment_name} not created - already exists"
-                )
+                logger.info(f"Compute environment {self.batch_compute_environment_name} not created - already exists")
             else:
                 raise
 
@@ -662,9 +634,7 @@ class AwsBatchEnv(AwsJobBase):
 
             except Exception as e:
                 if "Object already exists" in str(e):
-                    logger.info(
-                        f"Job queue {self.batch_job_queue_name} not created - already exists"
-                    )
+                    logger.info(f"Job queue {self.batch_job_queue_name} not created - already exists")
                     response = self.batch.describe_job_queues(
                         jobQueues=[
                             self.batch_job_queue_name,
@@ -676,8 +646,7 @@ class AwsBatchEnv(AwsJobBase):
                 elif "is not valid" in str(e):
                     # Need to wait a second for the compute environment to complete registration
                     logger.warning(
-                        "5 second sleep initiated to wait for compute environment creation due to error: "
-                        + str(e)
+                        "5 second sleep initiated to wait for compute environment creation due to error: " + str(e)
                     )
                     time.sleep(5)
 
@@ -732,10 +701,7 @@ class AwsBatchEnv(AwsJobBase):
             except Exception as e:
                 if "not in VALID state" in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.warning(
-                        "5 second sleep initiated to wait for job queue creation due to error: "
-                        + str(e)
-                    )
+                    logger.warning("5 second sleep initiated to wait for job queue creation due to error: " + str(e))
                     time.sleep(5)
                 else:
                     raise
@@ -947,20 +913,14 @@ class AwsBatchEnv(AwsJobBase):
 
         except Exception as e:
             if "ResourceNotFoundException" in str(e):
-                logger.info(
-                    f"EMR cluster {self.emr_cluster_name} already MIA - skipping..."
-                )
+                logger.info(f"EMR cluster {self.emr_cluster_name} already MIA - skipping...")
 
-        self.iam_helper.remove_role_from_instance_profile(
-            self.emr_instance_profile_name
-        )
+        self.iam_helper.remove_role_from_instance_profile(self.emr_instance_profile_name)
         self.iam_helper.delete_instance_profile(self.emr_instance_profile_name)
         self.iam_helper.delete_role(self.emr_job_flow_role_name)
         self.iam_helper.delete_role(self.emr_service_role_name)
 
-        logger.info(
-            f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted."
-        )
+        logger.info(f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
 
         logger.info(f"Deleting Security group {self.emr_cluster_security_group_name}.")
         default_sg_response = self.ec2.describe_security_groups(
@@ -980,9 +940,7 @@ class AwsBatchEnv(AwsJobBase):
                 default_group_id = group["GroupId"]
                 dsg = self.ec2r.SecurityGroup(default_group_id)
                 if len(dsg.ip_permissions_egress):
-                    response = dsg.revoke_egress(
-                        IpPermissions=dsg.ip_permissions_egress
-                    )
+                    response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
         sg_response = AWSRetry.backoff()(self.ec2.describe_security_groups)(
             Filters=[
@@ -1006,38 +964,26 @@ class AwsBatchEnv(AwsJobBase):
                     self.ec2.delete_security_group(GroupId=group_id)
                     break
                 except ClientError:
-                    logger.info(
-                        "Waiting for security group ingress rules to be removed ..."
-                    )
+                    logger.info("Waiting for security group ingress rules to be removed ...")
                     time.sleep(5)
 
-            logger.info(
-                f"Deleted security group {self.emr_cluster_security_group_name}."
-            )
+            logger.info(f"Deleted security group {self.emr_cluster_security_group_name}.")
         except Exception as e:
             if "does not exist" in str(e) or "list index out of range" in str(e):
-                logger.info(
-                    f"Security group {self.emr_cluster_security_group_name} does not exist - skipping..."
-                )
+                logger.info(f"Security group {self.emr_cluster_security_group_name} does not exist - skipping...")
             else:
                 raise
 
         try:
-            self.aws_lambda.delete_function(
-                FunctionName=self.lambda_emr_job_step_function_name
-            )
+            self.aws_lambda.delete_function(FunctionName=self.lambda_emr_job_step_function_name)
         except Exception as e:
             if "Function not found" in str(e):
-                logger.info(
-                    f"Function {self.lambda_emr_job_step_function_name} not found, skipping..."
-                )
+                logger.info(f"Function {self.lambda_emr_job_step_function_name} not found, skipping...")
             else:
                 raise
 
         try:
-            self.s3.delete_object(
-                Bucket=self.s3_bucket, Key=self.s3_lambda_code_emr_cluster_key
-            )
+            self.s3.delete_object(Bucket=self.s3_bucket, Key=self.s3_lambda_code_emr_cluster_key)
             logger.info(
                 f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} deleted."  # noqa E501
             )
@@ -1056,39 +1002,29 @@ class AwsBatchEnv(AwsJobBase):
         for sm in state_machines["stateMachines"]:
             if sm["name"] == self.state_machine_name:
                 self.state_machine_arn = sm["stateMachineArn"]
-                self.step_functions.delete_state_machine(
-                    stateMachineArn=self.state_machine_arn
-                )
+                self.step_functions.delete_state_machine(stateMachineArn=self.state_machine_arn)
                 logger.info(f"Deleted state machine {self.state_machine_name}.")
                 break
 
         self.iam_helper.delete_role(self.state_machine_role_name)
 
         try:
-            self.batch.update_job_queue(
-                jobQueue=self.batch_job_queue_name, state="DISABLED"
-            )
+            self.batch.update_job_queue(jobQueue=self.batch_job_queue_name, state="DISABLED")
 
             while True:
                 try:
-                    response = self.batch.delete_job_queue(
-                        jobQueue=self.batch_job_queue_name
-                    )
+                    response = self.batch.delete_job_queue(jobQueue=self.batch_job_queue_name)
                     logger.info(f"Job queue {self.batch_job_queue_name} deleted.")
                     break
                 except Exception as e:
                     if "Cannot delete, resource is being modified" in str(e):
-                        logger.info(
-                            "Job queue being modified - sleeping until ready..."
-                        )
+                        logger.info("Job queue being modified - sleeping until ready...")
                         time.sleep(5)
                     else:
                         raise
         except Exception as e:
             if "does not exist" in str(e):
-                logger.info(
-                    f"Job queue {self.batch_job_queue_name} missing, skipping..."
-                )
+                logger.info(f"Job queue {self.batch_job_queue_name} missing, skipping...")
 
         # Delete compute enviornment
 
@@ -1102,25 +1038,17 @@ class AwsBatchEnv(AwsJobBase):
                     response = self.batch.delete_compute_environment(
                         computeEnvironment=self.batch_compute_environment_name
                     )
-                    logger.info(
-                        f"Compute environment {self.batch_compute_environment_name} deleted."
-                    )
+                    logger.info(f"Compute environment {self.batch_compute_environment_name} deleted.")
                     break
                 except Exception as e:
-                    if "Cannot delete, resource is being modified" in str(
-                        e
-                    ) or "found existing JobQueue" in str(e):
-                        logger.info(
-                            "Compute environment being modified - sleeping until ready..."
-                        )
+                    if "Cannot delete, resource is being modified" in str(e) or "found existing JobQueue" in str(e):
+                        logger.info("Compute environment being modified - sleeping until ready...")
                         time.sleep(5)
                     else:
                         raise
         except Exception as e:
             if "does not exist" in str(e):
-                logger.info(
-                    f"Compute environment {self.batch_compute_environment_name} missing, skipping..."
-                )
+                logger.info(f"Compute environment {self.batch_compute_environment_name} missing, skipping...")
             else:
                 raise
 
@@ -1128,9 +1056,7 @@ class AwsBatchEnv(AwsJobBase):
         self.iam_helper.delete_role(self.batch_spot_service_role_name)
         self.iam_helper.delete_role(self.batch_ecs_task_role_name)
         # Instance profile order of removal
-        self.iam_helper.remove_role_from_instance_profile(
-            self.batch_instance_profile_name
-        )
+        self.iam_helper.remove_role_from_instance_profile(self.batch_instance_profile_name)
         self.iam_helper.delete_role(self.batch_instance_role_name)
         self.iam_helper.delete_instance_profile(self.batch_instance_profile_name)
 
@@ -1174,9 +1100,7 @@ class AwsBatchEnv(AwsJobBase):
                         rt_counter = 10
                         while rt_counter:
                             try:
-                                response = self.ec2.delete_route_table(
-                                    RouteTableId=route_table_id
-                                )
+                                response = self.ec2.delete_route_table(RouteTableId=route_table_id)
                                 logger.info("Route table removed.")
                                 break
                             except Exception as e:
@@ -1200,20 +1124,14 @@ class AwsBatchEnv(AwsJobBase):
                             try:
                                 try:
                                     self.ec2.detach_internet_gateway(
-                                        InternetGatewayId=internet_gateway[
-                                            "InternetGatewayId"
-                                        ],
+                                        InternetGatewayId=internet_gateway["InternetGatewayId"],
                                         VpcId=attachment["VpcId"],
                                     )
                                 except Exception as e:
-                                    logger.info(
-                                        f"Error on Internet Gateway disassociation - ignoring... {str(e)}"
-                                    )
+                                    logger.info(f"Error on Internet Gateway disassociation - ignoring... {str(e)}")
 
                                 self.ec2.delete_internet_gateway(
-                                    InternetGatewayId=internet_gateway[
-                                        "InternetGatewayId"
-                                    ]
+                                    InternetGatewayId=internet_gateway["InternetGatewayId"]
                                 )
                                 logger.info("Internet Gateway deleted.")
                                 break
@@ -1227,9 +1145,7 @@ class AwsBatchEnv(AwsJobBase):
                                 else:
                                     raise
 
-            subn_response = self.ec2.describe_subnets(
-                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
-            )
+            subn_response = self.ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
 
             for subnet in subn_response["Subnets"]:
                 while True:
@@ -1238,9 +1154,7 @@ class AwsBatchEnv(AwsJobBase):
                         break
                     except Exception as e:
                         if "DependencyViolation" in str(e):
-                            logger.info(
-                                "Subnet cannot be deleted as dependencies are still being deleted. Sleeping..."
-                            )
+                            logger.info("Subnet cannot be deleted as dependencies are still being deleted. Sleeping...")
                             time.sleep(10)
                         else:
                             raise
@@ -1286,9 +1200,7 @@ class AwsBatchEnv(AwsJobBase):
                     ]
                 )
 
-                self.emr_cluster_security_group_id = response["SecurityGroups"][0][
-                    "GroupId"
-                ]
+                self.emr_cluster_security_group_id = response["SecurityGroups"][0]["GroupId"]
             else:
                 raise
 
@@ -1309,9 +1221,7 @@ class AwsBatchEnv(AwsJobBase):
             )
         except Exception as e:
             if "already exists" in str(e):
-                logger.info(
-                    "Security group egress rule for EMR already exists, skipping ..."
-                )
+                logger.info("Security group egress rule for EMR already exists, skipping ...")
             else:
                 raise
 
@@ -1320,9 +1230,7 @@ class AwsBatchEnv(AwsJobBase):
             self.emr_service_role_name,
             "elasticmapreduce",
             f"EMR Service Role {self.job_identifier}",
-            managed_policie_arns=[
-                "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"
-            ],
+            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"],
         )
 
         emr_policy = """{
@@ -1361,16 +1269,12 @@ class AwsBatchEnv(AwsJobBase):
             self.emr_job_flow_role_name,
             "ec2",
             f"EMR Job Flow Role {self.job_identifier}",
-            managed_policie_arns=[
-                "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
-            ],
+            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"],
             policies_list=[emr_policy],
         )
 
         try:
-            response = self.iam.create_instance_profile(
-                InstanceProfileName=self.emr_instance_profile_name
-            )
+            response = self.iam.create_instance_profile(InstanceProfileName=self.emr_instance_profile_name)
 
             self.emr_instance_profile_arn = response["InstanceProfile"]["Arn"]
 
@@ -1384,18 +1288,14 @@ class AwsBatchEnv(AwsJobBase):
         except Exception as e:
             if "EntityAlreadyExists" in str(e):
                 logger.info("EMR Instance Profile not created - already exists")
-                response = self.iam.get_instance_profile(
-                    InstanceProfileName=self.emr_instance_profile_name
-                )
+                response = self.iam.get_instance_profile(InstanceProfileName=self.emr_instance_profile_name)
                 self.emr_instance_profile_arn = response["InstanceProfile"]["Arn"]
 
     def upload_assets(self):
         logger.info("Uploading EMR support assets...")
         fs = S3FileSystem()
         here = os.path.dirname(os.path.abspath(__file__))
-        emr_folder = (
-            f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
-        )
+        emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
         fs.makedirs(emr_folder)
 
         # bsb_post.sh
@@ -1409,9 +1309,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
             f.write(bsb_post_bash)
 
         # bsb_post.py
-        fs.put(
-            os.path.join(here, "s3_assets", "bsb_post.py"), f"{emr_folder}/bsb_post.py"
-        )
+        fs.put(os.path.join(here, "s3_assets", "bsb_post.py"), f"{emr_folder}/bsb_post.py")
 
         # bootstrap-dask-custom
         fs.put(
@@ -1470,9 +1368,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                     "Name": "launchFromS3",
                     "ScriptBootstrapAction": {
                         "Path": bootstrap_action,
-                        "Args": [
-                            f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz"
-                        ],
+                        "Args": [f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz"],
                     },
                 },
             ],
@@ -1516,9 +1412,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                 zi.external_attr = 0o100755 << 16
                 zf.writestr(zi, function_script, zipfile.ZIP_DEFLATED)
             f.seek(0)
-            self.s3.upload_fileobj(
-                f, self.s3_bucket, self.s3_lambda_code_emr_cluster_key
-            )
+            self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_code_emr_cluster_key)
 
         while True:
             try:
@@ -1545,9 +1439,7 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                     Tags={"job": self.job_identifier},
                 )
 
-                logger.info(
-                    f"Lambda function {self.lambda_emr_job_step_function_name} created."
-                )
+                logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")
                 break
 
             except Exception as e:
@@ -1557,14 +1449,10 @@ aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_po
                     )
                     time.sleep(5)
                 elif "Function already exist" in str(e):
-                    logger.info(
-                        f"Lambda function {self.lambda_emr_job_step_function_name} exists, skipping..."
-                    )
+                    logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...")
                     break
                 elif "ARN does not refer to a valid principal" in str(e):
-                    logger.info(
-                        "Waiting for roles/permissions to propagate to allow Lambda function creation ..."
-                    )
+                    logger.info("Waiting for roles/permissions to propagate to allow Lambda function creation ...")
                     time.sleep(5)
                 else:
                     raise
@@ -1579,9 +1467,7 @@ class AwsSNS(AwsJobBase):
     def create_topic(self):
         response = self.sns.create_topic(Name=self.sns_state_machine_topic)
 
-        logger.info(
-            f"Simple notifications topic {self.sns_state_machine_topic} created."
-        )
+        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} created.")
 
         self.sns_state_machine_topic_arn = response["TopicArn"]
 
@@ -1597,13 +1483,9 @@ class AwsSNS(AwsJobBase):
         )
 
     def clean(self):
-        self.sns.delete_topic(
-            TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-        )
+        self.sns.delete_topic(TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}")
 
-        logger.info(
-            f"Simple notifications topic {self.sns_state_machine_topic} deleted."
-        )
+        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} deleted.")
 
 
 class DockerBatchBase(BuildStockBatchBase):
@@ -1616,12 +1498,8 @@ class DockerBatchBase(BuildStockBatchBase):
         try:
             self.docker_client.ping()
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
-            logger.error(
-                "The docker server did not respond, make sure Docker Desktop is started then retry."
-            )
-            raise RuntimeError(
-                "The docker server did not respond, make sure Docker Desktop is started then retry."
-            )
+            logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
+            raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
 
     @staticmethod
     def validate_project(project_file):
@@ -1636,9 +1514,7 @@ class AwsBatch(DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
-        self.job_identifier = re.sub(
-            "[^0-9a-zA-Z]+", "_", self.cfg["aws"]["job_identifier"]
-        )[:10]
+        self.job_identifier = re.sub("[^0-9a-zA-Z]+", "_", self.cfg["aws"]["job_identifier"])[:10]
 
         self.project_filename = project_filename
         self.region = self.cfg["aws"]["region"]
@@ -1661,17 +1537,11 @@ class AwsBatch(DockerBatchBase):
         instance_types_requested.add(job_base.emr_manager_instance_type)
         instance_types_requested.add(job_base.emr_worker_instance_type)
         inst_type_resp = ec2.describe_instance_type_offerings(
-            Filters=[
-                {"Name": "instance-type", "Values": list(instance_types_requested)}
-            ]
+            Filters=[{"Name": "instance-type", "Values": list(instance_types_requested)}]
         )
-        instance_types_available = set(
-            [x["InstanceType"] for x in inst_type_resp["InstanceTypeOfferings"]]
-        )
+        instance_types_available = set([x["InstanceType"] for x in inst_type_resp["InstanceTypeOfferings"]])
         if not instance_types_requested == instance_types_available:
-            instance_types_not_available = (
-                instance_types_requested - instance_types_available
-            )
+            instance_types_not_available = instance_types_requested - instance_types_available
             raise ValidationError(
                 f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}."  # noqa E501
             )
@@ -1708,13 +1578,9 @@ class AwsBatch(DockerBatchBase):
         """
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / "Dockerfile").exists():
-            raise RuntimeError(
-                f"The needs to be run from the root of the repo, found {root_path}"
-            )
+            raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
         logger.debug("Building docker image")
-        self.docker_client.images.build(
-            path=str(root_path), tag=self.docker_image, rm=True
-        )
+        self.docker_client.images.build(path=str(root_path), tag=self.docker_image, rm=True)
 
     def push_image(self):
         """
@@ -1722,22 +1588,16 @@ class AwsBatch(DockerBatchBase):
         """
         auth_token = self.ecr.get_authorization_token()
         dkr_user, dkr_pass = (
-            base64.b64decode(auth_token["authorizationData"][0]["authorizationToken"])
-            .decode("ascii")
-            .split(":")
+            base64.b64decode(auth_token["authorizationData"][0]["authorizationToken"]).decode("ascii").split(":")
         )
         repo_url = self.container_repo["repositoryUri"]
         registry_url = "https://" + repo_url.split("/")[0]
-        resp = self.docker_client.login(
-            username=dkr_user, password=dkr_pass, registry=registry_url
-        )
+        resp = self.docker_client.login(username=dkr_user, password=dkr_pass, registry=registry_url)
         logger.debug(resp)
         image = self.docker_client.images.get(self.docker_image)
         image.tag(repo_url, tag=self.job_identifier)
         last_status = None
-        for x in self.docker_client.images.push(
-            repo_url, tag=self.job_identifier, stream=True
-        ):
+        for x in self.docker_client.images.push(repo_url, tag=self.job_identifier, stream=True):
             try:
                 y = json.loads(x)
             except json.JSONDecodeError:
@@ -1754,9 +1614,7 @@ class AwsBatch(DockerBatchBase):
         """
         logger.info("Beginning cleanup of AWS resources...")
 
-        batch_env = AwsBatchEnv(
-            self.job_identifier, self.cfg["aws"], self.boto3_session
-        )
+        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
         batch_env.clean()
 
         sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
@@ -1776,9 +1634,7 @@ class AwsBatch(DockerBatchBase):
         buildstock_csv_filename = self.sampler.run_sampling()
 
         # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory(
-            prefix="bsb_"
-        ) as tmpdir, tempfile.TemporaryDirectory(
+        with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
             prefix="bsb_"
         ) as tmp_weather_dir:  # noqa: E501
             self._weather_dir = tmp_weather_dir
@@ -1805,14 +1661,10 @@ class AwsBatch(DockerBatchBase):
             os.makedirs(weather_path)
 
             # Determine the unique weather files
-            epw_filenames = list(
-                filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir))
-            )
+            epw_filenames = list(filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir)))
             logger.debug("Calculating hashes for weather files")
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
-                delayed(calc_hash_for_file)(
-                    pathlib.Path(self.weather_dir) / epw_filename
-                )
+                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
                 for epw_filename in epw_filenames
             )
             unique_epws = collections.defaultdict(list)
@@ -1848,14 +1700,10 @@ class AwsBatch(DockerBatchBase):
                 max_array_size = 10000
             n_sims_per_job = math.ceil(n_sims / max_array_size)
             n_sims_per_job = max(n_sims_per_job, 2)
-            logger.debug(
-                "Number of simulations per array job = {}".format(n_sims_per_job)
-            )
+            logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
 
             baseline_sims = zip(building_ids, itertools.repeat(None))
-            upgrade_sims = itertools.product(
-                building_ids, range(len(self.cfg.get("upgrades", [])))
-            )
+            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
             random.shuffle(all_sims)
             all_sims_iter = iter(all_sims)
@@ -1888,9 +1736,7 @@ class AwsBatch(DockerBatchBase):
             with tarfile.open(tmppath / "jobs.tar.gz", "w:gz") as tf:
                 tf.add(jobs_dir, arcname="jobs")
             tick = time.time() - tick
-            logger.debug(
-                "Done compressing job jsons using gz {:.1f} seconds".format(tick)
-            )
+            logger.debug("Done compressing job jsons using gz {:.1f} seconds".format(tick))
             shutil.rmtree(jobs_dir)
 
             os.makedirs(tmppath / "results" / "simulation_output")
@@ -1916,10 +1762,7 @@ class AwsBatch(DockerBatchBase):
 
         logger.debug("Copying weather files on S3")
         bucket = self.cfg["aws"]["s3"]["bucket"]
-        Parallel(n_jobs=-1, verbose=9)(
-            delayed(copy_s3_file)(bucket, src, bucket, dest)
-            for src, dest in epws_to_copy
-        )
+        Parallel(n_jobs=-1, verbose=9)(delayed(copy_s3_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy)
 
         # Create the output directories
         fs = S3FileSystem()
@@ -1929,9 +1772,7 @@ class AwsBatch(DockerBatchBase):
             )  # noqa E501
 
         # Define the batch environment
-        batch_env = AwsBatchEnv(
-            self.job_identifier, self.cfg["aws"], self.boto3_session
-        )
+        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
         logger.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):"  # noqa 501
         )
@@ -1949,9 +1790,7 @@ class AwsBatch(DockerBatchBase):
             REGION=self.region,
         )
 
-        image_url = "{}:{}".format(
-            self.container_repo["repositoryUri"], self.job_identifier
-        )
+        image_url = "{}:{}".format(self.container_repo["repositoryUri"], self.job_identifier)
 
         job_env_cfg = self.cfg["aws"].get("job_environment", {})
         batch_env.create_job_definition(
@@ -1981,9 +1820,7 @@ class AwsBatch(DockerBatchBase):
         # start job
         batch_env.start_state_machine_execution(array_size)
 
-        logger.info(
-            "Batch job submitted. Check your email to subscribe to notifications."
-        )
+        logger.info("Batch job submitted. Check your email to subscribe to notifications.")
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -2016,9 +1853,7 @@ class AwsBatch(DockerBatchBase):
         jobs_file_path = sim_dir.parent / "jobs.tar.gz"
         s3.download_file(bucket, f"{prefix}/jobs.tar.gz", str(jobs_file_path))
         with tarfile.open(jobs_file_path, "r") as tar_f:
-            jobs_d = json.load(
-                tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8"
-            )
+            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8")
         logger.debug("Number of simulations = {}".format(len(jobs_d["batch"])))
 
         logger.debug("Getting weather files")
@@ -2026,9 +1861,7 @@ class AwsBatch(DockerBatchBase):
         os.makedirs(weather_dir, exist_ok=True)
 
         # Make a lookup of which parameter points to the weather file from options_lookup.tsv
-        with open(
-            sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8"
-        ) as f:
+        with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
             tsv_reader = csv.reader(f, delimiter="\t")
             next(tsv_reader)  # skip headers
             param_name = None
@@ -2079,9 +1912,7 @@ class AwsBatch(DockerBatchBase):
                 sim_id = f"bldg{building_id:07d}up{upgrade_id:02d}"
 
                 # Create OSW
-                osw = cls.create_osw(
-                    cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx
-                )
+                osw = cls.create_osw(cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx)
                 with open(os.path.join(sim_dir, "in.osw"), "w") as f:
                     json.dump(osw, f, indent=4)
 

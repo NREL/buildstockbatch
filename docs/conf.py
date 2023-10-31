@@ -20,9 +20,7 @@ import os
 here = os.path.abspath(os.path.dirname(__file__))
 metadata = {}
 
-with open(
-    os.path.join(here, "..", "buildstockbatch", "__version__.py"), "r", encoding="utf-8"
-) as f:
+with open(os.path.join(here, "..", "buildstockbatch", "__version__.py"), "r", encoding="utf-8") as f:
     exec(f.read(), metadata)
 
 # -- Project information -----------------------------------------------------
@@ -75,9 +73,7 @@ changelog_inner_tag_sort = ["feature", "changed", "removed", "bug", "moved"]
 # how to render changelog links
 changelog_render_ticket = "http://www.github.com/nrel/buildstockbatch/issues/%s"
 
-changelog_render_pullreq = {
-    "default": "https://www.github.com/nrel/buildstockbatch/pull/%s"
-}
+changelog_render_pullreq = {"default": "https://www.github.com/nrel/buildstockbatch/pull/%s"}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -180,9 +176,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "buildstockbatch", "BuildStock Batch Documentation", [author], 1)
-]
+man_pages = [(master_doc, "buildstockbatch", "BuildStock Batch Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------

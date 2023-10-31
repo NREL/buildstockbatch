@@ -145,18 +145,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         workflow_generator_args = cfg["workflow_generator"]["args"]
         schema_yml = re.sub(r"^ {8}", "", schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser="ruamel")
-        data = yamale.make_data(
-            content=json.dumps(workflow_generator_args), parser="ruamel"
-        )
+        data = yamale.make_data(content=json.dumps(workflow_generator_args), parser="ruamel")
         yamale.validate(schema, data, strict=True)
         return cls.validate_measures_and_arguments(cfg)
 
     def reporting_measures(self):
         """Return a list of reporting measures to include in outputs"""
         workflow_args = self.cfg["workflow_generator"].get("args", {})
-        return [
-            x["measure_dir_name"] for x in workflow_args.get("reporting_measures", [])
-        ]
+        return [x["measure_dir_name"] for x in workflow_args.get("reporting_measures", [])]
 
     @staticmethod
     def validate_measures_and_arguments(cfg):
@@ -195,9 +191,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         workflow_args = cfg["workflow_generator"].get("args", {})
         if "reporting_measures" in workflow_args.keys():
             for reporting_measure in workflow_args["reporting_measures"]:
-                measure_names[
-                    reporting_measure["measure_dir_name"]
-                ] = "workflow_generator.args.reporting_measures"
+                measure_names[reporting_measure["measure_dir_name"]] = "workflow_generator.args.reporting_measures"
 
         error_msgs = ""
         warning_msgs = ""
@@ -230,9 +224,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     error_msgs += "* The following multipliers values are invalid: \n"
                     for multiplier, count in invalid_multipliers.items():
                         error_msgs += f"    '{multiplier}' - Used {count} times \n"
-                    error_msgs += (
-                        f"    The list of valid multipliers are {valid_multipliers}.\n"
-                    )
+                    error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
 
         if warning_msgs:
             logger.warning(warning_msgs)
@@ -274,8 +266,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         bld_exist_model_args = {
             "building_id": building_id,
-            "sample_weight": self.cfg["baseline"]["n_buildings_represented"]
-            / self.n_datapoints,
+            "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
         }
 
         bld_exist_model_args.update(sim_ctl_args)
@@ -298,16 +289,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 ["emissions_wood_values", "wood_value"],
             ]
             for arg, item in emissions_map:
-                bld_exist_model_args[arg] = ",".join(
-                    [str(s.get(item, "")) for s in emissions]
-                )
+                bld_exist_model_args[arg] = ",".join([str(s.get(item, "")) for s in emissions])
 
         buildstock_dir = self.cfg["buildstock_directory"]
         measures_dir = os.path.join(buildstock_dir, "measures")
         measure_path = os.path.join(measures_dir, "BuildExistingModel")
-        bld_exist_model_args_avail = get_measure_arguments(
-            os.path.join(measure_path, "measure.xml")
-        )
+        bld_exist_model_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
 
         if "utility_bills" in workflow_args:
             utility_bills = workflow_args["utility_bills"]
@@ -346,9 +333,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             ]
             for arg, item in utility_bills_map:
                 if arg in bld_exist_model_args_avail:
-                    bld_exist_model_args[arg] = ",".join(
-                        [str(s.get(item, "")) for s in utility_bills]
-                    )
+                    bld_exist_model_args[arg] = ",".join([str(s.get(item, "")) for s in utility_bills])
 
         sim_out_rep_args = {
             "timeseries_frequency": "none",
@@ -371,9 +356,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         measures_dir = os.path.join(buildstock_dir, "resources/hpxml-measures")
         measure_path = os.path.join(measures_dir, "ReportSimulationOutput")
-        sim_out_rep_args_avail = get_measure_arguments(
-            os.path.join(measure_path, "measure.xml")
-        )
+        sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
 
         if "include_annual_total_consumptions" in sim_out_rep_args_avail:
             sim_out_rep_args["include_annual_total_consumptions"] = True
@@ -436,18 +419,14 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         if "output_variables" in sim_out_rep_args:
             output_variables = sim_out_rep_args["output_variables"]
-            sim_out_rep_args["user_output_variables"] = ",".join(
-                [str(s.get("name")) for s in output_variables]
-            )
+            sim_out_rep_args["user_output_variables"] = ",".join([str(s.get("name")) for s in output_variables])
             sim_out_rep_args.pop("output_variables")
 
         util_bills_rep_args = {}
 
         measures_dir = os.path.join(buildstock_dir, "resources/hpxml-measures")
         measure_path = os.path.join(measures_dir, "ReportUtilityBills")
-        util_bills_rep_args_avail = get_measure_arguments(
-            os.path.join(measure_path, "measure.xml")
-        )
+        util_bills_rep_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
 
         if "include_annual_bills" in util_bills_rep_args_avail:
             util_bills_rep_args["include_annual_bills"] = True
@@ -538,17 +517,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 "arguments": {"run_measure": 1},
             }
             if "upgrade_name" in measure_d:
-                apply_upgrade_measure["arguments"]["upgrade_name"] = measure_d[
-                    "upgrade_name"
-                ]
+                apply_upgrade_measure["arguments"]["upgrade_name"] = measure_d["upgrade_name"]
             for opt_num, option in enumerate(measure_d["options"], 1):
-                apply_upgrade_measure["arguments"][
-                    "option_{}".format(opt_num)
-                ] = option["option"]
+                apply_upgrade_measure["arguments"]["option_{}".format(opt_num)] = option["option"]
                 if "lifetime" in option:
-                    apply_upgrade_measure["arguments"][
-                        "option_{}_lifetime".format(opt_num)
-                    ] = option["lifetime"]
+                    apply_upgrade_measure["arguments"]["option_{}_lifetime".format(opt_num)] = option["lifetime"]
                 if "apply_logic" in option:
                     apply_upgrade_measure["arguments"][
                         "option_{}_apply_logic".format(opt_num)
@@ -561,13 +534,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                             "option_{}_cost_{}_{}".format(opt_num, cost_num, arg)
                         ] = cost[arg]
             if "package_apply_logic" in measure_d:
-                apply_upgrade_measure["arguments"][
-                    "package_apply_logic"
-                ] = self.make_apply_logic_arg(measure_d["package_apply_logic"])
+                apply_upgrade_measure["arguments"]["package_apply_logic"] = self.make_apply_logic_arg(
+                    measure_d["package_apply_logic"]
+                )
 
-            build_existing_model_idx = [
-                x["measure_dir_name"] == "BuildExistingModel" for x in osw["steps"]
-            ].index(True)
+            build_existing_model_idx = [x["measure_dir_name"] == "BuildExistingModel" for x in osw["steps"]].index(True)
             osw["steps"].insert(build_existing_model_idx + 1, apply_upgrade_measure)
 
         if "reporting_measures" in workflow_args:
@@ -575,8 +546,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 if "arguments" not in reporting_measure:
                     reporting_measure["arguments"] = {}
                 reporting_measure["measure_type"] = "ReportingMeasure"
-                osw["steps"].insert(
-                    -1, reporting_measure
-                )  # right before ServerDirectoryCleanup
+                osw["steps"].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
 
         return osw

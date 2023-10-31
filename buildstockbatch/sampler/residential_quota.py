@@ -49,10 +49,7 @@ class ResidentialQuotaSampler(BuildStockSampler):
             else:
                 raise ValidationError(f"Unknown argument for sampler: {k}")
         if len(expected_args) > 0:
-            raise ValidationError(
-                "The following sampler arguments are required: "
-                + ", ".join(expected_args)
-            )
+            raise ValidationError("The following sampler arguments are required: " + ", ".join(expected_args))
         return True
 
     def _run_sampling_docker(self):
@@ -74,9 +71,7 @@ class ResidentialQuotaSampler(BuildStockSampler):
                 "buildstock.csv",
             ],
             remove=True,
-            volumes={
-                self.buildstock_dir: {"bind": "/var/simdata/openstudio", "mode": "rw"}
-            },
+            volumes={self.buildstock_dir: {"bind": "/var/simdata/openstudio", "mode": "rw"}},
             name="buildstock_sampling",
             **extra_kws,
         )
