@@ -25,10 +25,15 @@ import pathlib
 import re
 import shutil
 
+from google.api_core import exceptions
 from google.cloud import batch_v1
+from google.cloud import compute_v1
+from google.cloud import storage
+from google.cloud import artifactregistry_v1
 
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.utils import ContainerRuntime, log_error_details
+from buildstockbatch.exc import ValidationError
+from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +83,7 @@ class GcpBatch(DockerBatchBase):
         self.ar_repo = self.cfg['gcp']['artifact_registry']['repository']
         self.gcs_bucket = self.cfg['gcp']['gcs']['bucket']
         self.gcs_prefix = self.cfg['gcp']['gcs']['prefix']
-        self.use_spot = self.cfg['gcp']['use_spot']
+        self.use_spot = self.cfg['gcp'].get('use_spot', False)
 
         # Add timestamp to job ID, since duplicates aren't allowed (even between finished and new jobs)
         # TODO: stop appending timestamp here - it's useful for testing, but we should probably
@@ -87,15 +92,43 @@ class GcpBatch(DockerBatchBase):
 
     @staticmethod
     def validate_gcp_args(project_file):
-        # TODO: validate GCP section of project definition, like region, machine type, etc
-        pass
+        cfg = get_project_configuration(project_file)
+        assert 'gcp' in cfg, 'Project config must contain a "gcp" section'
+        gcp_project = cfg['gcp']['project']
+
+        # Check that GCP region exists and is available for this project
+        region = cfg['gcp']['region']
+        regions_client = compute_v1.RegionsClient()
+        try:
+            regions_client.get(project=gcp_project, region=region)
+        except exceptions.NotFound:
+            raise ValidationError(
+                f'Region {region} is not available in project {gcp_project}. '
+                '(Region should be something like "us-central1" or "asia-east2")'
+            )
+
+        # Check that GCP bucket exists
+        bucket = cfg['gcp']['gcs']['bucket']
+        storage_client = storage.Client(project=gcp_project)
+        assert storage_client.bucket(bucket).exists(), f'GCS bucket {bucket} does not exist in project {gcp_project}'
+
+        # Check that artifact registry repository exists
+        repo = cfg['gcp']['artifact_registry']['repository']
+        ar_client = artifactregistry_v1.ArtifactRegistryClient()
+        repo_name = f'projects/{gcp_project}/locations/{region}/repositories/{repo}'
+        try:
+            ar_client.get_repository(name=repo_name)
+        except exceptions.NotFound:
+            raise ValidationError(
+                f'Artifact Registry repository {repo} does not exist in project {gcp_project} and region {region}'
+            )
 
     @staticmethod
     def validate_project(project_file):
-        return  # todo-xxx- to be (re)implemented
         super(GcpBatch, GcpBatch).validate_project(project_file)
-        GcpBatch.validate_dask_settings(project_file)
         GcpBatch.validate_gcp_args(project_file)
+        return  # todo-xxx- to be (re)implemented
+        GcpBatch.validate_dask_settings(project_file)
 
     @property
     def docker_image(self):

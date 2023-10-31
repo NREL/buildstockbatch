@@ -45,6 +45,9 @@ setuptools.setup(
         'awsretry',
         'lxml',
         'google-cloud-batch',
+        'google-cloud-compute',
+        'google-cloud-storage',
+        'google-cloud-artifact-registry',
     ],
     extras_require={
         'dev': [
