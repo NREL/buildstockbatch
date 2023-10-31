@@ -118,11 +118,11 @@ following properties:
      Multiple costs can be entered and each is multiplied by a cost multiplier, described below.
 
         - ``value``: A cost for the measure, which will be multiplied by the multiplier.
-        - ``multiplier``: The cost above is multiplied by this value, which is a function of the buiding.
+        - ``multiplier``: The cost above is multiplied by this value, which is a function of the building.
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
-          `this enumeration list inthe resstock or comstock repo <https://github.com/NREL/resstock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
+          `this enumeration list in the resstock or comstock repo <https://github.com/NREL/resstock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
           or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
@@ -176,7 +176,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 .. note::
 
    Many of these options overlap with options specified in the
-   :ref:`postprocessing` section. The options here take pecedence when running
+   :ref:`postprocessing` section. The options here take precedence when running
    on AWS. In a future version we will break backwards compatibility in the
    config file and have more consistent options.
 
@@ -222,8 +222,36 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
 GCP Configuration
 ~~~~~~~~~~~~~~~~~
-TODO: Add GCP configuration details
+The top-level ``gcp`` key is used to specify options for running the batch job
+on the `GCP Batch <https://cloud.google.com/batch>`_ service.
 
+.. note::
+    When BuildStockBatch is run on GCP, it will only save results to GCP Cloud Storage (using the
+    ``gcs`` configuration below); i.e., it currently cannot save to AWS S3 and Athena. Likewise,
+    buildstock run locally, on Eagle, or on AWS cannot save to GCP.
+
+*  ``job_identifier``: A unique string that starts with an alphabetical character,
+   is up to 10 characters long, and only has letters, numbers or underscore.
+   This is used to name all the GCP service objects to be created and
+   differentiate it from other jobs.
+*  ``project``: The GCP Project ID in which the batch will be run and of the Artifact Registry
+   (where Docker images are stored).
+*  ``gcs``: Configuration for project data storage on GCP Cloud Storage.
+
+    *  ``bucket``: The Cloud Storage bucket this project will use for simulation output and
+       processed data storage.
+    *  ``prefix``: The Cloud Storage prefix at which the data will be stored.
+
+*  ``region``: The GCP region in which the batch will be run and of the Artifact Registry.
+*  ``use_spot``: true or false. Defaults to false if missing. This tells the project
+   to use `Spot VMs <https://cloud.google.com/spot-vms>`_ for data
+   simulations, which can reduce costs by up to 91%.
+*  ``batch_array_size``: Number of concurrent simulations to run. Max: 10000.
+*  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry
+
+    * ``repository``: The name of the GCP Artifact Repository in which Docker images are stored.
+      This will be combined with the ``project`` and ``region`` to build the full URL to the
+      repository.
 
 .. _postprocessing:
 

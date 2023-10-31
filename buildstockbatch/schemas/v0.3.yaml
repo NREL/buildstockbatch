@@ -24,7 +24,8 @@ gcp-spec:
   region: str(required=True)
   artifact_registry: include('gcp-ar-spec', required=True)
   batch_array_size: num(min=1, max=10000, required=True)
-  notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', name='email', required=True)
+  # TODO: notifications_email is not yet used/supported. Also update project_defn when it is.
+  # notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', name='email', required=True)
   gcs: include('gcs-spec', required=True)
   use_spot: bool(required=False)
 

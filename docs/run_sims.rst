@@ -120,10 +120,11 @@ tool.
 .. command-output:: buildstock_gcp --help
    :ellipsis: 0,8
 
+The first time you run ``buildstock_gcp`` it may take several minutes,
+especially over a slower internet connection as it is downloading and building a docker image.
+
 GCP Specific Project configuration
 ..................................
-
-TODO: add more GCP configuration details here
 
 For the project to run on GCP, you will need to add a section to your config
 file, something like this:
@@ -132,7 +133,7 @@ file, something like this:
 
     gcp:
       job_identifier: national01
-      gcp_project: myorg_project
+      project: myorg_project
       region: us-central1
       artifact_registry: buildstockbatch
       gcs:
