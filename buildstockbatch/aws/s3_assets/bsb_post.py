@@ -53,13 +53,9 @@ def do_postprocessing(s3_bucket, s3_bucket_prefix):
         tbl_prefix = s3_bucket_prefix.split("/")[-1]
         if not tbl_prefix:
             tbl_prefix = cfg["aws"]["job_identifier"]
-        create_athena_tables(
-            aws_conf, tbl_prefix, s3_bucket, f"{s3_bucket_prefix}/results/parquet"
-        )
+        create_athena_tables(aws_conf, tbl_prefix, s3_bucket, f"{s3_bucket_prefix}/results/parquet")
 
-    keep_individual_timeseries = cfg.get("postprocessing", {}).get(
-        "keep_individual_timeseries", False
-    )
+    keep_individual_timeseries = cfg.get("postprocessing", {}).get("keep_individual_timeseries", False)
     remove_intermediate_files(fs, results_s3_loc, keep_individual_timeseries)
 
 

@@ -64,9 +64,7 @@ class AWSIAMHelper:
                 p_counter = p_counter + 1
 
             for managed_policy_arn in managed_policie_arns:
-                response = self.iam.attach_role_policy(
-                    PolicyArn=managed_policy_arn, RoleName=role_name
-                )
+                response = self.iam.attach_role_policy(PolicyArn=managed_policy_arn, RoleName=role_name)
 
             logger.info(f"Role {role_name} created")
 
@@ -97,9 +95,7 @@ class AWSIAMHelper:
             response = self.iam.list_attached_role_policies(RoleName=role_name)
 
             for policy in response["AttachedPolicies"]:
-                self.iam.detach_role_policy(
-                    RoleName=role_name, PolicyArn=policy["PolicyArn"]
-                )
+                self.iam.detach_role_policy(RoleName=role_name, PolicyArn=policy["PolicyArn"])
 
             logger.info(f"Policies detached from role {role_name}.")
 
@@ -117,17 +113,13 @@ class AWSIAMHelper:
             logger.info(f"Instance profile {instance_profile_name} deleted.")
         except Exception as e:
             if "NoSuchEntity" in str(e):
-                logger.info(
-                    f"Instance profile {instance_profile_name} missing, skipping..."
-                )
+                logger.info(f"Instance profile {instance_profile_name} missing, skipping...")
             else:
                 raise
 
     def remove_role_from_instance_profile(self, instance_profile_name):
         try:
-            response = self.iam.get_instance_profile(
-                InstanceProfileName=instance_profile_name
-            )
+            response = self.iam.get_instance_profile(InstanceProfileName=instance_profile_name)
 
             for role in response["InstanceProfile"]["Roles"]:
                 response = self.iam.remove_role_from_instance_profile(
@@ -136,9 +128,7 @@ class AWSIAMHelper:
             logger.info(f"Roles removed from instance profile {instance_profile_name}")
         except Exception as e:
             if "NoSuchEntity" in str(e):
-                logger.info(
-                    f"Instance profile {instance_profile_name} does not exist. Skipping..."
-                )
+                logger.info(f"Instance profile {instance_profile_name} does not exist. Skipping...")
             else:
                 raise
 
@@ -161,26 +151,16 @@ class AwsJobBase:
         self.s3_bucket = aws_config["s3"]["bucket"]
         self.s3_bucket_arn = f"arn:aws:s3:::{self.s3_bucket}"
         self.s3_bucket_prefix = aws_config["s3"]["prefix"].rstrip("/")
-        self.s3_lambda_code_emr_cluster_key = (
-            f"{self.s3_bucket_prefix}/lambda_functions/emr_function.py.zip"
-        )
-        self.s3_lambda_emr_config_key = (
-            f"{self.s3_bucket_prefix}/lambda_functions/emr_config.json"
-        )
+        self.s3_lambda_code_emr_cluster_key = f"{self.s3_bucket_prefix}/lambda_functions/emr_function.py.zip"
+        self.s3_lambda_emr_config_key = f"{self.s3_bucket_prefix}/lambda_functions/emr_config.json"
         self.s3_emr_folder_name = "emr"
 
         # EMR
         emr_config = aws_config.get("emr", {})
-        self.emr_manager_instance_type = emr_config.get(
-            "manager_instance_type", "m5.4xlarge"
-        )
-        self.emr_worker_instance_type = emr_config.get(
-            "worker_instance_type", "r5.4xlarge"
-        )
+        self.emr_manager_instance_type = emr_config.get("manager_instance_type", "m5.4xlarge")
+        self.emr_worker_instance_type = emr_config.get("worker_instance_type", "r5.4xlarge")
         self.emr_worker_instance_count = emr_config.get("worker_instance_count", 4)
-        self.emr_cluster_security_group_name = (
-            f"{self.job_identifier}_emr_security_group"
-        )
+        self.emr_cluster_security_group_name = f"{self.job_identifier}_emr_security_group"
         self.emr_cluster_name = f"{self.job_identifier}_emr_dask_cluster"
         self.emr_job_flow_role_name = f"{self.job_identifier}_emr_job_flow_role"
         self.emr_job_flow_role_arn = ""
@@ -191,12 +171,8 @@ class AwsJobBase:
         self.emr_instance_profile_name = f"{self.job_identifier}_emr_instance_profile"
 
         # Lambda
-        self.lambda_emr_job_step_execution_role = (
-            f"{self.job_identifier}_emr_job_step_execution_role"
-        )
-        self.lambda_emr_job_step_function_name = (
-            f"{self.job_identifier}_emr_job_step_submission"
-        )
+        self.lambda_emr_job_step_execution_role = f"{self.job_identifier}_emr_job_step_execution_role"
+        self.lambda_emr_job_step_function_name = f"{self.job_identifier}_emr_job_step_submission"
         self.lambda_emr_job_step_execution_role_arn = ""
 
         # Batch
@@ -205,9 +181,7 @@ class AwsJobBase:
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
         self.batch_service_role_name = f"batch_service_role_{self.job_identifier}"
         self.batch_instance_role_name = f"batch_instance_role_{self.job_identifier}"
-        self.batch_instance_profile_name = (
-            f"batch_instance_profile_{self.job_identifier}"
-        )
+        self.batch_instance_profile_name = f"batch_instance_profile_{self.job_identifier}"
         self.batch_spot_service_role_name = f"spot_fleet_role_{self.job_identifier}"
         self.batch_ecs_task_role_name = f"ecs_task_role_{self.job_identifier}"
         self.batch_task_policy_name = f"ecs_task_policy_{self.job_identifier}"
@@ -219,9 +193,7 @@ class AwsJobBase:
         self.state_machine_role_name = f"{self.job_identifier}_state_machine_role"
 
         # SNS
-        self.sns_state_machine_topic = (
-            f"{self.job_identifier}_state_machine_notifications"
-        )
+        self.sns_state_machine_topic = f"{self.job_identifier}_state_machine_notifications"
 
         # VPC
         self.vpc_name = self.job_identifier

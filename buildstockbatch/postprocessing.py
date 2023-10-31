@@ -132,9 +132,7 @@ def read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, buildin
     :return: dpout [dict]
     """
 
-    dpout = read_data_point_out_json(
-        fs, reporting_measures, f"{sim_dir}/run/data_point_out.json"
-    )
+    dpout = read_data_point_out_json(fs, reporting_measures, f"{sim_dir}/run/data_point_out.json")
     if dpout is None:
         dpout = {}
     else:
@@ -167,16 +165,9 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     for col in ("started_at", "completed_at"):
         if col in results_df.columns:
             results_df[col] = results_df[col].map(
-                lambda x: dt.datetime.strptime(x, "%Y%m%dT%H%M%SZ")
-                if isinstance(x, str)
-                else x
+                lambda x: dt.datetime.strptime(x, "%Y%m%dT%H%M%SZ") if isinstance(x, str) else x
             )
-    reference_scenarios = dict(
-        [
-            (i, x.get("reference_scenario"))
-            for i, x in enumerate(cfg.get("upgrades", []), 1)
-        ]
-    )
+    reference_scenarios = dict([(i, x.get("reference_scenario")) for i, x in enumerate(cfg.get("upgrades", []), 1)])
     results_df["apply_upgrade.reference_scenario"] = (
         results_df["upgrade"].map(reference_scenarios).fillna("").astype(str)
     )
@@ -196,26 +187,10 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     if "job_id" in results_df.columns:
         first_few_cols.insert(2, "job_id")
 
-    build_existing_model_cols = sorted(
-        [col for col in results_df.columns if col.startswith("build_existing_model")]
-    )
-    sim_output_report_cols = sorted(
-        [
-            col
-            for col in results_df.columns
-            if col.startswith("simulation_output_report")
-        ]
-    )
-    report_sim_output_cols = sorted(
-        [
-            col
-            for col in results_df.columns
-            if col.startswith("report_simulation_output")
-        ]
-    )
-    upgrade_costs_cols = sorted(
-        [col for col in results_df.columns if col.startswith("upgrade_costs")]
-    )
+    build_existing_model_cols = sorted([col for col in results_df.columns if col.startswith("build_existing_model")])
+    sim_output_report_cols = sorted([col for col in results_df.columns if col.startswith("simulation_output_report")])
+    report_sim_output_cols = sorted([col for col in results_df.columns if col.startswith("report_simulation_output")])
+    upgrade_costs_cols = sorted([col for col in results_df.columns if col.startswith("upgrade_costs")])
     sorted_cols = (
         first_few_cols
         + build_existing_model_cols
@@ -281,9 +256,7 @@ def read_enduse_timeseries_parquet(fs, all_cols, src_path, bldg_id):
     return df
 
 
-def concat_and_normalize(
-    fs, all_cols, src_path, dst_path, partition_columns, indx, bldg_ids, partition_vals
-):
+def concat_and_normalize(fs, all_cols, src_path, dst_path, partition_columns, indx, bldg_ids, partition_vals):
     dfs = []
     for bldg_id in sorted(bldg_ids):
         df = read_enduse_timeseries_parquet(fs, all_cols, src_path, bldg_id)
@@ -357,22 +330,12 @@ def get_partitioned_bldg_groups(partition_df, partition_columns, files_per_parti
     """
     total_building = len(partition_df)
     if partition_columns:
-        bldg_id_list_df = (
-            partition_df.reset_index()
-            .groupby(partition_columns)["building_id"]
-            .apply(list)
-        )
+        bldg_id_list_df = partition_df.reset_index().groupby(partition_columns)["building_id"].apply(list)
         ngroups = len(bldg_id_list_df)
         bldg_id_list = bldg_id_list_df.sum()
-        nfiles_in_each_group = [
-            nfiles for nfiles in bldg_id_list_df.map(lambda x: len(x))
-        ]
-        files_groups = [
-            split_into_groups(n, files_per_partition) for n in nfiles_in_each_group
-        ]
-        flat_groups = [
-            n for group in files_groups for n in group
-        ]  # flatten list of list into a list (maintain order)
+        nfiles_in_each_group = [nfiles for nfiles in bldg_id_list_df.map(lambda x: len(x))]
+        files_groups = [split_into_groups(n, files_per_partition) for n in nfiles_in_each_group]
+        flat_groups = [n for group in files_groups for n in group]  # flatten list of list into a list (maintain order)
     else:
         # no partitioning by a column. Just put buildings into groups of files_per_partition
         ngroups = 1
@@ -412,9 +375,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     concat_files = fs.glob(glob_str)
     logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
     parquet_root_dir = Path(parquet_root_dir).as_posix()
-    create_metadata_file(
-        concat_files, root_dir=parquet_root_dir, engine="pyarrow", fs=fs
-    )
+    create_metadata_file(concat_files, root_dir=parquet_root_dir, engine="pyarrow", fs=fs)
     logger.info(f"_metadata file written to {parquet_root_dir}")
 
 
@@ -448,9 +409,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     if not results_json_files:
         raise ValueError("No simulation results found to post-process.")
 
-    logger.info(
-        "Collecting all the columns and datatypes in results_job*.json.gz parquet files."
-    )
+    logger.info("Collecting all the columns and datatypes in results_job*.json.gz parquet files.")
     all_schema_dict = (
         db.from_sequence(results_json_files)
         .map(partial(get_schema_dict, fs))
@@ -459,13 +418,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     )
     logger.info(f"Got {len(all_schema_dict)} columns")
     all_results_cols = list(all_schema_dict.keys())
-    all_schema_dict = {
-        to_camelcase(key): value for key, value in all_schema_dict.items()
-    }
+    all_schema_dict = {to_camelcase(key): value for key, value in all_schema_dict.items()}
     logger.info(f"Got this schema: {all_schema_dict}\n")
     delayed_results_dfs = [
-        dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x)
-        for x in results_json_files
+        dask.delayed(partial(read_results_json, fs, all_cols=all_results_cols))(x) for x in results_json_files
     ]
     results_df = dd.from_delayed(delayed_results_dfs, verify_meta=False)
 
@@ -478,25 +434,15 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             ts_filenames = fs.ls(upgrade_folder)
             if ts_filenames:
                 do_timeseries = True
-                logger.info(
-                    f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}."
-                )
+                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
                 files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= (
-                    files_bag.map(partial(get_cols, fs))
-                    .fold(lambda x, y: x.union(y))
-                    .compute()
-                )
+                all_ts_cols |= files_bag.map(partial(get_cols, fs)).fold(lambda x, y: x.union(y)).compute()
                 logger.info("Collected all the columns")
             else:
-                logger.info(
-                    f"There are no timeseries files for upgrade {Path(upgrade_folder).name}."
-                )
+                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
         # Sort the columns
-        all_ts_cols_sorted = ["building_id"] + sorted(
-            x for x in all_ts_cols if x.startswith("time")
-        )
+        all_ts_cols_sorted = ["building_id"] + sorted(x for x in all_ts_cols if x.startswith("time"))
         all_ts_cols.difference_update(all_ts_cols_sorted)
         all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith("]")))
         all_ts_cols.difference_update(all_ts_cols_sorted)
@@ -513,9 +459,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     df_partition_columns = [f"build_existing_model.{c}" for c in partition_columns]
     missing_cols = set(df_partition_columns) - set(all_schema_dict.keys())
     if missing_cols:
-        raise ValueError(
-            f"The following partitioning columns are not found in results.json: {missing_cols}"
-        )
+        raise ValueError(f"The following partitioning columns are not found in results.json: {missing_cols}")
     if partition_columns:
         logger.info(f"The timeseries files will be partitioned by {partition_columns}.")
 
@@ -532,16 +476,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         schema = None
         partition_df = df[df_partition_columns].copy()
         partition_df.rename(
-            columns={
-                df_c: c for df_c, c in zip(df_partition_columns, partition_columns)
-            },
+            columns={df_c: c for df_c, c in zip(df_partition_columns, partition_columns)},
             inplace=True,
         )
         if upgrade_id > 0:
             # Remove building characteristics for upgrade scenarios.
-            cols_to_keep = list(
-                filter(lambda x: not x.startswith("build_existing_model."), df.columns)
-            )
+            cols_to_keep = list(filter(lambda x: not x.startswith("build_existing_model."), df.columns))
             df = df[cols_to_keep]
             null_cols = get_null_cols(df)
             # If certain column datatype is null (happens when it doesn't have any data), the datatype
@@ -550,13 +490,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 logger.info(f"Upgrade {upgrade_id} has null cols: {null_cols}")
                 schema, unresolved = correct_schema(all_schema_dict, df)
                 if unresolved:
-                    logger.info(
-                        f"The types for {unresolved} columns couldn't be determined."
-                    )
+                    logger.info(f"The types for {unresolved} columns couldn't be determined.")
                 else:
-                    logger.info(
-                        "All columns were successfully assigned a datatype based on other upgrades."
-                    )
+                    logger.info("All columns were successfully assigned a datatype based on other upgrades.")
         # Write CSV
         csv_filename = f"{results_csvs_dir}/results_up{upgrade_id:02d}.csv.gz"
         logger.info(f"Writing {csv_filename}")
@@ -573,53 +509,30 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         fs.makedirs(results_parquet_dir)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         logger.info(f"Writing {parquet_filename}")
-        write_dataframe_as_parquet(
-            df.reset_index(), fs, parquet_filename, schema=schema
-        )
+        write_dataframe_as_parquet(df.reset_index(), fs, parquet_filename, schema=schema)
 
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
             ts_upgrade_path = f"{ts_in_dir}/up{upgrade_id:02d}"
-            ts_filenames = [
-                ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)
-            ]
-            ts_bldg_ids = [
-                int(re.search(r"bldg(\d+).parquet", flname).group(1))
-                for flname in ts_filenames
-            ]
+            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            ts_bldg_ids = [int(re.search(r"bldg(\d+).parquet", flname).group(1)) for flname in ts_filenames]
             if not ts_filenames:
-                logger.warning(
-                    f"There are no timeseries files for upgrade{upgrade_id}."
-                )
+                logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
                 continue
-            logger.info(
-                f"There are {len(ts_filenames)} timeseries files for upgrade{upgrade_id}."
-            )
+            logger.info(f"There are {len(ts_filenames)} timeseries files for upgrade{upgrade_id}.")
 
             # Calculate the mean and estimate the total memory usage
-            read_ts_parquet = partial(
-                read_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_upgrade_path
-            )
-            get_ts_mem_usage_d = dask.delayed(
-                lambda x: read_ts_parquet(x).memory_usage(deep=True).sum()
-            )
+            read_ts_parquet = partial(read_enduse_timeseries_parquet, fs, all_ts_cols_sorted, ts_upgrade_path)
+            get_ts_mem_usage_d = dask.delayed(lambda x: read_ts_parquet(x).memory_usage(deep=True).sum())
             sample_size = min(len(ts_bldg_ids), 36 * 3)
-            mean_mem = np.mean(
-                dask.compute(
-                    map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size))
-                )[0]
-            )
+            mean_mem = np.mean(dask.compute(map(get_ts_mem_usage_d, random.sample(ts_bldg_ids, sample_size)))[0])
 
             # Determine how many files should be in each partition and group the files
             parquet_memory = int(
-                cfg.get("eagle", {})
-                .get("postprocessing", {})
-                .get("parquet_memory_mb", MAX_PARQUET_MEMORY)
+                cfg.get("eagle", {}).get("postprocessing", {}).get("parquet_memory_mb", MAX_PARQUET_MEMORY)
             )
             logger.info(f"Max parquet memory: {parquet_memory} MB")
-            max_files_per_partition = max(
-                1, math.floor(parquet_memory / (mean_mem / 1e6))
-            )
+            max_files_per_partition = max(1, math.floor(parquet_memory / (mean_mem / 1e6)))
             partition_df = partition_df.loc[ts_bldg_ids].copy()
             logger.info(f"partition_df for the upgrade has {len(partition_df)} rows.")
             bldg_id_groups, bldg_id_list, ngroup = get_partitioned_bldg_groups(
@@ -638,9 +551,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
             fs.makedirs(ts_out_loc)
-            logger.info(
-                f"Created directory {ts_out_loc} for writing. Now concatenating ..."
-            )
+            logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
 
             src_path = f"{ts_in_dir}/up{upgrade_id:02d}/"
             concat_partial = dask.delayed(
@@ -654,9 +565,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 )
             )
             partition_vals_list = [
-                list(partition_df.loc[bldg_id_list[0]].values)
-                if partition_columns
-                else []
+                list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else []
                 for bldg_id_list in bldg_id_groups
             ]
 
@@ -676,9 +585,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                         f"{results_dir}/dask_combine_report{upgrade_id}.html",
                     )
 
-            logger.info(
-                f"Finished combining and saving timeseries for upgrade{upgrade_id}."
-            )
+            logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
     logger.info("All aggregation completed. ")
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
@@ -704,9 +611,7 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
     parquet_dir = Path(results_dir).joinpath("parquet")
     ts_dir = parquet_dir / "timeseries"
     if not parquet_dir.is_dir():
-        logger.error(
-            f"{parquet_dir} does not exist. Please make sure postprocessing has been done."
-        )
+        logger.error(f"{parquet_dir} does not exist. Please make sure postprocessing has been done.")
         raise FileNotFoundError(parquet_dir)
 
     all_files = []
@@ -718,9 +623,7 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
     s3_prefix = aws_conf.get("s3", {}).get("prefix", "").rstrip("/")
     s3_bucket = aws_conf.get("s3", {}).get("bucket", None)
     if not (s3_prefix and s3_bucket):
-        logger.error(
-            "YAML file missing postprocessing:aws:s3:prefix and/or bucket entry."
-        )
+        logger.error("YAML file missing postprocessing:aws:s3:prefix and/or bucket entry.")
         return
     s3_prefix_output = s3_prefix + "/" + output_folder_name + "/"
 
@@ -728,15 +631,11 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
     bucket = s3.Bucket(s3_bucket)
     n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix_output)))
     if n_existing_files > 0:
-        logger.error(
-            f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}."
-        )
+        logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
         raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix_output}")
 
     def upload_file(filepath, s3key=None):
-        full_path = (
-            filepath if filepath.is_absolute() else parquet_dir.joinpath(filepath)
-        )
+        full_path = filepath if filepath.is_absolute() else parquet_dir.joinpath(filepath)
         s3 = boto3.resource("s3")
         bucket = s3.Bucket(s3_bucket)
         if s3key is None:
@@ -756,9 +655,7 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
         else:
             logger.warning(f"{buildstock_csv_filename} doesn't exist, can't upload.")
     dask.compute(tasks)
-    logger.info(
-        f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}"
-    )
+    logger.info(f"Upload to S3 completed. The files are uploaded to: {s3_bucket}/{s3_prefix_output}")
     return s3_bucket, s3_prefix_output
 
 
@@ -767,9 +664,7 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
 
     region_name = aws_conf.get("region_name", "us-west-2")
     db_name = aws_conf.get("athena", {}).get("database_name", None)
-    role = aws_conf.get("athena", {}).get(
-        "glue_service_role", "service-role/AWSGlueServiceRole-default"
-    )
+    role = aws_conf.get("athena", {}).get("glue_service_role", "service-role/AWSGlueServiceRole-default")
     max_crawling_time = aws_conf.get("athena", {}).get("max_crawling_time", 600)
     assert db_name, "athena:database_name not supplied"
 
@@ -779,17 +674,11 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     s3_path = f"s3://{s3_bucket}/{s3_prefix}"
     n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix)))
     if n_existing_files == 0:
-        logger.warning(
-            f"There are no files in {s3_path}, Athena tables will not be created as intended"
-        )
+        logger.warning(f"There are no files in {s3_path}, Athena tables will not be created as intended")
         return
 
     glueClient = boto3.client("glue", region_name=region_name)
-    crawlTarget = {
-        "S3Targets": [
-            {"Path": s3_path, "Exclusions": ["**_metadata", "**_common_metadata"]}
-        ]
-    }
+    crawlTarget = {"S3Targets": [{"Path": s3_path, "Exclusions": ["**_metadata", "**_common_metadata"]}]}
     crawler_name = db_name + "_" + tbl_prefix
     tbl_prefix = tbl_prefix + "_"
 
@@ -807,26 +696,18 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     except glueClient.exceptions.AlreadyExistsException:
         logger.info(f"Deleting existing crawler: {crawler_name}. And creating new one.")
         glueClient.delete_crawler(Name=crawler_name)
-        time.sleep(
-            1
-        )  # A small delay after deleting is required to prevent AlreadyExistsException again
+        time.sleep(1)  # A small delay after deleting is required to prevent AlreadyExistsException again
         create_crawler()
 
     try:
-        existing_tables = [
-            x["Name"] for x in glueClient.get_tables(DatabaseName=db_name)["TableList"]
-        ]
+        existing_tables = [x["Name"] for x in glueClient.get_tables(DatabaseName=db_name)["TableList"]]
     except glueClient.exceptions.EntityNotFoundException:
         existing_tables = []
 
     to_be_deleted_tables = [x for x in existing_tables if x.startswith(tbl_prefix)]
     if to_be_deleted_tables:
-        logger.info(
-            f"Deleting existing tables in db {db_name}: {to_be_deleted_tables}. And creating new ones."
-        )
-        glueClient.batch_delete_table(
-            DatabaseName=db_name, TablesToDelete=to_be_deleted_tables
-        )
+        logger.info(f"Deleting existing tables in db {db_name}: {to_be_deleted_tables}. And creating new ones.")
+        glueClient.batch_delete_table(DatabaseName=db_name, TablesToDelete=to_be_deleted_tables)
 
     glueClient.start_crawler(Name=crawler_name)
     logger.info("Crawler started")
@@ -834,9 +715,7 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
     t = time.time()
     while time.time() - t < (3 * max_crawling_time):
         crawler_state = glueClient.get_crawler(Name=crawler_name)["Crawler"]["State"]
-        metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])[
-            "CrawlerMetricsList"
-        ][0]
+        metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])["CrawlerMetricsList"][0]
         if is_crawler_running and crawler_state != "RUNNING":
             is_crawler_running = False
             logger.info(f"Crawler has completed running. It is {crawler_state}.")

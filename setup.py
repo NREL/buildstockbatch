@@ -8,9 +8,7 @@ import setuptools
 here = os.path.abspath(os.path.dirname(__file__))
 metadata = {}
 
-with open(
-    os.path.join(here, "buildstockbatch", "__version__.py"), "r", encoding="utf-8"
-) as f:
+with open(os.path.join(here, "buildstockbatch", "__version__.py"), "r", encoding="utf-8") as f:
     exec(f.read(), metadata)
 
 with open("README.md", "r", "utf-8") as f:
@@ -58,6 +56,7 @@ setuptools.setup(
             "sphinx_paramlinks",
             "changelog",
             "flake8",
+            "black",
             "rope",
             "doc8",
             "pre-commit",

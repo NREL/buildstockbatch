@@ -42,11 +42,7 @@ class DownselectSamplerBase(BuildStockSampler):
         """
         super().__init__(parent)
         self.validate_args(
-            self.parent().project_filename,
-            n_datapoints=n_datapoints,
-            logic=logic,
-            resample=resample,
-            **kw
+            self.parent().project_filename, n_datapoints=n_datapoints, logic=logic, resample=resample, **kw
         )
         self.logic = logic
         self.resample = resample
@@ -69,10 +65,7 @@ class DownselectSamplerBase(BuildStockSampler):
             else:
                 extra_kw[k] = v
         if len(expected_args) > 0:
-            raise ValidationError(
-                "The following sampler arguments are required: "
-                + ", ".join(expected_args)
-            )
+            raise ValidationError("The following sampler arguments are required: " + ", ".join(expected_args))
         cls.SUB_SAMPLER_CLASS.validate_args(project_filename, **extra_kw)
         return True
 
@@ -105,31 +98,21 @@ class DownselectSamplerBase(BuildStockSampler):
 
     def run_sampling(self):
         if self.resample:
-            logger.debug(
-                "Performing initial sampling to figure out number of samples for downselect"
-            )
+            logger.debug("Performing initial sampling to figure out number of samples for downselect")
             n_samples_init = 350000
-            init_sampler = self.SUB_SAMPLER_CLASS(
-                self.parent(), n_datapoints=n_samples_init, **self.sub_kw
-            )
+            init_sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_samples_init, **self.sub_kw)
             buildstock_csv_filename = init_sampler.run_sampling()
             df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
             df_new = df[self.downselect_logic(df, self.logic)]
             downselected_n_samples_init = df_new.shape[0]
-            n_samples = math.ceil(
-                self.n_datapoints * n_samples_init / downselected_n_samples_init
-            )
+            n_samples = math.ceil(self.n_datapoints * n_samples_init / downselected_n_samples_init)
             os.remove(buildstock_csv_filename)
             del init_sampler
         else:
             n_samples = self.n_datapoints
-        sampler = self.SUB_SAMPLER_CLASS(
-            self.parent(), n_datapoints=n_samples, **self.sub_kw
-        )
+        sampler = self.SUB_SAMPLER_CLASS(self.parent(), n_datapoints=n_samples, **self.sub_kw)
         buildstock_csv_filename = sampler.run_sampling()
-        with gzip.open(
-            os.path.splitext(buildstock_csv_filename)[0] + "_orig.csv.gz", "wb"
-        ) as f_out:
+        with gzip.open(os.path.splitext(buildstock_csv_filename)[0] + "_orig.csv.gz", "wb") as f_out:
             with open(buildstock_csv_filename, "rb") as f_in:
                 shutil.copyfileobj(f_in, f_out)
         df = read_csv(buildstock_csv_filename, index_col=0, dtype="str")
