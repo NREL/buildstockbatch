@@ -11,29 +11,46 @@ code later. Also, because that branch has not yet been merged, this will also _n
 refactoring right now to share code with that (to reduce merging complexity). Instead, code that's
 likely to be refactored out will be commented with 'todo: aws-shared'.
 
-:author: Robert LaThanh
+:author: Robert LaThanh, Natalie Weires
 :copyright: (c) 2023 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
 import argparse
+import collections
+import csv
 from datetime import datetime
 import docker
+from fsspec.implementations.local import LocalFileSystem
+import gcsfs
+import gzip
+import hashlib
+from joblib import Parallel, delayed
 import json
+import io
+import itertools
 import logging
+import math
 import os
 import pathlib
+import random
 import re
 import shutil
+import subprocess
+import tarfile
+import tempfile
+import time
 
 from google.api_core import exceptions
-from google.cloud import batch_v1
-from google.cloud import compute_v1
-from google.cloud import storage
 from google.cloud import artifactregistry_v1
+from google.cloud import batch_v1, storage
+from google.cloud.storage import transfer_manager
+from google.cloud import compute_v1
 
+from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.exc import ValidationError
-from buildstockbatch.utils import ContainerRuntime, log_error_details, get_project_configuration
+from buildstockbatch.utils import ContainerRuntime, get_project_configuration, log_error_details, read_csv
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +78,50 @@ class DockerBatchBase(BuildStockBatchBase):
         return f"nrel/openstudio:{self.os_version}"
 
 
+def upload_directory_to_GCS(local_directory, bucket, prefix):
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket)
+
+    local_dir_abs = pathlib.Path(local_directory).absolute()
+
+    string_paths = []
+    for dirpath, dirnames, filenames in os.walk(local_dir_abs):
+        for filename in filenames:
+            if filename.startswith('.'):
+                continue
+            local_filepath = pathlib.Path(dirpath, filename)
+            string_paths.append(str(local_filepath.relative_to(local_dir_abs)))
+
+    transfer_manager.upload_many_from_filenames(
+        bucket,
+        string_paths,
+        source_directory=local_dir_abs,
+        blob_name_prefix=prefix,
+        raise_exception=True,
+    )
+
+
+# todo: aws-shared (see file comment)
+def compress_file(in_filename, out_filename):
+    with gzip.open(str(out_filename), 'wb') as f_out:
+        with open(str(in_filename), 'rb') as f_in:
+            shutil.copyfileobj(f_in, f_out)
+
+
+# todo: aws-shared (see file comment)
+def calc_hash_for_file(filename):
+    with open(filename, 'rb') as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
+def copy_GCS_file(src_bucket, src_name, dest_bucket, dest_name):
+    storage_client = storage.Client()
+    source_bucket = storage_client.bucket(src_bucket)
+    source_blob = source_bucket.blob(src_name)
+    destination_bucket = storage_client.bucket(dest_bucket)
+    source_bucket.copy_blob(source_blob, destination_bucket, dest_name)
+
+
 class GcpBatch(DockerBatchBase):
     # https://patorjk.com/software/taag/#p=display&f=Santa%20Clara&t=BuildStockBatch%20%20%2F%20GCP
     LOGO = '''
@@ -83,6 +144,7 @@ class GcpBatch(DockerBatchBase):
         self.ar_repo = self.cfg['gcp']['artifact_registry']['repository']
         self.gcs_bucket = self.cfg['gcp']['gcs']['bucket']
         self.gcs_prefix = self.cfg['gcp']['gcs']['prefix']
+        self.batch_array_size = self.cfg['gcp']['batch_array_size']
         self.use_spot = self.cfg['gcp'].get('use_spot', False)
 
         # Add timestamp to job ID, since duplicates aren't allowed (even between finished and new jobs)
@@ -133,6 +195,11 @@ class GcpBatch(DockerBatchBase):
     @property
     def docker_image(self):
         return 'nrel/buildstockbatch'
+
+    # todo: aws-shared (see file comment)
+    @property
+    def weather_dir(self):
+        return self._weather_dir
 
     @property
     def registry_url(self):
@@ -284,14 +351,14 @@ class GcpBatch(DockerBatchBase):
         request.parent = f'projects/{self.gcp_project}/locations/{self.region}'
         request.filter = f'name:{request.parent}/jobs/{self.job_identifier}'
         request.order_by = 'create_time desc'
-        logger.info(f'Showing existing jobs that match: {request.filter}\n')
+        request.page_size = 10
+        logger.info(f'Showing the first 10 existing jobs that match: {request.filter}\n')
         response = client.list_jobs(request)
         for job in response.jobs:
             logger.debug(job)
-
             logger.info(f'Name: {job.name}')
-            logger.info(f'UID: {job.uid}')
-            logger.info(f'Status: {str(job.status.state)}')
+            logger.info(f'  UID: {job.uid}')
+            logger.info(f'  Status: {job.status.state.name}')
 
     def run_batch(self):
         """
@@ -303,65 +370,164 @@ class GcpBatch(DockerBatchBase):
             - kick off a batch simulation on GCP
         """
         # Step 1: Run sampling and split up buildings into batches.
-        # TDOO: Generate buildstock.csv
-        # buildstock_csv_filename = self.sampler.run_sampling()
+        buildstock_csv_filename = self.sampler.run_sampling()
 
-        # TODO: Step 2: Upload weather data and any other required files to GCP
-        # TODO: split samples into smaller batches to be run by individual tasks (reuse logic from aws.py)
+        # Step 2: Compress and upload weather data and any other required files to GCP
+        # todo: aws-shared (see file comment)
+        logger.info('Collecting and uploading input files')
+        with tempfile.TemporaryDirectory(prefix='bsb_') as tmpdir, tempfile.TemporaryDirectory(
+            prefix='bsb_'
+        ) as tmp_weather_dir:  # noqa: E501
+            self._weather_dir = tmp_weather_dir
+            self._get_weather_files()
+            tmppath = pathlib.Path(tmpdir)
+            logger.debug('Creating assets tarfile')
+            with tarfile.open(tmppath / 'assets.tar.gz', 'x:gz') as tar_f:
+                project_path = pathlib.Path(self.project_dir)
+                buildstock_path = pathlib.Path(self.buildstock_dir)
+                tar_f.add(buildstock_path / 'measures', 'measures')
+                if os.path.exists(buildstock_path / 'resources/hpxml-measures'):
+                    tar_f.add(buildstock_path / 'resources/hpxml-measures', 'resources/hpxml-measures')
+                tar_f.add(buildstock_path / 'resources', 'lib/resources')
+                tar_f.add(project_path / 'housing_characteristics', 'lib/housing_characteristics')
+
+            # Weather files
+            weather_path = tmppath / 'weather'
+            os.makedirs(weather_path)
+
+            # Determine the unique weather files
+            epw_filenames = list(filter(lambda x: x.endswith('.epw'), os.listdir(self.weather_dir)))
+            logger.debug('Calculating hashes for weather files')
+            epw_hashes = Parallel(n_jobs=-1, verbose=9)(
+                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
+                for epw_filename in epw_filenames
+            )
+            unique_epws = collections.defaultdict(list)
+            for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
+                unique_epws[epw_hash].append(epw_filename)
+
+            # Compress unique weather files
+            logger.debug('Compressing weather files')
+            Parallel(n_jobs=-1, verbose=9)(
+                delayed(compress_file)(pathlib.Path(self.weather_dir) / x[0], str(weather_path / x[0]) + '.gz')
+                for x in list(unique_epws.values())
+            )
+
+            logger.debug('Writing project configuration for upload')
+            with open(tmppath / 'config.json', 'wt', encoding='utf-8') as f:
+                json.dump(self.cfg, f)
+
+            # Collect simulations to queue
+            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
+            self.validate_buildstock_csv(self.project_filename, df)
+            building_ids = df.index.tolist()
+            n_datapoints = len(building_ids)
+            n_sims = n_datapoints * (len(self.cfg.get('upgrades', [])) + 1)
+            logger.debug('Total number of simulations = {}'.format(n_sims))
+
+            # GCP Batch allows up to 100,000 tasks, but limit to 10,000 here for consistency with AWS implementation.
+            if self.batch_array_size <= 10000:
+                max_array_size = self.batch_array_size
+            else:
+                max_array_size = 10000
+            n_sims_per_job = math.ceil(n_sims / max_array_size)
+            n_sims_per_job = max(n_sims_per_job, 2)
+            logger.debug('Number of simulations per array job = {}'.format(n_sims_per_job))
+
+            # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get('upgrades', []))))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+            random.shuffle(all_sims)
+            all_sims_iter = iter(all_sims)
+
+            os.makedirs(tmppath / 'jobs')
+
+            # Write each batch of simulations to a file.
+            logger.info('Creating batches of jobs')
+            for i in itertools.count(0):
+                batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
+                if not batch:
+                    break
+                job_json_filename = tmppath / 'jobs' / 'job{:05d}.json'.format(i)
+                with open(job_json_filename, 'w') as f:
+                    json.dump(
+                        {
+                            'job_num': i,
+                            'n_datapoints': n_datapoints,
+                            'batch': batch,
+                        },
+                        f,
+                        indent=4,
+                    )
+            task_count = i
+            logger.debug('Task count = {}'.format(task_count))
+
+            # Compress job jsons
+            jobs_dir = tmppath / 'jobs'
+            logger.debug('Compressing job jsons using gz')
+            tick = time.time()
+            with tarfile.open(tmppath / 'jobs.tar.gz', 'w:gz') as tf:
+                tf.add(jobs_dir, arcname='jobs')
+            tick = time.time() - tick
+            logger.debug('Done compressing job jsons using gz {:.1f} seconds'.format(tick))
+            shutil.rmtree(jobs_dir)
+
+            os.makedirs(tmppath / 'results' / 'simulation_output')
+
+            logger.debug(f'Uploading files to GCS bucket: {self.gcs_bucket}')
+            upload_directory_to_GCS(tmppath, self.gcs_bucket, self.gcs_prefix + '/')
+
+        # Copy the non-unique weather files on GCS
+        epws_to_copy = []
+        for epws in unique_epws.values():
+            # The first in the list is already up there, copy the rest
+            for filename in epws[1:]:
+                epws_to_copy.append(
+                    (f'{self.gcs_prefix}/weather/{epws[0]}.gz', f'{self.gcs_prefix}/weather/{filename}.gz')
+                )
+
+        logger.debug('Copying weather files on GCS')
+        bucket = self.gcs_bucket
+        Parallel(n_jobs=-1, verbose=9)(delayed(copy_GCS_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy)
 
         # Step 3: Define and run the GCP Batch job.
+        logger.info('Setting up GCP Batch job')
         client = batch_v1.BatchServiceClient()
 
         runnable = batch_v1.Runnable()
         runnable.container = batch_v1.Runnable.Container()
-        # TODO: Use the docker image pushed earlier instead of this hardcoded image.
-        runnable.container.image_uri = (
-            'us-central1-docker.pkg.dev/buildstockbatch-dev/buildstockbatch-docker/buildstockbatch'
-        )
+        runnable.container.image_uri = self.repository_uri + ':' + self.job_identifier
         runnable.container.entrypoint = '/bin/sh'
 
         # Pass environment variables to each task
         environment = batch_v1.Environment()
-        # TODO: What other env vars need to exist for run_job() below?
-        # BATCH_TASK_INDEX and BATCH_TASK_COUNT env vars are automatically made available.
-        environment.variables = {'JOB_ID': self.unique_job_id}
+        # BATCH_TASK_INDEX and BATCH_TASK_COUNT env vars are automatically made available by GCP Batch.
+        environment.variables = {
+            'JOB_NAME': self.job_identifier,
+            'GCS_PREFIX': self.gcs_prefix,
+            'GCS_BUCKET': self.gcs_bucket,
+        }
         runnable.environment = environment
 
-        # TODO: Update to run batches of openstudio with something like "python3 -m buildstockbatch.gcp.gcp"
-        runnable.container.commands = [
-            "-c",
-            # Test script that checks whether openstudio is installed and writes to a file in GCS.
-            "mkdir /mnt/disks/share/${JOB_ID}; "
-            "openstudio --help > /mnt/disks/share/${JOB_ID}/output_${BATCH_TASK_INDEX}.txt",
-        ]
-
-        # Mount GCS Bucket, so we can use it like a normal directory.
-        gcs_bucket = batch_v1.GCS(remote_path=self.gcs_bucket)
-        # Note: 'mnt/share/' is read-only, but 'mnt/disks/share' works
-        gcs_volume = batch_v1.Volume(
-            gcs=gcs_bucket,
-            mount_path='/mnt/disks/share',
-        )
+        runnable.container.commands = ['-c', 'python3 -m buildstockbatch.gcp.gcp']
 
         # TODO: Allow specifying resources from the project YAML file, plus pick better defaults.
         resources = batch_v1.ComputeResource(
             cpu_milli=1000,
-            memory_mib=1,
+            memory_mib=2000,
         )
 
         task = batch_v1.TaskSpec(
             runnables=[runnable],
-            volumes=[gcs_volume],
             compute_resource=resources,
             # TODO: Confirm what happens if this fails repeatedly, or for only some tasks, and document it.
             max_retry_count=2,
             # TODO: How long does this timeout need to be?
-            max_run_duration='60s',
+            max_run_duration='5000s',
         )
 
         # How many of these tasks to run.
-        # TODO: determine this count above, when splitting up samples.
-        task_count = 3
         group = batch_v1.TaskGroup(
             task_count=task_count,
             task_spec=task,
@@ -371,13 +537,17 @@ class GcpBatch(DockerBatchBase):
         # TODO: look into best default machine type for running OpenStudio, but also allow
         # changing via the project config. https://cloud.google.com/compute/docs/machine-types
         policy = batch_v1.AllocationPolicy.InstancePolicy(
+            # TODO: Skip setting this and let GCP pick the right machine type
+            # based on resources in ComputeResource
             machine_type='e2-standard-2',
+            provisioning_model=(
+                batch_v1.AllocationPolicy.ProvisioningModel.SPOT
+                if self.use_spot
+                else batch_v1.AllocationPolicy.ProvisioningModel.STANDARD
+            ),
         )
         instances = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(policy=policy)
-        allocation_policy = batch_v1.AllocationPolicy(
-            instances=[instances],
-            # TODO: Support using Spot instances
-        )
+        allocation_policy = batch_v1.AllocationPolicy(instances=[instances])
         # TODO: Add option to set service account that runs the job?
         # Otherwise uses the project's default compute engine service account.
         # allocation_policy.service_account = batch_v1.ServiceAccount(email = '')
@@ -412,21 +582,172 @@ class GcpBatch(DockerBatchBase):
         # Start the job!
         created_job = client.create_job(create_request)
 
-        logger.debug(created_job)
         logger.info('Newly created GCP Batch job')
-        logger.info(f'Job name: {created_job.name}')
-        logger.info(f'Job UID: {created_job.uid}')
+        logger.info(f'  Job name: {created_job.name}')
+        logger.info(f'  Job UID: {created_job.uid}')
 
     @classmethod
-    def run_job(self, job_id, gcs_bucket, gcs_prefix, job_name, region):
+    def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):
         """
         Run a few simulations inside a container.
 
         This method is called from inside docker container in GCP compute engine.
         It will read the necessary files from GCS, run the simulation, and write the
         results back to GCS.
+
+        :param task_index: Index of this task (e.g. this may be task 1 of 4)
+        :param job_name: Job identifier
+        :param gcs_bucket: GCS bucket for input and output files
+        :param gcs_prefix: Prefix used for GCS files
         """
-        pass
+        # Local directory where we'll write files
+        sim_dir = pathlib.Path('/var/simdata/openstudio')
+
+        client = storage.Client()
+        bucket = client.get_bucket(gcs_bucket)
+
+        logger.info('Extracting assets TAR file')
+        # Copy assets file to local machine to extract TAR file
+        assets_file_path = sim_dir.parent / 'assets.tar.gz'
+        bucket.blob(f'{gcs_prefix}/assets.tar.gz').download_to_filename(assets_file_path)
+        with tarfile.open(assets_file_path, 'r') as tar_f:
+            tar_f.extractall(sim_dir)
+
+        logger.debug('Reading config')
+        blob = bucket.blob(f'{gcs_prefix}/config.json')
+        cfg = json.loads(blob.download_as_string())
+
+        # Extract the job information for this particular task
+        logger.debug('Getting job information')
+        jobs_file_path = sim_dir.parent / 'jobs.tar.gz'
+        bucket.blob(f'{gcs_prefix}/jobs.tar.gz').download_to_filename(jobs_file_path)
+        with tarfile.open(jobs_file_path, 'r') as tar_f:
+            jobs_d = json.load(tar_f.extractfile(f'jobs/job{task_index:05d}.json'), encoding='utf-8')
+        logger.debug('Number of simulations = {}'.format(len(jobs_d['batch'])))
+
+        logger.debug('Getting weather files')
+        weather_dir = sim_dir / 'weather'
+        os.makedirs(weather_dir, exist_ok=True)
+
+        # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+        with open(sim_dir / 'lib' / 'resources' / 'options_lookup.tsv', 'r', encoding='utf-8') as f:
+            tsv_reader = csv.reader(f, delimiter='\t')
+            next(tsv_reader)  # skip headers
+            param_name = None
+            epws_by_option = {}
+            for row in tsv_reader:
+                row_has_epw = [x.endswith('.epw') for x in row[2:]]
+                if sum(row_has_epw):
+                    if row[0] != param_name and param_name is not None:
+                        raise RuntimeError(
+                            'The epw files are specified in options_lookup.tsv under more than one parameter '
+                            f'type: {param_name}, {row[0]}'
+                        )  # noqa: E501
+                    epw_filename = row[row_has_epw.index(True) + 2].split('=')[1]
+                    param_name = row[0]
+                    option_name = row[1]
+                    epws_by_option[option_name] = epw_filename
+
+        # Look through the buildstock.csv to find the appropriate location and epw
+        epws_to_download = set()
+        building_ids = [x[0] for x in jobs_d['batch']]
+        with open(sim_dir / 'lib' / 'housing_characteristics' / 'buildstock.csv', 'r', encoding='utf-8') as f:
+            csv_reader = csv.DictReader(f)
+            for row in csv_reader:
+                if int(row['Building']) in building_ids:
+                    epws_to_download.add(epws_by_option[row[param_name]])
+
+        # Download and unzip the epws needed for these simulations
+        for epw_filename in epws_to_download:
+            epw_filename = os.path.basename(epw_filename)
+            with io.BytesIO() as f_gz:
+                logger.debug('Downloading {}.gz'.format(epw_filename))
+                bucket.blob(f'{gcs_prefix}/weather/{epw_filename}.gz').download_to_file(f_gz)
+                with open(weather_dir / epw_filename, 'wb') as f_out:
+                    logger.debug('Extracting {}'.format(epw_filename))
+                    f_out.write(gzip.decompress(f_gz.getvalue()))
+        asset_dirs = os.listdir(sim_dir)
+
+        gcs_fs = gcsfs.GCSFileSystem()
+        local_fs = LocalFileSystem()
+        reporting_measures = cls.get_reporting_measures(cfg)
+        dpouts = []
+        simulation_output_tar_filename = sim_dir.parent / 'simulation_outputs.tar.gz'
+        with tarfile.open(str(simulation_output_tar_filename), 'w:gz') as simout_tar:
+            for building_id, upgrade_idx in jobs_d['batch']:
+                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+                sim_id = f'bldg{building_id:07d}up{upgrade_id:02d}'
+
+                # Create OSW
+                osw = cls.create_osw(cfg, jobs_d['n_datapoints'], sim_id, building_id, upgrade_idx)
+                with open(os.path.join(sim_dir, 'in.osw'), 'w') as f:
+                    json.dump(osw, f, indent=4)
+
+                # Run Simulation
+                with open(sim_dir / 'os_stdout.log', 'w') as f_out:
+                    try:
+                        logger.debug('Running {}'.format(sim_id))
+                        subprocess.run(
+                            ['openstudio', 'run', '-w', 'in.osw'],
+                            check=True,
+                            stdout=f_out,
+                            stderr=subprocess.STDOUT,
+                            cwd=str(sim_dir),
+                        )
+                    except subprocess.CalledProcessError:
+                        logger.debug(f'Simulation failed: see {sim_id}/os_stdout.log')
+
+                # Clean Up simulation directory
+                cls.cleanup_sim_dir(
+                    sim_dir,
+                    gcs_fs,
+                    f'{gcs_bucket}/{gcs_prefix}/results/simulation_output/timeseries',
+                    upgrade_id,
+                    building_id,
+                )
+
+                # Read data_point_out.json
+                dpout = postprocessing.read_simulation_outputs(
+                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
+                )
+                dpouts.append(dpout)
+
+                # Add the rest of the simulation outputs to the tar archive
+                logger.info('Archiving simulation outputs')
+                for dirpath, dirnames, filenames in os.walk(sim_dir):
+                    if dirpath == str(sim_dir):
+                        for dirname in set(dirnames).intersection(asset_dirs):
+                            dirnames.remove(dirname)
+                    for filename in filenames:
+                        abspath = os.path.join(dirpath, filename)
+                        relpath = os.path.relpath(abspath, sim_dir)
+                        simout_tar.add(abspath, os.path.join(sim_id, relpath))
+
+                # Clear directory for next simulation
+                logger.debug('Clearing out simulation directory')
+                for item in set(os.listdir(sim_dir)).difference(asset_dirs):
+                    if os.path.isdir(item):
+                        shutil.rmtree(item)
+                    elif os.path.isfile(item):
+                        os.remove(item)
+
+        blob = bucket.blob(f'{gcs_prefix}/results/simulation_output/simulations_job{task_index}.tar.gz')
+        blob.upload_from_filename(simulation_output_tar_filename)
+
+        # Upload aggregated dpouts as a json file
+        with gcs_fs.open(
+            f'{gcs_bucket}/{gcs_prefix}/results/simulation_output/results_job{task_index}.json.gz', 'wb'
+        ) as f1:
+            with gzip.open(f1, 'wt', encoding='utf-8') as f2:
+                json.dump(dpouts, f2)
+
+        # Remove files (it helps docker if we don't leave a bunch of files laying around)
+        os.remove(simulation_output_tar_filename)
+        for item in os.listdir(sim_dir):
+            if os.path.isdir(item):
+                shutil.rmtree(item)
+            elif os.path.isfile(item):
+                os.remove(item)
 
 
 @log_error_details()
@@ -458,13 +779,11 @@ def main():
     print(GcpBatch.LOGO)
     if 'BATCH_TASK_INDEX' in os.environ:
         # If this var exists, we're inside a single batch task.
-        job_id = int(os.environ['BATCH_TASK_INDEX'])
-        # TODO: pass in these env vars to tasks as needed. (Do we really need bucket here?)
+        task_index = int(os.environ['BATCH_TASK_INDEX'])
         gcs_bucket = os.environ['GCS_BUCKET']
         gcs_prefix = os.environ['GCS_PREFIX']
         job_name = os.environ['JOB_NAME']
-        region = os.environ['REGION']
-        GcpBatch.run_job(job_id, gcs_bucket, gcs_prefix, job_name, region)
+        GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix)
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument('project_filename')
@@ -481,7 +800,7 @@ def main():
             help='Only validate the project YAML file and references. Nothing is executed',
             action='store_true',
         )
-        parser.add_argument('--list_jobs', help='List existing jobs', action='store_true')
+        group.add_argument('--list_jobs', help='List existing jobs', action='store_true')
         parser.add_argument(
             '-v',
             '--verbose',
