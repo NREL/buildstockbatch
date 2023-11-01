@@ -484,6 +484,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                         "debug": debug,
                         "add_component_loads": add_component_loads,
                         "skip_validation": True,
+                        "building_id": "ALL"
                     },
                 }
             ]
