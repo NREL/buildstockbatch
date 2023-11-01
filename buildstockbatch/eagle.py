@@ -327,7 +327,7 @@ class EagleBatch(BuildStockBatchBase):
             else:
                 logger.warning(f"Directory does not exist {dir}")
         logger.debug(f"Removing {self.local_singularity_img}")
-        os.remove(self.local_singularity_img)
+        self.local_singularity_img.unlink(missing_ok=True)
 
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
