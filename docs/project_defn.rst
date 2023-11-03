@@ -122,8 +122,10 @@ following properties:
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
-          `this enumeration list inthe resstock or comstock repo <https://github.com/NREL/resstock/blob/master/measures/ApplyUpgrade/measure.rb#L71-L87>`_
-          or from the list in your branch of that repo.
+          this enumeration list in the
+          `resstock <https://github.com/NREL/resstock/blob/main/measures/ApplyUpgrade/resources/constants.rb#L12-L38>`_ or
+          `comstock <https://github.com/NREL/ComStock/blob/main/measures/ApplyUpgrade/measure.rb#L76-L93>`_ repo or
+          from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
 - ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
