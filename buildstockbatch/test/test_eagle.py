@@ -256,6 +256,7 @@ def test_run_building_process(mocker, basic_residential_project_file):
         return joblib.Parallel(**kw2)
 
     mocker.patch("buildstockbatch.eagle.shutil.copy2")
+    mocker.patch("buildstockbatch.eagle.shutil.rmtree")
     mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.eagle.subprocess")
 
@@ -341,6 +342,7 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
         return joblib.Parallel(**kw2)
 
     mocker.patch("buildstockbatch.eagle.shutil.copy2")
+    mocker.patch("buildstockbatch.eagle.shutil.rmtree")
     mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.eagle.subprocess")
 
