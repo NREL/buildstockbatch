@@ -19,7 +19,10 @@ postprocessing: include('postprocessing-spec', required=False)
 references: map(required=False)
 ---
 gcp-spec:
-  job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
+  # The GCP Batch Job id pattern is `^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$`.
+  # For Batch Job id, we append 15 characters for date and time (e.g., "23-10-31-224116") to this.
+  # So, this can be up to 48 characters.
+  job_identifier: regex('^[a-z]([a-z0-9-]{0,46}[a-z0-9])?$', required=True)
   project: str(required=True)
   region: str(required=True)
   artifact_registry: include('gcp-ar-spec', required=True)

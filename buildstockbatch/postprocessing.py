@@ -18,6 +18,7 @@ from dask.dataframe.io.parquet import create_metadata_file
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
+from gcsfs import GCSFileSystem
 import gzip
 import json
 import logging
@@ -369,9 +370,9 @@ def get_upgrade_list(cfg):
 
 
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
-    df = dd.read_parquet(parquet_root_dir)
+    df = dd.read_parquet(parquet_root_dir, filesystem=fs)
     sch = pa.Schema.from_pandas(df._meta_nonempty)
-    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata")
+    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata", filesystem=fs)
     logger.info(f"Written _common_metadata to {parquet_root_dir}")
 
     if partition_columns:
@@ -553,6 +554,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             if isinstance(fs, LocalFileSystem):
                 ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
+            elif isinstance(fs, GCSFileSystem):
+                ts_out_loc = f"gs://{ts_dir}/upgrade={upgrade_id}/"
             else:
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
@@ -560,7 +563,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             fs.makedirs(ts_out_loc)
             logger.info(f'Created directory {ts_out_loc} for writing. Now concatenating ...')
 
-            src_path = f'{ts_in_dir}/up{upgrade_id:02d}/'
+            src_path = f'{ts_in_dir}/up{upgrade_id:02d}'
             concat_partial = dask.delayed(partial(concat_and_normalize,
                                                   fs, all_ts_cols_sorted, src_path, ts_out_loc, partition_columns))
             partition_vals_list = [list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else []

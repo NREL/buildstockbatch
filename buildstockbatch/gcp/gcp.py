@@ -5,11 +5,11 @@ buildstockbatch.gcp
 ~~~~~~~~~~~~~~~
 This class contains the object & methods that allow for usage of the library with GCP Batch.
 
-This implementation tries to match the structure of `../aws/aws.py` in the 'aws-batch' branch as
-much as possible in order to make it easier to refactor these two (or three, with Eagle) to share
+This implementation tries to match the structure of `../aws/aws.py` in the 'nrel/aws_batch' branch
+as much as possible in order to make it easier to refactor these two (or three, with Eagle) to share
 code later. Also, because that branch has not yet been merged, this will also _not_ do any
-refactoring right now to share code with that (to reduce merging complexity). Instead, code that's
-likely to be refactored out will be commented with 'todo: aws-shared'.
+refactoring right now to share code with that (to reduce merging complexity later). Instead, code
+that's likely to be refactored out will be commented with 'todo: aws-shared'.
 
 :author: Robert LaThanh, Natalie Weires
 :copyright: (c) 2023 by The Alliance for Sustainable Energy
@@ -21,7 +21,7 @@ import csv
 from datetime import datetime
 import docker
 from fsspec.implementations.local import LocalFileSystem
-import gcsfs
+from gcsfs import GCSFileSystem
 import gzip
 import hashlib
 from joblib import Parallel, delayed
@@ -189,6 +189,7 @@ class GcpBatch(DockerBatchBase):
     def validate_project(project_file):
         super(GcpBatch, GcpBatch).validate_project(project_file)
         GcpBatch.validate_gcp_args(project_file)
+        logger.warning(f"TODO: validate_project() not completely implemented, yet!")
         return  # todo-xxx- to be (re)implemented
         GcpBatch.validate_dask_settings(project_file)
 
@@ -200,6 +201,10 @@ class GcpBatch(DockerBatchBase):
     @property
     def weather_dir(self):
         return self._weather_dir
+
+    @property
+    def results_dir(self):
+        return f'{self.gcs_bucket}/{self.gcs_prefix}/results'
 
     @property
     def registry_url(self):
@@ -337,7 +342,11 @@ class GcpBatch(DockerBatchBase):
 
     def clean(self):
         # TODO: clean up all resources used for this project
-        pass
+        # Run `terraform destroy` (But make sure outputs aren't deleted!)
+        # Note: cleanup also requires the project input file, and only should only clean
+        # up resources from that particular project.
+        # TODO: should this also stop the job if it's currently running?
+        logger.warning(f"TODO: clean() not yet implemented!")
 
     def list_jobs(self):
         """
@@ -673,7 +682,7 @@ class GcpBatch(DockerBatchBase):
                     f_out.write(gzip.decompress(f_gz.getvalue()))
         asset_dirs = os.listdir(sim_dir)
 
-        gcs_fs = gcsfs.GCSFileSystem()
+        gcs_fs = GCSFileSystem()
         local_fs = LocalFileSystem()
         reporting_measures = cls.get_reporting_measures(cfg)
         dpouts = []
@@ -753,6 +762,69 @@ class GcpBatch(DockerBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    # todo: Do cleanup (which the aws script does, in the 'nrel/aws_batch' branch)
+    # todo: aws-shared (see file comment): Such cleanup should be shared with the aws script.
+    def cleanup_dask(self):
+        pass
+
+    def get_fs(self):
+        """
+        Overrides `BuildStockBatchBase.get_fs()` (in the 'nrel/aws_batch' branch). This would
+        indirectly result in `postprocessing.combine_results()` writing to GCS (GCP Cloud Storage);
+        however, we also override `BuildStockBatch.process_results()`, so we also make the call to
+        `postprocessing.combine_results()` and can directly define where that writes to.
+
+        :returns: A `GCSFileSystem()`.
+        """
+        return GCSFileSystem()
+
+    def process_results(self, skip_combine=False, use_dask_cluster=True):
+        """
+        Overrides `BuildStockBatchBase.process_results()`.
+
+        While the BuildStockBatchBase implementation uploads to S3, this uploads to GCP Cloud
+        Storage. The BSB implementation tries to write both indirectly (via
+        `postprocessing.combine_results()`, using `get_fs()`), and directly (through
+        `upload_results`). Which way the results end up on S3 depends on whether the script was run
+        via aws.py (indirect write), or locally or Eagle (direct upload).
+
+        Here, where writing to GCS is (currently) coupled to running on GCS, the writing
+        to GCS will happen indirectly (via `postprocessing.combine_results()`), and we don't need to
+        also try to explicitly upload results.
+        """
+
+        if use_dask_cluster:
+            self.get_dask_client()  # noqa F841
+
+        try:
+            wfg_args = self.cfg['workflow_generator'].get('args', {})
+            if self.cfg['workflow_generator']['type'] == 'residential_hpxml':
+                if 'simulation_output_report' in wfg_args.keys():
+                    if 'timeseries_frequency' in wfg_args['simulation_output_report'].keys():
+                        do_timeseries = wfg_args['simulation_output_report']['timeseries_frequency'] != 'none'
+            else:
+                do_timeseries = 'timeseries_csv_export' in wfg_args.keys()
+
+            fs = self.get_fs()
+
+            if not skip_combine:
+                postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+
+        finally:
+            if use_dask_cluster:
+                self.cleanup_dask()
+
+    def upload_results(self, *args, **kwargs):
+        """
+        Overrides `BuildStockBatchBase.upload_results()` from base.
+
+        Does nothing — in fact, this override is not called and not necessary — because the results
+        are already on GCS (`postprocessing.combine_results`, via `process_results()` here, wrote
+        directly to GCS). But this is here in case `upload_results()` is called, and to match aws.py
+        if/when we refactor to make GCS usable from other contexts (e.g., running locally).
+        """
+        return self.bucket, f'{self.prefix}/parquet'
 
 
 @log_error_details()
@@ -836,11 +908,6 @@ def main():
 
         batch = GcpBatch(args.project_filename)
         if args.clean:
-            # TODO: clean up resources
-            # Run `terraform destroy` (But make sure outputs aren't deleted!)
-            # Note: cleanup also requires the project input file, and only should only clean
-            # up resources from that particular project.
-            # TODO: should this also stop the job if it's currently running?
             batch.clean()
             return
         if args.list_jobs:
@@ -849,19 +916,13 @@ def main():
         elif args.postprocessonly:
             batch.build_image()
             batch.push_image()
-            # todo-xxx- to be (re)implemented
-            raise NotImplementedError("Not yet (re)implemented past this point")
             batch.process_results()
         elif args.crawl:
-            # todo-xxx- to be (re)implemented
-            raise NotImplementedError("Not yet (re)implemented past this point")
             batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
             batch.build_image()
             batch.push_image()
             batch.run_batch()
-            # todo-xxx- to be (re)implemented
-            raise NotImplementedError("Not yet (re)implemented past this point")
             batch.process_results()
             batch.clean()
 
