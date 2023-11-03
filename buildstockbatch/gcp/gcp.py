@@ -359,6 +359,11 @@ class GcpBatch(DockerBatchBase):
             logger.info(f'Name: {job.name}')
             logger.info(f'  UID: {job.uid}')
             logger.info(f'  Status: {job.status.state.name}')
+            task_counts = collections.defaultdict(int)
+            for group in job.status.task_groups.values():
+                for status, count in group.counts.items():
+                    task_counts[status] += count
+            logger.info(f'  Task statuses: {dict(task_counts)}')
 
     def run_batch(self):
         """
