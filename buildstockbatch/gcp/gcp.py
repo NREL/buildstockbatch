@@ -145,7 +145,6 @@ class GcpBatch(DockerBatchBase):
         self.gcs_bucket = self.cfg['gcp']['gcs']['bucket']
         self.gcs_prefix = self.cfg['gcp']['gcs']['prefix']
         self.batch_array_size = self.cfg['gcp']['batch_array_size']
-        self.use_spot = self.cfg['gcp'].get('use_spot', False)
 
         # Add timestamp to job ID, since duplicates aren't allowed (even between finished and new jobs)
         # TODO: stop appending timestamp here - it's useful for testing, but we should probably
@@ -383,6 +382,8 @@ class GcpBatch(DockerBatchBase):
             - package and upload the assets, including weather
             - kick off a batch simulation on GCP
         """
+        gcp_cfg = self.cfg['gcp']
+
         # Step 1: Run sampling and split up buildings into batches.
         buildstock_csv_filename = self.sampler.run_sampling()
 
@@ -526,10 +527,10 @@ class GcpBatch(DockerBatchBase):
 
         runnable.container.commands = ['-c', 'python3 -m buildstockbatch.gcp.gcp']
 
-        # TODO: Allow specifying resources from the project YAML file, plus pick better defaults.
+        job_env_cfg = gcp_cfg.get('job_environment', {})
         resources = batch_v1.ComputeResource(
-            cpu_milli=1000,
-            memory_mib=2000,
+            cpu_milli=1000 * job_env_cfg.get('vcpus', 1),
+            memory_mib=job_env_cfg.get('memory_mib', 1024),
         )
 
         task = batch_v1.TaskSpec(
@@ -547,16 +548,13 @@ class GcpBatch(DockerBatchBase):
             task_spec=task,
         )
 
-        # Specify types of VMs to run on
-        # TODO: look into best default machine type for running OpenStudio, but also allow
-        # changing via the project config. https://cloud.google.com/compute/docs/machine-types
+        # Specify type of VMs to run on
         policy = batch_v1.AllocationPolicy.InstancePolicy(
-            # TODO: Skip setting this and let GCP pick the right machine type
-            # based on resources in ComputeResource
-            machine_type='e2-standard-2',
+            # If machine type isn't specified, GCP Batch will choose a type based on the resources requested.
+            machine_type=job_env_cfg.get('machine_type'),
             provisioning_model=(
                 batch_v1.AllocationPolicy.ProvisioningModel.SPOT
-                if self.use_spot
+                if job_env_cfg.get('use_spot')
                 else batch_v1.AllocationPolicy.ProvisioningModel.STANDARD
             ),
         )
@@ -570,8 +568,6 @@ class GcpBatch(DockerBatchBase):
         job = batch_v1.Job()
         job.task_groups = [group]
         job.allocation_policy = allocation_policy
-        # TODO: What (if any) labels are useful to include here? (These are from sample code)
-        job.labels = {'env': 'testing'}
         job.logs_policy = batch_v1.LogsPolicy()
         job.logs_policy.destination = batch_v1.LogsPolicy.Destination.CLOUD_LOGGING
 
