@@ -38,7 +38,7 @@ import zipfile
 
 from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase
-from buildstockbatch.docker_base import DockerBatchBase
+from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch import postprocessing
 from buildstockbatch.utils import (
     calc_hash_for_file,
