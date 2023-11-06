@@ -13,9 +13,16 @@ General
 =======
 
 This version should be backwards compatible with previous versions of
-buildstockbatch. 
+buildstockbatch.
 
 See :doc:`changelog_dev` for details of this change.
+
+Kestrel Availability
+====================
+
+This version adds support for `Kestrel`_.
+
+.. _Kestrel: https://www.nrel.gov/hpc/kestrel-computing-system.html
 
 Schema Updates
 ==============

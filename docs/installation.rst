@@ -33,14 +33,14 @@ For example to get OpenStudio 3.5.1 on an Apple Silicon Mac
    # Make a directory for your openstudio installations to live in
    mkdir ~/openstudio
    cd ~/openstudio
-   
+
    # Download the .tar.gz version for your operating system, x86_64 for an Intel mac
    # This can also done using a browser from the OpenStudio releases page
    curl -O -L https://github.com/NREL/OpenStudio/releases/download/v3.5.1/OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
-   
+
    # Extract it
    tar xvzf OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
-   
+
    # Optionally remove the tar file
    rm OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
 
@@ -120,12 +120,19 @@ configure your user account with your AWS credentials. This setup only needs to 
 .. _Configure the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration
 .. _change the Athena Engine version: https://docs.aws.amazon.com/athena/latest/ug/engine-versions-changing.html
 
+.. _kestrel_install:
+
+Kestrel
+~~~~~~~
+
+
+
 .. _eagle_install:
 
 Eagle
 ~~~~~
 
-BuildStock Batch is preinstalled on Eagle. To use it, `ssh into Eagle`_,
+BuildStockBatch is preinstalled on Eagle. To use it, `ssh into Eagle`_,
 activate the appropriate conda environment:
 
 .. _ssh into Eagle: https://www.nrel.gov/hpc/eagle-user-basics.html
