@@ -39,6 +39,7 @@ import subprocess
 import tarfile
 import tempfile
 import time
+import tqdm
 
 from google.api_core import exceptions
 from google.cloud import artifactregistry_v1
@@ -591,10 +592,40 @@ class GcpBatch(DockerBatchBase):
 
         # Start the job!
         created_job = client.create_job(create_request)
+        job_name = created_job.name
 
-        logger.info('Newly created GCP Batch job')
-        logger.info(f'  Job name: {created_job.name}')
-        logger.info(f'  Job UID: {created_job.uid}')
+        logger.info("Newly created GCP Batch job")
+        logger.info(f"  Job name: {job_name}")
+        logger.info(f"  Job UID: {created_job.uid}")
+        job_url = (
+            "https://console.cloud.google.com/batch/jobsDetail/regions/"
+            f"{self.region}/jobs/{self.unique_job_id}/details?project={self.gcp_project}"
+        )
+        logger.info(f"View GCP Batch job at {job_url}")
+
+        # Monitor job status while waiting for the job to complete
+        n_succeeded_last_time = 0
+        client = batch_v1.BatchServiceClient()
+        with tqdm.tqdm(desc="Running Simulations", total=task_count, unit="batch") as progress_bar:
+            job_status = None
+            while job_status not in ("SUCCEEDED", "FAILED", "DELETION_IN_PROGRESS"):
+                time.sleep(10)
+                job_info = client.get_job(batch_v1.GetJobRequest(name=job_name))
+                job_status = job_info.status.state.name
+                # Check how many tasks have succeeded
+                task_counts = collections.defaultdict(int)
+                for group in job_info.status.task_groups.values():
+                    for status, count in group.counts.items():
+                        task_counts[status] += count
+                n_succeeded = task_counts.get("SUCCEEDED", 0)
+                progress_bar.update(n_succeeded - n_succeeded_last_time)
+                n_succeeded_last_time = n_succeeded
+                # Show all task status counts next to the progress bar
+                progress_bar.set_postfix_str(f'{dict(task_counts)}')
+
+        logger.info(f"Batch job status: {job_status}")
+        if job_status != "SUCCEEDED":
+            raise RuntimeError("Batch job failed. See GCP logs at {job_url}")
 
     @classmethod
     def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):

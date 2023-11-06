@@ -49,6 +49,7 @@ setuptools.setup(
         'google-cloud-batch',
         'google-cloud-compute',
         'google-cloud-storage',
+        'tqdm',
     ],
     extras_require={
         'dev': [
