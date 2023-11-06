@@ -11,7 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -31,7 +31,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import yaml
 import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
