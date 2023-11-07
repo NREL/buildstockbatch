@@ -16,6 +16,13 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
+        :tags: eagle, bugfix
+        :pullreq: 406
+        :tickets: 404
+
+        Cleans out the ``/tmp/scratch`` folder on Eagle at the end of each array job.
+
+    .. change::
         :tags: general, feature, kestrel
         :pullreq: 405
         :tickets: 313
