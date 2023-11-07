@@ -128,7 +128,7 @@ def test_validation_integration(project_file, base_expected, eagle_expected):
     ), patch.object(BuildStockBatchBase, "validate_workflow_generator", lambda _: True), patch.object(
         BuildStockBatchBase, "validate_postprocessing_spec", lambda _: True
     ), patch.object(
-        SlurmBatch, "validate_singularity_image_hpc", lambda _: True
+        SlurmBatch, "validate_apptainer_image_hpc", lambda _: True
     ):
         for cls, expected in [
             (BuildStockBatchBase, base_expected),
@@ -390,7 +390,7 @@ def test_validate_kestrel_output_directory():
             KestrelBatch.validate_output_directory_kestrel(str(temp_yml))
 
 
-def test_validate_singularity_image_eagle(mocker, basic_residential_project_file):
+def test_validate_apptainer_image_eagle(mocker, basic_residential_project_file):
     minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(minimal_yml, "r") as f:
@@ -400,7 +400,7 @@ def test_validate_singularity_image_eagle(mocker, basic_residential_project_file
         with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
         with pytest.raises(ValidationError, match=r"image does not exist"):
-            EagleBatch.validate_singularity_image_hpc(str(temp_yml))
+            EagleBatch.validate_apptainer_image_hpc(str(temp_yml))
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):

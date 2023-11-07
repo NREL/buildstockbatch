@@ -58,14 +58,14 @@ class SlurmBatch(BuildStockBatchBase):
     HPC_NAME = None
     CORES_PER_NODE = None
     MIN_SIMS_PER_JOB = None
-    CONTAINER_RUNTIME = ContainerRuntime.SINGULARITY
+    CONTAINER_RUNTIME = ContainerRuntime.APPTAINER
 
     local_scratch = pathlib.Path(os.environ.get("LOCAL_SCRATCH", "/tmp/scratch"))
     local_project_dir = local_scratch / "project"
     local_buildstock_dir = local_scratch / "buildstock"
     local_weather_dir = local_scratch / "weather"
     local_output_dir = local_scratch / "output"
-    local_singularity_img = local_scratch / "openstudio.simg"
+    local_apptainer_img = local_scratch / "openstudio.simg"
     local_housing_characteristics_dir = local_scratch / "housing_characteristics"
 
     def __init__(self, project_filename):
@@ -76,25 +76,25 @@ class SlurmBatch(BuildStockBatchBase):
         logger.debug("Output directory = {}".format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
 
-        self.singularity_image = self.get_singularity_image(self.cfg, self.os_version, self.os_sha)
+        self.apptainer_image = self.get_apptainer_image(self.cfg, self.os_version, self.os_sha)
 
     @classmethod
     def validate_project(cls, project_file):
         super().validate_project(project_file)
-        cls.validate_singularity_image_hpc(project_file)
+        cls.validate_apptainer_image_hpc(project_file)
         logger.info("HPC Validation Successful")
         return True
 
     @classmethod
-    def validate_singularity_image_hpc(cls, project_file):
+    def validate_apptainer_image_hpc(cls, project_file):
         cfg = get_project_configuration(project_file)
-        singularity_image = cls.get_singularity_image(
+        apptainer_image = cls.get_apptainer_image(
             cfg,
             cfg.get("os_version", cls.DEFAULT_OS_VERSION),
             cfg.get("os_sha", cls.DEFAULT_OS_SHA),
         )
-        if not os.path.exists(singularity_image):
-            raise ValidationError(f"The singularity image does not exist: {singularity_image}")
+        if not os.path.exists(apptainer_image):
+            raise ValidationError(f"The apptainer image does not exist: {apptainer_image}")
 
     @property
     def output_dir(self):
@@ -114,7 +114,7 @@ class SlurmBatch(BuildStockBatchBase):
         shutil.copytree(src, dst)
 
     @classmethod
-    def get_singularity_image(cls, cfg, os_version, os_sha):
+    def get_apptainer_image(cls, cfg, os_version, os_sha):
         return os.path.join(
             cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR),
             "OpenStudio-{ver}.{sha}-Singularity.simg".format(ver=os_version, sha=os_sha),
@@ -223,9 +223,9 @@ class SlurmBatch(BuildStockBatchBase):
             pathlib.Path(self.output_dir) / "housing_characteristics",
             self.local_housing_characteristics_dir,
         )
-        if os.path.exists(self.local_singularity_img):
-            os.remove(self.local_singularity_img)
-        shutil.copy2(self.singularity_image, self.local_singularity_img)
+        if os.path.exists(self.local_apptainer_img):
+            os.remove(self.local_apptainer_img)
+        shutil.copy2(self.apptainer_image, self.local_apptainer_img)
 
         # Run the job batch as normal
         job_json_filename = os.path.join(self.output_dir, "job{:03d}.json".format(job_array_number))
@@ -318,10 +318,10 @@ class SlurmBatch(BuildStockBatchBase):
 
             # Create a temporary directory for the simulation to use
             with tempfile.TemporaryDirectory(dir=cls.local_scratch, prefix=f"{sim_id}_") as tmpdir:
-                # Build the command to instantiate and configure the singularity container the simulation is run inside
+                # Build the command to instantiate and configure the apptainer container the simulation is run inside
                 local_resources_dir = cls.local_buildstock_dir / "resources"
                 args = [
-                    "singularity",
+                    "apptainer",
                     "exec",
                     "--contain",
                     "-e",
@@ -357,8 +357,8 @@ class SlurmBatch(BuildStockBatchBase):
                     args.extend(["-B", f"{src}:{container_mount}:ro"])
 
                 # Build the openstudio command that will be issued within the
-                # singularity container If custom gems are to be used in the
-                # singularity container add extra bundle arguments to the cli
+                # apptainer container If custom gems are to be used in the
+                # apptainer container add extra bundle arguments to the cli
                 # command
                 cli_cmd = "openstudio run -w in.osw"
                 if cfg.get("baseline", dict()).get("custom_gems", False):
@@ -369,7 +369,7 @@ class SlurmBatch(BuildStockBatchBase):
                 if get_bool_env_var("MEASURESONLY"):
                     cli_cmd += " --measures_only"
                 runscript.append(cli_cmd)
-                args.extend([str(cls.local_singularity_img), "bash", "-x"])
+                args.extend([str(cls.local_apptainer_img), "bash", "-x"])
                 env_vars = dict(os.environ)
                 env_vars["SINGULARITYENV_BUILDSTOCKBATCH_VERSION"] = bsb_version
                 logger.debug("\n".join(map(str, args)))
@@ -747,7 +747,7 @@ class EagleBatch(SlurmBatch):
 
 
 class KestrelBatch(SlurmBatch):
-    DEFAULT_SYS_IMAGE_DIR = "/kfs2/shared-projects/buildstock/singularity_images"
+    DEFAULT_SYS_IMAGE_DIR = "/kfs2/shared-projects/buildstock/apptainer_images"
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2

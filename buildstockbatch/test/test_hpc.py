@@ -39,15 +39,15 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         # Normal run
         run_bldg_args = [results_dir, cfg, 1, None]
         KestrelBatch.run_building(*run_bldg_args)
-        expected_singularity_args = [
-            "singularity",
+        expected_apptainer_args = [
+            "apptainer",
             "exec",
             "--contain",
             "-e",
             "--pwd",
             "/var/simdata/openstudio",
         ]
-        end_expected_singularity_args = [
+        end_expected_apptainer_args = [
             str(pathlib.Path("/tmp/scratch/openstudio.simg")),
             "bash",
             "-x",
@@ -65,8 +65,8 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
                 "/weather",
                 "/tmp",
             )
-        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
-        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_apptainer_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_apptainer_args
         called_kw = mock_subprocess.run.call_args[1]
         assert called_kw.get("check") is True
         assert "input" in called_kw
@@ -82,8 +82,8 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         monkeypatch.setenv("MEASURESONLY", "1")
         KestrelBatch.run_building(*run_bldg_args)
         mock_subprocess.run.assert_called_once()
-        assert mock_subprocess.run.call_args[0][0][0:6] == expected_singularity_args
-        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_singularity_args
+        assert mock_subprocess.run.call_args[0][0][0:6] == expected_apptainer_args
+        assert mock_subprocess.run.call_args[0][0][-3:] == end_expected_apptainer_args
         called_kw = mock_subprocess.run.call_args[1]
         assert called_kw.get("check") is True
         assert "input" in called_kw
@@ -113,7 +113,7 @@ def _test_env_vars_passed(mock_subprocess, hpc_name):
 @pytest.mark.parametrize("hpc_name", ["eagle", "kestrel"])
 def test_user_cli(basic_residential_project_file, monkeypatch, mocker, hpc_name):
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
-    mock_validate_singularity_image = mocker.patch("buildstockbatch.hpc.SlurmBatch.validate_singularity_image_hpc")
+    mock_validate_apptainer_image = mocker.patch("buildstockbatch.hpc.SlurmBatch.validate_apptainer_image_hpc")
     mock_validate_output_directory = mocker.patch(
         f"buildstockbatch.hpc.{hpc_name.capitalize()}Batch.validate_output_directory_{hpc_name}"
     )
@@ -121,7 +121,7 @@ def test_user_cli(basic_residential_project_file, monkeypatch, mocker, hpc_name)
 
     mock_validate_options.return_value = True
     mock_validate_output_directory.return_value = True
-    mock_validate_singularity_image.return_value = True
+    mock_validate_apptainer_image.return_value = True
 
     project_filename, results_dir = basic_residential_project_file(hpc_name=hpc_name)
     shutil.rmtree(results_dir)

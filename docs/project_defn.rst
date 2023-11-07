@@ -87,7 +87,7 @@ Information about baseline simulations are listed under the ``baseline`` key.
   call the OpenStudio CLI commands with the  ``bundle`` and ``bundle_path`` options. These options tell the CLI
   to load a custom set of gems rather than those included in the OpenStudio CLI. For both Eagle
   and local Docker runs, these gems are first specified in the ``buildstock\resources\Gemfile``.
-  For Eagle, when the Singularity image is built, these gems are added to the image.
+  For Eagle, when the apptainer image is built, these gems are added to the image.
   For local Docker, when the containers are started, the gems specified in the Gemfile are installed into a Docker
   volume on the local computer. This volume is mounted by each container as models are run, so each run
   uses the custom gems.

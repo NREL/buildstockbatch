@@ -88,16 +88,16 @@ class ResidentialQuotaSampler(BuildStockSampler):
         )
         return destination_filename
 
-    def _run_sampling_singularity(self):
+    def _run_sampling_apptainer(self):
         args = [
-            "singularity",
+            "apptainer",
             "exec",
             "--contain",
             "--home",
             "{}:/buildstock".format(self.buildstock_dir),
             "--bind",
             "{}:/outbind".format(os.path.dirname(self.csv_path)),
-            self.parent().singularity_image,
+            self.parent().apptainer_image,
             "ruby",
             "resources/run_sampling.rb",
             "-p",
@@ -107,9 +107,9 @@ class ResidentialQuotaSampler(BuildStockSampler):
             "-o",
             "../../outbind/{}".format(os.path.basename(self.csv_path)),
         ]
-        logger.debug(f"Starting singularity sampling with command: {' '.join(args)}")
+        logger.debug(f"Starting apptainer sampling with command: {' '.join(args)}")
         subprocess.run(args, check=True, env=os.environ, cwd=self.parent().output_dir)
-        logger.debug("Singularity sampling completed.")
+        logger.debug("Apptainer sampling completed.")
         return self.csv_path
 
     def _run_sampling_local_openstudio(self):
