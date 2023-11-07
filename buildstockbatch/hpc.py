@@ -92,7 +92,7 @@ class SlurmBatch(BuildStockBatchBase):
             cfg.get("os_version", cls.DEFAULT_OS_VERSION),
             cfg.get("os_sha", cls.DEFAULT_OS_SHA),
         )
-        if not os.path.exists(apptainer_image):
+        if apptainer_image is None or not os.path.exists(apptainer_image):
             raise ValidationError(f"The apptainer image does not exist: {apptainer_image}")
 
     @property
@@ -114,10 +114,12 @@ class SlurmBatch(BuildStockBatchBase):
 
     @classmethod
     def get_apptainer_image(cls, cfg, os_version, os_sha):
-        return os.path.join(
-            cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR),
-            "OpenStudio-{ver}.{sha}-Singularity.simg".format(ver=os_version, sha=os_sha),
-        )
+        exts_to_try = ["sif", "simg"]
+        sys_img_dir = cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR)
+        for ext in exts_to_try:
+            image_path = pathlib.Path(sys_img_dir, f"OpenStudio-{os_version}.{os_sha}-Singularity.{ext}")
+            if image_path.exists():
+                return str(image_path)
 
     @property
     def weather_dir(self):
