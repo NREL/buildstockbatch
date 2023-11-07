@@ -572,19 +572,6 @@ class GcpBatch(DockerBatchBase):
         job.logs_policy = batch_v1.LogsPolicy()
         job.logs_policy.destination = batch_v1.LogsPolicy.Destination.CLOUD_LOGGING
 
-        # Send notifications to pub/sub when the job's state changes
-        # TODO: Turn these into emails if an email address is provided?
-        job.notifications = [
-            batch_v1.JobNotification(
-                # TODO: Get topic from config or create a new one as needed (via terraform)
-                pubsub_topic="projects/buildstockbatch-dev/topics/notifications",
-                message=batch_v1.JobNotification.Message(
-                    type_=1,
-                    new_job_state="STATE_UNSPECIFIED",  # notify on any changes
-                ),
-            )
-        ]
-
         create_request = batch_v1.CreateJobRequest()
         create_request.job = job
         create_request.job_id = self.unique_job_id

@@ -28,12 +28,6 @@ variable "bucket_name" {
   description = "GCS bucket where buildstockbatch inputs and outputs should be stored"
 }
 
-variable "topic_name" {
-  type        = string
-  default     = "notifications"
-  description = "Pub/sub topic where batch job state change notifications will be sent"
-}
-
 variable "region" {
   type        = string
   default     = "us-central1"
@@ -50,11 +44,6 @@ variable "artifact_registry_repository" {
 provider "google" {
   project = var.gcp_project
   region  = var.region
-}
-
-# Pub/sub topic for job notifications
-resource "google_pubsub_topic" "notification_topic" {
-  name = var.topic_name
 }
 
 # GCS bucket for storing inputs and outputs

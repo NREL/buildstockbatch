@@ -141,7 +141,6 @@ file, something like this:
         prefix: national01_run01
       use_spot: true
       batch_array_size: 10000
-      notifications_email: your_email@somewhere.com
 
 See :ref:`gcp-config` for details.
 
