@@ -317,8 +317,8 @@ class SlurmBatch(BuildStockBatchBase):
                 shutil.rmtree(dir)
             else:
                 logger.warning(f"Directory does not exist {dir}")
-        logger.debug(f"Removing {self.local_singularity_img}")
-        self.local_singularity_img.unlink(missing_ok=True)
+        logger.debug(f"Removing {self.local_apptainer_img}")
+        self.local_apptainer_img.unlink(missing_ok=True)
 
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
