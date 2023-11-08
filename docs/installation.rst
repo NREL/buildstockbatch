@@ -218,7 +218,7 @@ One-time setup that each developer needs to do on the workstation from which the
 manage BuildStockBatch runs.
 
 1. `Install Docker`_. This is needed by the script to manage Docker images (pull, push, etc).
-2. Get BuildStockBatch and set up a Python environment for it using the :ref:`_python` instructions
+2. Get BuildStockBatch and set up a Python environment for it using the :ref:`python` instructions
    above (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
    to it).
 3. Download/Clone ResStock or ComStock.
