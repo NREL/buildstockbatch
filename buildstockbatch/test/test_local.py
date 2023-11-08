@@ -9,15 +9,22 @@ import tempfile
 
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.utils import get_project_configuration
-from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
+from buildstockbatch.test.shared_testing_stuff import (
+    resstock_directory,
+    resstock_required,
+)
 
 
-@pytest.mark.parametrize("project_filename", [
-    resstock_directory / "project_national" / "national_baseline.yml",
-    resstock_directory / "project_national" / "national_upgrades.yml",
-    resstock_directory / "project_testing" / "testing_baseline.yml",
-    resstock_directory / "project_testing" / "testing_upgrades.yml",
-], ids=lambda x: x.stem)
+@pytest.mark.parametrize(
+    "project_filename",
+    [
+        resstock_directory / "project_national" / "national_baseline.yml",
+        resstock_directory / "project_national" / "national_upgrades.yml",
+        resstock_directory / "project_testing" / "testing_baseline.yml",
+        resstock_directory / "project_testing" / "testing_upgrades.yml",
+    ],
+    ids=lambda x: x.stem,
+)
 @resstock_required
 def test_resstock_local_batch(project_filename):
     LocalBatch.validate_project(str(project_filename))
@@ -82,16 +89,15 @@ def test_resstock_local_batch(project_filename):
 
 @resstock_required
 def test_local_simulation_timeout(mocker):
-
     def mocked_subprocess_run(run_cmd, **kwargs):
         assert "timeout" in kwargs.keys()
         raise subprocess.TimeoutExpired(run_cmd, kwargs["timeout"])
 
-    mocker.patch('buildstockbatch.local.subprocess.run', mocked_subprocess_run)
-    sleep_mock = mocker.patch('buildstockbatch.local.time.sleep')
+    mocker.patch("buildstockbatch.local.subprocess.run", mocked_subprocess_run)
+    sleep_mock = mocker.patch("buildstockbatch.local.time.sleep")
 
     cfg = get_project_configuration(resstock_directory / "project_national" / "national_baseline.yml")
-    cfg['max_minutes_per_sim'] = 5
+    cfg["max_minutes_per_sim"] = 5
 
     with tempfile.TemporaryDirectory() as tmpdir:
         LocalBatch.run_building(
@@ -99,16 +105,16 @@ def test_local_simulation_timeout(mocker):
             str(resstock_directory / "weather"),
             tmpdir,
             measures_only=False,
-            n_datapoints=cfg['sampler']['args']['n_datapoints'],
+            n_datapoints=cfg["sampler"]["args"]["n_datapoints"],
             cfg=cfg,
-            i=1
+            i=1,
         )
-        sim_path = pathlib.Path(tmpdir, 'simulation_output', 'up00', 'bldg0000001')
+        sim_path = pathlib.Path(tmpdir, "simulation_output", "up00", "bldg0000001")
         assert sim_path.is_dir()
 
         msg_re = re.compile(r"Terminated \w+ after reaching max time")
 
-        with open(sim_path / 'openstudio_output.log', 'r') as f:
+        with open(sim_path / "openstudio_output.log", "r") as f:
             os_output = f.read()
             assert msg_re.search(os_output)
 
@@ -120,9 +126,9 @@ def test_local_simulation_timeout(mocker):
             assert msg_re.search(out_osw["timeout"])
 
         err_log_re = re.compile(r"\[\d\d:\d\d:\d\d ERROR\] Terminated \w+ after reaching max time")
-        with open(sim_path / 'run' / 'run.log', 'r') as run_log:
+        with open(sim_path / "run" / "run.log", "r") as run_log:
             err_log_re.search(run_log.read())
-        with open(sim_path / 'run' / 'failed.job', 'r') as failed_job:
+        with open(sim_path / "run" / "failed.job", "r") as failed_job:
             err_log_re.search(failed_job.read())
 
         sleep_mock.assert_called_once_with(20)

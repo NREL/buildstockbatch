@@ -20,7 +20,10 @@ import pathlib
 from buildstockbatch.eagle import EagleBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
-from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
+from buildstockbatch.test.shared_testing_stuff import (
+    resstock_directory,
+    resstock_required,
+)
 from buildstockbatch.utils import get_project_configuration
 from unittest.mock import patch
 from testfixtures import LogCapture
@@ -29,12 +32,12 @@ import logging
 import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
-example_yml_dir = os.path.join(here, 'test_inputs')
-resources_dir = os.path.join(here, 'test_inputs', 'test_openstudio_buildstock', 'resources')
+example_yml_dir = os.path.join(here, "test_inputs")
+resources_dir = os.path.join(here, "test_inputs", "test_openstudio_buildstock", "resources")
 
 
 def filter_logs(logs, level):
-    filtered_logs = ''
+    filtered_logs = ""
     for record in logs.records:
         if record.levelname == level:
             filtered_logs += record.msg
@@ -58,31 +61,37 @@ def test_local_docker_validation_is_classmethod():
 
 
 def test_complete_schema_passes_validation():
-    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'complete-schema.yml'))
+    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, "complete-schema.yml"))
 
 
 def test_minimal_schema_passes_validation():
-    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, 'minimal-schema.yml'))
+    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, "minimal-schema.yml"))
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'missing-required-schema.yml'),
-    os.path.join(example_yml_dir, 'missing-nested-required-schema.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "missing-required-schema.yml"),
+        os.path.join(example_yml_dir, "missing-nested-required-schema.yml"),
+    ],
+)
 def test_missing_required_key_fails(project_file):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+    with patch.object(BuildStockBatchBase, "validate_options_lookup", lambda _: True):
         with pytest.raises(ValueError):
             BuildStockBatchBase.validate_project_schema(project_file)
 
 
-@pytest.mark.parametrize("project_file,expected", [
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor-and-passes.yml'), True),
-])
+@pytest.mark.parametrize(
+    "project_file,expected",
+    [
+        (os.path.join(example_yml_dir, "enforce-schema-xor.yml"), ValidationError),
+        (os.path.join(example_yml_dir, "enforce-schema-xor-and-passes.yml"), True),
+    ],
+)
 def test_xor_violations_fail(project_file, expected):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True):
+    with patch.object(BuildStockBatchBase, "validate_options_lookup", lambda _: True):
         if expected is not True:
             with pytest.raises(expected):
                 BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
@@ -90,21 +99,41 @@ def test_xor_violations_fail(project_file, expected):
             assert BuildStockBatchBase.validate_xor_nor_schema_keys(project_file)
 
 
-@pytest.mark.parametrize("project_file, base_expected, eagle_expected", [
-    (os.path.join(example_yml_dir, 'missing-required-schema.yml'), ValueError, ValueError),
-    (os.path.join(example_yml_dir, 'missing-nested-required-schema.yml'), ValueError, ValueError),
-    (os.path.join(example_yml_dir, 'enforce-schema-xor.yml'), ValidationError, ValidationError),
-    (os.path.join(example_yml_dir, 'complete-schema.yml'), True, True),
-    (os.path.join(example_yml_dir, 'minimal-schema.yml'), True, ValidationError)
-])
+@pytest.mark.parametrize(
+    "project_file, base_expected, eagle_expected",
+    [
+        (
+            os.path.join(example_yml_dir, "missing-required-schema.yml"),
+            ValueError,
+            ValueError,
+        ),
+        (
+            os.path.join(example_yml_dir, "missing-nested-required-schema.yml"),
+            ValueError,
+            ValueError,
+        ),
+        (
+            os.path.join(example_yml_dir, "enforce-schema-xor.yml"),
+            ValidationError,
+            ValidationError,
+        ),
+        (os.path.join(example_yml_dir, "complete-schema.yml"), True, True),
+        (os.path.join(example_yml_dir, "minimal-schema.yml"), True, ValidationError),
+    ],
+)
 def test_validation_integration(project_file, base_expected, eagle_expected):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, 'validate_options_lookup', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_measure_references', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_workflow_generator', lambda _: True), \
-            patch.object(BuildStockBatchBase, 'validate_postprocessing_spec', lambda _: True), \
-            patch.object(EagleBatch, 'validate_singularity_image_eagle', lambda _: True):
-        for cls, expected in [(BuildStockBatchBase, base_expected), (EagleBatch, eagle_expected)]:
+    with patch.object(BuildStockBatchBase, "validate_options_lookup", lambda _: True), patch.object(
+        BuildStockBatchBase, "validate_measure_references", lambda _: True
+    ), patch.object(BuildStockBatchBase, "validate_workflow_generator", lambda _: True), patch.object(
+        BuildStockBatchBase, "validate_postprocessing_spec", lambda _: True
+    ), patch.object(
+        EagleBatch, "validate_singularity_image_eagle", lambda _: True
+    ):
+        for cls, expected in [
+            (BuildStockBatchBase, base_expected),
+            (EagleBatch, eagle_expected),
+        ]:
             if expected is not True:
                 with pytest.raises(expected):
                     cls.validate_project(project_file)
@@ -112,34 +141,35 @@ def test_validation_integration(project_file, base_expected, eagle_expected):
                 assert cls.validate_project(project_file)
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-bad-2.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [os.path.join(example_yml_dir, "enforce-validate-measures-bad-2.yml")],
+)
 def test_bad_reference_scenario(project_file):
-
     with LogCapture(level=logging.INFO) as logs:
         BuildStockBatchBase.validate_reference_scenario(project_file)
-        warning_logs = filter_logs(logs, 'WARNING')
+        warning_logs = filter_logs(logs, "WARNING")
         assert "non-existing upgrade' does not match " in warning_logs
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [os.path.join(example_yml_dir, "enforce-validate-measures-good-2.yml")],
+)
 def test_good_reference_scenario(project_file):
     with LogCapture(level=logging.INFO) as logs:
         assert BuildStockBatchBase.validate_reference_scenario(project_file)
-        warning_logs = filter_logs(logs, 'WARNING')
-        error_logs = filter_logs(logs, 'ERROR')
-        assert warning_logs == ''
-        assert error_logs == ''
+        warning_logs = filter_logs(logs, "WARNING")
+        error_logs = filter_logs(logs, "ERROR")
+        assert warning_logs == ""
+        assert error_logs == ""
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-bad-2.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [os.path.join(example_yml_dir, "enforce-validate-measures-bad-2.yml")],
+)
 def test_bad_measures(project_file):
-
     with LogCapture(level=logging.INFO) as _:
         try:
             BuildStockBatchBase.validate_workflow_generator(project_file)
@@ -148,44 +178,57 @@ def test_bad_measures(project_file):
             assert "'1.5' is not a int" in er
             assert "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')" in er
         else:
-            raise Exception("measures_and_arguments was supposed to raise ValidationError for"
-                            " enforce-validate-measures-bad.yml")
+            raise Exception(
+                "measures_and_arguments was supposed to raise ValidationError for" " enforce-validate-measures-bad.yml"
+            )
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2.yml'),
-    os.path.join(example_yml_dir, 'enforce-validate-measures-good-2-with-anchors.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-measures-good-2.yml"),
+        os.path.join(example_yml_dir, "enforce-validate-measures-good-2-with-anchors.yml"),
+    ],
+)
 def test_good_measures(project_file):
     with LogCapture(level=logging.INFO) as logs:
         assert BuildStockBatchBase.validate_workflow_generator(project_file)
-        warning_logs = filter_logs(logs, 'WARNING')
-        error_logs = filter_logs(logs, 'ERROR')
-        assert warning_logs == ''
-        assert error_logs == ''
+        warning_logs = filter_logs(logs, "WARNING")
+        error_logs = filter_logs(logs, "ERROR")
+        assert warning_logs == ""
+        assert error_logs == ""
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-wrong-path.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-options-wrong-path.yml"),
+    ],
+)
 def test_bad_path_options_validation(project_file):
     with pytest.raises(FileNotFoundError):
         BuildStockBatchBase.validate_options_lookup(project_file)
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-good.yml'),
-    os.path.join(example_yml_dir, 'enforce-validate-options-good-2.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-options-good.yml"),
+        os.path.join(example_yml_dir, "enforce-validate-options-good-2.yml"),
+    ],
+)
 def test_good_options_validation(project_file):
     assert BuildStockBatchBase.validate_options_lookup(project_file)
     assert BuildStockBatchBase.validate_postprocessing_spec(project_file)
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-bad.yml'),
-    os.path.join(example_yml_dir, 'enforce-validate-options-bad-2.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-options-bad.yml"),
+        os.path.join(example_yml_dir, "enforce-validate-options-bad-2.yml"),
+    ],
+)
 def test_bad_options_validation(project_file):
     try:
         BuildStockBatchBase.validate_options_lookup(project_file)
@@ -212,16 +255,22 @@ def test_bad_options_validation(project_file):
         raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-good.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-measures-good.yml"),
+    ],
+)
 def test_good_measures_validation(project_file):
     assert BuildStockBatchBase.validate_measure_references(project_file)
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-measures-bad.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-measures-bad.yml"),
+    ],
+)
 def test_bad_measures_validation(project_file):
     try:
         BuildStockBatchBase.validate_measure_references(project_file)
@@ -233,13 +282,17 @@ def test_bad_measures_validation(project_file):
         assert "ResidentialConstructionsFinishedBasement" in er
 
     else:
-        raise Exception("validate_measure_references was supposed to raise ValueError for "
-                        "enforce-validate-measures-bad.yml")
+        raise Exception(
+            "validate_measure_references was supposed to raise ValueError for " "enforce-validate-measures-bad.yml"
+        )
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-bad-2.yml'),
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [
+        os.path.join(example_yml_dir, "enforce-validate-options-bad-2.yml"),
+    ],
+)
 def test_bad_postprocessing_spec_validation(project_file):
     try:
         BuildStockBatchBase.validate_postprocessing_spec(project_file)
@@ -250,9 +303,7 @@ def test_bad_postprocessing_spec_validation(project_file):
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-bad-2.yml")
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-good.yml')
-])
+@pytest.mark.parametrize("project_file", [os.path.join(example_yml_dir, "enforce-validate-options-good.yml")])
 def test_logic_validation_fail(project_file):
     try:
         BuildStockBatchBase.validate_logic(project_file)
@@ -265,9 +316,10 @@ def test_logic_validation_fail(project_file):
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
 
 
-@pytest.mark.parametrize("project_file", [
-    os.path.join(example_yml_dir, 'enforce-validate-options-all-good.yml')
-])
+@pytest.mark.parametrize(
+    "project_file",
+    [os.path.join(example_yml_dir, "enforce-validate-options-all-good.yml")],
+)
 def test_logic_validation_pass(project_file):
     BuildStockBatchBase.validate_logic(project_file)
 
@@ -290,75 +342,75 @@ def test_number_of_options_apply_upgrade():
 @resstock_required
 def test_validate_resstock_or_comstock_version(mocker):
     # Set the version to a 'really old' one so we trigger the version check error
-    mocker.patch("buildstockbatch.base.bsb_version", "0.1")
+    mocker.patch("buildstockbatch.base.bsb_version", "1.0.0")
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     with pytest.raises(ValidationError):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
 
 
 def test_validate_eagle_output_directory():
-    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
         EagleBatch.validate_output_directory_eagle(str(minimal_yml))
     with tempfile.TemporaryDirectory() as tmpdir:
         dirs_to_try = [
-            '/scratch/username/out_dir',
-            '/projects/projname/out_dir',
-            '/lustre/eaglefs/scratch/username/out_dir',
-            '/lustre/eaglefs/projects/projname/out_dir'
+            "/scratch/username/out_dir",
+            "/projects/projname/out_dir",
+            "/lustre/eaglefs/scratch/username/out_dir",
+            "/lustre/eaglefs/projects/projname/out_dir",
         ]
         for output_directory in dirs_to_try:
-            with open(minimal_yml, 'r') as f:
+            with open(minimal_yml, "r") as f:
                 cfg = yaml.load(f, Loader=yaml.SafeLoader)
-            cfg['output_directory'] = output_directory
-            temp_yml = pathlib.Path(tmpdir, 'temp.yml')
-            with open(temp_yml, 'w') as f:
+            cfg["output_directory"] = output_directory
+            temp_yml = pathlib.Path(tmpdir, "temp.yml")
+            with open(temp_yml, "w") as f:
                 yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
             EagleBatch.validate_output_directory_eagle(str(temp_yml))
 
 
 def test_validate_singularity_image_eagle(mocker, basic_residential_project_file):
-    minimal_yml = pathlib.Path(example_yml_dir, 'minimal-schema.yml')
+    minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with tempfile.TemporaryDirectory() as tmpdir:
-        with open(minimal_yml, 'r') as f:
+        with open(minimal_yml, "r") as f:
             cfg = yaml.load(f, Loader=yaml.SafeLoader)
-        cfg['sys_image_dir'] = tmpdir
-        temp_yml = pathlib.Path(tmpdir, 'temp.yml')
-        with open(temp_yml, 'w') as f:
+        cfg["sys_image_dir"] = tmpdir
+        temp_yml = pathlib.Path(tmpdir, "temp.yml")
+        with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
         with pytest.raises(ValidationError, match=r"image does not exist"):
             EagleBatch.validate_singularity_image_eagle(str(temp_yml))
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
-    project_filename, _ = basic_residential_project_file({
-        'sampler': {
-            'type': 'precomputed',
-            'args': {
-                'sample_file': str(os.path.join(resources_dir, 'buildstock_good.csv'))
+    project_filename, _ = basic_residential_project_file(
+        {
+            "sampler": {
+                "type": "precomputed",
+                "args": {"sample_file": str(os.path.join(resources_dir, "buildstock_good.csv"))},
             }
         }
-    })
+    )
     assert BuildStockBatchBase.validate_sampler(project_filename)
 
 
 def test_validate_sampler_bad_buildstock(basic_residential_project_file):
-    project_filename, _ = basic_residential_project_file({
-        'sampler': {
-            'type': 'precomputed',
-            'args': {
-                'sample_file': str(os.path.join(resources_dir, 'buildstock_bad.csv'))
+    project_filename, _ = basic_residential_project_file(
+        {
+            "sampler": {
+                "type": "precomputed",
+                "args": {"sample_file": str(os.path.join(resources_dir, "buildstock_bad.csv"))},
             }
         }
-    })
+    )
     try:
         BuildStockBatchBase.validate_sampler(project_filename)
     except ValidationError as er:
         er = str(er)
-        assert 'Option 1940-1950 in column Vintage of buildstock_csv is not available in options_lookup.tsv' in er
-        assert 'Option TX in column State of buildstock_csv is not available in options_lookup.tsv' in er
-        assert 'Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv' in er
-        assert 'Column Insulation in buildstock_csv is not available in options_lookup.tsv' in er
-        assert 'Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv' in er
+        assert "Option 1940-1950 in column Vintage of buildstock_csv is not available in options_lookup.tsv" in er
+        assert "Option TX in column State of buildstock_csv is not available in options_lookup.tsv" in er
+        assert "Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv" in er
+        assert "Column Insulation in buildstock_csv is not available in options_lookup.tsv" in er
+        assert "Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv" in er
     else:
         raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")

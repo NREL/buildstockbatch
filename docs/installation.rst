@@ -76,17 +76,34 @@ Get a copy of BuildStockBatch either by downloading the zip file from GitHub or
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
-environment`_ if you're using Anaconda. Make sure you configure your virtual environment to use Python 3.8 or greater. Then activate your environment.
+environment`_ if you're using Anaconda. Make sure you configure your virtual
+environment to use Python 3.8 or greater. Then activate your environment.
 
 .. _python virtual environment: https://docs.python.org/3/library/venv.html
 .. _conda environment: https://conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html
 
-Install the library by doing the following:
+Standard Install
+................
+
+If you are just going to be using buildstockbatch, not working on it, install like so:
 
 ::
 
    cd /path/to/buildstockbatch
-   python -m pip install -e . --user
+   python -m pip install -e .
+
+Developer Install
+.................
+
+If you are going to be working on and contributing back to buildstockbatch,
+install as follows after cloning the repository and creating and activating a
+new python or conda environment.
+
+::
+
+   cd /path/to/buildstockbatch
+   python -m pip install -e ".[dev]"
+   pre-commit install
 
 .. _aws-user-config-local:
 
@@ -184,6 +201,11 @@ The ``-d`` and ``-e`` flags can also be combined if desired
 
 Amazon Web Services (Beta)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. warning::
+
+   The AWS version of buildstockbatch is currently broken. A remedy is in
+   progress. Thanks for your patience.
 
 The installation instructions are the same as the :ref:`local-install`
 installation. You will need to use an AWS account with appropriate permissions.

@@ -5,21 +5,32 @@ import os
 
 
 def test_str_repr():
-    test_obj = [{1, 2, 3, 4, 5, 6}, {"List1": ["Item1", ('a', 'b', 'c', 'd'), "item3"],
-                "long_name_list": ["long_name_one_two_three", "long_name"],
-                "dict": {"key1": ["List_item1", "List_item2", "List_item3"], "Key2": "value2",
-                         "key3": "value3", "key4": "val4"}}]
+    test_obj = [
+        {1, 2, 3, 4, 5, 6},
+        {
+            "List1": ["Item1", ("a", "b", "c", "d"), "item3"],
+            "long_name_list": ["long_name_one_two_three", "long_name"],
+            "dict": {
+                "key1": ["List_item1", "List_item2", "List_item3"],
+                "Key2": "value2",
+                "key3": "value3",
+                "key4": "val4",
+            },
+        },
+    ]
 
     gen_repr = _str_repr(test_obj, list_max=2, dict_max=3, string_max=10)
-    true_repr = "[{'1','2','3' ...6},{'List1': ['Item1',('a','b' ...4) ...3],'long_...14..._list': ['long_...23..."\
-                "three','long_name'],'dict': {'key1': ['List_item1','List_item2' ...3],'Key2': 'value2',"\
-                "'key3': 'value3' ...4}}]"
+    true_repr = (
+        "[{'1','2','3' ...6},{'List1': ['Item1',('a','b' ...4) ...3],'long_...14..._list': ['long_...23..."
+        "three','long_name'],'dict': {'key1': ['List_item1','List_item2' ...3],'Key2': 'value2',"
+        "'key3': 'value3' ...4}}]"
+    )
 
     assert true_repr == gen_repr
 
 
 def test_get_error_details():
-    tf = tempfile.NamedTemporaryFile('w+', delete=False)
+    tf = tempfile.NamedTemporaryFile("w+", delete=False)
     tf.close()
 
     @log_error_details(tf.name)
@@ -40,7 +51,7 @@ def test_get_error_details():
         failing_function1("my_arg1")
 
     assert "actual dummy exception" in str(ex_info.value)
-    with open(tf.name, 'r') as f:
+    with open(tf.name, "r") as f:
         error_log = f.read()
     assert "'arg1':'my_arg1'" in error_log
     assert "'level_1_string':'string1_my_arg1'" in error_log
