@@ -6,12 +6,13 @@
 BuildStock Batch
 ================
 
-This set of tools provides a means to run and manage the batch
-simulations for the
-`ResStock <https://github.com/NREL/resstock>`__
-and `ComStock <https://github.com/NREL/comstock>`__ building stock energy modeling platforms. It can be used to run the
-simulations locally, on Amazon Web Services (beta), or on NREL's
-supercomputer, Eagle.
+This set of tools provides a means to run and manage the batch simulations for
+the `ResStock`_ and `ComStock`_ building stock energy modeling platforms. It can
+be used to run the simulations locally, on NREL's high performance computers, or
+Amazon Web Services (beta).
+
+.. _ResStock: https://github.com/NREL/resstock
+.. _ComStock: https://github.com/NREL/comstock
 
 .. toctree::
    :maxdepth: 2

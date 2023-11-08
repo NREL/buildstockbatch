@@ -83,14 +83,16 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE AND LOCAL DOCKER** When true, buildstockbatch will
-  call the OpenStudio CLI commands with the  ``bundle`` and ``bundle_path`` options. These options tell the CLI
-  to load a custom set of gems rather than those included in the OpenStudio CLI. For both Eagle
-  and local Docker runs, these gems are first specified in the ``buildstock\resources\Gemfile``.
-  For Eagle, when the apptainer image is built, these gems are added to the image.
-  For local Docker, when the containers are started, the gems specified in the Gemfile are installed into a Docker
-  volume on the local computer. This volume is mounted by each container as models are run, so each run
-  uses the custom gems.
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE, KESTREL, AND LOCAL
+  DOCKER** When true, buildstockbatch will call the OpenStudio CLI commands with
+  the  ``bundle`` and ``bundle_path`` options. These options tell the CLI to
+  load a custom set of gems rather than those included in the OpenStudio CLI.
+  For both Eagle, Kestrel, and local Docker runs, these gems are first specified in the
+  ``buildstock\resources\Gemfile``. For Eagle, Kestrel, when the apptainer image is
+  built, these gems are added to the image. For local Docker, when the
+  containers are started, the gems specified in the Gemfile are installed into a
+  Docker volume on the local computer. This volume is mounted by each container
+  as models are run, so each run uses the custom gems.
 
 OpenStudio Version Overrides
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -162,6 +164,33 @@ the Eagle supercomputer.
     *  ``node_memory_mb``: The memory (in MB) to request for eagle node for
        postprocessing. The valid values are 85248, 180224 and 751616. Default is
        85248.
+    *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in
+       memory. Default is 1000.
+
+.. _kestrel-config:
+
+Kestrel Configuration
+~~~~~~~~~~~~~~~~~~~~~
+
+Under the ``kestrel`` key is a list of configuration for running the batch job on
+the Kestrel supercomputer.
+
+*  ``n_jobs``: Number of kestrel jobs to parallelize the simulation into
+*  ``minutes_per_sim``: Required. Maximum allocated simulation time in minutes.
+*  ``account``: Required. kestrel allocation account to charge the job to.
+*  ``sampling``: Configuration for the sampling in kestrel
+
+    *  ``time``: Maximum time in minutes to allocate to sampling job
+
+*  ``postprocessing``: kestrel configuration for the postprocessing step
+
+    *  ``time``: Maximum time in minutes to allocate postprocessing job
+    *  ``n_workers``: Number of kestrel nodes to parallelize the postprocessing
+       job into. Max supported is 32. Default is 2.
+    *  ``n_procs``: Number of CPUs to use within each kestrel nodes. Max is 104.
+       Default is 52. Try reducing this if you get OOM error.
+    *  ``node_memory_mb``: The memory (in MB) to request for kestrel node for
+       postprocessing. The default is 250000, which is a standard node.
     *  ``parquet_memory_mb``: The size (in MB) of the combined parquet file in
        memory. Default is 1000.
 
