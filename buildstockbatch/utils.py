@@ -1,10 +1,13 @@
 import enum
+import gzip
+import hashlib
 import inspect
-import os
 import logging
+import os
+import pandas as pd
+import shutil
 import traceback
 import yaml
-import pandas as pd
 
 
 logger = logging.getLogger(__name__)
@@ -125,3 +128,14 @@ def log_error_details(output_file="buildstockbatch_crash_details.log"):
         return run_with_error_capture
 
     return log_error_decorator
+
+
+def compress_file(in_filename, out_filename):
+    with gzip.open(str(out_filename), "wb") as f_out:
+        with open(str(in_filename), "rb") as f_in:
+            shutil.copyfileobj(f_in, f_out)
+
+
+def calc_hash_for_file(filename):
+    with open(filename, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
