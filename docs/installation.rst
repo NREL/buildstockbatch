@@ -229,7 +229,7 @@ One-time GCP setup shared by all users.
    Account.
 
 .. _Create a repository:
-   https://cloud.google.com/artifact-registry/docs/repositories/create-repos>
+   https://cloud.google.com/artifact-registry/docs/repositories/create-repos
 .. _Create a Google Cloud Storage Bucket:
    https://cloud.google.com/storage/docs/creating-buckets
 .. _gcloud CLI: https://cloud.google.com/sdk/docs/install
