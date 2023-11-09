@@ -494,7 +494,7 @@ class SlurmBatch(BuildStockBatchBase):
         if hipri:
             subargs.insert(-1, "--qos=high")
         logger.info("Submitting sampling job to task scheduler")
-        subprocess.run(subargs, env=env_export, cwd=out_dir, check=True)
+        subprocess.run(subargs, env=env, cwd=out_dir, check=True)
         logger.info("Run squeue -u $USER to monitor the progress of your jobs")
 
     def queue_jobs(self, array_ids=None, hipri=False):
