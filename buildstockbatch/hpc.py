@@ -654,6 +654,10 @@ class SlurmBatch(BuildStockBatchBase):
             logger.debug("sbatch: {}".format(line))
 
     def get_dask_client(self):
+        # Keep this, helpful for debugging on a bigmem node
+        # from dask.distributed import LocalCluster
+        # cluster = LocalCluster(local_directory="/tmp/scratch/dask", n_workers=90, memory_limit="16GiB")
+        # return Client(cluster)
         return Client(scheduler_file=os.path.join(self.output_dir, "dask_scheduler.json"))
 
     def process_results(self, *args, **kwargs):
