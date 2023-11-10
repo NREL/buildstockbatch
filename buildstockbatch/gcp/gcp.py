@@ -19,11 +19,9 @@ import argparse
 import collections
 import csv
 from datetime import datetime
-import docker
 from fsspec.implementations.local import LocalFileSystem
 from gcsfs import GCSFileSystem
 import gzip
-import hashlib
 from joblib import Parallel, delayed
 import json
 import io
@@ -48,35 +46,18 @@ from google.cloud.storage import transfer_manager
 from google.cloud import compute_v1
 
 from buildstockbatch import postprocessing
-from buildstockbatch.base import BuildStockBatchBase
+from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch.exc import ValidationError
-from buildstockbatch.utils import ContainerRuntime, get_project_configuration, log_error_details, read_csv
+from buildstockbatch.utils import (
+    calc_hash_for_file,
+    compress_file,
+    get_project_configuration,
+    log_error_details,
+    read_csv,
+)
 
 
 logger = logging.getLogger(__name__)
-
-
-# todo: aws-shared (see file comment)
-class DockerBatchBase(BuildStockBatchBase):
-    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
-
-    def __init__(self, project_filename):
-        super().__init__(project_filename)
-
-        self.docker_client = docker.DockerClient.from_env()
-        try:
-            self.docker_client.ping()
-        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
-            logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
-            raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
-
-    @staticmethod
-    def validate_project(project_file):
-        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
-
-    @property
-    def docker_image(self):
-        return f"nrel/openstudio:{self.os_version}"
 
 
 def upload_directory_to_GCS(local_directory, bucket, prefix):
@@ -100,19 +81,6 @@ def upload_directory_to_GCS(local_directory, bucket, prefix):
         blob_name_prefix=prefix,
         raise_exception=True,
     )
-
-
-# todo: aws-shared (see file comment)
-def compress_file(in_filename, out_filename):
-    with gzip.open(str(out_filename), "wb") as f_out:
-        with open(str(in_filename), "rb") as f_in:
-            shutil.copyfileobj(f_in, f_out)
-
-
-# todo: aws-shared (see file comment)
-def calc_hash_for_file(filename):
-    with open(filename, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
 
 
 def copy_GCS_file(src_bucket, src_name, dest_bucket, dest_name):
