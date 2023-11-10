@@ -276,12 +276,12 @@ Uploading to AWS Athena
 
 BuildStock results can optionally be uploaded to AWS for further analysis using
 Athena. This process requires appropriate access to an AWS account to be
-configured on your machine. You will need to set this up wherever you use buildstockbatch.
-If you don't have
-keys, consult your AWS administrator to get them set up.
+configured on your machine. You will need to set this up wherever you use
+buildstockbatch. If you don't have keys, consult your AWS administrator to get
+them set up. The appropriate keys are already installed on Eagle and Kestrel, so
+no action is required.
 
-* :ref:`Local Docker AWS setup instructions <aws-user-config-local>`
-* :ref:`Eagle AWS setup instructions <aws-user-config-eagle>`
+* :ref:`Local AWS setup instructions <aws-user-config-local>`
 * `Detailed instructions from AWS <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_
 
 .. _post-config-opts:

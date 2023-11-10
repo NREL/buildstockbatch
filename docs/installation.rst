@@ -125,7 +125,8 @@ configure your user account with your AWS credentials. This setup only needs to 
 Kestrel
 ~~~~~~~
 
-The most common way to run buildstockbatch on Kestrel will be to use a pre-built python environment. This is done as follows:
+The most common way to run buildstockbatch on Kestrel will be to use a pre-built
+python environment. This is done as follows:
 
 ::
 
@@ -192,31 +193,6 @@ You can get a list of installed environments by looking in the envs directory
 ::
 
    ls /shared-projects/buildstock/envs
-
-.. _aws-user-config-eagle:
-
-AWS User Configuration
-......................
-
-To use the automatic upload of processed results to AWS Athena, you'll need to
-configure your user account with your AWS credentials. This setup only needs to
-be done once.
-
-First, `ssh into Eagle`_, then
-issue the following commands
-
-::
-
-   module load conda
-   source activate /shared-projects/buildstock/envs/awscli
-   aws configure
-
-Follow the on screen instructions to enter your AWS credentials. When you are
-done:
-
-::
-
-   source deactivate
 
 Developer installation
 ......................

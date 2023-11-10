@@ -59,6 +59,12 @@ Calling buildstockbatch uses the ``buildstock_kestrel`` command line interface
 is very similar to Eagle. A few of the optional args were renamed in this
 version for consistency.
 
+AWS Keys on Kestrel and Eagle
+=============================
+
+You no longer need to manage AWS keys on Kestrel or Eagle. A service account has
+been created for each and the software knows where to find those keys.
+
 
 Schema Updates
 ==============
