@@ -18,7 +18,6 @@ that's likely to be refactored out will be commented with 'todo: aws-shared'.
 import argparse
 import collections
 import csv
-from datetime import datetime
 from fsspec.implementations.local import LocalFileSystem
 from gcsfs import GCSFileSystem
 import gzip
@@ -91,6 +90,39 @@ def copy_GCS_file(src_bucket, src_name, dest_bucket, dest_name):
     source_bucket.copy_blob(source_blob, destination_bucket, dest_name)
 
 
+def delete_job(job_name):
+    """Delete an existing GCP Batch job, with user confirmation.
+
+    :param job_name: Full GCP Batch job name (projects/{project}/locations/{region}/jobs/{name})
+    """
+    client = batch_v1.BatchServiceClient()
+    try:
+        job_info = client.get_job(batch_v1.GetJobRequest(name=job_name))
+    except exceptions.NotFound:
+        logger.error(f"Job {job_name} not found.")
+        return
+    except Exception:
+        logger.error(
+            f"Job {job_name} invalid or not found. Job name should be in the format "
+            "projects/{project}/locations/{region}/jobs/{name}."
+        )
+        return
+
+    job_status = job_info.status.state.name
+    answer = input(
+        f"Current status of job {job_name} is {job_status}. Are you sure you want to cancel and delete it? (y/n) "
+    )
+    if answer[:1] not in ("y", "Y"):
+        return
+
+    request = batch_v1.DeleteJobRequest(
+        name=job_name,
+    )
+    operation = client.delete_job(request=request)
+    logger.info("Canceling and deleting GCP Batch job. This may take a few minutes.")
+    operation.result()
+
+
 class GcpBatch(DockerBatchBase):
     # https://patorjk.com/software/taag/#p=display&f=Santa%20Clara&t=BuildStockBatch%20%20%2F%20GCP
     LOGO = """
@@ -101,11 +133,21 @@ class GcpBatch(DockerBatchBase):
       Executing BuildStock projects with grace since 2018
 """
 
-    def __init__(self, project_filename):
+    def __init__(self, project_filename, job_identifier=None):
+        """
+        :param project_filename: Path to the project's configuration file.
+        :param job_identifier: Optional job ID that will override gcp.job_identifier from the project file.
+        """
         super().__init__(project_filename)
 
-        # TODO: how short does this really need to be? What characters are allowed?
-        self.job_identifier = re.sub("[^0-9a-zA-Z-]+", "_", self.cfg["gcp"]["job_identifier"])[:10]
+        if job_identifier:
+            assert len(job_identifier) <= 48, "Job identifier must be no longer than 48 characters."
+            assert re.match(
+                "^[a-z]([a-z0-9-]{0,46}[a-z0-9])?$", job_identifier
+            ), "Job identifer must start with a letter and contain only letters, numbers, and hyphens."
+            self.job_identifier = job_identifier
+        else:
+            self.job_identifier = self.cfg["gcp"]["job_identifier"]
 
         self.project_filename = project_filename
         self.gcp_project = self.cfg["gcp"]["project"]
@@ -114,11 +156,6 @@ class GcpBatch(DockerBatchBase):
         self.gcs_bucket = self.cfg["gcp"]["gcs"]["bucket"]
         self.gcs_prefix = self.cfg["gcp"]["gcs"]["prefix"]
         self.batch_array_size = self.cfg["gcp"]["batch_array_size"]
-
-        # Add timestamp to job ID, since duplicates aren't allowed (even between finished and new jobs)
-        # TODO: stop appending timestamp here - it's useful for testing, but we should probably
-        # make users choose a unique job ID each time.
-        self.unique_job_id = self.job_identifier + datetime.utcnow().strftime("%y-%m-%d-%H%M%S")
 
     @staticmethod
     def validate_gcp_args(project_file):
@@ -308,13 +345,19 @@ class GcpBatch(DockerBatchBase):
                     logger.debug(y["status"])
                     last_status = y["status"]
 
+    @property
+    def gcp_batch_parent(self):
+        return f"projects/{self.gcp_project}/locations/{self.region}"
+
+    @property
+    def gcp_batch_job_name(self):
+        return f"{self.gcp_batch_parent}/jobs/{self.job_identifier}"
+
     def clean(self):
-        # TODO: clean up all resources used for this project
-        # Run `terraform destroy` (But make sure outputs aren't deleted!)
-        # Note: cleanup also requires the project input file, and only should only clean
-        # up resources from that particular project.
-        # TODO: should this also stop the job if it's currently running?
-        logger.warning("TODO: clean() not yet implemented!")
+        delete_job(self.gcp_batch_job_name)
+        # TODO: Clean up docker images in AR (and locally?)
+
+        logger.warning("TODO: clean() not fully implemented yet!")
 
     def list_jobs(self):
         """
@@ -460,6 +503,8 @@ class GcpBatch(DockerBatchBase):
             os.makedirs(tmppath / "results" / "simulation_output")
 
             logger.debug(f"Uploading files to GCS bucket: {self.gcs_bucket}")
+            # TODO: Consider creating a unique directory each time a job is run,
+            # to avoid accidentally overwriting previous results
             upload_directory_to_GCS(tmppath, self.gcs_bucket, self.gcs_prefix + "/")
 
         # Copy the non-unique weather files on GCS
@@ -542,7 +587,7 @@ class GcpBatch(DockerBatchBase):
 
         create_request = batch_v1.CreateJobRequest()
         create_request.job = job
-        create_request.job_id = self.unique_job_id
+        create_request.job_id = self.job_identifier
         create_request.parent = f"projects/{self.gcp_project}/locations/{self.region}"
 
         # Start the job!
@@ -554,7 +599,7 @@ class GcpBatch(DockerBatchBase):
         logger.info(f"  Job UID: {created_job.uid}")
         job_url = (
             "https://console.cloud.google.com/batch/jobsDetail/regions/"
-            f"{self.region}/jobs/{self.unique_job_id}/details?project={self.gcp_project}"
+            f"{self.region}/jobs/{self.job_identifier}/details?project={self.gcp_project}"
         )
         logger.info(f"View GCP Batch job at {job_url}")
 
@@ -846,13 +891,18 @@ def main():
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument("project_filename")
+        parser.add_argument(
+            "job_identifier",
+            default=None,
+            help="Optional override of gcp.job_identifier in your project file. Max 48 characters.",
+        )
         group = parser.add_mutually_exclusive_group()
         group.add_argument(
             "-c",
             "--clean",
             action="store_true",
-            help="After the simulation is done, run with --clean to clean up GCP environment"
-            # TODO: Clarify whether this will also stop a job that's still running.
+            help="After the simulation is done, run with --clean to clean up GCP environment. "
+            "If the GCP Batch job is still running, this will cancel the job.",
         )
         group.add_argument(
             "--validateonly",
@@ -860,12 +910,6 @@ def main():
             action="store_true",
         )
         group.add_argument("--list_jobs", help="List existing jobs", action="store_true")
-        parser.add_argument(
-            "-v",
-            "--verbose",
-            action="store_true",
-            help="Verbose output - includes DEBUG logs if set",
-        )
         group.add_argument(
             "--postprocessonly",
             help="Only do postprocessing, useful for when the simulations are already done",
@@ -875,6 +919,12 @@ def main():
             "--crawl",
             help="Only do the crawling in Athena. When simulations and postprocessing are done.",
             action="store_true",
+        )
+        parser.add_argument(
+            "-v",
+            "--verbose",
+            action="store_true",
+            help="Verbose output - includes DEBUG logs if set",
         )
         args = parser.parse_args()
 
@@ -888,7 +938,7 @@ def main():
         if args.validateonly:
             return True
 
-        batch = GcpBatch(args.project_filename)
+        batch = GcpBatch(args.project_filename, args.job_identifier)
         if args.clean:
             batch.clean()
             return
@@ -902,6 +952,8 @@ def main():
         elif args.crawl:
             batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
+            # TODO: check whether this job ID already exists. If so, don't try to start a new job, and maybe reattach
+            # to the existing one if it's still running.
             batch.build_image()
             batch.push_image()
             batch.run_batch()
