@@ -42,12 +42,25 @@ def test_prep_batches(basic_residential_project_file, mocker):
             ["G2601210.epw", "G2601390.epw"],
         ]
 
-        # Three job files should be created, with 10 total simulations
+        # Three job files should be created, with 10 total simulations, split
+        # into batches of 4, 4, and 2 simulations.
         assert job_count == 3
         jobs_file_path = tmppath / "jobs.tar.gz"
         with tarfile.open(jobs_file_path, "r") as tar_f:
-            assert tar_f.getnames() == ["jobs", "jobs/job00000.json", "jobs/job00001.json", "jobs/job00002.json"]
-            job = json.load(tar_f.extractfile("jobs/job00000.json"))
-            assert job["job_num"] == 0
-            assert job["n_datapoints"] == 5  # Total number of buildings
-            assert len(job["batch"]) == 4  # Number of simulations in this batch
+            all_job_files = ["jobs", "jobs/job00000.json", "jobs/job00001.json", "jobs/job00002.json"]
+            assert tar_f.getnames() == all_job_files
+            simulations = []
+            for filename in all_job_files[1:]:
+                job = json.load(tar_f.extractfile(filename))
+                assert filename == f"jobs/job{job['job_num']:05d}.json"
+                assert job["n_datapoints"] == 5  # Total number of buildings
+                assert len(job["batch"]) in (2, 4)  # Number of simulations in this batch
+                simulations.extend(job["batch"])
+
+            # Check that all 10 expected simulations are present
+            assert len(simulations) == 10
+            for building in range(1, 6):
+                # Building baseline
+                assert [building, None] in simulations
+                # Building with upgrade 0
+                assert [building, 0] in simulations

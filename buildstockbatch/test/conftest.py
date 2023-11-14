@@ -45,7 +45,10 @@ def basic_residential_project_file():
             os.mkdir(os.path.join(buildstock_directory, project_directory, "housing_characteristics"))
             weather_file_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
-                "test_inputs/test_openstudio_buildstock/resources/weather.zip",
+                "test_inputs",
+                "test_openstudio_buildstock",
+                "resources",
+                "weather.zip",
             )
             cfg = {
                 "buildstock_directory": buildstock_directory,

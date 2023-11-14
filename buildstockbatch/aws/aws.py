@@ -1764,7 +1764,6 @@ class AwsBatch(DockerBatchBase):
         reporting_measures = cls.get_reporting_measures(cfg)
         dpouts = []
         simulation_output_tar_filename = sim_dir.parent / "simulation_outputs.tar.gz"
-
         with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
             for building_id, upgrade_idx in jobs_d["batch"]:
                 upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
