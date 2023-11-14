@@ -321,12 +321,20 @@ class GcpBatch(DockerBatchBase):
         """
 
         # Log the Docker client into the GCP AR registry
-        service_account_key_file = open(os.environ["GOOGLE_APPLICATION_CREDENTIALS"], "r")
-        service_account_key = service_account_key_file.read()
-        docker_client_login_response = self.docker_client.login(
-            username="_json_key", password=service_account_key, registry=self.registry_url
-        )
-        logger.debug(docker_client_login_response)
+        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            logger.info("Using GOOGLE_APPLICATION_CREDENTIALS to authenticate Docker with Artifact Registry")
+            service_account_key_file = open(os.environ["GOOGLE_APPLICATION_CREDENTIALS"], "r")
+            service_account_key = service_account_key_file.read()
+            docker_client_login_response = self.docker_client.login(
+                username="_json_key", password=service_account_key, registry=self.registry_url
+            )
+            logger.debug(docker_client_login_response)
+        else:
+            # Instructions for setting up these credentials are here:
+            # https://cloud.google.com/artifact-registry/docs/docker/authentication#gcloud-helper
+            logger.info(
+                "Using Artifact Registry credentials from gcloud because GOOGLE_APPLICATION_CREDENTIALS is not set."
+            )
 
         # Tag the image with a repo name for pushing to GCP AR
         image = self.docker_client.images.get(self.docker_image)
