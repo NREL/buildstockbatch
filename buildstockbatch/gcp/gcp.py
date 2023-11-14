@@ -893,6 +893,7 @@ def main():
         parser.add_argument("project_filename")
         parser.add_argument(
             "job_identifier",
+            nargs="?",
             default=None,
             help="Optional override of gcp.job_identifier in your project file. Max 48 characters.",
         )
