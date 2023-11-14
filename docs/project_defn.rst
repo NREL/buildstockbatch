@@ -19,12 +19,11 @@ Reference the project
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_ or ComStock
-  repository.
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the
+  `ResStock <https://github.com/NREL/resstock>`_ or
+  `ComStock <https://github.com/NREL/ComStock>`_ repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
-
-.. _ResStock: https://github.com/NREL/resstock
 
 Weather Files
 ~~~~~~~~~~~~~
@@ -111,7 +110,7 @@ following properties:
 
    -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in
       `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_
-      in `ResStock`_.
+      in `ResStock <https://github.com/NREL/resstock>`_.
    -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See
       :ref:`filtering-logic` for instructions.
    - ``costs``: A list of costs for the upgrade.
@@ -122,10 +121,9 @@ following properties:
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
-          this enumeration list in the
-          `resstock <https://github.com/NREL/resstock/blob/main/measures/ApplyUpgrade/resources/constants.rb#L12-L38>`_ or
-          `comstock <https://github.com/NREL/ComStock/blob/main/measures/ApplyUpgrade/measure.rb#L76-L93>`_ repo or
-          from the list in your branch of that repo.
+          `this enumeration list in the resstock repo <https://github.com/NREL/resstock/blob/main/measures/ApplyUpgrade/resources/constants.rb#L12-L38>`_ or
+          `this enumeration list in the comstock repo <https://github.com/NREL/ComStock/blob/main/measures/ApplyUpgrade/measure.rb#L76-L93>`_
+          or from the list in your branch of that repo.
    - ``lifetime``: Lifetime in years of the upgrade.
 
 - ``package_apply_logic``: (optional) The conditions under which this package of upgrades should be performed.
