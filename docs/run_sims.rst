@@ -144,9 +144,9 @@ file, something like this:
 
 See :ref:`gcp-config` for details.
 
-You can optionally override the ``job_identifier`` from the command line (``buildstock_gcp project.yml new_job_id``).
+You can optionally override the ``job_identifier`` from the command line (``buildstock_gcp project.yml job_identifier``).
 Note that each job you run must have a unique ID (unless you delete a previous job with the ``--clean`` option), so
-this option makes it easier to quickly assign a new ID with each run.
+this option makes it easier to quickly assign a new ID with each run. It also makes it easy to clean a previous job.
 
 
 List existing jobs
