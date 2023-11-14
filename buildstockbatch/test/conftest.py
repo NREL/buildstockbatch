@@ -3,7 +3,6 @@ import pytest
 import shutil
 import tempfile
 import yaml
-from pathlib import Path
 
 OUTPUT_FOLDER_NAME = "output"
 
@@ -44,11 +43,15 @@ def basic_residential_project_file():
 
             os.mkdir(os.path.join(output_directory, "housing_characteristics"))
             os.mkdir(os.path.join(buildstock_directory, project_directory, "housing_characteristics"))
+            weather_file_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "test_inputs/test_openstudio_buildstock/resources/weather.zip",
+            )
             cfg = {
                 "buildstock_directory": buildstock_directory,
                 "project_directory": project_directory,
                 "output_directory": output_directory,
-                "weather_files_url": "https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip",
+                "weather_files_path": weather_file_path,
                 "sampler": {"type": "residential_quota", "args": {"n_datapoints": 8}},
                 "workflow_generator": {
                     "type": "residential_hpxml",
