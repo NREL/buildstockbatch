@@ -37,7 +37,7 @@ def test_prep_batches(basic_residential_project_file, mocker):
         sampler_mock.run_sampling.assert_called_once()
 
         # Of the three test weather files, two are identical
-        assert sorted(unique_epws.values()) == [
+        assert sorted([sorted(i) for i in unique_epws.values()]) == [
             ["G2500210.epw"],
             ["G2601210.epw", "G2601390.epw"],
         ]
