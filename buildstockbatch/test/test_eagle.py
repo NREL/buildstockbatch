@@ -256,6 +256,7 @@ def test_run_building_process(mocker, basic_residential_project_file):
         return joblib.Parallel(**kw2)
 
     mocker.patch("buildstockbatch.eagle.shutil.copy2")
+    rmtree_mock = mocker.patch("buildstockbatch.eagle.shutil.rmtree")
     mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.eagle.subprocess")
 
@@ -287,6 +288,10 @@ def test_run_building_process(mocker, basic_residential_project_file):
     b.run_batch(sampling_only=True)  # so the directories can be created
     sampler_mock.run_sampling.assert_called_once()
     b.run_job_batch(1)
+    rmtree_mock.assert_any_call(b.local_buildstock_dir)
+    rmtree_mock.assert_any_call(b.local_weather_dir)
+    rmtree_mock.assert_any_call(b.local_output_dir)
+    rmtree_mock.assert_any_call(b.local_housing_characteristics_dir)
 
     # check results job-json
     refrence_path = pathlib.Path(__file__).resolve().parent / "test_results" / "reference_files"
@@ -341,6 +346,7 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
         return joblib.Parallel(**kw2)
 
     mocker.patch("buildstockbatch.eagle.shutil.copy2")
+    mocker.patch("buildstockbatch.eagle.shutil.rmtree")
     mocker.patch("buildstockbatch.eagle.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.eagle.subprocess")
 

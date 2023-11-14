@@ -32,7 +32,7 @@ conda activate "$MY_CONDA_PREFIX"
 which pip
 if [ $DEV -eq 1 ]
 then
-    pip install --no-cache-dir -e .
+    pip install --no-cache-dir -e ".[dev]"
 else
     pip install --no-cache-dir .
 fi

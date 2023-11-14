@@ -61,7 +61,6 @@ class EagleBatch(BuildStockBatchBase):
     min_sims_per_job = 36 * 2
 
     local_scratch = pathlib.Path(os.environ.get("LOCAL_SCRATCH", "/tmp/scratch"))
-    local_project_dir = local_scratch / "project"
     local_buildstock_dir = local_scratch / "buildstock"
     local_weather_dir = local_scratch / "weather"
     local_output_dir = local_scratch / "output"
@@ -311,6 +310,24 @@ class EagleBatch(BuildStockBatchBase):
             shutil.copy2(traceback_file_path, lustre_sim_out_dir)
 
         logger.info("batch complete")
+
+        # Remove local scratch files
+        dirs_to_remove = [
+            self.local_buildstock_dir,
+            self.local_weather_dir,
+            self.local_output_dir,
+            self.local_housing_characteristics_dir,
+        ]
+
+        logger.info(f"Cleaning up {self.local_scratch}")
+        for dir in dirs_to_remove:
+            logger.debug(f"Removing {dir}")
+            if dir.exists():
+                shutil.rmtree(dir)
+            else:
+                logger.warning(f"Directory does not exist {dir}")
+        logger.debug(f"Removing {self.local_singularity_img}")
+        self.local_singularity_img.unlink(missing_ok=True)
 
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
