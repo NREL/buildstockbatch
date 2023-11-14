@@ -1,4 +1,4 @@
-"""Tests for the base class in docker_base.py. """
+"""Tests for the DockerBatchBase class."""
 import json
 import os
 import pathlib

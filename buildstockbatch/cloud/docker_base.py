@@ -62,17 +62,18 @@ class DockerBatchBase(BuildStockBatchBase):
 
         This will:
             - Perform the sampling
-            - Split the samples into self.batch_array_size batches
-            - Collect and package and the required assets, including weather files
+            - Split the samples into (at most) self.batch_array_size batches
+            - Collect and package and the required assets, including weather
+              files, and write them to tmppath.
+
+        self.weather_dir must exist before calling this method. This is where weather files are stored temporarily.
 
         :param tmppath:  Path to a temporary directory where files should be collected before uploading.
-
-        Also depends on self.weather_dir existing.
 
         :returns: (job_count, unique_epws), where
             job_count: The number of jobs the samples were split into.
             unique_epws: A dictionary mapping from the hash of weather files to a list of filenames
-                with that hashed value. Only one copy of each unique file is written to tmppath, so
+                with that hashed value. Only the first in each list is written to tmppath, so
                 this can be used to recreate the other files later.
         """
         # Generate buildstock.csv
