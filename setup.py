@@ -46,6 +46,7 @@ setuptools.setup(
         "google-cloud-artifact-registry",
         "google-cloud-batch",
         "google-cloud-compute",
+        "google-cloud-run",
         "google-cloud-storage",
         "tqdm",
     ],

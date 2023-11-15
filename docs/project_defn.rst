@@ -261,6 +261,15 @@ on the `GCP Batch <https://cloud.google.com/batch>`_ service.
     *  ``use_spot``: true or false. Defaults to false if missing. This tells the project
        to use `Spot VMs <https://cloud.google.com/spot-vms>`_ for data
        simulations, which can reduce costs by up to 91%.
+*  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
+   postprocessing.
+
+    *  ``cpus``: `Number of CPUs`_ to use. Default: 2.
+    *  ``memory_mib``: `Amount of RAM`_ needed in MiB. 2048 MiB per CPU is recommended. Default:
+       4096.
+
+.. _Number of CPUs: https://cloud.google.com/run/docs/configuring/services/cpu
+.. _Amount of RAM: https://cloud.google.com/run/docs/configuring/services/memory-limits
 
 .. _postprocessing:
 
