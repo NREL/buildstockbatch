@@ -8,6 +8,7 @@ on:
 
 jobs:
   coverage:
+    name: Post coverage report to PR
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.event == 'pull_request' }}
 
