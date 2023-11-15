@@ -35,7 +35,6 @@ jobs:
         # https://github.com/5monkeys/cobertura-action/tree/master/.github/workflows
       - name: Report coverage to PR
         uses: 5monkeys/cobertura-action@v13
-        if: ${{ matrix.python-version == '3.11' }}
         with:
           path: buildstockbatch/coverage/coverage.xml
           repo_token: ${{ secrets.GITHUB_TOKEN }}
