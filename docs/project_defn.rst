@@ -19,11 +19,13 @@ Reference the project
 
 First we tell it what project we're running with the following keys:
 
-- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the
-  `ResStock <https://github.com/NREL/resstock>`_ or
-  `ComStock <https://github.com/NREL/ComStock>`_ repository.
+- ``buildstock_directory``: The absolute (or relative to this YAML file) path of the `ResStock`_ or `ComStock`_
+  repository.
 - ``project_directory``: The relative (to the ``buildstock_directory``) path of the project.
 - ``schema_version``: The version of the project yaml file to use and validate - currently the minimum version is ``0.3``.
+
+.. _ResStock: https://github.com/NREL/resstock
+.. _ComStock: https://github.com/NREL/ComStock
 
 Weather Files
 ~~~~~~~~~~~~~
@@ -109,8 +111,8 @@ following properties:
 -  ``options``: A list of options to apply as part of this upgrade.
 
    -  ``option``: (required) The option to apply, in the format ``parameter|option`` which can be found in
-      `options_lookup.tsv <https://github.com/NREL/resstock/blob/master/resources/options_lookup.tsv>`_
-      in `ResStock <https://github.com/NREL/resstock>`_.
+      `options_lookup.tsv <https://github.com/NREL/resstock/blob/main/resources/options_lookup.tsv>`_
+      in `ResStock`_.
    -  ``apply_logic``: Logic that defines which buildings to apply the upgrade to. See
       :ref:`filtering-logic` for instructions.
    - ``costs``: A list of costs for the upgrade.
