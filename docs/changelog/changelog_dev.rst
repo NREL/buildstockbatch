@@ -21,3 +21,10 @@ Development Changelog
         :tickets: 404
 
         Cleans out the ``/tmp/scratch`` folder on Eagle at the end of each array job.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 410
+        :tickets: 408
+
+        Update cost multiplier link in upgrade scenarios documentation.
