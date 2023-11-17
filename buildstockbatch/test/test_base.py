@@ -128,7 +128,9 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         }
     }
     mocked_glueclient = MagicMock()
-    mocked_glueclient.get_crawler = MagicMock(return_value={"Crawler": {"State": "READY"}})
+    mocked_glueclient.get_crawler = MagicMock(
+        return_value={"Crawler": {"State": "READY", "LastCrawl": {"Status": "SUCCEEDED"}}}
+    )
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
     mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ["a", "b", "c"]]
     project_filename, results_dir = basic_residential_project_file(upload_config)
