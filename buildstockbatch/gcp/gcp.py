@@ -953,13 +953,18 @@ class GcpBatch(DockerBatchBase):
                 job=job
             )
         )
-        logger.info("Cloud Run job created (but not yet started). See status at:"
-                    f" {self.postprocessing_job_console_url}")
 
         # Start the job!
-        jobs_client.run_job(name=self.postprocessing_job_name)
-        logger.info("Post-processing Cloud Run job started! You will need to run this script with "
-                    "--clean to clean up GCP environment after post-processing is complete.")
+        try:
+            jobs_client.run_job(name=self.postprocessing_job_name)
+            logger.info("Post-processing Cloud Run job started! "
+                        f"See status at: {self.postprocessing_job_console_url}. "
+                        "You will need to run this script with --clean to clean up the GCP "
+                        "environment after post-processing is complete.")
+        except:
+            logger.warning("Post-processing Cloud Run job failed to start. You may try starting it "
+                           f"at the console: {self.postprocessing_job_console_url}")
+
 
     def clean_postprocessing_job(self):
         jobs_client = run_v2.JobsClient()
