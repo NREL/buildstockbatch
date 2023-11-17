@@ -15,7 +15,6 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
@@ -164,8 +163,8 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
             del results_df[col]
     for col in ("started_at", "completed_at"):
         if col in results_df.columns:
-            results_df[col] = results_df[col].map(
-                lambda x: dt.datetime.strptime(x, "%Y%m%dT%H%M%SZ") if isinstance(x, str) else x
+            results_df[col] = pd.to_datetime(results_df[col], format="%Y%m%dT%H%M%SZ").astype(
+                pd.ArrowDtype(pa.timestamp("s"))
             )
     reference_scenarios = dict([(i, x.get("reference_scenario")) for i, x in enumerate(cfg.get("upgrades", []), 1)])
     results_df["apply_upgrade.reference_scenario"] = (
@@ -203,6 +202,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     sorted_cols += remaining_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
+    results_df = results_df.convert_dtypes(dtype_backend="pyarrow")
 
     return results_df
 
