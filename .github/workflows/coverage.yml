@@ -1,0 +1,43 @@
+name: Coverage report
+
+on:
+  workflow_run:
+    workflows: ["BuildStockBatch Tests"]
+    types:
+      - completed
+
+jobs:
+  coverage:
+    name: Post coverage report to PR
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'pull_request' }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_commit.id }}
+
+      - name: Download Coverage Artifacts
+        uses: Legit-Labs/action-download-artifact@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: ${{ github.event.workflow_run.workflow_id }}
+          workflow_conclusion: success
+          commit: ${{ github.event.workflow_run.head_commit.id }}
+          name: coverage-report-xml
+          path: buildstockbatch/coverage
+
+        # This step is here instead of in ci.yml because PRs from other forks
+        # do not have write permission to the PR during a pull_request action.
+        # More information:
+        # https://securitylab.github.com/research/github-actions-preventing-pwn-requests/
+        # Example to follow:
+        # https://github.com/5monkeys/cobertura-action/tree/master/.github/workflows
+      - name: Report coverage to PR
+        uses: 5monkeys/cobertura-action@v13
+        with:
+          path: buildstockbatch/coverage/coverage.xml
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          minimum_coverage: 33
+          fail_below_threshold: true
