@@ -516,7 +516,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             ts_upgrade_path = f"{ts_in_dir}/up{upgrade_id:02d}"
             try:
                 ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
-            except:
+            except FileNotFoundError:
                 # Upgrade directories may be empty if the upgrade is invalid. In some cloud
                 # filesystems, there aren't actual directories, and trying to list a directory with
                 # no files in it can fail. Just continue post-processing (other upgrades).
