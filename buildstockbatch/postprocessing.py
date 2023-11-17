@@ -514,7 +514,14 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
             ts_upgrade_path = f"{ts_in_dir}/up{upgrade_id:02d}"
-            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            try:
+                ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            except:
+                # Upgrade directories may be empty if the upgrade is invalid. In some cloud
+                # filesystems, there aren't actual directories, and trying to list a directory with
+                # no files in it can fail. Just continue post-processing (other upgrades).
+                logger.warning(f"Listing '{ts_upgrade_path}' failed. Skipping this upgrade.")
+                continue
             ts_bldg_ids = [int(re.search(r"bldg(\d+).parquet", flname).group(1)) for flname in ts_filenames]
             if not ts_filenames:
                 logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
