@@ -23,6 +23,13 @@ Development Changelog
         Cleans out the ``/tmp/scratch`` folder on Eagle at the end of each array job.
 
     .. change::
+        :tags: documentation
+        :pullreq: 410
+        :tickets: 408
+
+        Update cost multiplier link in upgrade scenarios documentation.
+
+    .. change::
         :tags: general, feature, kestrel
         :pullreq: 405
         :tickets: 313
