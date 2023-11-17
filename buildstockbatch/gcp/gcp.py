@@ -649,6 +649,32 @@ class GcpBatch(DockerBatchBase):
         logger.info(f"Batch job status: {job_status}")
         if job_status != "SUCCEEDED":
             raise RuntimeError("Batch job failed. See GCP logs at {job_url}")
+        else:
+            task_group = job_info.task_groups[0]
+            task_spec = task_group.task_spec
+            instance = job_info.status.task_groups["group0"].instances[0]
+
+            # Format stats for easy copying into a spreadsheet
+            keys, values = [], []
+
+            def append_stat(key, value):
+                nonlocal keys
+                nonlocal values
+                width = max(len(str(key)), len(str(value)))
+                keys.append(str(key).rjust(width))
+                values.append(str(value).rjust(width))
+
+            append_stat("Simulations", n_sims)
+            append_stat("Tasks", task_group.task_count)
+            append_stat("Parallelism", task_group.parallelism)
+            append_stat("mCPU/task", task_spec.compute_resource.cpu_milli)
+            append_stat("MiB/task", task_spec.compute_resource.memory_mib)
+            append_stat("Machine type", instance.machine_type)
+            append_stat("Provisioning", instance.provisioning_model.name)
+            append_stat("Runtime", job_info.status.run_duration)
+
+            logger.info("\t".join(keys))
+            logger.info("\t".join(values))
 
     @classmethod
     def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):
