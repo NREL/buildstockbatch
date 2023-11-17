@@ -68,8 +68,10 @@ def test_resstock_local_batch(project_filename):
     assert (simout_path / "simulations_job0.tar.gz").exists()
     base_pq = out_path / "parquet" / "baseline" / "results_up00.parquet"
     assert base_pq.exists()
-    base = pd.read_parquet(base_pq, columns=["completed_status"])
+    base = pd.read_parquet(base_pq, columns=["completed_status", "started_at", "completed_at"])
     assert (base["completed_status"] == "Success").all()
+    assert base.dtypes["started_at"] == "timestamp[s][pyarrow]"
+    assert base.dtypes["completed_at"] == "timestamp[s][pyarrow]"
     assert base.shape[0] == n_datapoints
     ts_pq_path = out_path / "parquet" / "timeseries"
     for upgrade_id in range(0, n_upgrades + 1):
