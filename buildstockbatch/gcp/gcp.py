@@ -384,22 +384,14 @@ class GcpBatch(DockerBatchBase):
 
     def list_jobs(self):
         """
-        List existing GCP Batch jobs that match the provided project.
+        Show any existing GCP Batch and Cloud Run jobs that match the provided project.
         """
-        # TODO: this only shows jobs that exist in GCP Batch - update it to also
-        # show any post-processing steps that may be running.
+        # GCP Batch job that runs the simulations
         client = batch_v1.BatchServiceClient()
-
-        request = batch_v1.ListJobsRequest()
-        request.parent = f"projects/{self.gcp_project}/locations/{self.region}"
-        request.filter = f"name:{request.parent}/jobs/{self.job_identifier}"
-        request.order_by = "create_time desc"
-        request.page_size = 10
-        logger.info(f"Showing the first 10 existing jobs that match: {request.filter}\n")
-        response = client.list_jobs(request)
-        for job in response.jobs:
-            logger.debug(job)
-            logger.info(f"Name: {job.name}")
+        try:
+            job = client.get_job(batch_v1.GetJobRequest(name=self.gcp_batch_job_name))
+            logger.info("Batch job")
+            logger.info(f"  Name: {job.name}")
             logger.info(f"  UID: {job.uid}")
             logger.info(f"  Status: {job.status.state.name}")
             task_counts = collections.defaultdict(int)
@@ -407,6 +399,25 @@ class GcpBatch(DockerBatchBase):
                 for status, count in group.counts.items():
                     task_counts[status] += count
             logger.info(f"  Task statuses: {dict(task_counts)}")
+            logger.debug(f"Full job info:\n{job}")
+        except exceptions.NotFound:
+            logger.info(f"No existing jobs match: {self.gcp_batch_job_name}\n")
+            logger.info(f"See all batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
+
+        # Postprocessing Cloud Run job
+        jobs_client = run_v2.JobsClient()
+        try:
+            job = jobs_client.get_job(name=self.postprocessing_job_name)
+            last_execution = job.latest_created_execution
+            status = "Running"
+            if last_execution.completion_time:
+                status = "Completed"
+            logger.info("Post-processing Cloud Run job")
+            logger.info(f"  Name: {last_execution.name}")
+            logger.info(f"  Status of latest run ({last_execution.name}): {status}")
+            logger.debug(f"Full job info:\n{job}")
+        except exceptions.NotFound:
+            logger.info(f"No Cloud Run job found with name {self.postprocessing_job_name}")
 
     def run_batch(self):
         """
