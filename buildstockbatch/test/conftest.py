@@ -11,7 +11,7 @@ OUTPUT_FOLDER_NAME = "output"
 def basic_residential_project_file():
     with tempfile.TemporaryDirectory() as test_directory:
 
-        def _basic_residential_project_file(update_args={}, raw=False):
+        def _basic_residential_project_file(update_args={}, raw=False, hpc_name="eagle"):
             output_dir = "simulations_job0" if raw else "simulation_output"
             buildstock_directory = os.path.join(test_directory, "openstudio_buildstock")
             shutil.copytree(
@@ -107,7 +107,7 @@ def basic_residential_project_file():
                         "options": [{"option": "Infiltration|11.25 ACH50"}],
                     }
                 ],
-                "eagle": {
+                hpc_name: {
                     "sampling": {"time": 20},
                     "account": "testaccount",
                     "minutes_per_sim": 1,

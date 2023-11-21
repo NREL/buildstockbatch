@@ -5,6 +5,7 @@ __pycache__
 docs/_build
 dask-worker-space
 venv/*
+.venv
 *.DS_Store
 *.zip
 .pytest_cache

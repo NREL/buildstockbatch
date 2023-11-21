@@ -37,3 +37,10 @@ Development Changelog
         Fixing ``started_at`` and ``completed_at`` timestamps in parquet files
         to that when read by AWS Glue/Athena they show up as dates rather than
         bigints.
+
+    .. change::
+        :tags: general, feature, kestrel
+        :pullreq: 405
+        :tickets: 313
+
+        Add support for NREL's Kestrel supercomputer.

@@ -12,4 +12,4 @@ df -h
 module load conda singularity-container
 source activate "$MY_CONDA_ENV"
 
-time python -u -m buildstockbatch.eagle "$PROJECTFILE"
+time python -u -m buildstockbatch.hpc eagle "$PROJECTFILE"

@@ -6,6 +6,7 @@ weather_files_url: str(required=False)
 sampler: include('sampler-spec', required=True)
 workflow_generator: include('workflow-generator-spec', required=True)
 eagle: include('hpc-spec', required=False)
+kestrel: include('hpc-spec', required=False)
 aws: include('aws-spec', required=False)
 output_directory: regex('^(.*\/)?[a-z][a-z0-9_]*\/?$', required=True)
 sys_image_dir: str(required=False)
@@ -48,7 +49,7 @@ hpc-spec:
 hpc-postprocessing-spec:
   time: int(required=True)
   n_workers: int(min=1, max=32, required=False)
-  node_memory_mb: enum(85248, 180224, 751616, required=False)
+  node_memory_mb: int(min=85248, max=751616, required=False)
   n_procs: int(min=1, max=36, required=False)
   parquet_memory_mb: int(min=100, max=4096, required=False)
 

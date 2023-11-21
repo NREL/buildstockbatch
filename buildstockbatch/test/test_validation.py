@@ -17,7 +17,7 @@ import types
 import tempfile
 import json
 import pathlib
-from buildstockbatch.eagle import EagleBatch
+from buildstockbatch.hpc import EagleBatch, SlurmBatch, KestrelBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import (
@@ -128,7 +128,7 @@ def test_validation_integration(project_file, base_expected, eagle_expected):
     ), patch.object(BuildStockBatchBase, "validate_workflow_generator", lambda _: True), patch.object(
         BuildStockBatchBase, "validate_postprocessing_spec", lambda _: True
     ), patch.object(
-        EagleBatch, "validate_singularity_image_eagle", lambda _: True
+        SlurmBatch, "validate_apptainer_image_hpc", lambda _: True
     ):
         for cls, expected in [
             (BuildStockBatchBase, base_expected),
@@ -369,7 +369,28 @@ def test_validate_eagle_output_directory():
             EagleBatch.validate_output_directory_eagle(str(temp_yml))
 
 
-def test_validate_singularity_image_eagle(mocker, basic_residential_project_file):
+def test_validate_kestrel_output_directory():
+    minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
+    with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
+        KestrelBatch.validate_output_directory_kestrel(str(minimal_yml))
+    with tempfile.TemporaryDirectory() as tmpdir:
+        dirs_to_try = [
+            "/scratch/username/out_dir",
+            "/projects/projname/out_dir",
+            "/kfs2/scratch/username/out_dir",
+            "/kfs3/projects/projname/out_dir",
+        ]
+        for output_directory in dirs_to_try:
+            with open(minimal_yml, "r") as f:
+                cfg = yaml.load(f, Loader=yaml.SafeLoader)
+            cfg["output_directory"] = output_directory
+            temp_yml = pathlib.Path(tmpdir, "temp.yml")
+            with open(temp_yml, "w") as f:
+                yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
+            KestrelBatch.validate_output_directory_kestrel(str(temp_yml))
+
+
+def test_validate_apptainer_image():
     minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(minimal_yml, "r") as f:
@@ -378,8 +399,15 @@ def test_validate_singularity_image_eagle(mocker, basic_residential_project_file
         temp_yml = pathlib.Path(tmpdir, "temp.yml")
         with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
-        with pytest.raises(ValidationError, match=r"image does not exist"):
-            EagleBatch.validate_singularity_image_eagle(str(temp_yml))
+        with pytest.raises(ValidationError, match=r"Could not find apptainer image: .+\.sif or .+\.simg"):
+            SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
+        for ext in ["Apptainer.sif", "Singularity.simg"]:
+            filename = pathlib.Path(
+                tmpdir, f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}"
+            )
+            filename.touch()
+            SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
+            filename.unlink()
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
