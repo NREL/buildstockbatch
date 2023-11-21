@@ -10,12 +10,12 @@ A module containing utility functions for postprocessing
 :license: BSD-3
 """
 import boto3
+import botocore.exceptions
 import dask.bag as db
 from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
@@ -164,8 +164,8 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
             del results_df[col]
     for col in ("started_at", "completed_at"):
         if col in results_df.columns:
-            results_df[col] = results_df[col].map(
-                lambda x: dt.datetime.strptime(x, "%Y%m%dT%H%M%SZ") if isinstance(x, str) else x
+            results_df[col] = pd.to_datetime(results_df[col], format="%Y%m%dT%H%M%SZ").astype(
+                pd.ArrowDtype(pa.timestamp("s"))
             )
     reference_scenarios = dict([(i, x.get("reference_scenario")) for i, x in enumerate(cfg.get("upgrades", []), 1)])
     results_df["apply_upgrade.reference_scenario"] = (
@@ -203,6 +203,7 @@ def clean_up_results_df(df, cfg, keep_upgrade_id=False):
     sorted_cols += remaining_cols
 
     results_df = results_df.reindex(columns=sorted_cols, copy=False)
+    results_df = results_df.convert_dtypes(dtype_backend="pyarrow")
 
     return results_df
 
@@ -514,7 +515,14 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         if do_timeseries:
             # Get the names of the timeseries file for each simulation in this upgrade
             ts_upgrade_path = f"{ts_in_dir}/up{upgrade_id:02d}"
-            ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            try:
+                ts_filenames = [ts_upgrade_path + ts_filename for ts_filename in fs.ls(ts_upgrade_path)]
+            except FileNotFoundError:
+                # Upgrade directories may be empty if the upgrade is invalid. In some cloud
+                # filesystems, there aren't actual directories, and trying to list a directory with
+                # no files in it can fail. Just continue post-processing (other upgrades).
+                logger.warning(f"Listing '{ts_upgrade_path}' failed. Skipping this upgrade.")
+                continue
             ts_bldg_ids = [int(re.search(r"bldg(\d+).parquet", flname).group(1)) for flname in ts_filenames]
             if not ts_filenames:
                 logger.warning(f"There are no timeseries files for upgrade{upgrade_id}.")
@@ -678,7 +686,9 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
         return
 
     glueClient = boto3.client("glue", region_name=region_name)
-    crawlTarget = {"S3Targets": [{"Path": s3_path, "Exclusions": ["**_metadata", "**_common_metadata"]}]}
+    crawlTarget = {
+        "S3Targets": [{"Path": s3_path, "Exclusions": ["**_metadata", "**_common_metadata"], "SampleSize": 2}]
+    }
     crawler_name = db_name + "_" + tbl_prefix
     tbl_prefix = tbl_prefix + "_"
 
@@ -711,35 +721,35 @@ def create_athena_tables(aws_conf, tbl_prefix, s3_bucket, s3_prefix):
 
     glueClient.start_crawler(Name=crawler_name)
     logger.info("Crawler started")
-    is_crawler_running = True
-    t = time.time()
-    while time.time() - t < (3 * max_crawling_time):
-        crawler_state = glueClient.get_crawler(Name=crawler_name)["Crawler"]["State"]
-        metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])["CrawlerMetricsList"][0]
-        if is_crawler_running and crawler_state != "RUNNING":
-            is_crawler_running = False
+    start_time = time.time()
+    elapsed_time = 0
+    while elapsed_time < (3 * max_crawling_time):
+        time.sleep(30)
+        elapsed_time = time.time() - start_time
+        crawler = glueClient.get_crawler(Name=crawler_name)["Crawler"]
+        crawler_state = crawler["State"]
+        logger.info(f"Crawler is {crawler_state}")
+        if crawler_state == "RUNNING":
+            if elapsed_time > max_crawling_time:
+                logger.error("Crawler is taking too long. Aborting ...")
+                glueClient.stop_crawler(Name=crawler_name)
+        elif crawler_state == "STOPPING":
+            logger.debug("Waiting for crawler to stop")
+        else:
+            assert crawler_state == "READY"
+            metrics = glueClient.get_crawler_metrics(CrawlerNameList=[crawler_name])["CrawlerMetricsList"][0]
             logger.info(f"Crawler has completed running. It is {crawler_state}.")
             logger.info(
                 f"TablesCreated: {metrics['TablesCreated']} "
                 f"TablesUpdated: {metrics['TablesUpdated']} "
                 f"TablesDeleted: {metrics['TablesDeleted']} "
             )
-        if crawler_state == "READY":
-            logger.info("Crawler stopped. Deleting it now.")
-            glueClient.delete_crawler(Name=crawler_name)
             break
-        elif time.time() - t > max_crawling_time:
-            logger.info("Crawler is taking too long. Aborting ...")
-            logger.info(
-                f"TablesCreated: {metrics['TablesCreated']} "
-                f"TablesUpdated: {metrics['TablesUpdated']} "
-                f"TablesDeleted: {metrics['TablesDeleted']} "
-            )
-            glueClient.stop_crawler(Name=crawler_name)
-        elif time.time() - t > 2 * max_crawling_time:
-            logger.warning(
-                f"Crawler could not be stopped and deleted. Please delete the crawler {crawler_name} "
-                f"manually from the AWS console"
-            )
-            break
-        time.sleep(30)
+
+    logger.info(f"Crawl {crawler['LastCrawl']['Status']}")
+    logger.info(f"Deleting crawler {crawler_name}")
+    try:
+        glueClient.delete_crawler(Name=crawler_name)
+    except botocore.exceptions.ClientError as error:
+        logger.error(f"Could not delete crawler {crawler_name}. Please delete it manually from the AWS console.")
+        raise error

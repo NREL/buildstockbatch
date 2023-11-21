@@ -1,10 +1,12 @@
 Installation
 ------------
 
-BuildStockBatch installations depend on the `ResStock
-<https://github.com/NREL/resstock>`__ or ComStock repository. Either ``git
-clone`` it or download a copy of it or your fork or branch of it with your
-projects.
+BuildStockBatch installations depend on the `ResStock`_ or `ComStock`_
+repository. Either ``git clone`` it or download a copy of it or your fork or
+branch of it with your projects.
+
+.. _ResStock: https://github.com/NREL/resstock
+.. _ComStock: https://github.com/NREL/comstock
 
 .. _local-install:
 
@@ -33,14 +35,14 @@ For example to get OpenStudio 3.5.1 on an Apple Silicon Mac
    # Make a directory for your openstudio installations to live in
    mkdir ~/openstudio
    cd ~/openstudio
-   
+
    # Download the .tar.gz version for your operating system, x86_64 for an Intel mac
    # This can also done using a browser from the OpenStudio releases page
    curl -O -L https://github.com/NREL/OpenStudio/releases/download/v3.5.1/OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
-   
+
    # Extract it
    tar xvzf OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
-   
+
    # Optionally remove the tar file
    rm OpenStudio-3.5.1+22e1db7be5-Darwin-arm64.tar.gz
 
@@ -66,16 +68,14 @@ For Windows, the process is similar.
 BuildStockBatch Python Library
 ..............................
 
-Install Python 3.8 or greater for your platform. Either the official
-distribution from python.org or the `Anaconda distribution
-<https://www.anaconda.com/distribution/>`_ (recommended).
+Install Python 3.8 or greater for your platform.
 
 Get a copy of BuildStockBatch either by downloading the zip file from GitHub or
 `cloning the repository <https://github.com/NREL/buildstockbatch>`_.
 
 Optional, but highly recommended, is to create a new `python virtual
 environment`_ if you're using python from python.org, or to create a new `conda
-environment`_ if you're using Anaconda. Make sure you configure your virtual
+environment`_ if you're using conda. Make sure you configure your virtual
 environment to use Python 3.8 or greater. Then activate your environment.
 
 .. _python virtual environment: https://docs.python.org/3/library/venv.html
@@ -120,12 +120,65 @@ configure your user account with your AWS credentials. This setup only needs to 
 .. _Configure the AWS CLI: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html#cli-quick-configuration
 .. _change the Athena Engine version: https://docs.aws.amazon.com/athena/latest/ug/engine-versions-changing.html
 
+.. _kestrel_install:
+
+Kestrel
+~~~~~~~
+
+The most common way to run buildstockbatch on Kestrel will be to use a pre-built
+python environment. This is done as follows:
+
+::
+
+   module load python
+   source /kfs2/shared-projects/buildstock/envs/buildstock-20XX.XX.X/bin/activate
+
+You can get a list of installed environments by looking in the envs directory
+
+::
+
+   ls /kfs2/shared-projects/buildstock/envs
+
+Developer Installaion
+......................
+
+For those doing development work on buildstockbatch (not most users), a new
+python environment that includes buildstockbatch is created with the bash
+script `create_kestrel_env.sh` in the git repo that will need to be cloned onto
+Kestrel. The script is called as follows:
+
+::
+
+   module load git
+   git clone git@github.com:NREL/buildstockbatch.git
+   cd buildstockbatch
+   bash create_kestrel_env.sh env-name
+
+This will create a directory ``/kfs2/shared-projects/buildstock/envs/env-name``
+that contains the python environment with buildstockbatch installed. This
+environment can then be used by any user.
+
+If you pass the ``-d`` flag to that script, it will install the buildstockbatch
+package in development mode meaning that any changes you make in your cloned
+repo will immediately be available to that environment. However, it means that
+only the user who installed the environment can use it.
+
+If you pass the flag ``-e /projects/someproject/envs``, it will install the
+environment there instead of the default location. This is useful if you need a
+specific installation for a particular project.
+
+The ``-d`` and ``-e`` flags can also be combined if desired
+
+::
+
+   bash create_kestrel_env.sh -d -e /projects/enduse/envs mydevenv
+
 .. _eagle_install:
 
 Eagle
 ~~~~~
 
-BuildStock Batch is preinstalled on Eagle. To use it, `ssh into Eagle`_,
+buildstockbatch is preinstalled on Eagle. To use it, `ssh into Eagle`_,
 activate the appropriate conda environment:
 
 .. _ssh into Eagle: https://www.nrel.gov/hpc/eagle-user-basics.html
@@ -141,48 +194,23 @@ You can get a list of installed environments by looking in the envs directory
 
    ls /shared-projects/buildstock/envs
 
-.. _aws-user-config-eagle:
-
-AWS User Configuration
-......................
-
-To use the automatic upload of processed results to AWS Athena, you'll need to
-configure your user account with your AWS credentials. This setup only needs to
-be done once.
-
-First, `ssh into Eagle`_, then
-issue the following commands
-
-::
-
-   module load conda
-   source activate /shared-projects/buildstock/envs/awscli
-   aws configure
-
-Follow the on screen instructions to enter your AWS credentials. When you are
-done:
-
-::
-
-   source deactivate
-
 Developer installation
 ......................
 
-For those doing development work on BuildStock Batch (not most users), a new
-conda environment that includes buildstock batch is created with the bash
+For those doing development work on buildstockbatch (not most users), a new
+conda environment that includes buildstockbatch is created with the bash
 script `create_eagle_env.sh` in the git repo that will need to be cloned onto
 Eagle. The script is called as follows:
 
 ::
 
-   bash create_eagle_env.sh envname
+   bash create_eagle_env.sh env-name
 
 This will create a directory ``/shared-projects/buildstock/envs/env-name`` that
 contains the conda environment with BuildStock Batch installed. This environment
 can then be used by any user.
 
-If you pass the ``-d`` flag to that script, it will install the buildstock-batch
+If you pass the ``-d`` flag to that script, it will install the buildstockbatch
 package in development mode meaning that any changes you make in your cloned
 repo will immediately be available to that environment. However, it means that
 only the user who installed the environment can use it.

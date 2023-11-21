@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class ContainerRuntime(enum.Enum):
     DOCKER = 1
-    SINGULARITY = 2
+    APPTAINER = 2
     LOCAL_OPENSTUDIO = 3
 
 
