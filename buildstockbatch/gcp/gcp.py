@@ -401,8 +401,8 @@ class GcpBatch(DockerBatchBase):
             logger.info(f"  Task statuses: {dict(task_counts)}")
             logger.debug(f"Full job info:\n{job}")
         except exceptions.NotFound:
-            logger.info(f"No existing jobs match: {self.gcp_batch_job_name}\n")
-            logger.info(f"See all batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
+            logger.info(f"No existing Batch jobs match: {self.gcp_batch_job_name}")
+            logger.info(f"See all Batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
 
         # Postprocessing Cloud Run job
         jobs_client = run_v2.JobsClient()
@@ -595,7 +595,7 @@ class GcpBatch(DockerBatchBase):
                 batch_v1.LifecyclePolicy(
                     action=batch_v1.LifecyclePolicy.Action.RETRY_TASK,
                     action_condition=batch_v1.LifecyclePolicy.ActionCondition(
-                        exit_codes=[50001]  # Exit code for pre-emptions
+                        exit_codes=[50001]  # Exit code for preemptions
                     ),
                 )
             ],
