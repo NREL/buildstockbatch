@@ -28,3 +28,9 @@ Development Changelog
         :tickets: 408
 
         Update cost multiplier link in upgrade scenarios documentation.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 419
+
+        Update weather file location argument name in custom weather files documentation.
