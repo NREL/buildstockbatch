@@ -49,9 +49,9 @@ To use your own custom weather files for a specific location, this can be done i
 
 - Rename the filename references in your local `options_lookup.tsv`_ in the
   ``resources`` folder to match your custom weather file names. For example, in
-  the options_lookup.tsv, the Location ``AL_Birmingham.Muni.AP.722280`` is
-  matched to the ``weather_file_name=USA_AL_Birmingham.Muni.AP.722280.epw``. To
-  update the weather file for this location, the `weather_file_name` field needs
+  the options_lookup.tsv, the County ``AL, Autauga County`` is
+  matched to the ``weather_station_epw_filepath=../../../G0100010.epw``. To
+  update the weather file for this location, the `weather_station_epw_filepath` field needs
   to be updated to match your new name specified.
 - Rename your custom .epw weather file to match the references in your local
   `options_lookup.tsv`_ in the ``resources`` folder.
