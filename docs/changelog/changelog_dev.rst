@@ -30,6 +30,15 @@ Development Changelog
         Update cost multiplier link in upgrade scenarios documentation.
 
     .. change::
+        :tags: bugfix
+        :pullreq: 418
+        :tickets: 411
+
+        Fixing ``started_at`` and ``completed_at`` timestamps in parquet files
+        to that when read by AWS Glue/Athena they show up as dates rather than
+        bigints.
+
+    .. change::
         :tags: general, feature, kestrel
         :pullreq: 405
         :tickets: 313
