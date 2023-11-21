@@ -103,8 +103,9 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
                 assert row["Days Shifted"] in valid_option_values
 
 
-@patch("buildstockbatch.postprocessing.boto3")
-def test_upload_files(mocked_boto3, basic_residential_project_file):
+def test_upload_files(mocker, basic_residential_project_file):
+    mocked_boto3 = mocker.patch("buildstockbatch.postprocessing.boto3")
+    sleep_mock = mocker.patch("time.sleep")
     s3_bucket = "test_bucket"
     s3_prefix = "test_prefix"
     db_name = "test_db_name"
@@ -128,7 +129,9 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         }
     }
     mocked_glueclient = MagicMock()
-    mocked_glueclient.get_crawler = MagicMock(return_value={"Crawler": {"State": "READY"}})
+    mocked_glueclient.get_crawler = MagicMock(
+        return_value={"Crawler": {"State": "READY", "LastCrawl": {"Status": "SUCCEEDED"}}}
+    )
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
     mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ["a", "b", "c"]]
     project_filename, results_dir = basic_residential_project_file(upload_config)
@@ -143,16 +146,16 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         Path(__file__).parent / "test_results" / "housing_characteristics" / "buildstock.csv",
         buildstock_csv_path,
     )
-    with patch.object(BuildStockBatchBase, "weather_dir", None), patch.object(
-        BuildStockBatchBase, "output_dir", results_dir
-    ), patch.object(BuildStockBatchBase, "get_dask_client") as get_dask_client_mock, patch.object(
-        BuildStockBatchBase, "results_dir", results_dir
-    ), patch.object(
-        BuildStockBatchBase, "CONTAINER_RUNTIME", ContainerRuntime.LOCAL_OPENSTUDIO
-    ):
-        bsb = BuildStockBatchBase(project_filename)
-        bsb.process_results()
-        get_dask_client_mock.assert_called_once()
+    mocker.patch.object(BuildStockBatchBase, "weather_dir", None)
+    mocker.patch.object(BuildStockBatchBase, "output_dir", results_dir)
+    get_dask_client_mock = mocker.patch.object(BuildStockBatchBase, "get_dask_client")
+    mocker.patch.object(BuildStockBatchBase, "results_dir", results_dir)
+    mocker.patch.object(BuildStockBatchBase, "CONTAINER_RUNTIME", ContainerRuntime.LOCAL_OPENSTUDIO)
+
+    bsb = BuildStockBatchBase(project_filename)
+    bsb.process_results()
+    sleep_mock.assert_called_with(30)
+    get_dask_client_mock.assert_called_once()
 
     files_uploaded = []
     crawler_created = False
