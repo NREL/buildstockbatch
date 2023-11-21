@@ -417,7 +417,10 @@ class GcpBatch(DockerBatchBase):
             logger.info(f"  Status of latest run ({last_execution.name}): {status}")
             logger.debug(f"Full job info:\n{job}")
         except exceptions.NotFound:
-            logger.info(f"No Cloud Run job found with name {self.postprocessing_job_name}")
+            logger.info(f"No existing Cloud Run jobs match {self.postprocessing_job_name}")
+            logger.info(
+                f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}"
+            )
 
     def run_batch(self):
         """
@@ -581,13 +584,22 @@ class GcpBatch(DockerBatchBase):
             memory_mib=job_env_cfg.get("memory_mib", 1024),
         )
 
+        # Give three minutes per simulation, plus ten minutes for job overhead
+        task_duration_mins = 10 + n_sims_per_job * 3
         task = batch_v1.TaskSpec(
             runnables=[runnable],
             compute_resource=resources,
-            # TODO: Confirm what happens if this fails repeatedly, or for only some tasks, and document it.
-            max_retry_count=2,
-            # TODO: How long does this timeout need to be?
-            max_run_duration="5000s",
+            # Allow retries, but only when the machine is preempted.
+            max_retry_count=3,
+            lifecycle_policies=[
+                batch_v1.LifecyclePolicy(
+                    action=batch_v1.LifecyclePolicy.Action.RETRY_TASK,
+                    action_condition=batch_v1.LifecyclePolicy.ActionCondition(
+                        exit_codes=[50001]  # Exit code for pre-emptions
+                    ),
+                )
+            ],
+            max_run_duration=f"{task_duration_mins * 60}s",
         )
 
         # How many of these tasks to run.
