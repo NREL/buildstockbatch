@@ -51,4 +51,10 @@ Development Changelog
         :tickets: 412
 
         Add support for an AWS service account on Kestrel/Eagle so the user
-        doesn't have to manage AWS keys. 
+        doesn't have to manage AWS keys.
+
+    .. change::
+        :tags: documentation
+        :pullreq: 419
+
+        Update weather file location argument name in custom weather files documentation.
