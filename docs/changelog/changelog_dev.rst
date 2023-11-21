@@ -44,3 +44,11 @@ Development Changelog
         :tickets: 313
 
         Add support for NREL's Kestrel supercomputer.
+
+    .. change::
+        :tags: general, postprocessing
+        :pullreq: 414
+        :tickets: 412
+
+        Add support for an AWS service account on Kestrel/Eagle so the user
+        doesn't have to manage AWS keys. 

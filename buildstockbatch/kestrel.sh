@@ -12,5 +12,6 @@ df -h
 
 module load python apptainer
 source "$MY_PYTHON_ENV/bin/activate"
+source /kfs2/shared-projects/buildstock/aws_credentials.sh
 
 time python -u -m buildstockbatch.hpc kestrel "$PROJECTFILE"
