@@ -382,9 +382,9 @@ class GcpBatch(DockerBatchBase):
         delete_job(self.gcp_batch_job_name)
         self.clean_postprocessing_job()
 
-    def list_jobs(self):
+    def show_jobs(self):
         """
-        Show any existing GCP Batch and Cloud Run jobs that match the provided project.
+        Show the existing GCP Batch and Cloud Run jobs that match the provided project, if they exist.
         """
         # GCP Batch job that runs the simulations
         client = batch_v1.BatchServiceClient()
@@ -402,7 +402,7 @@ class GcpBatch(DockerBatchBase):
             logger.debug(f"Full job info:\n{job}")
         except exceptions.NotFound:
             logger.info(f"No existing Batch jobs match: {self.gcp_batch_job_name}")
-            logger.info(f"See all Batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
+        logger.info(f"See all Batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
 
         # Postprocessing Cloud Run job
         jobs_client = run_v2.JobsClient()
@@ -413,14 +413,12 @@ class GcpBatch(DockerBatchBase):
             if last_execution.completion_time:
                 status = "Completed"
             logger.info("Post-processing Cloud Run job")
-            logger.info(f"  Name: {last_execution.name}")
+            logger.info(f"  Name: {job.name}")
             logger.info(f"  Status of latest run ({last_execution.name}): {status}")
             logger.debug(f"Full job info:\n{job}")
         except exceptions.NotFound:
             logger.info(f"No existing Cloud Run jobs match {self.postprocessing_job_name}")
-            logger.info(
-                f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}"
-            )
+        logger.info(f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}")
 
     def run_batch(self):
         """
@@ -585,7 +583,7 @@ class GcpBatch(DockerBatchBase):
         )
 
         # Give three minutes per simulation, plus ten minutes for job overhead
-        task_duration_mins = 10 + n_sims_per_job * 3
+        task_duration_secs = 60 * (10 + n_sims_per_job * 3)
         task = batch_v1.TaskSpec(
             runnables=[runnable],
             compute_resource=resources,
@@ -599,7 +597,7 @@ class GcpBatch(DockerBatchBase):
                     ),
                 )
             ],
-            max_run_duration=f"{task_duration_mins * 60}s",
+            max_run_duration=f"{task_duration_secs}s",
         )
 
         # How many of these tasks to run.
@@ -1110,7 +1108,7 @@ def main():
             help="Only validate the project YAML file and references. Nothing is executed",
             action="store_true",
         )
-        group.add_argument("--list_jobs", help="List existing jobs", action="store_true")
+        group.add_argument("--show_jobs", help="List existing jobs", action="store_true")
         group.add_argument(
             "--postprocessonly",
             help="Only do postprocessing, useful for when the simulations are already done",
@@ -1143,8 +1141,8 @@ def main():
         if args.clean:
             batch.clean()
             return
-        if args.list_jobs:
-            batch.list_jobs()
+        if args.show_jobs:
+            batch.show_jobs()
             return
         elif args.postprocessonly:
             batch.build_image()

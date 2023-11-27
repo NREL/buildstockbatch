@@ -152,7 +152,7 @@ this option makes it easier to quickly assign a new ID with each run. It also ma
 List existing jobs
 ..................
 
-Run ``buildstock_gcp --list_jobs your_project_file.yml`` to see a list of all existing
+Run ``buildstock_gcp --show_jobs your_project_file.yml`` to see the existing
 jobs matching the project specified. This can show you whether a previously-started job
 has completed, is still running, or has already been cleaned up.
 
