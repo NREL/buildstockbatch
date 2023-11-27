@@ -382,24 +382,16 @@ class GcpBatch(DockerBatchBase):
         delete_job(self.gcp_batch_job_name)
         self.clean_postprocessing_job()
 
-    def list_jobs(self):
+    def show_jobs(self):
         """
-        List existing GCP Batch jobs that match the provided project.
+        Show the existing GCP Batch and Cloud Run jobs that match the provided project, if they exist.
         """
-        # TODO: this only shows jobs that exist in GCP Batch - update it to also
-        # show any post-processing steps that may be running.
+        # GCP Batch job that runs the simulations
         client = batch_v1.BatchServiceClient()
-
-        request = batch_v1.ListJobsRequest()
-        request.parent = f"projects/{self.gcp_project}/locations/{self.region}"
-        request.filter = f"name:{request.parent}/jobs/{self.job_identifier}"
-        request.order_by = "create_time desc"
-        request.page_size = 10
-        logger.info(f"Showing the first 10 existing jobs that match: {request.filter}\n")
-        response = client.list_jobs(request)
-        for job in response.jobs:
-            logger.debug(job)
-            logger.info(f"Name: {job.name}")
+        try:
+            job = client.get_job(batch_v1.GetJobRequest(name=self.gcp_batch_job_name))
+            logger.info("Batch job")
+            logger.info(f"  Name: {job.name}")
             logger.info(f"  UID: {job.uid}")
             logger.info(f"  Status: {job.status.state.name}")
             task_counts = collections.defaultdict(int)
@@ -407,6 +399,26 @@ class GcpBatch(DockerBatchBase):
                 for status, count in group.counts.items():
                     task_counts[status] += count
             logger.info(f"  Task statuses: {dict(task_counts)}")
+            logger.debug(f"Full job info:\n{job}")
+        except exceptions.NotFound:
+            logger.info(f"No existing Batch jobs match: {self.gcp_batch_job_name}")
+        logger.info(f"See all Batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
+
+        # Postprocessing Cloud Run job
+        jobs_client = run_v2.JobsClient()
+        try:
+            job = jobs_client.get_job(name=self.postprocessing_job_name)
+            last_execution = job.latest_created_execution
+            status = "Running"
+            if last_execution.completion_time:
+                status = "Completed"
+            logger.info("Post-processing Cloud Run job")
+            logger.info(f"  Name: {job.name}")
+            logger.info(f"  Status of latest run ({last_execution.name}): {status}")
+            logger.debug(f"Full job info:\n{job}")
+        except exceptions.NotFound:
+            logger.info(f"No existing Cloud Run jobs match {self.postprocessing_job_name}")
+        logger.info(f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}")
 
     def run_batch(self):
         """
@@ -570,13 +582,22 @@ class GcpBatch(DockerBatchBase):
             memory_mib=job_env_cfg.get("memory_mib", 1024),
         )
 
+        # Give three minutes per simulation, plus ten minutes for job overhead
+        task_duration_secs = 60 * (10 + n_sims_per_job * 3)
         task = batch_v1.TaskSpec(
             runnables=[runnable],
             compute_resource=resources,
-            # TODO: Confirm what happens if this fails repeatedly, or for only some tasks, and document it.
-            max_retry_count=2,
-            # TODO: How long does this timeout need to be?
-            max_run_duration="5000s",
+            # Allow retries, but only when the machine is preempted.
+            max_retry_count=3,
+            lifecycle_policies=[
+                batch_v1.LifecyclePolicy(
+                    action=batch_v1.LifecyclePolicy.Action.RETRY_TASK,
+                    action_condition=batch_v1.LifecyclePolicy.ActionCondition(
+                        exit_codes=[50001]  # Exit code for preemptions
+                    ),
+                )
+            ],
+            max_run_duration=f"{task_duration_secs}s",
         )
 
         # How many of these tasks to run.
@@ -1087,7 +1108,7 @@ def main():
             help="Only validate the project YAML file and references. Nothing is executed",
             action="store_true",
         )
-        group.add_argument("--list_jobs", help="List existing jobs", action="store_true")
+        group.add_argument("--show_jobs", help="List existing jobs", action="store_true")
         group.add_argument(
             "--postprocessonly",
             help="Only do postprocessing, useful for when the simulations are already done",
@@ -1120,8 +1141,8 @@ def main():
         if args.clean:
             batch.clean()
             return
-        if args.list_jobs:
-            batch.list_jobs()
+        if args.show_jobs:
+            batch.show_jobs()
             return
         elif args.postprocessonly:
             batch.build_image()

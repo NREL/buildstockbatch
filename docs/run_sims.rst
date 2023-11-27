@@ -22,7 +22,7 @@ Running a project file is straightforward. Call the ``buildstock_local`` command
 
 Eagle
 ~~~~~
-After you have :ref:`activated the appropriate conda environment on Eagle <eagle_install>`, 
+After you have :ref:`activated the appropriate conda environment on Eagle <eagle_install>`,
 you can submit a project file to be simulated by passing it to the ``buildstock_eagle`` command.
 
 .. command-output:: buildstock_eagle --help
@@ -40,8 +40,8 @@ Eagle specific project configuration
 To get a project to run on Eagle, you will need to make a few changes to your :doc:`project_defn`.
 First, the ``output_directory`` should be in ``/scratch/your_username/some_directory`` or in ``/projects`` somewhere.
 Building stock simulations generate a lot of output quickly and the ``/scratch`` or ``/projects`` filesystem are
-equipped to handle that kind of I/O throughput where your ``/home`` directory is not and may cause 
-stability issues across the whole system. 
+equipped to handle that kind of I/O throughput where your ``/home`` directory is not and may cause
+stability issues across the whole system.
 
 Next, you will need to add an ``eagle`` top level key to the project file, which will look something like this
 
@@ -69,7 +69,7 @@ jobs runs a batch of simulations on a single compute node. Sometimes a handful
 of jobs will fail due to issues with Eagle (filesystem or timeouts). If most of
 the jobs succeeded, rather than rerun everything you can resubmit just the jobs
 that failed with the ``--rerun_failed`` command line argument. This will also
-clear out and rerun the postprocessing. 
+clear out and rerun the postprocessing.
 
 
 Amazon Web Services
@@ -152,9 +152,9 @@ this option makes it easier to quickly assign a new ID with each run. It also ma
 List existing jobs
 ..................
 
-Run ``buildstock_gcp --list_jobs your_project_file.yml`` to see a list of all existing
+Run ``buildstock_gcp --show_jobs your_project_file.yml`` to see the existing
 jobs matching the project specified. This can show you whether a previously-started job
-has completed or is still running.
+has completed, is still running, or has already been cleaned up.
 
 
 Cleaning up after yourself
