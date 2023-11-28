@@ -224,7 +224,7 @@ def read_results_json(fs, filename, all_cols=None):
         for missing_col in set(all_cols).difference(df.columns.values):
             df[missing_col] = None
     # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
-    df = df.reindex(sorted(df.columns), axis=1)
+    df = df.reindex(sorted(df.columns), axis=1).convert_dtypes(dtype_backend='pyarrow')
     return df
 
 
