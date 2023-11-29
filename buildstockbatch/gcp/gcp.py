@@ -974,19 +974,38 @@ class GcpBatch(DockerBatchBase):
         )
 
         # Start the job!
-        try:
-            jobs_client.run_job(name=self.postprocessing_job_name)
-            logger.info(
-                "Post-processing Cloud Run job started! "
-                f"See status at: {self.postprocessing_job_console_url}. "
-                "You will need to run this script with --clean to clean up the GCP "
-                "environment after post-processing is complete."
-            )
-        except:
-            logger.warning(
-                "Post-processing Cloud Run job failed to start. You may try starting it "
-                f"at the console: {self.postprocessing_job_console_url}"
-            )
+        attempts_remaining = 3
+        while True:
+            try:
+                jobs_client.run_job(name=self.postprocessing_job_name)
+                logger.info(
+                    "Post-processing Cloud Run job started! "
+                    f"See status at: {self.postprocessing_job_console_url}. "
+                    "You will need to run this script with --clean to clean up the GCP "
+                    "environment after post-processing is complete."
+                )
+                break
+            except:
+                attempts_remaining -= 1
+                if attempts_remaining > 0:
+                    # retry after delay
+                    logger.warning(
+                        "Post-processing Cloud Run job failed to start. "
+                        f"{attempts_remaining} attempt(s) remaining. "
+                        "Will retry in 1 second...",
+                        exc_info=logger.isEnabledFor(logging.DEBUG),
+                    )
+                    time.sleep(1)
+                    continue
+
+                # no attempts remaining
+                logger.warning(
+                    "Post-processing Cloud Run job failed to start after three attempts. "
+                    "You may want to investigate why and try starting it at the console: "
+                    f"{self.postprocessing_job_console_url}",
+                    exc_info=True,
+                )
+                break
 
     def clean_postprocessing_job(self):
         jobs_client = run_v2.JobsClient()
