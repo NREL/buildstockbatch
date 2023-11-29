@@ -12,7 +12,7 @@ here = os.path.dirname(os.path.abspath(__file__))
 resources_dir = os.path.join(here, "test_inputs", "test_openstudio_buildstock", "resources")
 
 
-def test_prep_batches(basic_residential_project_file, mocker):
+def test_run_batch_prep(basic_residential_project_file, mocker):
     """Test that samples are created and bundled into batches correctly."""
     project_filename, results_dir = basic_residential_project_file()
 
@@ -27,24 +27,29 @@ def test_prep_batches(basic_residential_project_file, mocker):
     dbb.batch_array_size = 3
     DockerBatchBase.validate_project = MagicMock(return_value=True)
 
-    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
-        prefix="bsb_"
-    ) as tmp_weather_dir:
-        dbb._weather_dir = tmp_weather_dir
+    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
         tmppath = pathlib.Path(tmpdir)
-
-        job_count, unique_epws = dbb.prep_batches(tmppath)
+        epws_to_copy, batch_info = dbb._run_batch_prep(tmppath)
         sampler_mock.run_sampling.assert_called_once()
 
-        # Of the three test weather files, two are identical
-        assert sorted([sorted(i) for i in unique_epws.values()]) == [
-            ["G2500210.epw"],
-            ["G2601210.epw", "G2601390.epw"],
-        ]
+        # There are three weather files...
+        #   * "G2500210.epw" is unique; check for it (gz'd) in tmppath
+        #   * "G2601210.epw" and "G2601390.epw" are dupes. One should be in
+        #     tmppath; one should be copied to the other according to ``epws_to_copy``
+        assert os.path.isfile(tmppath / "weather" / "G2500210.epw.gz")
+        assert os.path.isfile(tmppath / "weather" / "G2601210.epw.gz") or os.path.isfile(
+            tmppath / "weather" / "G2601390.epw.gz"
+        )
+        src, dest = epws_to_copy[0]
+        assert src in ("G2601210.epw.gz", "G2601390.epw.gz")
+        assert dest in ("G2601210.epw.gz", "G2601390.epw.gz")
+        assert src != dest
 
         # Three job files should be created, with 10 total simulations, split
         # into batches of 4, 4, and 2 simulations.
-        assert job_count == 3
+        assert batch_info.n_sims == 10
+        assert batch_info.n_sims_per_job == 4
+        assert batch_info.job_count == 3
         jobs_file_path = tmppath / "jobs.tar.gz"
         with tarfile.open(jobs_file_path, "r") as tar_f:
             all_job_files = ["jobs", "jobs/job00000.json", "jobs/job00001.json", "jobs/job00002.json"]

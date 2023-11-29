@@ -25,17 +25,13 @@ import gzip
 from joblib import Parallel, delayed
 import json
 import io
-import itertools
 import logging
-import math
 import os
 import pathlib
-import random
 import re
 import shutil
 import subprocess
 import tarfile
-import tempfile
 import time
 import tqdm
 
@@ -50,11 +46,8 @@ from buildstockbatch import postprocessing
 from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.utils import (
-    calc_hash_for_file,
-    compress_file,
     get_project_configuration,
     log_error_details,
-    read_csv,
 )
 
 
@@ -420,142 +413,27 @@ class GcpBatch(DockerBatchBase):
             logger.info(f"No existing Cloud Run jobs match {self.postprocessing_job_name}")
         logger.info(f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}")
 
-    def run_batch(self):
-        """
-        Start the GCP Batch job to run all the building simulations.
+    def upload_batch_files_to_cloud(self, tmppath):
+        """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
+        logger.info("Uploading Batch files to Cloud Storage")
+        upload_directory_to_GCS(tmppath, self.gcs_bucket, self.gcs_prefix + "/")
 
-        This will
-            - perform the sampling
-            - package and upload the assets, including weather
-            - kick off a batch simulation on GCP
-        """
-        gcp_cfg = self.cfg["gcp"]
-
-        # Step 1: Run sampling and split up buildings into batches.
-        buildstock_csv_filename = self.sampler.run_sampling()
-
-        # Step 2: Compress and upload weather data and any other required files to GCP
-        # todo: aws-shared (see file comment)
-        logger.info("Collecting and uploading input files")
-        with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
-            prefix="bsb_"
-        ) as tmp_weather_dir:  # noqa: E501
-            self._weather_dir = tmp_weather_dir
-            self._get_weather_files()
-            tmppath = pathlib.Path(tmpdir)
-            logger.debug("Creating assets tarfile")
-            with tarfile.open(tmppath / "assets.tar.gz", "x:gz") as tar_f:
-                project_path = pathlib.Path(self.project_dir)
-                buildstock_path = pathlib.Path(self.buildstock_dir)
-                tar_f.add(buildstock_path / "measures", "measures")
-                if os.path.exists(buildstock_path / "resources/hpxml-measures"):
-                    tar_f.add(buildstock_path / "resources/hpxml-measures", "resources/hpxml-measures")
-                tar_f.add(buildstock_path / "resources", "lib/resources")
-                tar_f.add(project_path / "housing_characteristics", "lib/housing_characteristics")
-
-            # Weather files
-            weather_path = tmppath / "weather"
-            os.makedirs(weather_path)
-
-            # Determine the unique weather files
-            epw_filenames = list(filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir)))
-            logger.debug("Calculating hashes for weather files")
-            epw_hashes = Parallel(n_jobs=-1, verbose=5)(
-                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
-                for epw_filename in epw_filenames
+    def copy_files_at_cloud(self, files_to_copy):
+        """Implements :func:`DockerBase.copy_files_at_cloud`"""
+        logger.info("Copying weather files at Cloud Storage")
+        Parallel(n_jobs=-1, verbose=9)(
+            delayed(copy_GCS_file)(
+                self.gcs_bucket,
+                f"{self.gcs_prefix}/weather/{src}",
+                self.gcs_bucket,
+                f"{self.gcs_prefix}/weather/{dest}",
             )
-            unique_epws = collections.defaultdict(list)
-            for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
-                unique_epws[epw_hash].append(epw_filename)
+            for src, dest in files_to_copy
+        )
 
-            # Compress unique weather files
-            logger.debug("Compressing weather files")
-            Parallel(n_jobs=-1, verbose=5)(
-                delayed(compress_file)(pathlib.Path(self.weather_dir) / x[0], str(weather_path / x[0]) + ".gz")
-                for x in list(unique_epws.values())
-            )
-
-            logger.debug("Writing project configuration for upload")
-            with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
-                json.dump(self.cfg, f)
-
-            # Collect simulations to queue
-            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
-            self.validate_buildstock_csv(self.project_filename, df)
-            building_ids = df.index.tolist()
-            n_datapoints = len(building_ids)
-            n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
-            logger.debug("Total number of simulations = {}".format(n_sims))
-
-            # GCP Batch allows up to 100,000 tasks, but limit to 10,000 here for consistency with AWS implementation.
-            if self.batch_array_size <= 10000:
-                max_array_size = self.batch_array_size
-            else:
-                max_array_size = 10000
-            n_sims_per_job = math.ceil(n_sims / max_array_size)
-            n_sims_per_job = max(n_sims_per_job, 2)
-            logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
-
-            # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
-            baseline_sims = zip(building_ids, itertools.repeat(None))
-            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
-            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
-            random.shuffle(all_sims)
-            all_sims_iter = iter(all_sims)
-
-            os.makedirs(tmppath / "jobs")
-
-            # Write each batch of simulations to a file.
-            logger.info("Creating batches of jobs")
-            for i in itertools.count(0):
-                batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
-                if not batch:
-                    break
-                job_json_filename = tmppath / "jobs" / "job{:05d}.json".format(i)
-                with open(job_json_filename, "w") as f:
-                    json.dump(
-                        {
-                            "job_num": i,
-                            "n_datapoints": n_datapoints,
-                            "batch": batch,
-                        },
-                        f,
-                        indent=4,
-                    )
-            task_count = i
-            logger.debug("Task count = {}".format(task_count))
-
-            # Compress job jsons
-            jobs_dir = tmppath / "jobs"
-            logger.debug("Compressing job jsons using gz")
-            tick = time.time()
-            with tarfile.open(tmppath / "jobs.tar.gz", "w:gz") as tf:
-                tf.add(jobs_dir, arcname="jobs")
-            tick = time.time() - tick
-            logger.debug("Done compressing job jsons using gz {:.1f} seconds".format(tick))
-            shutil.rmtree(jobs_dir)
-
-            os.makedirs(tmppath / "results" / "simulation_output")
-
-            logger.debug(f"Uploading files to GCS bucket: {self.gcs_bucket}")
-            # TODO: Consider creating a unique directory each time a job is run,
-            # to avoid accidentally overwriting previous results
-            upload_directory_to_GCS(tmppath, self.gcs_bucket, self.gcs_prefix + "/")
-
-        # Copy the non-unique weather files on GCS
-        epws_to_copy = []
-        for epws in unique_epws.values():
-            # The first in the list is already up there, copy the rest
-            for filename in epws[1:]:
-                epws_to_copy.append(
-                    (f"{self.gcs_prefix}/weather/{epws[0]}.gz", f"{self.gcs_prefix}/weather/{filename}.gz")
-                )
-
-        logger.info("Copying weather files on GCS")
-        bucket = self.gcs_bucket
-        Parallel(n_jobs=-1, verbose=5)(delayed(copy_GCS_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy)
-
-        # Step 3: Define and run the GCP Batch job.
+    def start_batch_job(self, batch_info):
+        """Implements :func:`DockerBase.start_batch_job`"""
+        # Define and run the GCP Batch job.
         logger.info("Setting up GCP Batch job")
         client = batch_v1.BatchServiceClient()
 
@@ -576,6 +454,7 @@ class GcpBatch(DockerBatchBase):
 
         runnable.container.commands = ["-c", "python3 -m buildstockbatch.gcp.gcp"]
 
+        gcp_cfg = self.cfg["gcp"]
         job_env_cfg = gcp_cfg.get("job_environment", {})
         resources = batch_v1.ComputeResource(
             cpu_milli=1000 * job_env_cfg.get("vcpus", 1),
@@ -583,7 +462,7 @@ class GcpBatch(DockerBatchBase):
         )
 
         # Give three minutes per simulation, plus ten minutes for job overhead
-        task_duration_secs = 60 * (10 + n_sims_per_job * 3)
+        task_duration_secs = 60 * (10 + batch_info.n_sims_per_job * 3)
         task = batch_v1.TaskSpec(
             runnables=[runnable],
             compute_resource=resources,
@@ -602,7 +481,7 @@ class GcpBatch(DockerBatchBase):
 
         # How many of these tasks to run.
         group = batch_v1.TaskGroup(
-            task_count=task_count,
+            task_count=batch_info.job_count,
             task_spec=task,
         )
 
@@ -650,7 +529,7 @@ class GcpBatch(DockerBatchBase):
         # Monitor job status while waiting for the job to complete
         n_succeeded_last_time = 0
         client = batch_v1.BatchServiceClient()
-        with tqdm.tqdm(desc="Running Simulations", total=task_count, unit="batch") as progress_bar:
+        with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="batch") as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED", "DELETION_IN_PROGRESS"):
                 time.sleep(10)
@@ -685,7 +564,7 @@ class GcpBatch(DockerBatchBase):
                 keys.append(str(key).rjust(width))
                 values.append(str(value).rjust(width))
 
-            append_stat("Simulations", n_sims)
+            append_stat("Simulations", batch_info.n_sims)
             append_stat("Tasks", task_group.task_count)
             append_stat("Parallelism", task_group.parallelism)
             append_stat("mCPU/task", task_spec.compute_resource.cpu_milli)

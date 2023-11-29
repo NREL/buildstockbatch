@@ -27,7 +27,6 @@ from s3fs import S3FileSystem
 import shutil
 import subprocess
 import tarfile
-import tempfile
 import re
 import time
 import io
@@ -1579,47 +1578,31 @@ class AwsBatch(DockerBatchBase):
         sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
         sns_env.clean()
 
-    def run_batch(self):
-        """
-        Run a batch of simulations using AWS Batch
+    def upload_batch_files_to_cloud(self, tmppath):
+        """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
+        logger.debug("Uploading Batch files to S3")
+        upload_directory_to_s3(
+            tmppath,
+            self.cfg["aws"]["s3"]["bucket"],
+            self.cfg["aws"]["s3"]["prefix"],
+        )
 
-        This will
-            - perform the sampling
-            - package and upload the assets, including weather
-            - kick off a batch simulation on AWS
-        """
-        # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
-            prefix="bsb_"
-        ) as tmp_weather_dir:
-            self._weather_dir = tmp_weather_dir
-            tmppath = pathlib.Path(tmpdir)
-
-            array_size, unique_epws = self.prep_batches(tmppath)
-
-            logger.debug("Uploading files to S3")
-            upload_directory_to_s3(
-                tmppath,
-                self.cfg["aws"]["s3"]["bucket"],
-                self.cfg["aws"]["s3"]["prefix"],
-            )
-
-        # Copy the non-unique weather files on S3
-        epws_to_copy = []
-        for epws in unique_epws.values():
-            # The first in the list is already up there, copy the rest
-            for filename in epws[1:]:
-                epws_to_copy.append(
-                    (
-                        f"{self.cfg['aws']['s3']['prefix']}/weather/{epws[0]}.gz",
-                        f"{self.cfg['aws']['s3']['prefix']}/weather/{filename}.gz",
-                    )
-                )
-
+    def copy_files_at_cloud(self, files_to_copy):
+        """Implements :func:`DockerBase.copy_files_at_cloud`"""
         logger.debug("Copying weather files on S3")
         bucket = self.cfg["aws"]["s3"]["bucket"]
-        Parallel(n_jobs=-1, verbose=9)(delayed(copy_s3_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy)
+        Parallel(n_jobs=-1, verbose=9)(
+            delayed(copy_s3_file)(
+                bucket,
+                f"{self.cfg['aws']['s3']['prefix']}/weather/{src}",
+                bucket,
+                f"{self.cfg['aws']['s3']['prefix']}/weather/{dest}",
+            )
+            for src, dest in files_to_copy
+        )
 
+    def start_batch_job(self, batch_info):
+        """Implements :func:`DockerBase.start_batch_job`"""
         # Create the output directories
         fs = S3FileSystem()
         for upgrade_id in range(len(self.cfg.get("upgrades", [])) + 1):
@@ -1675,7 +1658,7 @@ class AwsBatch(DockerBatchBase):
         batch_env.create_emr_cluster_function()
 
         # start job
-        batch_env.start_state_machine_execution(array_size)
+        batch_env.start_state_machine_execution(batch_info.job_count)
 
         logger.info("Batch job submitted. Check your email to subscribe to notifications.")
 
