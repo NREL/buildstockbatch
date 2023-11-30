@@ -19,6 +19,7 @@ import argparse
 import collections
 import csv
 from dask.distributed import Client as DaskClient
+from datetime import datetime
 from fsspec.implementations.local import LocalFileSystem
 from gcsfs import GCSFileSystem
 import gzip
@@ -116,6 +117,27 @@ def delete_job(job_name):
     operation = client.delete_job(request=request)
     logger.info("Canceling and deleting GCP Batch job. This may take a few minutes.")
     operation.result()
+
+
+class TsvLogger:
+    """Collects pairs of headers and values, and then outputs to the logger the set of headers on
+    one line and the set of values on another.
+
+    The entries (of the headers and values) are separated by tabs (for easy pasting into a
+    spreadsheet), and may also have spaces for padding so headers and values line up in logging
+    output.
+    """
+
+    headers, values = [], []
+
+    def append_stat(self, header, value):
+        width = max(len(str(header)), len(str(value)))
+        self.headers.append(str(header).rjust(width))
+        self.values.append(str(value).rjust(width))
+
+    def log_stats(self, level):
+        logger.log(level, "\t".join(self.headers))
+        logger.log(level, "\t".join(self.values))
 
 
 class GcpBatch(DockerBatchBase):
@@ -554,27 +576,17 @@ class GcpBatch(DockerBatchBase):
             task_spec = task_group.task_spec
             instance = job_info.status.task_groups["group0"].instances[0]
 
-            # Format stats for easy copying into a spreadsheet
-            keys, values = [], []
-
-            def append_stat(key, value):
-                nonlocal keys
-                nonlocal values
-                width = max(len(str(key)), len(str(value)))
-                keys.append(str(key).rjust(width))
-                values.append(str(value).rjust(width))
-
-            append_stat("Simulations", batch_info.n_sims)
-            append_stat("Tasks", task_group.task_count)
-            append_stat("Parallelism", task_group.parallelism)
-            append_stat("mCPU/task", task_spec.compute_resource.cpu_milli)
-            append_stat("MiB/task", task_spec.compute_resource.memory_mib)
-            append_stat("Machine type", instance.machine_type)
-            append_stat("Provisioning", instance.provisioning_model.name)
-            append_stat("Runtime", job_info.status.run_duration)
-
-            logger.info("\t".join(keys))
-            logger.info("\t".join(values))
+            # Output stats in spreadsheet-friendly format
+            tsv_logger = TsvLogger()
+            tsv_logger.append_stat("Simulations", batch_info.n_sims)
+            tsv_logger.append_stat("Tasks", task_group.task_count)
+            tsv_logger.append_stat("Parallelism", task_group.parallelism)
+            tsv_logger.append_stat("mCPU/task", task_spec.compute_resource.cpu_milli)
+            tsv_logger.append_stat("MiB/task", task_spec.compute_resource.memory_mib)
+            tsv_logger.append_stat("Machine type", instance.machine_type)
+            tsv_logger.append_stat("Provisioning", instance.provisioning_model.name)
+            tsv_logger.append_stat("Runtime", job_info.status.run_duration)
+            tsv_logger.log_stats(logging.INFO)
 
     @classmethod
     def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):
@@ -812,6 +824,8 @@ class GcpBatch(DockerBatchBase):
 
         # Define the Job
         pp_env_cfg = self.cfg["gcp"].get("postprocessing_environment", {})
+        memory_mib = pp_env_cfg.get("memory_mib", 4096)
+        cpus = pp_env_cfg.get("cpus", 2)
         job = run_v2.Job(
             template=run_v2.ExecutionTemplate(
                 template=run_v2.TaskTemplate(
@@ -821,8 +835,8 @@ class GcpBatch(DockerBatchBase):
                             image=self.repository_uri + ":" + self.job_identifier,
                             resources=run_v2.ResourceRequirements(
                                 limits={
-                                    "memory": f"{pp_env_cfg.get('memory_mib', 4096)}Mi",
-                                    "cpu": str(pp_env_cfg.get("cpus", 2)),
+                                    "memory": f"{memory_mib}Mi",
+                                    "cpu": str(cpus),
                                 }
                             ),
                             command=["/bin/sh"],
@@ -858,10 +872,16 @@ class GcpBatch(DockerBatchBase):
             try:
                 jobs_client.run_job(name=self.postprocessing_job_name)
                 logger.info(
-                    "Post-processing Cloud Run job started! "
-                    f"See status at: {self.postprocessing_job_console_url}. "
-                    "You will need to run this script with --clean to clean up the GCP "
-                    "environment after post-processing is complete."
+                    f"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║ Post-processing Cloud Run Job started!                                       ║
+║                                                                              ║
+║ You may interrupt the script and the job will continue to run.               ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+🔗 See status at: {self.postprocessing_job_console_url}.
+
+Run this script with --clean to clean up the GCP environment after post-processing is complete."""
                 )
                 break
             except:
@@ -884,7 +904,76 @@ class GcpBatch(DockerBatchBase):
                     f"{self.postprocessing_job_console_url}",
                     exc_info=True,
                 )
-                break
+                return
+
+        # Monitor job/execution status, starting by polling the Job for an Execution
+        logger.info("Waiting for execution to begin...")
+        job_start_time = datetime.now()
+        jobs_client = run_v2.JobsClient()
+        job = jobs_client.get_job(name=self.postprocessing_job_name)
+        while not job.latest_created_execution:
+            time.sleep(1)
+            job = jobs_client.get_job(name=self.postprocessing_job_name)
+        execution_start_time = datetime.now()
+        logger.info(
+            f"Execution has started (after {str(execution_start_time - job_start_time)} "
+            "seconds). Waiting for execution to finish..."
+        )
+
+        # Have an execution; poll that for completion
+        fail_message = None
+        with tqdm.tqdm(
+            desc="Waiting for post-processing execution to complete", bar_format="{desc}: {elapsed}{postfix}"
+        ) as pp_tqdm:
+            spinner_states = ["|", "/", "-", "\\"]
+            spinner_state = 0
+
+            pp_tqdm.set_postfix_str("|")
+            executions_client = run_v2.ExecutionsClient()
+            execution_name = f"{self.postprocessing_job_name}/executions/{job.latest_created_execution.name}"
+            last_query_time = time.time()
+            while True:
+                # update spinner frequently...
+                time.sleep(0.25)
+                # ...but only actually query status every 10 sec
+                if time.time() - last_query_time > 10:
+                    # fetch and extract the status
+                    execution = executions_client.get_execution(name=execution_name)
+                    last_query_time = time.time()
+
+                    if execution.succeeded_count > 0:
+                        # Done!
+                        break
+                    elif execution.failed_count > 0:
+                        fail_message = "🟥 Post-processing execution failed."
+                        break
+                    elif execution.cancelled_count > 0:
+                        fail_message = "🟧 Post-processing execution canceled."
+                        break
+
+                spinner_state = (spinner_state + 1) % len(spinner_states)
+                pp_tqdm.set_postfix_str(spinner_states[spinner_state])
+                pp_tqdm.update()
+
+        if fail_message is not None:
+            # if logged within the tqdm block, the message ends up on the same line as the status
+            logger.warning(f"{fail_message} See {self.postprocessing_job_console_url} for more information")
+            return
+
+        logger.info(f"🟢 Post-processing finished! ({str(datetime.now() - execution_start_time)}). ")
+
+        # Output stats in spreadsheet-friendly format
+        # completion_time might not be set right away; if not, just use current time (close enough)
+        finish_time = execution.completion_time if execution.completion_time is not None else datetime.now()
+        tsv_logger = TsvLogger()
+        tsv_logger.append_stat("cpus", cpus)
+        tsv_logger.append_stat("memory_mib", memory_mib)
+        tsv_logger.append_stat("Succeeded", "Yes")
+        tsv_logger.append_stat("Job Created", job.create_time.strftime("%H:%M:%S"))
+        tsv_logger.append_stat("Exec Start", execution.start_time.strftime("%H:%M:%S"))
+        tsv_logger.append_stat("Script Start", "?")
+        tsv_logger.append_stat("Exec Finish", finish_time.strftime("%H:%M:%S"))
+        tsv_logger.log_stats(logging.INFO)
 
     def clean_postprocessing_job(self):
         jobs_client = run_v2.JobsClient()
