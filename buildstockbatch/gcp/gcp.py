@@ -128,7 +128,8 @@ class TsvLogger:
     output.
     """
 
-    headers, values = [], []
+    def __init__(self):
+        self.headers, self.values = [], []
 
     def append_stat(self, header, value):
         width = max(len(str(header)), len(str(value)))
