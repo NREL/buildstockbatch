@@ -45,8 +45,11 @@ gcp-job-environment-spec:
   use_spot: bool(required=False)
 
 gcp-postprocessing_environment-spec:
-  cpus: int(min=1, max=224, required=False)
-  memory_mib: int(min=512, required=False)
+  # Limits documented at
+  # https://cloud.google.com/run/docs/configuring/services/memory-limits
+  # https://cloud.google.com/run/docs/configuring/services/cpu
+  cpus: int(min=1, max=8, required=False)
+  memory_mib: int(min=512, max=32768, required=False)
 
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
