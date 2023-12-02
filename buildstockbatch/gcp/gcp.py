@@ -624,7 +624,7 @@ class GcpBatch(DockerBatchBase):
 
         logger.info(f"Batch job status: {job_status}")
         if job_status != "SUCCEEDED":
-            raise RuntimeError("Batch job failed. See GCP logs at {job_url}")
+            raise RuntimeError(f"Batch job failed. See GCP logs at {job_url}")
         else:
             task_group = job_info.task_groups[0]
             task_spec = task_group.task_spec
