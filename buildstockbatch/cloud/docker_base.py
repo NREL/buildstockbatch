@@ -234,7 +234,7 @@ class DockerBatchBase(BuildStockBatchBase):
         return epws_to_download
 
     @classmethod
-    def run_simulations(cls, cfg, job_id, jobs_d, sim_dir, fs, bucket, prefix):
+    def run_simulations(cls, cfg, job_id, jobs_d, sim_dir, fs, output_path):
         """
         Run one batch of simulations.
 
@@ -245,15 +245,14 @@ class DockerBatchBase(BuildStockBatchBase):
         :param jobs_d: Contents of a single job JSON file; contains the list of buildings to simulate in this job.
         :param sim_dir: Path to the (local) directory where job files are stored.
         :param fs: Filesystem to use when writing outputs to storage bucket
-        :param bucket: Name of the storage bucket to upload results to.
-        :param prefix: File prefix to use when writing to storage bucket.
+        :param output_path: File path (typically `bucket/prefix`) to write outputs to.
         """
         local_fs = LocalFileSystem()
         reporting_measures = cls.get_reporting_measures(cfg)
         dpouts = []
         simulation_output_tar_filename = sim_dir.parent / "simulation_outputs.tar.gz"
         asset_dirs = os.listdir(sim_dir)
-        ts_output_dir = (f"{bucket}/{prefix}/results/simulation_output/timeseries",)
+        ts_output_dir = (f"{output_path}/results/simulation_output/timeseries",)
 
         with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
             for building_id, upgrade_idx in jobs_d["batch"]:
@@ -316,12 +315,12 @@ class DockerBatchBase(BuildStockBatchBase):
         # Upload simulation outputs tarfile to s3
         fs.put(
             str(simulation_output_tar_filename),
-            f"{bucket}/{prefix}/results/simulation_output/simulations_job{job_id}.tar.gz",
+            f"{output_path}/results/simulation_output/simulations_job{job_id}.tar.gz",
         )
 
         # Upload aggregated dpouts as a json file
         with fs.open(
-            f"{bucket}/{prefix}/results/simulation_output/results_job{job_id}.json.gz",
+            f"{output_path}/results/simulation_output/results_job{job_id}.json.gz",
             "wb",
         ) as f1:
             with gzip.open(f1, "wt", encoding="utf-8") as f2:

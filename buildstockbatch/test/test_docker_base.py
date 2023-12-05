@@ -120,7 +120,7 @@ def test_run_simulations(basic_residential_project_file):
         bucket = temp_path / "bucket"
         os.makedirs(bucket / "test_prefix" / "results" / "simulation_output")
 
-        DockerBatchBase.run_simulations(cfg, 0, jobs_d, sim_dir, fs, bucket, "test_prefix")
+        DockerBatchBase.run_simulations(cfg, 0, jobs_d, sim_dir, fs, f"{bucket}/test_prefix")
 
         output_dir = bucket / "test_prefix" / "results" / "simulation_output"
         assert sorted(os.listdir(output_dir)) == ["results_job0.json.gz", "simulations_job0.tar.gz"]
