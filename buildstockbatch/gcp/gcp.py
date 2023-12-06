@@ -642,7 +642,7 @@ class GcpBatch(DockerBatchBase):
         logger.info(f"View GCP Batch job at {job_url}")
 
         # Monitor job status while waiting for the job to complete
-        n_succeeded_last_time = 0
+        n_completed_last_time = 0
         client = batch_v1.BatchServiceClient()
         with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="batch") as progress_bar:
             job_status = None
@@ -655,9 +655,9 @@ class GcpBatch(DockerBatchBase):
                 for group in job_info.status.task_groups.values():
                     for status, count in group.counts.items():
                         task_counts[status] += count
-                n_succeeded = task_counts.get("SUCCEEDED", 0)
-                progress_bar.update(n_succeeded - n_succeeded_last_time)
-                n_succeeded_last_time = n_succeeded
+                n_completed = task_counts.get("SUCCEEDED", 0) + task_counts.get("FAILED", 0)
+                progress_bar.update(n_completed - n_completed_last_time)
+                n_completed_last_time = n_completed
                 # Show all task status counts next to the progress bar
                 progress_bar.set_postfix_str(f"{dict(task_counts)}")
 
