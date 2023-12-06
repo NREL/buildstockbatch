@@ -456,9 +456,7 @@ class GcpBatch(DockerBatchBase):
         Show the existing GCP Batch and Cloud Run jobs that match the provided project, if they exist.
         """
         # GCP Batch job that runs the simulations
-        client = batch_v1.BatchServiceClient()
-        try:
-            job = client.get_job(batch_v1.GetJobRequest(name=self.gcp_batch_job_name))
+        if job := self.get_existing_batch_job():
             logger.info("Batch job")
             logger.info(f"  Name: {job.name}")
             logger.info(f"  UID: {job.uid}")
@@ -469,7 +467,7 @@ class GcpBatch(DockerBatchBase):
                     task_counts[status] += count
             logger.info(f"  Task statuses: {dict(task_counts)}")
             logger.debug(f"Full job info:\n{job}")
-        except exceptions.NotFound:
+        else:
             logger.info(f"No existing Batch jobs match: {self.gcp_batch_job_name}")
         logger.info(f"See all Batch jobs at https://console.cloud.google.com/batch/jobs?project={self.gcp_project}")
 
@@ -488,6 +486,47 @@ class GcpBatch(DockerBatchBase):
         except exceptions.NotFound:
             logger.info(f"No existing Cloud Run jobs match {self.postprocessing_job_name}")
         logger.info(f"See all Cloud Run jobs at https://console.cloud.google.com/run/jobs?project={self.gcp_project}")
+
+    def get_existing_batch_job(self):
+        client = batch_v1.BatchServiceClient()
+        try:
+            job = client.get_job(batch_v1.GetJobRequest(name=self.gcp_batch_job_name))
+            return job
+        except exceptions.NotFound:
+            return None
+
+    def get_existing_postprocessing_job(self):
+        jobs_client = run_v2.JobsClient()
+        try:
+            job = jobs_client.get_job(name=self.postprocessing_job_name)
+            return job
+        except exceptions.NotFound:
+            return False
+
+    def check_for_existing_jobs(self, pp_only=False):
+        """If there are existing jobs with the same ID as this job, logs them as errors and returns True.
+
+        Checks for both the Batch job and Cloud Run post-processing job.
+
+        :param pp_only: If true, only check for the post-processing job.
+        """
+        if pp_only:
+            existing_batch_job = None
+        elif existing_batch_job := self.get_existing_batch_job():
+            logger.error(
+                f"A Batch job with this ID ({self.job_identifier}) already exists "
+                f"(status: {existing_batch_job.status.state.name}). Choose a new job_identifier or run with "
+                "--clean to delete the existing job."
+            )
+
+        if existing_pp_job := self.get_existing_postprocessing_job():
+            status = "Completed" if existing_pp_job.latest_created_execution.completion_time else "Running"
+            logger.error(
+                f"A Cloud Run job with this ID ({self.postprocessing_job_id}) already exists "
+                f"(status: {status}). Choose a new job_identifier or run with --clean "
+                "to delete the existing job."
+            )
+        return bool(existing_batch_job or existing_pp_job)
 
     def upload_batch_files_to_cloud(self, tmppath):
         """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
@@ -963,11 +1002,10 @@ Run this script with --clean to clean up the GCP environment after post-processi
         # Monitor job/execution status, starting by polling the Job for an Execution
         logger.info("Waiting for execution to begin...")
         job_start_time = datetime.now()
-        jobs_client = run_v2.JobsClient()
-        job = jobs_client.get_job(name=self.postprocessing_job_name)
+        job = self.get_existing_postprocessing_job()
         while not job.latest_created_execution:
             time.sleep(1)
-            job = jobs_client.get_job(name=self.postprocessing_job_name)
+            job = self.get_existing_postprocessing_job()
         execution_start_time = datetime.now()
         logger.info(
             f"Execution has started (after {str(execution_start_time - job_start_time)} "
@@ -1030,15 +1068,13 @@ Run this script with --clean to clean up the GCP environment after post-processi
         tsv_logger.log_stats(logging.INFO)
 
     def clean_postprocessing_job(self):
-        jobs_client = run_v2.JobsClient()
         logger.info(
             "Cleaning post-processing Cloud Run job with "
             f"job_identifier='{self.job_identifier}'; "
             f"job name={self.postprocessing_job_name}..."
         )
-        try:
-            job = jobs_client.get_job(name=self.postprocessing_job_name)
-        except Exception:
+        job = self.get_existing_postprocessing_job()
+        if not job:
             logger.warning(
                 "Post-processing Cloud Run job not found for "
                 f"job_identifier='{self.job_identifier}' "
@@ -1069,6 +1105,7 @@ Run this script with --clean to clean up the GCP environment after post-processi
             return
 
         # ... The job succeeded or its execution was deleted successfully; it can be deleted
+        jobs_client = run_v2.JobsClient()
         try:
             jobs_client.delete_job(name=self.postprocessing_job_name)
         except Exception:
@@ -1186,14 +1223,17 @@ def main():
             batch.show_jobs()
             return
         elif args.postprocessonly:
+            if batch.check_for_existing_jobs(pp_only=True):
+                return
             batch.build_image()
             batch.push_image()
             batch.process_results()
         elif args.crawl:
             batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
-            # TODO: check whether this job ID already exists. If so, don't try to start a new job, and maybe reattach
-            # to the existing one if it's still running.
+            if batch.check_for_existing_jobs():
+                return
+
             batch.build_image()
             batch.push_image()
             batch.run_batch()
