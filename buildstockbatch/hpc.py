@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 """
-buildstockbatch.eagle
+buildstockbatch.hpc
 ~~~~~~~~~~~~~~~
-This class contains the object & methods that allow for usage of the library with Eagle
+This class contains the object & methods that allow for usage of the library with Eagle and Kestrel
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -11,7 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
-from dask.distributed import Client, LocalCluster
+from dask.distributed import Client
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
 import gzip
@@ -31,7 +31,6 @@ import subprocess
 import sys
 import tempfile
 import time
-import yaml
 import csv
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
@@ -54,17 +53,18 @@ def get_bool_env_var(varname):
     return os.environ.get(varname, "0").lower() in ("true", "t", "1", "y", "yes")
 
 
-class EagleBatch(BuildStockBatchBase):
-    CONTAINER_RUNTIME = ContainerRuntime.SINGULARITY
-    DEFAULT_SYS_IMAGE_DIR = "/shared-projects/buildstock/singularity_images"
-    hpc_name = "eagle"
-    min_sims_per_job = 36 * 2
+class SlurmBatch(BuildStockBatchBase):
+    DEFAULT_SYS_IMAGE_DIR = None
+    HPC_NAME = None
+    CORES_PER_NODE = None
+    MIN_SIMS_PER_JOB = None
+    CONTAINER_RUNTIME = ContainerRuntime.APPTAINER
 
     local_scratch = pathlib.Path(os.environ.get("LOCAL_SCRATCH", "/tmp/scratch"))
     local_buildstock_dir = local_scratch / "buildstock"
     local_weather_dir = local_scratch / "weather"
     local_output_dir = local_scratch / "output"
-    local_singularity_img = local_scratch / "openstudio.simg"
+    local_apptainer_img = local_scratch / "openstudio.simg"
     local_housing_characteristics_dir = local_scratch / "housing_characteristics"
 
     def __init__(self, project_filename):
@@ -75,36 +75,26 @@ class EagleBatch(BuildStockBatchBase):
         logger.debug("Output directory = {}".format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
 
-        self.singularity_image = self.get_singularity_image(self.cfg, self.os_version, self.os_sha)
+        self.apptainer_image = self.get_apptainer_image(self.cfg, self.os_version, self.os_sha)
 
     @classmethod
     def validate_project(cls, project_file):
-        super(cls, cls).validate_project(project_file)
-        # Eagle specific validation goes here
-        cls.validate_output_directory_eagle(project_file)
-        cls.validate_singularity_image_eagle(project_file)
-        logger.info("Eagle Validation Successful")
+        super().validate_project(project_file)
+        cls.validate_apptainer_image_hpc(project_file)
+        logger.info("HPC Validation Successful")
         return True
 
     @classmethod
-    def validate_output_directory_eagle(cls, project_file):
+    def validate_apptainer_image_hpc(cls, project_file):
         cfg = get_project_configuration(project_file)
-        output_dir = path_rel_to_file(project_file, cfg["output_directory"])
-        if not re.match(r"/(lustre/eaglefs/)?(scratch|projects)", output_dir):
-            raise ValidationError(
-                f"`output_directory` must be in /scratch or /projects," f" `output_directory` = {output_dir}"
+        try:
+            cls.get_apptainer_image(
+                cfg,
+                cfg.get("os_version", cls.DEFAULT_OS_VERSION),
+                cfg.get("os_sha", cls.DEFAULT_OS_SHA),
             )
-
-    @classmethod
-    def validate_singularity_image_eagle(cls, project_file):
-        cfg = get_project_configuration(project_file)
-        singularity_image = cls.get_singularity_image(
-            cfg,
-            cfg.get("os_version", cls.DEFAULT_OS_VERSION),
-            cfg.get("os_sha", cls.DEFAULT_OS_SHA),
-        )
-        if not os.path.exists(singularity_image):
-            raise ValidationError(f"The singularity image does not exist: {singularity_image}")
+        except RuntimeError as err:
+            raise ValidationError(str(err))
 
     @property
     def output_dir(self):
@@ -124,11 +114,14 @@ class EagleBatch(BuildStockBatchBase):
         shutil.copytree(src, dst)
 
     @classmethod
-    def get_singularity_image(cls, cfg, os_version, os_sha):
-        return os.path.join(
-            cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR),
-            "OpenStudio-{ver}.{sha}-Singularity.simg".format(ver=os_version, sha=os_sha),
-        )
+    def get_apptainer_image(cls, cfg, os_version, os_sha):
+        exts_to_try = ["Apptainer.sif", "Singularity.simg"]
+        sys_img_dir = cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR)
+        image_paths = [pathlib.Path(sys_img_dir, f"OpenStudio-{os_version}.{os_sha}-{ext}") for ext in exts_to_try]
+        for image_path in image_paths:
+            if image_path.exists():
+                return str(image_path)
+        raise RuntimeError(f"Could not find apptainer image: {' or '.join(map(str, image_paths))}")
 
     @property
     def weather_dir(self):
@@ -175,10 +168,10 @@ class EagleBatch(BuildStockBatchBase):
 
         # this is the number of simulations defined for this run as a "full job"
         #     number of simulations per job if we believe the .yml file n_jobs
-        n_sims_per_job = math.ceil(n_sims / self.cfg[self.hpc_name]["n_jobs"])
+        n_sims_per_job = math.ceil(n_sims / self.cfg[self.HPC_NAME]["n_jobs"])
         #     use more appropriate batch size in the case of n_jobs being much
         #     larger than we need, now that we know n_sims
-        n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
+        n_sims_per_job = max(n_sims_per_job, self.MIN_SIMS_PER_JOB)
 
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
         if not self.skip_baseline_sims:
@@ -233,9 +226,9 @@ class EagleBatch(BuildStockBatchBase):
             pathlib.Path(self.output_dir) / "housing_characteristics",
             self.local_housing_characteristics_dir,
         )
-        if os.path.exists(self.local_singularity_img):
-            os.remove(self.local_singularity_img)
-        shutil.copy2(self.singularity_image, self.local_singularity_img)
+        if os.path.exists(self.local_apptainer_img):
+            os.remove(self.local_apptainer_img)
+        shutil.copy2(self.apptainer_image, self.local_apptainer_img)
 
         # Run the job batch as normal
         job_json_filename = os.path.join(self.output_dir, "job{:03d}.json".format(job_array_number))
@@ -326,8 +319,8 @@ class EagleBatch(BuildStockBatchBase):
                 shutil.rmtree(dir)
             else:
                 logger.warning(f"Directory does not exist {dir}")
-        logger.debug(f"Removing {self.local_singularity_img}")
-        self.local_singularity_img.unlink(missing_ok=True)
+        logger.debug(f"Removing {self.local_apptainer_img}")
+        self.local_apptainer_img.unlink(missing_ok=True)
 
     @classmethod
     def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
@@ -344,18 +337,12 @@ class EagleBatch(BuildStockBatchBase):
             with open(os.path.join(sim_dir, "in.osw"), "w") as f:
                 json.dump(osw, f, indent=4)
 
-            # Copy other necessary stuff into the simulation directory
-            dirs_to_mount = [
-                os.path.join(cls.local_buildstock_dir, "measures"),
-                cls.local_weather_dir,
-            ]
-
             # Create a temporary directory for the simulation to use
             with tempfile.TemporaryDirectory(dir=cls.local_scratch, prefix=f"{sim_id}_") as tmpdir:
-                # Build the command to instantiate and configure the singularity container the simulation is run inside
+                # Build the command to instantiate and configure the apptainer container the simulation is run inside
                 local_resources_dir = cls.local_buildstock_dir / "resources"
                 args = [
-                    "singularity",
+                    "apptainer",
                     "exec",
                     "--contain",
                     "-e",
@@ -371,21 +358,28 @@ class EagleBatch(BuildStockBatchBase):
                     f"{tmpdir}:/tmp",
                 ]
                 runscript = ["ln -s /lib /var/simdata/openstudio/lib"]
-                for src in dirs_to_mount:
-                    container_mount = "/" + os.path.basename(src)
-                    args.extend(["-B", "{}:{}:ro".format(src, container_mount)])
-                    container_symlink = os.path.join("/var/simdata/openstudio", os.path.basename(src))
-                    runscript.append("ln -s {} {}".format(*map(shlex.quote, (container_mount, container_symlink))))
 
-                if os.path.exists(os.path.join(cls.local_buildstock_dir, "resources/hpxml-measures")):
-                    runscript.append("ln -s /resources /var/simdata/openstudio/resources")
-                    src = os.path.join(cls.local_buildstock_dir, "resources/hpxml-measures")
-                    container_mount = "/resources/hpxml-measures"
+                # Copy other necessary stuff into the simulation directory
+                dirs_to_mount = [
+                    cls.local_buildstock_dir / "measures",
+                    cls.local_weather_dir,
+                ]
+
+                for src in dirs_to_mount:
+                    container_mount = "/" + src.name
                     args.extend(["-B", "{}:{}:ro".format(src, container_mount)])
+                    container_symlink = pathlib.Path("/var/simdata/openstudio", src.name)
+                    runscript.append("ln -s {} {}".format(*map(shlex.quote, (container_mount, str(container_symlink)))))
+
+                if (cls.local_buildstock_dir / "resources" / "hpxml-measures").exists():
+                    runscript.append("ln -s /resources /var/simdata/openstudio/resources")
+                    src = cls.local_buildstock_dir / "resources" / "hpxml-measures"
+                    container_mount = "/resources/hpxml-measures"
+                    args.extend(["-B", f"{src}:{container_mount}:ro"])
 
                 # Build the openstudio command that will be issued within the
-                # singularity container If custom gems are to be used in the
-                # singularity container add extra bundle arguments to the cli
+                # apptainer container If custom gems are to be used in the
+                # apptainer container add extra bundle arguments to the cli
                 # command
                 cli_cmd = "openstudio run -w in.osw"
                 if cfg.get("baseline", dict()).get("custom_gems", False):
@@ -396,7 +390,7 @@ class EagleBatch(BuildStockBatchBase):
                 if get_bool_env_var("MEASURESONLY"):
                     cli_cmd += " --measures_only"
                 runscript.append(cli_cmd)
-                args.extend([str(cls.local_singularity_img), "bash", "-x"])
+                args.extend([str(cls.local_apptainer_img), "bash", "-x"])
                 env_vars = dict(os.environ)
                 env_vars["SINGULARITYENV_BUILDSTOCKBATCH_VERSION"] = bsb_version
                 logger.debug("\n".join(map(str, args)))
@@ -406,7 +400,7 @@ class EagleBatch(BuildStockBatchBase):
                 else:
                     subprocess_kw = {}
                 start_time = dt.datetime.now()
-                with open(os.path.join(sim_dir, "openstudio_output.log"), "w") as f_out:
+                with open(pathlib.Path(sim_dir, "openstudio_output.log"), "w") as f_out:
                     try:
                         subprocess.run(
                             args,
@@ -423,7 +417,7 @@ class EagleBatch(BuildStockBatchBase):
                         msg = f"Terminated {sim_id} after reaching max time of {max_time_min} minutes"
                         f_out.write(f"[{end_time.now()} ERROR] {msg}")
                         logger.warning(msg)
-                        with open(os.path.join(sim_dir, "out.osw"), "w") as out_osw:
+                        with open(pathlib.Path(sim_dir, "out.osw"), "w") as out_osw:
                             out_msg = {
                                 "started_at": start_time.strftime("%Y%m%dT%H%M%SZ"),
                                 "completed_at": end_time.strftime("%Y%m%dT%H%M%SZ"),
@@ -431,18 +425,19 @@ class EagleBatch(BuildStockBatchBase):
                                 "timeout": msg,
                             }
                             out_osw.write(json.dumps(out_msg, indent=3))
-                        with open(os.path.join(sim_dir, "run", "out.osw"), "a") as run_log:
+                        with open(pathlib.Path(sim_dir, "run", "out.osw"), "a") as run_log:
                             run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
-                        with open(os.path.join(sim_dir, "run", "failed.job"), "w") as failed_job:
+                        with open(pathlib.Path(sim_dir, "run", "failed.job"), "w") as failed_job:
                             failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
-                        time.sleep(60)  # Wait for EnergyPlus to release file locks and data_point.zip to finish
+                        # Wait for EnergyPlus to release file locks and data_point.zip to finish
+                        time.sleep(60)
                     except subprocess.CalledProcessError:
                         pass
                     finally:
                         # Clean up the symbolic links we created in the container
-                        for mount_dir in dirs_to_mount + [os.path.join(sim_dir, "lib")]:
+                        for mount_dir in dirs_to_mount + [pathlib.Path(sim_dir, "lib")]:
                             try:
-                                os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
+                                pathlib.Path(sim_dir, os.path.basename(mount_dir)).unlink()
                             except FileNotFoundError:
                                 pass
 
@@ -459,9 +454,54 @@ class EagleBatch(BuildStockBatchBase):
         dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
+    @staticmethod
+    def _queue_jobs_env_vars() -> dict:
+        raise NotImplementedError()
+
+    @classmethod
+    def queue_sampling(
+        cls,
+        project_filename: os.PathLike,
+        measures_only: bool,
+        sampling_only: bool,
+        hipri: bool,
+    ):
+        cfg = get_project_configuration(project_filename)
+        hpc_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{cls.HPC_NAME}.sh")
+        assert os.path.exists(hpc_sh)
+        out_dir = cfg["output_directory"]
+        if os.path.exists(out_dir):
+            raise FileExistsError(
+                "The output directory {} already exists. Please delete it or choose another.".format(out_dir)
+            )
+        logger.info("Creating output directory {}".format(out_dir))
+        os.makedirs(out_dir)
+        env_export = {}
+        env_export["PROJECTFILE"] = project_filename
+        env_export["MEASURESONLY"] = str(int(measures_only))
+        env_export["SAMPLINGONLY"] = str(int(sampling_only))
+        env_export.update(cls._queue_jobs_env_vars())
+        env = {}
+        env.update(os.environ)
+        env.update(env_export)
+        subargs = [
+            "sbatch",
+            "--time={}".format(cfg[cls.HPC_NAME].get("sampling", {}).get("time", 60)),
+            "--account={}".format(cfg[cls.HPC_NAME]["account"]),
+            "--nodes=1",
+            "--export={}".format(",".join(env.keys())),
+            "--output=sampling.out",
+            hpc_sh,
+        ]
+        if hipri:
+            subargs.insert(-1, "--qos=high")
+        logger.info("Submitting sampling job to task scheduler")
+        subprocess.run(subargs, env=env, cwd=out_dir, check=True)
+        logger.info("Run squeue -u $USER to monitor the progress of your jobs")
+
     def queue_jobs(self, array_ids=None, hipri=False):
-        eagle_cfg = self.cfg["eagle"]
-        with open(os.path.join(self.output_dir, "job001.json"), "r") as f:
+        hpc_cfg = self.cfg[self.HPC_NAME]
+        with open(pathlib.Path(self.output_dir, "job001.json"), "r") as f:
             job_json = json.load(f)
             n_sims_per_job = len(job_json["batch"])
             del job_json
@@ -479,29 +519,31 @@ class EagleBatch(BuildStockBatchBase):
                 )
             )
             array_spec = "1-{}".format(array_max)
-        account = eagle_cfg["account"]
+        account = hpc_cfg["account"]
 
         # Estimate the wall time in minutes
-        cores_per_node = 36
-        minutes_per_sim = eagle_cfg["minutes_per_sim"]
-        walltime = math.ceil(math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim)
+        minutes_per_sim = hpc_cfg["minutes_per_sim"]
+        walltime = math.ceil(math.ceil(n_sims_per_job / self.CORES_PER_NODE) * minutes_per_sim)
 
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
-        eagle_sh = os.path.join(here, "eagle.sh")
+        hpc_sh = os.path.join(here, f"{self.HPC_NAME}.sh")
         env = {}
         env.update(os.environ)
         env["PROJECTFILE"] = self.project_filename
-        env["MY_CONDA_ENV"] = os.environ["CONDA_PREFIX"]
+        extra_env_vars = self._queue_jobs_env_vars()
+        env.update(extra_env_vars)
+        export_vars = ["PROJECTFILE", "MEASURESONLY"]
+        export_vars.extend(extra_env_vars.keys())
         args = [
             "sbatch",
             "--account={}".format(account),
             "--time={}".format(walltime),
-            "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY",
+            "--export={}".format(",".join(export_vars)),
             "--array={}".format(array_spec),
             "--output=job.out-%a",
             "--job-name=bstk",
-            eagle_sh,
+            hpc_sh,
         ]
         if os.environ.get("SLURM_JOB_QOS"):
             args.insert(-1, "--qos={}".format(os.environ.get("SLURM_JOB_QOS")))
@@ -533,11 +575,12 @@ class EagleBatch(BuildStockBatchBase):
 
     def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False):
         # Configuration values
-        account = self.cfg["eagle"]["account"]
-        walltime = self.cfg["eagle"].get("postprocessing", {}).get("time", "1:30:00")
-        memory = self.cfg["eagle"].get("postprocessing", {}).get("node_memory_mb", 85248)
-        n_procs = self.cfg["eagle"].get("postprocessing", {}).get("n_procs", 18)
-        n_workers = self.cfg["eagle"].get("postprocessing", {}).get("n_workers", 2)
+        hpc_cfg = self.cfg[self.HPC_NAME]
+        account = hpc_cfg["account"]
+        walltime = hpc_cfg.get("postprocessing", {}).get("time", "1:30:00")
+        memory = hpc_cfg.get("postprocessing", {}).get("node_memory_mb", self.DEFAULT_POSTPROCESSING_NODE_MEMORY_MB)
+        n_procs = hpc_cfg.get("postprocessing", {}).get("n_procs", self.DEFAULT_POSTPROCESSING_N_PROCS)
+        n_workers = hpc_cfg.get("postprocessing", {}).get("n_workers", self.DEFAULT_POSTPROCESSING_N_WORKERS)
         print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
 
@@ -564,22 +607,22 @@ class EagleBatch(BuildStockBatchBase):
                     filepath.parent / f"{filepath.stem}_{last_mod_date:%Y%m%d%H%M}{filepath.suffix}",
                 )
 
-        env = {}
-        env.update(os.environ)
-        env["PROJECTFILE"] = self.project_filename
-        env["MY_CONDA_ENV"] = os.environ["CONDA_PREFIX"]
-        env["OUT_DIR"] = self.output_dir
-        env["UPLOADONLY"] = str(upload_only)
-        env["MEMORY"] = str(memory)
-        env["NPROCS"] = str(n_procs)
+        env_export = {
+            "PROJECTFILE": self.project_filename,
+            "OUT_DIR": self.output_dir,
+            "UPLOADONLY": str(upload_only),
+            "MEMORY": str(memory),
+            "NPROCS": str(n_procs),
+        }
+        env_export.update(self._queue_jobs_env_vars())
         here = os.path.dirname(os.path.abspath(__file__))
-        eagle_post_sh = os.path.join(here, "eagle_postprocessing.sh")
+        hpc_post_sh = os.path.join(here, f"{self.HPC_NAME}_postprocessing.sh")
 
         args = [
             "sbatch",
             "--account={}".format(account),
             "--time={}".format(walltime),
-            "--export=PROJECTFILE,MY_CONDA_ENV,OUT_DIR,UPLOADONLY,MEMORY,NPROCS",
+            "--export={}".format(",".join(env_export.keys())),
             "--job-name=bstkpost",
             "--output=postprocessing.out",
             "--nodes=1",
@@ -587,7 +630,7 @@ class EagleBatch(BuildStockBatchBase):
             "--mem={}".format(memory),
             "--output=dask_workers.out",
             "--nodes={}".format(n_workers),
-            eagle_post_sh,
+            hpc_post_sh,
         ]
 
         if after_jobids:
@@ -598,6 +641,9 @@ class EagleBatch(BuildStockBatchBase):
         elif hipri:
             args.insert(-1, "--qos=high")
 
+        env = {}
+        env.update(os.environ)
+        env.update(env_export)
         resp = subprocess.run(
             args,
             stdout=subprocess.PIPE,
@@ -610,11 +656,11 @@ class EagleBatch(BuildStockBatchBase):
             logger.debug("sbatch: {}".format(line))
 
     def get_dask_client(self):
-        if get_bool_env_var("DASKLOCALCLUSTER"):
-            cluster = LocalCluster(local_directory="/data/dask-tmp")
-            return Client(cluster)
-        else:
-            return Client(scheduler_file=os.path.join(self.output_dir, "dask_scheduler.json"))
+        # Keep this, helpful for debugging on a bigmem node
+        # from dask.distributed import LocalCluster
+        # cluster = LocalCluster(local_directory="/tmp/scratch/dask", n_workers=90, memory_limit="16GiB")
+        # return Client(cluster)
+        return Client(scheduler_file=os.path.join(self.output_dir, "dask_scheduler.json"))
 
     def process_results(self, *args, **kwargs):
         # Check that all the jobs succeeded before proceeding
@@ -694,6 +740,68 @@ class EagleBatch(BuildStockBatchBase):
         self.queue_post_processing(job_ids, hipri=hipri)
 
 
+class EagleBatch(SlurmBatch):
+    DEFAULT_SYS_IMAGE_DIR = "/shared-projects/buildstock/singularity_images"
+    HPC_NAME = "eagle"
+    CORES_PER_NODE = 36
+    MIN_SIMS_PER_JOB = 36 * 2
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 85248
+    DEFAULT_POSTPROCESSING_N_PROCS = 18
+    DEFAULT_POSTPROCESSING_N_WORKERS = 2
+
+    @classmethod
+    def validate_output_directory_eagle(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        output_dir = path_rel_to_file(project_file, cfg["output_directory"])
+        if not re.match(r"/(lustre/eaglefs/)?(scratch|projects)", output_dir):
+            raise ValidationError(
+                f"`output_directory` must be in /scratch or /projects," f" `output_directory` = {output_dir}"
+            )
+
+    @classmethod
+    def validate_project(cls, project_file):
+        super(cls, cls).validate_project(project_file)
+        cls.validate_output_directory_eagle(project_file)
+        logger.info("Eagle Validation Successful")
+        return True
+
+    @staticmethod
+    def _queue_jobs_env_vars() -> dict:
+        env = {"MY_CONDA_ENV": os.environ["CONDA_PREFIX"]}
+        return env
+
+
+class KestrelBatch(SlurmBatch):
+    DEFAULT_SYS_IMAGE_DIR = "/kfs2/shared-projects/buildstock/apptainer_images"
+    HPC_NAME = "kestrel"
+    CORES_PER_NODE = 104
+    MIN_SIMS_PER_JOB = 104 * 2
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 250000  # Standard node
+    DEFAULT_POSTPROCESSING_N_PROCS = 52
+    DEFAULT_POSTPROCESSING_N_WORKERS = 2
+
+    @classmethod
+    def validate_output_directory_kestrel(cls, project_file):
+        cfg = get_project_configuration(project_file)
+        output_dir = path_rel_to_file(project_file, cfg["output_directory"])
+        if not re.match(r"/(kfs\d/)?(scratch|projects)", output_dir):
+            raise ValidationError(
+                f"`output_directory` must be in /scratch or /projects," f" `output_directory` = {output_dir}"
+            )
+
+    @classmethod
+    def validate_project(cls, project_file):
+        super().validate_project(project_file)
+        cls.validate_output_directory_kestrel(project_file)
+        logger.info("Kestrel Validation Successful")
+        return True
+
+    @staticmethod
+    def _queue_jobs_env_vars() -> dict:
+        env = {"MY_PYTHON_ENV": os.environ["VIRTUAL_ENV"]}
+        return env
+
+
 logging_config = {
     "version": 1,
     "disable_existing_loggers": True,
@@ -722,9 +830,17 @@ logging_config = {
 }
 
 
-def user_cli(argv=sys.argv[1:]):
+def eagle_cli(argv=sys.argv[1:]):
+    user_cli(EagleBatch, argv)
+
+
+def kestrel_cli(argv=sys.argv[1:]):
+    user_cli(KestrelBatch, argv)
+
+
+def user_cli(Batch: SlurmBatch, argv: list):
     """
-    This is the user entry point for running buildstockbatch on Eagle
+    This is the user entry point for running buildstockbatch on Eagle/Kestrel
     """
     # set up logging, currently based on within-this-file hard-coded config
     logging.config.dictConfig(logging_config)
@@ -742,7 +858,7 @@ def user_cli(argv=sys.argv[1:]):
     )
     parser.add_argument(
         "-m",
-        "--measures_only",
+        "--measuresonly",
         action="store_true",
         help="Only apply the measures, but don't run simulations. Useful for debugging.",
     )
@@ -772,57 +888,26 @@ def user_cli(argv=sys.argv[1:]):
     if not os.path.isfile(args.project_filename):
         raise FileNotFoundError("The project file {} doesn't exist".format(args.project_filename))
     project_filename = os.path.abspath(args.project_filename)
-    with open(project_filename, "r") as f:
-        cfg = yaml.load(f, Loader=yaml.SafeLoader)
 
     # validate the project, and in case of the --validateonly flag return True if validation passes
-    EagleBatch.validate_project(project_filename)
+    Batch.validate_project(project_filename)
     if args.validateonly:
         return True
 
     # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
-        eagle_batch = EagleBatch(project_filename)
-        eagle_batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
+        batch = Batch(project_filename)
+        batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
         return True
 
     if args.rerun_failed:
-        eagle_batch = EagleBatch(project_filename)
-        eagle_batch.rerun_failed_jobs(hipri=args.hipri)
+        batch = Batch(project_filename)
+        batch.rerun_failed_jobs(hipri=args.hipri)
         return True
 
-    # otherwise, queue up the whole eagle buildstockbatch process
-    # the main work of the first Eagle job is to run the sampling script ...
-    eagle_sh = os.path.join(os.path.dirname(os.path.abspath(__file__)), "eagle.sh")
-    assert os.path.exists(eagle_sh)
-    out_dir = cfg["output_directory"]
-    if os.path.exists(out_dir):
-        raise FileExistsError(
-            "The output directory {} already exists. Please delete it or choose another.".format(out_dir)
-        )
-    logger.info("Creating output directory {}".format(out_dir))
-    os.makedirs(out_dir)
-    env = {}
-    env.update(os.environ)
-    env["PROJECTFILE"] = project_filename
-    env["MY_CONDA_ENV"] = os.environ["CONDA_PREFIX"]
-    env["MEASURESONLY"] = str(int(args.measures_only))
-    env["SAMPLINGONLY"] = str(int(args.samplingonly))
-    subargs = [
-        "sbatch",
-        "--time={}".format(cfg["eagle"].get("sampling", {}).get("time", 60)),
-        "--account={}".format(cfg["eagle"]["account"]),
-        "--nodes=1",
-        "--export=PROJECTFILE,MY_CONDA_ENV,MEASURESONLY,SAMPLINGONLY",
-        "--output=sampling.out",
-        eagle_sh,
-    ]
-    if args.hipri:
-        subargs.insert(-1, "--qos=high")
-    logger.info("Submitting sampling job to task scheduler")
-    subprocess.run(subargs, env=env, cwd=out_dir, check=True)
-    logger.info("Run squeue -u $USER to monitor the progress of your jobs")
-    # eagle.sh calls main()
+    # otherwise, queue up the whole buildstockbatch process
+    # the main work of the first job is to run the sampling script ...
+    Batch.queue_sampling(project_filename, args.measuresonly, args.samplingonly, args.hipri)
 
 
 @log_error_details()
@@ -845,11 +930,16 @@ def main():
 
     # only direct script argument is the project .yml file
     parser = argparse.ArgumentParser()
+    parser.add_argument("hpc_name", choices=["eagle", "kestrel"])
     parser.add_argument("project_filename")
     args = parser.parse_args()
 
-    # initialize the EagleBatch object
-    batch = EagleBatch(args.project_filename)
+    # initialize the EagleBatch/KestrelBatch object
+    if args.hpc_name == "eagle":
+        batch = EagleBatch(args.project_filename)
+    else:
+        assert args.hpc_name == "kestrel"
+        batch = KestrelBatch(args.project_filename)
     # other arguments/cues about which part of the process we are in are
     # encoded in slurm job environment variables
     job_array_number = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
@@ -881,7 +971,10 @@ def main():
 
 
 if __name__ == "__main__":
-    if get_bool_env_var("BUILDSTOCKBATCH_CLI"):
-        user_cli()
+    bsb_cli = os.environ.get("BUILDSTOCKBATCH_CLI")
+    if bsb_cli == "eagle":
+        eagle_cli()
+    elif bsb_cli == "kestrel":
+        kestrel_cli()
     else:
         main()

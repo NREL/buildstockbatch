@@ -16,24 +16,7 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: eagle, bugfix
-        :pullreq: 406
-        :tickets: 404
+        :tags: general
+        :pullreq: 422
 
-        Cleans out the ``/tmp/scratch`` folder on Eagle at the end of each array job.
-
-    .. change::
-        :tags: documentation
-        :pullreq: 410
-        :tickets: 408
-
-        Update cost multiplier link in upgrade scenarios documentation.
-
-    .. change::
-        :tags: bugfix
-        :pullreq: 418
-        :tickets: 411
-
-        Fixing ``started_at`` and ``completed_at`` timestamps in parquet files
-        to that when read by AWS Glue/Athena they show up as dates rather than
-        bigints.
+        Refactor AWS code so it can be shared by the upcoming GCP implementation.

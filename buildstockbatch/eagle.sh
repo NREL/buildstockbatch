@@ -11,5 +11,6 @@ df -h
 
 module load conda singularity-container
 source activate "$MY_CONDA_ENV"
+source /shared-projects/buildstock/aws_credentials.sh
 
-time python -u -m buildstockbatch.eagle "$PROJECTFILE"
+time python -u -m buildstockbatch.hpc eagle "$PROJECTFILE"
