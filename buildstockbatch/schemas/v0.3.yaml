@@ -26,6 +26,7 @@ gcp-spec:
   job_identifier: regex('^[a-z]([a-z0-9-]{0,46}[a-z0-9])?$', required=True)
   project: str(required=True)
   region: str(required=True)
+  service_account: str(required=False)
   artifact_registry: include('gcp-ar-spec', required=True)
   batch_array_size: num(min=1, max=10000, required=True)
   gcs: include('gcs-spec', required=True)

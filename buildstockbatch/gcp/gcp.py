@@ -609,9 +609,8 @@ class GcpBatch(DockerBatchBase):
         )
         instances = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(policy=policy)
         allocation_policy = batch_v1.AllocationPolicy(instances=[instances])
-        # TODO: Add option to set service account that runs the job?
-        # Otherwise uses the project's default compute engine service account.
-        # allocation_policy.service_account = batch_v1.ServiceAccount(email = '')
+        if service_account := gcp_cfg.get("service_account"):
+            allocation_policy.service_account = batch_v1.ServiceAccount(email=service_account)
 
         # Define the batch job
         job = batch_v1.Job()
@@ -836,6 +835,7 @@ class GcpBatch(DockerBatchBase):
                     ],
                     timeout=f"{60 * 60 * 24}s",  # 24h
                     max_retries=0,
+                    service_account=self.cfg["gcp"].get("service_account"),
                 )
             )
         )
