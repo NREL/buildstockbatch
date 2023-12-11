@@ -23,3 +23,9 @@ Development Changelog
         between various implementations (GCP implementation to come). This also includes teasing apart the several batch
         prep steps (weather, assets, and jobs) into their own methods so they can each be more easily understood,
         shared, and maintained.
+
+    .. change::
+        :tags: general
+        :pullreq: 422
+
+        Refactor AWS code so it can be shared by the upcoming GCP implementation.
