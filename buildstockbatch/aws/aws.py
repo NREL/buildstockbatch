@@ -1706,7 +1706,7 @@ class AwsBatch(DockerBatchBase):
                     logger.debug("Extracting {}".format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 
-        cls.run_simulations(cfg, jobs_d, job_id, sim_dir, S3FileSystem(), bucket, prefix)
+        cls.run_simulations(cfg, jobs_d, job_id, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
 
 
 @log_error_details()
