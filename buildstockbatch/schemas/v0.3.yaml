@@ -29,6 +29,7 @@ gcp-spec:
   service_account: str(required=False)
   artifact_registry: include('gcp-ar-spec', required=True)
   batch_array_size: num(min=1, max=10000, required=True)
+  parallelism: num(min=1, max=10000, required=False)
   gcs: include('gcs-spec', required=True)
   job_environment: include('gcp-job-environment-spec', required=False)
   postprocessing_environment: include('gcp-postprocessing_environment-spec', required=False)

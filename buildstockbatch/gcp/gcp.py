@@ -595,6 +595,7 @@ class GcpBatch(DockerBatchBase):
         # How many of these tasks to run.
         group = batch_v1.TaskGroup(
             task_count=batch_info.job_count,
+            parallelism=gcp_cfg.get("parallelism", None),
             task_spec=task,
         )
 
@@ -641,7 +642,7 @@ class GcpBatch(DockerBatchBase):
         # Monitor job status while waiting for the job to complete
         n_completed_last_time = 0
         client = batch_v1.BatchServiceClient()
-        with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="batch") as progress_bar:
+        with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="task") as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED", "DELETION_IN_PROGRESS"):
                 time.sleep(10)
