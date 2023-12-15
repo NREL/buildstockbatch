@@ -30,6 +30,7 @@ import zipfile
 
 from buildstockbatch.aws.awsbase import AwsJobBase
 from buildstockbatch.base import ValidationError
+from buildstockbatch.cloud import docker_base
 from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch.utils import log_error_details, get_project_configuration
 
@@ -1695,7 +1696,7 @@ class AwsBatch(DockerBatchBase):
         weather_dir = sim_dir / "weather"
         os.makedirs(weather_dir, exist_ok=True)
 
-        epws_to_download = cls.get_epws_to_download(sim_dir, jobs_d)
+        epws_to_download = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
