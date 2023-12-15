@@ -250,7 +250,7 @@ class DockerBatchBase(BuildStockBatchBase):
                     missing_epws.add(needed_epw)
             if missing_epws:
                 raise ValidationError(
-                    "Not all weather files referenced by the buildstock are available. "
+                    "Not all weather files referenced by the sampled buildstock are available. "
                     f"{len(missing_epws):,} missing EPWs: {missing_epws}."
                 )
             logger.debug("...all needed weather files are present.")
