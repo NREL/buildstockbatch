@@ -637,6 +637,10 @@ class GcpBatch(DockerBatchBase):
             "https://console.cloud.google.com/batch/jobsDetail/regions/"
             f"{self.region}/jobs/{self.job_identifier}/details?project={self.gcp_project}"
         )
+        logger.info(
+            "Simulation output browser (Cloud Console): "
+            f"https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/simulation_output"
+        )
         logger.info(f"View GCP Batch job at {job_url}")
 
         # Monitor job status while waiting for the job to complete
@@ -866,6 +870,7 @@ class GcpBatch(DockerBatchBase):
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
 🔗 See status at: {self.postprocessing_job_console_url}.
+Results output browser (Cloud Console): https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/
 
 Run this script with --clean to clean up the GCP environment after post-processing is complete."""
                 )
