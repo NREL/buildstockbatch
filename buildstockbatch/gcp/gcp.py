@@ -620,6 +620,9 @@ class GcpBatch(DockerBatchBase):
         job.allocation_policy = allocation_policy
         job.logs_policy = batch_v1.LogsPolicy()
         job.logs_policy.destination = batch_v1.LogsPolicy.Destination.CLOUD_LOGGING
+        job.labels = {
+            "bsb_job_identifier": self.job_identifier,
+        }
 
         create_request = batch_v1.CreateJobRequest()
         create_request.job = job
@@ -843,7 +846,10 @@ class GcpBatch(DockerBatchBase):
                     max_retries=0,
                     service_account=self.cfg["gcp"].get("service_account"),
                 )
-            )
+            ),
+            labels={
+                "bsb_job_identifier": self.job_identifier,
+            },
         )
 
         # Create the job
