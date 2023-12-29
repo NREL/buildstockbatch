@@ -1,6 +1,9 @@
-FROM nrel/openstudio:2.9.1
+FROM nrel/openstudio:3.6.1
 
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONTAINER_TIMEZONE > /etc/timezone
 
 RUN sudo apt update && \
     sudo apt install -y wget build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev \
@@ -14,11 +17,10 @@ RUN wget https://www.python.org/ftp/python/3.8.8/Python-3.8.8.tgz && \
     rm -rf Python-3.8.8 && \
     rm -rf Python-3.8.8.tgz
 
-RUN sudo apt install -y -V ca-certificates lsb-release && \
-    wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
-    sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
-    sudo apt update && \
-    sudo apt install -y -V libarrow-dev libarrow-glib-dev libarrow-dataset-dev libparquet-dev libparquet-glib-dev
 
 COPY . /buildstock-batch/
+RUN python3.8 -m pip install "dask[distributed]" --upgrade
+RUN python3.8 -m pip install "bokeh"
 RUN python3.8 -m pip install /buildstock-batch
+
+WORKDIR /app/
