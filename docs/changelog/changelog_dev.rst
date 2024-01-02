@@ -20,3 +20,9 @@ Development Changelog
         :pullreq: 422
 
         Refactor AWS code so it can be shared by the upcoming GCP implementation.
+
+    .. change::
+        :tags: general, bugfix
+        :pullreq: 426
+
+        A bugfix for gracefully handling empty data_point_out.json files.
