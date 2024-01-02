@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class BuildStockSampler(object):
-
     csv_path = None
 
     @staticmethod
@@ -41,17 +40,20 @@ class BuildStockSampler(object):
         """
         Create the buildstock.csv file required for batch simulations using this class.
 
-        Multiple sampling methods are available to support local & eagle analyses, as well as to support multiple\
+        Multiple sampling methods are available to support local & hpc analyses, as well as to support multiple\
         sampling strategies. Currently there are separate implementations for commercial & residential stock types\
         due to unique requirements created by the commercial tsv set.
 
         :param parent: The BuildStockBatchBase object that owns this sampler.
         """
         self.parent = weakref.ref(parent)  # This removes circular references and allows garbage collection to work.
-        if self.container_runtime in (ContainerRuntime.DOCKER, ContainerRuntime.LOCAL_OPENSTUDIO):
-            self.csv_path = os.path.join(self.project_dir, 'housing_characteristics', 'buildstock.csv')
-        elif self.container_runtime == ContainerRuntime.SINGULARITY:
-            self.csv_path = os.path.join(self.parent().output_dir, 'housing_characteristics', 'buildstock.csv')
+        if self.container_runtime in (
+            ContainerRuntime.DOCKER,
+            ContainerRuntime.LOCAL_OPENSTUDIO,
+        ):
+            self.csv_path = os.path.join(self.project_dir, "housing_characteristics", "buildstock.csv")
+        elif self.container_runtime == ContainerRuntime.APPTAINER:
+            self.csv_path = os.path.join(self.parent().output_dir, "housing_characteristics", "buildstock.csv")
         else:
             self.csv_path = None
 
@@ -79,8 +81,8 @@ class BuildStockSampler(object):
         """
         if self.container_runtime == ContainerRuntime.DOCKER:
             return self._run_sampling_docker()
-        elif self.container_runtime == ContainerRuntime.SINGULARITY:
-            return self._run_sampling_singularity()
+        elif self.container_runtime == ContainerRuntime.APPTAINER:
+            return self._run_sampling_apptainer()
         else:
             assert self.container_runtime == ContainerRuntime.LOCAL_OPENSTUDIO
             return self._run_sampling_local_openstudio()
@@ -93,11 +95,11 @@ class BuildStockSampler(object):
         """
         raise NotImplementedError
 
-    def _run_sampling_singularity(self):
+    def _run_sampling_apptainer(self):
         """
-        Execute the sampling in a singularity container
+        Execute the sampling in an apptainer container
 
-        Replace this in a subclass if your sampling needs docker.
+        Replace this in a subclass if your sampling needs apptainer.
         """
         raise NotImplementedError
 

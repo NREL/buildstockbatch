@@ -16,16 +16,13 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: general, feature
-        :pullreq: 387
-        :tickets: 385
+        :tags: general
+        :pullreq: 422
 
-        Removing broken postprocessing tests.
+        Refactor AWS code so it can be shared by the upcoming GCP implementation.
 
     .. change::
-        :tags: bugfix
-        :pullreq: 386
-        :tickets: 256
+        :tags: general, bugfix
+        :pullreq: 426
 
-        No longer automatically downloads the appropriate singularity image from
-        S3. Also added validation to ensure the image is in the correct location.
+        A bugfix for gracefully handling empty data_point_out.json files.

@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowGeneratorBase(object):
-
     def __init__(self, cfg, n_datapoints):
         self.cfg = cfg
         self.n_datapoints = n_datapoints
@@ -42,17 +41,17 @@ class WorkflowGeneratorBase(object):
         :returns: str of logic
         """
         if isinstance(logic, dict):
-            assert (len(logic) == 1)
+            assert len(logic) == 1
             key = list(logic.keys())[0]
             val = logic[key]
-            if key == 'and':
+            if key == "and":
                 return cls.make_apply_logic_arg(val)
-            elif key == 'or':
-                return '(' + '||'.join(map(cls.make_apply_logic_arg, val)) + ')'
-            elif key == 'not':
-                return '!' + cls.make_apply_logic_arg(val)
+            elif key == "or":
+                return "(" + "||".join(map(cls.make_apply_logic_arg, val)) + ")"
+            elif key == "not":
+                return "!" + cls.make_apply_logic_arg(val)
         elif isinstance(logic, list):
-            return '(' + '&&'.join(map(cls.make_apply_logic_arg, logic)) + ')'
+            return "(" + "&&".join(map(cls.make_apply_logic_arg, logic)) + ")"
         elif isinstance(logic, str):
             return logic
 
