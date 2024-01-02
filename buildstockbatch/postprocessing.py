@@ -44,6 +44,8 @@ def read_data_point_out_json(fs, reporting_measures, filename):
     try:
         with fs.open(filename, "r") as f:
             d = json.load(f)
+        if not d:
+            return None
     except (FileNotFoundError, json.JSONDecodeError):
         return None
     else:
