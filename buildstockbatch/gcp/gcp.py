@@ -667,6 +667,7 @@ class GcpBatch(DockerBatchBase):
                 progress_bar.set_postfix_str(f"{dict(task_counts)}")
 
         logger.info(f"Batch job status: {job_status}")
+        logger.info(f"Batch job tasks: {dict(task_counts)}")
         if job_status != "SUCCEEDED":
             raise RuntimeError(f"Batch job failed. See GCP logs at {job_url}")
         else:
@@ -790,6 +791,7 @@ class GcpBatch(DockerBatchBase):
 
         if not skip_combine:
             self.start_combine_results_job_on_cloud(self.results_dir, do_timeseries=do_timeseries)
+        self.log_summary()
 
     @classmethod
     def run_combine_results_on_cloud(cls, gcs_bucket, gcs_prefix, results_dir, do_timeseries):
