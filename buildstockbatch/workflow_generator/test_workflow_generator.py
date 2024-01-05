@@ -2,7 +2,7 @@ from buildstockbatch.workflow_generator.base import WorkflowGeneratorBase
 from buildstockbatch.workflow_generator.residential_hpxml import ResidentialHpxmlWorkflowGenerator
 from buildstockbatch.workflow_generator.residential_hpxml_hes import ResidentialHpxmlHesWorkflowGenerator
 from buildstockbatch.workflow_generator.commercial import CommercialDefaultWorkflowGenerator
-from buildstockbatch.test.shared_testing_stuff import resstock_directory
+from buildstockbatch.test.shared_testing_stuff import resstock_directory, resstock_required
 
 
 def test_apply_logic_recursion():
@@ -24,6 +24,7 @@ def test_apply_logic_recursion():
     assert apply_logic == "(!abc&&(def||ghi)&&jkl&&mno)"
 
 
+@resstock_required
 def test_residential_hpxml(mocker):
     sim_id = "bldb1up1"
     building_id = 1
@@ -134,11 +135,13 @@ def test_residential_hpxml(mocker):
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
 
 
+@resstock_required
 def test_residential_hpxml_hes(mocker):
     sim_id = "bldb1up1"
     building_id = 1
     upgrade_idx = 0
     cfg = {
+        "buildstock_directory": resstock_directory,
         "baseline": {"n_buildings_represented": 100},
         "workflow_generator": {
             "type": "residential_hpxml",
@@ -183,7 +186,7 @@ def test_residential_hpxml_hes(mocker):
     assert build_existing_model_step["arguments"]["simulation_control_run_period_end_month"] == 2
     assert build_existing_model_step["arguments"]["simulation_control_run_period_end_day_of_month"] == 28
     assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2010
-    assert build_existing_model_step["arguments"]["os_hescore_directory"] == "/opt/OpenStudio-HEScore"
+    assert build_existing_model_step["arguments"]["os_hescore_directory"] == "../OpenStudio-HEScore"
 
     apply_upgrade_step = steps[1]
     assert apply_upgrade_step["measure_dir_name"] == "ApplyUpgrade"
