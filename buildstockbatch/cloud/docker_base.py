@@ -380,7 +380,7 @@ class DockerBatchBase(BuildStockBatchBase):
         dpouts = []
         simulation_output_tar_filename = sim_dir.parent / "simulation_outputs.tar.gz"
         asset_dirs = os.listdir(sim_dir)
-        ts_output_dir = (f"{output_path}/results/simulation_output/timeseries",)
+        ts_output_dir = f"{output_path}/results/simulation_output/timeseries"
 
         with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
             for building_id, upgrade_idx in jobs_d["batch"]:
