@@ -260,34 +260,35 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 
 GCP Configuration
 ~~~~~~~~~~~~~~~~~
-The top-level ``gcp`` key is used to specify options for running the batch job
-on the `GCP Batch <https://cloud.google.com/batch>`_ service.
+The top-level ``gcp`` key is used to specify options for running the batch job on GCP,
+using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://cloud.google.com/run>`_.
 
 .. note::
+
     When BuildStockBatch is run on GCP, it will only save results to GCP Cloud Storage (using the
     ``gcs`` configuration below); i.e., it currently cannot save to AWS S3 and Athena. Likewise,
     buildstock run locally, on Eagle, or on AWS cannot save to GCP.
 
 *  ``job_identifier``: A unique string that starts with an alphabetical character,
    is up to 48 characters long, and only has letters, numbers or hyphens.
-   This is used to name the GCP Batch job to be created and
-   differentiate it from other jobs.
+   This is used to name the GCP Batch and Cloud Run jobs to be created and
+   differentiate them from other jobs.
 *  ``project``: The GCP Project ID in which the batch will be run and of the Artifact Registry
    (where Docker images are stored).
-*  ``service_account``: The service account email address to use when running jobs on GCP.
-    Default: the Compute Engine default service account of the GCP project.
+*  ``service_account``: Optional. The service account email address to use when running jobs on GCP.
+   Default: the Compute Engine default service account of the GCP project.
 *  ``gcs``: Configuration for project data storage on GCP Cloud Storage.
 
     *  ``bucket``: The Cloud Storage bucket this project will use for simulation output and
        processed data storage.
-    *  ``prefix``: The Cloud Storage prefix at which the data will be stored.
+    *  ``prefix``: The Cloud Storage prefix at which the data will be stored within the bucket.
 
-*  ``region``: The GCP region in which the batch will be run and of the Artifact Registry.
+*  ``region``: The GCP region in which the job will be run and the region of the Artifact Registry.
 *  ``batch_array_size``: Number of tasks to divide the simulations into. Max: 10000.
 *  ``parallelism``: Optional. Maximum number of tasks that can run in parallel. If not specified,
    uses `GCP's default behavior`_ (the lesser of ``batch_array_size`` and `job limits`_).
    Parallelism is also limited by Compute Engine quotas and limits (including vCPU quota).
-*  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry
+*  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry.
 
     *  ``repository``: The name of the GCP Artifact Repository in which Docker images are stored.
        This will be combined with the ``project`` and ``region`` to build the full URL to the
@@ -300,10 +301,11 @@ on the `GCP Batch <https://cloud.google.com/batch>`_ service.
     *  ``machine_type``: GCP Compute Engine machine type to use. If omitted, GCP Batch will
        choose a machine type based on the requested vCPUs and memory. If set, the machine type
        should have at least as many resources as requested for each simulation above. If it is
-       large enough, multiple simulations will be run in parallel on the same machine.
-    *  ``use_spot``: true or false. Defaults to false if missing. This tells the project
-       to use `Spot VMs <https://cloud.google.com/spot-vms>`_ for data
-       simulations, which can reduce costs by up to 91%.
+       large enough, multiple simulations will be run in parallel on the same machine. Usually safe
+       to leave unset.
+    *  ``use_spot``: true or false. This tells the project whether to use
+       `Spot VMs <https://cloud.google.com/spot-vms>`_ for data simulations, which can reduce
+       costs by up to 91%. Default: false
 *  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
    postprocessing.
 

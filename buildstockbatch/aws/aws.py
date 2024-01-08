@@ -1510,10 +1510,6 @@ class AwsBatch(DockerBatchBase):
         return "nrel/buildstockbatch"
 
     @property
-    def weather_dir(self):
-        return self._weather_dir
-
-    @property
     def container_repo(self):
         repo_name = self.docker_image
         repos = self.ecr.describe_repositories()

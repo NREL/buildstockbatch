@@ -129,7 +129,7 @@ especially over a slower internet connection as it is downloading and building a
 GCP Specific Project configuration
 ..................................
 
-For the project to run on GCP, you will need to add a section to your config
+For the project to run on GCP, you will need to add a ``gcp`` section to your config
 file, something like this:
 
 .. code-block:: yaml
@@ -138,24 +138,26 @@ file, something like this:
       job_identifier: national01
       project: myorg_project
       region: us-central1
-      artifact_registry: buildstockbatch
+      artifact_registry:
+        repository: buildstockbatch
       gcs:
         bucket: mybucket
         prefix: national01_run01
       use_spot: true
       batch_array_size: 10000
 
-See :ref:`gcp-config` for details.
+See :ref:`gcp-config` for details and other optional settings.
 
-You can optionally override the ``job_identifier`` from the command line (``buildstock_gcp project.yml job_identifier``).
-Note that each job you run must have a unique ID (unless you delete a previous job with the ``--clean`` option), so
-this option makes it easier to quickly assign a new ID with each run. It also makes it easy to clean a previous job.
+You can optionally override the ``job_identifier`` from the command line
+(``buildstock_gcp project.yml [job_identifier]``). Note that each job you run must have a unique ID
+(unless you delete a previous job with the ``--clean`` option), so this option makes it easier to
+quickly assign a new ID with each run without updating the config file.
 
 
 List existing jobs
 ..................
 
-Run ``buildstock_gcp --show_jobs your_project_file.yml`` to see the existing
+Run ``buildstock_gcp your_project_file.yml [job_identifier] --show_jobs`` to see the existing
 jobs matching the project specified. This can show you whether a previously-started job
 has completed, is still running, or has already been cleaned up.
 
@@ -163,9 +165,7 @@ has completed, is still running, or has already been cleaned up.
 Cleaning up after yourself
 ..........................
 
-TODO: Review and update this after implementing cleanup option.
-
-When the simulation and postprocessing is all complete, run ``buildstock_gcp
---clean your_project_file.yml [job_identifier]``. This will clean up all the GCP resources that
-were created to run the specified project. If the project is still running, it
-will be cancelled. Your output files will still be available in GCS.
+When the simulations and postprocessing are complete, run ``buildstock_gcp
+your_project_file.yml [job_identifier] --clean``. This will clean up all the GCP resources that
+were created to run the specified project, other than files in Cloud Storage. If the project is
+still running, it will be cancelled. Your output files will still be available in GCS.

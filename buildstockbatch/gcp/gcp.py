@@ -5,11 +5,16 @@ buildstockbatch.gcp
 ~~~~~~~~~~~~~~~
 This class contains the object & methods that allow for usage of the library with GCP Batch.
 
-This implementation tries to match the structure of `../aws/aws.py` in the 'nrel/aws_batch' branch
-as much as possible in order to make it easier to refactor these two (or three, with Eagle) to share
-code later. Also, because that branch has not yet been merged, this will also _not_ do any
-refactoring right now to share code with that (to reduce merging complexity later). Instead, code
-that's likely to be refactored out will be commented with 'todo: aws-shared'.
+Architecture overview (these steps are split between GcpBatch and DockerBatchBase):
+    - Build a Docker image that includes OpenStudio and BuildStock Batch.
+    - Push the Docker image to GCP Artifact Registry.
+    - Run sampling, and split the generated buildings into batches.
+    - Collect all the required input files (including downloading weather files)
+      and upload them to Cloud Storage.
+    - Run a job on GCP Batch where each task runs one batch of simulations.
+      Uses the Docker image to run OpenStudio on Compute Engine VMs.
+    - Run a Cloud Run job for post-processing steps. Also uses the Docker image.
+    - Output files are written to a bucket in Cloud Storage.
 
 :author: Robert LaThanh, Natalie Weires
 :copyright: (c) 2023 by The Alliance for Sustainable Energy
@@ -248,11 +253,6 @@ class GcpBatch(DockerBatchBase):
     @property
     def docker_image(self):
         return "nrel/buildstockbatch"
-
-    # todo: aws-shared (see file comment)
-    @property
-    def weather_dir(self):
-        return self._weather_dir
 
     @property
     def results_dir(self):
@@ -642,7 +642,8 @@ class GcpBatch(DockerBatchBase):
         )
         logger.info(
             "Simulation output browser (Cloud Console): "
-            f"https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/simulation_output"
+            f"https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}"
+            "/results/simulation_output"
         )
         logger.info(f"View GCP Batch job at {job_url}")
 
@@ -1098,11 +1099,6 @@ def main():
             help="Only do postprocessing, useful for when the simulations are already done",
             action="store_true",
         )
-        group.add_argument(
-            "--crawl",
-            help="Only do the crawling in Athena. When simulations and postprocessing are done.",
-            action="store_true",
-        )
         parser.add_argument(
             "-v",
             "--verbose",
@@ -1134,8 +1130,6 @@ def main():
             batch.build_image()
             batch.push_image()
             batch.process_results()
-        elif args.crawl:
-            batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
             if batch.check_for_existing_jobs():
                 return
@@ -1144,7 +1138,6 @@ def main():
             batch.push_image()
             batch.run_batch()
             batch.process_results()
-            # process_results is async, so don't do a clean (which would clean before it's done)
 
 
 if __name__ == "__main__":

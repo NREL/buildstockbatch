@@ -387,7 +387,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
 
-    :param fs: fsspec filesystem (currently supports local and s3)
+    :param fs: fsspec filesystem (currently supports local, s3, gcs)
     :type fs: fsspec filesystem
     :param results_dir: directory where results are stored and written
     :type results_dir: str
@@ -609,7 +609,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                             )
                         )
                     except:
-                        logger.warning(f"Exception `dask.compute(map(concat_partial, ...` exception", exc_info=True)
+                        logger.warning("Exception `dask.compute(map(concat_partial, ...` exception", exc_info=True)
                         sys.exit(1)
                 if tmpfilepath.exists():
                     fs.put_file(
