@@ -1,5 +1,6 @@
 """Tests for the DockerBatchBase class."""
 from fsspec.implementations.local import LocalFileSystem
+import gzip
 import json
 import os
 import pathlib
@@ -103,6 +104,12 @@ def test_get_epws_to_download():
 
 
 def test_run_simulations(basic_residential_project_file):
+    """
+    Test running a single batch of simulation.
+
+    This doesn't provide all the necessary inputs for the simulations to succeed, but it confirms that they are
+    attempted, that the output files are produced, and that intermediate files are cleaned up.
+    """
     jobs_d = {
         "job_num": 0,
         "n_datapoints": 10,
@@ -130,6 +137,14 @@ def test_run_simulations(basic_residential_project_file):
 
         output_dir = bucket / "test_prefix" / "results" / "simulation_output"
         assert sorted(os.listdir(output_dir)) == ["results_job0.json.gz", "simulations_job0.tar.gz"]
+
+        # Check that buildings 1 and 5 (specified in jobs_d) are in the results
+        with gzip.open(output_dir / "results_job0.json.gz", "r") as f:
+            results = json.load(f)
+        assert len(results) == 2
+        for building in results:
+            assert building["building_id"] in (1, 5)
+
         # Check that files were cleaned up correctly
         assert not os.listdir(sim_dir)
         os.chdir(old_cwd)

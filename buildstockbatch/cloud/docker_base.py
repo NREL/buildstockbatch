@@ -10,8 +10,8 @@ This is the base class mixed into classes that deploy using a docker container.
 """
 import collections
 import csv
-import docker
 from dataclasses import dataclass
+import docker
 from fsspec.implementations.local import LocalFileSystem
 import glob
 import gzip
@@ -230,7 +230,6 @@ class DockerBatchBase(BuildStockBatchBase):
         :param tmppath: Unique weather files (compressed) will be copied into a 'weather' subdir
             of this path.
         :param epws_needed_set: A set of weather filenames needed by the batch.
-
         :returns: an array of tuples where the first value is the filename of a file that will be
             uploaded to cloud storage (because it's in the ``tmppath``), and the second value is the
             filename that the first should be copied to.
