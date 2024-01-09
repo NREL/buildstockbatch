@@ -114,9 +114,21 @@ def read_out_osw(fs, filename):
         keys_to_copy = ["started_at", "completed_at", "completed_status"]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
+
+        step_errors = []
         for step in d.get("steps", []):
-            if step["measure_dir_name"] == "BuildExistingModel":
+            measure_dir_name = step["measure_dir_name"]
+            if measure_dir_name == "BuildExistingModel":
                 out_d["building_id"] = step["arguments"]["building_id"]
+
+            # Collect error messages from any failed steps.
+            if result := step.get("result"):
+                if result.get("step_result", "Success") != "Success":
+                    step_errors.append({"measure_dir_name": measure_dir_name, "step_errors": result.get("step_errors")})
+
+        if step_errors:
+            out_d["step_failures"] = step_errors
+
         return out_d
 
 
