@@ -566,12 +566,15 @@ class GcpBatch(DockerBatchBase):
         """Implements :func:`DockerBase.start_batch_job`"""
         # Define and run the GCP Batch job.
         logger.info("Setting up GCP Batch job")
+        labels = {"bsb_job_identifier": self.job_identifier}
+
         client = batch_v1.BatchServiceClient()
 
         runnable = batch_v1.Runnable()
         runnable.container = batch_v1.Runnable.Container()
         runnable.container.image_uri = self.repository_uri + ":" + self.job_identifier
         runnable.container.entrypoint = "/bin/sh"
+        runnable.labels = labels
 
         # Pass environment variables to each task
         environment = batch_v1.Environment()
@@ -628,7 +631,10 @@ class GcpBatch(DockerBatchBase):
             ),
         )
         instances = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(policy=policy)
-        allocation_policy = batch_v1.AllocationPolicy(instances=[instances])
+        allocation_policy = batch_v1.AllocationPolicy(
+            instances=[instances],
+            labels=labels,
+        )
         if service_account := gcp_cfg.get("service_account"):
             allocation_policy.service_account = batch_v1.ServiceAccount(email=service_account)
 
@@ -638,9 +644,7 @@ class GcpBatch(DockerBatchBase):
         job.allocation_policy = allocation_policy
         job.logs_policy = batch_v1.LogsPolicy()
         job.logs_policy.destination = batch_v1.LogsPolicy.Destination.CLOUD_LOGGING
-        job.labels = {
-            "bsb_job_identifier": self.job_identifier,
-        }
+        job.labels = labels
 
         create_request = batch_v1.CreateJobRequest()
         create_request.job = job
