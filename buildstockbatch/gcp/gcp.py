@@ -33,6 +33,7 @@ import logging
 import os
 import pathlib
 import re
+import requests
 import shutil
 import tarfile
 import time
@@ -58,7 +59,7 @@ from buildstockbatch.utils import (
 logger = logging.getLogger(__name__)
 
 
-def upload_directory_to_GCS(local_directory, bucket, prefix):
+def upload_directory_to_GCS(local_directory, bucket, prefix, chunk_size_mib=None):
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket)
 
@@ -72,13 +73,25 @@ def upload_directory_to_GCS(local_directory, bucket, prefix):
             local_filepath = pathlib.Path(dirpath, filename)
             string_paths.append(str(local_filepath.relative_to(local_dir_abs)))
 
-    transfer_manager.upload_many_from_filenames(
-        bucket,
-        string_paths,
-        source_directory=local_dir_abs,
-        blob_name_prefix=prefix,
-        raise_exception=True,
-    )
+    try:
+        transfer_manager.upload_many_from_filenames(
+            bucket,
+            string_paths,
+            source_directory=local_dir_abs,
+            blob_name_prefix=prefix,
+            raise_exception=True,
+            # Default chunk size is 40 MiB
+            blob_constructor_kwargs={
+                "chunk_size": chunk_size_mib * 1024 * 1024,
+            }
+            if chunk_size_mib
+            else None,
+        )
+    except requests.exceptions.ConnectionError as e:
+        raise requests.exceptions.ConnectionError(
+            "Error while uploading files to GCS bucket. For timeout errors, "
+            f"consider decreasing gcp.gcs.upload_chunk_size_mib. (Currently {chunk_size_mib or 40} MiB)"
+        ) from e
 
 
 def copy_GCS_file(src_bucket, src_name, dest_bucket, dest_name):
@@ -529,7 +542,12 @@ class GcpBatch(DockerBatchBase):
     def upload_batch_files_to_cloud(self, tmppath):
         """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
         logger.info("Uploading Batch files to Cloud Storage")
-        upload_directory_to_GCS(tmppath, self.gcs_bucket, self.gcs_prefix + "/")
+        upload_directory_to_GCS(
+            tmppath,
+            self.gcs_bucket,
+            self.gcs_prefix + "/",
+            chunk_size_mib=self.cfg["gcp"]["gcs"].get("upload_chunk_size_mib"),
+        )
 
     def copy_files_at_cloud(self, files_to_copy):
         """Implements :func:`DockerBase.copy_files_at_cloud`"""

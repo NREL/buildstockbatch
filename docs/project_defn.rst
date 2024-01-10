@@ -282,6 +282,9 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
     *  ``bucket``: The Cloud Storage bucket this project will use for simulation output and
        processed data storage.
     *  ``prefix``: The Cloud Storage prefix at which the data will be stored within the bucket.
+    *  ``upload_chunk_size_mib``: Optional. The size of data chunks used when uploading files to GCS, in MiB.
+       If your network environment produces a TimeoutError when uploading project files, reducing this
+       may help. Default: 40 MiB
 
 *  ``region``: The GCP region in which the job will be run and the region of the Artifact Registry.
 *  ``batch_array_size``: Number of tasks to divide the simulations into. Max: 10000.

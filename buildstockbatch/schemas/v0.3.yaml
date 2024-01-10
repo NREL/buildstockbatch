@@ -37,6 +37,7 @@ gcp-spec:
 gcs-spec:
   bucket: str(required=True)
   prefix: str(required=True)
+  upload_chunk_size_mib: num(min=5, max=5000, required=False)
 
 gcp-ar-spec:
   repository: str(required=True)
