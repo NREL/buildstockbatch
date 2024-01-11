@@ -314,7 +314,10 @@ class DockerBatchBase(BuildStockBatchBase):
         self.validate_buildstock_csv(self.project_filename, df)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
-        n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
+        if self.skip_baseline_sims:
+            n_sims = n_datapoints * len(self.cfg.get("upgrades", []))
+        else:
+            n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
         logger.debug("Total number of simulations = {}".format(n_sims))
 
         # This is the maximum number of jobs that can be in an array
@@ -327,9 +330,12 @@ class DockerBatchBase(BuildStockBatchBase):
         logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
 
         # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
-        baseline_sims = zip(building_ids, itertools.repeat(None))
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
-        all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        if not self.skip_baseline_sims:
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        else:
+            all_sims = list(upgrade_sims)
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
 
