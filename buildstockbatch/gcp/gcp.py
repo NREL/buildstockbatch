@@ -601,6 +601,7 @@ class GcpBatch(DockerBatchBase):
         resources = batch_v1.ComputeResource(
             cpu_milli=1000 * job_env_cfg.get("vcpus", 1),
             memory_mib=job_env_cfg.get("memory_mib", 1024),
+            boot_disk_mib=job_env_cfg.get("boot_disk_mib", None),
         )
 
         # Give three minutes per simulation, plus ten minutes for job overhead

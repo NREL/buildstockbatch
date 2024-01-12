@@ -301,6 +301,12 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
     *  ``vcpus``: Number of CPUs to allocate for running each simulation. Default: 1.
     *  ``memory_mib``: Amount of RAM memory needed for each simulation in MiB. Default: 1024.
        For large multifamily buildings this works better if set to 2048.
+    *  ``boot_disk_mib``: Optional. Extra boot disk size in MiB for each task. This affects how
+       large the boot disk will be (see the `Batch OS environment docs`_ for details) of the
+       machine(s) running simulations (which is the disk used by simulations). This will likely need
+       to be set to at least 2,048 if more than 8 simulations will be run in parallel on the same
+       machine (i.e., when vCPUs per machine_type ÷ vCPUs per sim > 8). Default: None (which should
+       result in a 30 GB boot disk according to the docs linked above).
     *  ``machine_type``: GCP Compute Engine machine type to use. If omitted, GCP Batch will
        choose a machine type based on the requested vCPUs and memory. If set, the machine type
        should have at least as many resources as requested for each simulation above. If it is
@@ -318,6 +324,7 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
 
 .. _GCP's default behavior: https://cloud.google.com/python/docs/reference/batch/latest/google.cloud.batch_v1.types.TaskGroup
 .. _job limits: https://cloud.google.com/batch/quotas
+.. _Batch OS environment docs: https://cloud.google.com/batch/docs/vm-os-environment-overview#default
 .. _Number of CPUs: https://cloud.google.com/run/docs/configuring/services/cpu
 .. _Amount of RAM: https://cloud.google.com/run/docs/configuring/services/memory-limits
 
