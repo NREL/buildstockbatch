@@ -181,7 +181,7 @@ class GcpBatch(DockerBatchBase):
             assert len(job_identifier) <= 48, "Job identifier must be no longer than 48 characters."
             assert re.match(
                 "^[a-z]([a-z0-9-]{0,46}[a-z0-9])?$", job_identifier
-            ), "Job identifer must start with a letter and contain only letters, numbers, and hyphens."
+            ), "Job identifer must start with a letter and contain only lowercase letters, numbers, and hyphens."
             self.job_identifier = job_identifier
         else:
             self.job_identifier = self.cfg["gcp"]["job_identifier"]
@@ -564,6 +564,22 @@ class GcpBatch(DockerBatchBase):
 
     def start_batch_job(self, batch_info):
         """Implements :func:`DockerBase.start_batch_job`"""
+        # Make sure the default subnet for this region has access to Google APIs when external IP addresses are blocked.
+        subnet_client = compute_v1.SubnetworksClient()
+        op = subnet_client.set_private_ip_google_access(
+            project=self.gcp_project,
+            region=self.region,
+            subnetwork="default",
+            subnetworks_set_private_ip_google_access_request_resource=compute_v1.SubnetworksSetPrivateIpGoogleAccessRequest(  # noqa
+                private_ip_google_access=True
+            ),
+        )
+        op.result()
+        if op.error_code:
+            logger.error(
+                f"Error ({op.error_code}) updating subnet settings to allow private Google access: {op.error_message}"
+            )
+
         # Define and run the GCP Batch job.
         logger.info("Setting up GCP Batch job")
         labels = {"bsb_job_identifier": self.job_identifier}
@@ -635,6 +651,15 @@ class GcpBatch(DockerBatchBase):
         instances = batch_v1.AllocationPolicy.InstancePolicyOrTemplate(policy=policy)
         allocation_policy = batch_v1.AllocationPolicy(
             instances=[instances],
+            network=batch_v1.AllocationPolicy.NetworkPolicy(
+                network_interfaces=[
+                    batch_v1.AllocationPolicy.NetworkInterface(
+                        network="global/networks/default",
+                        subnetwork=f"regions/{self.region}/subnetworks/default",
+                        no_external_ip_address=True,
+                    )
+                ]
+            ),
             labels=labels,
         )
         if service_account := gcp_cfg.get("service_account"):
