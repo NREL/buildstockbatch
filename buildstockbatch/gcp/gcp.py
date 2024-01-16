@@ -574,6 +574,7 @@ class GcpBatch(DockerBatchBase):
         bsb_runnable.container = batch_v1.Runnable.Container()
         bsb_runnable.container.image_uri = self.repository_uri + ":" + self.job_identifier
         bsb_runnable.container.entrypoint = "/bin/sh"
+        bsb_runnable.container.options = "--rm"
         bsb_runnable.labels = labels
 
         # Pass environment variables to each task
@@ -588,14 +589,6 @@ class GcpBatch(DockerBatchBase):
 
         bsb_runnable.container.commands = ["-c", "python3 -m buildstockbatch.gcp.gcp"]
 
-        # Prune old docker containers after we're done using them, so they don't use up all the disk space.
-        cleanup_runnable = batch_v1.Runnable()
-        cleanup_runnable.script = batch_v1.Runnable.Script()
-        # "until=2m" - Ignore containers that were just created and aren't active yet.
-        # "|| true" - This can fail if another task is pruning at the same time, but these failures are safe to ignore.
-        cleanup_runnable.script.text = 'docker system prune -f --filter "until=2m" || true'
-        cleanup_runnable.labels = labels
-
         gcp_cfg = self.cfg["gcp"]
         job_env_cfg = gcp_cfg.get("job_environment", {})
         resources = batch_v1.ComputeResource(
@@ -607,7 +600,7 @@ class GcpBatch(DockerBatchBase):
         # Give three minutes per simulation, plus ten minutes for job overhead
         task_duration_secs = 60 * (10 + batch_info.n_sims_per_job * 3)
         task = batch_v1.TaskSpec(
-            runnables=[bsb_runnable, cleanup_runnable],
+            runnables=[bsb_runnable],
             compute_resource=resources,
             # Allow retries, but only when the machine is preempted.
             max_retry_count=3,
