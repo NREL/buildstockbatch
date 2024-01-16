@@ -68,12 +68,19 @@ def test_resstock_local_batch(project_filename):
     assert (simout_path / "simulations_job0.tar.gz").exists()
     base_pq = out_path / "parquet" / "baseline" / "results_up00.parquet"
     assert base_pq.exists()
-    base = pd.read_parquet(base_pq, columns=["completed_status"])
+    base = pd.read_parquet(base_pq, columns=["completed_status", "started_at", "completed_at"])
     assert (base["completed_status"] == "Success").all()
+    assert base.dtypes["started_at"] == "timestamp[s][pyarrow]"
+    assert base.dtypes["completed_at"] == "timestamp[s][pyarrow]"
     assert base.shape[0] == n_datapoints
     ts_pq_path = out_path / "parquet" / "timeseries"
+    ts_time_cols = ["time", "timeutc", "timedst"]
     for upgrade_id in range(0, n_upgrades + 1):
-        assert (ts_pq_path / f"upgrade={upgrade_id}" / "group0.parquet").exists()
+        ts_pq_filename = ts_pq_path / f"upgrade={upgrade_id}" / "group0.parquet"
+        assert ts_pq_filename.exists()
+        tsdf = pd.read_parquet(ts_pq_filename, columns=ts_time_cols)
+        for col in tsdf.columns:
+            assert tsdf[col].dtype == "timestamp[s][pyarrow]"
         assert (out_path / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz").exists()
         if upgrade_id >= 1:
             upg_pq = out_path / "parquet" / "upgrades" / f"upgrade={upgrade_id}" / f"results_up{upgrade_id:02d}.parquet"

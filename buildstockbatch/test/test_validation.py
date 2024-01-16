@@ -390,7 +390,7 @@ def test_validate_kestrel_output_directory():
             KestrelBatch.validate_output_directory_kestrel(str(temp_yml))
 
 
-def test_validate_apptainer_image_eagle(mocker, basic_residential_project_file):
+def test_validate_apptainer_image():
     minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with tempfile.TemporaryDirectory() as tmpdir:
         with open(minimal_yml, "r") as f:
@@ -399,8 +399,15 @@ def test_validate_apptainer_image_eagle(mocker, basic_residential_project_file):
         temp_yml = pathlib.Path(tmpdir, "temp.yml")
         with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
-        with pytest.raises(ValidationError, match=r"image does not exist"):
-            EagleBatch.validate_apptainer_image_hpc(str(temp_yml))
+        with pytest.raises(ValidationError, match=r"Could not find apptainer image: .+\.sif or .+\.simg"):
+            SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
+        for ext in ["Apptainer.sif", "Singularity.simg"]:
+            filename = pathlib.Path(
+                tmpdir, f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}"
+            )
+            filename.touch()
+            SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
+            filename.unlink()
 
 
 def test_validate_sampler_good_buildstock(basic_residential_project_file):

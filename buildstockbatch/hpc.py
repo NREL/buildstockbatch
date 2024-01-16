@@ -87,13 +87,14 @@ class SlurmBatch(BuildStockBatchBase):
     @classmethod
     def validate_apptainer_image_hpc(cls, project_file):
         cfg = get_project_configuration(project_file)
-        apptainer_image = cls.get_apptainer_image(
-            cfg,
-            cfg.get("os_version", cls.DEFAULT_OS_VERSION),
-            cfg.get("os_sha", cls.DEFAULT_OS_SHA),
-        )
-        if apptainer_image is None or not os.path.exists(apptainer_image):
-            raise ValidationError(f"The apptainer image does not exist: {apptainer_image}")
+        try:
+            cls.get_apptainer_image(
+                cfg,
+                cfg.get("os_version", cls.DEFAULT_OS_VERSION),
+                cfg.get("os_sha", cls.DEFAULT_OS_SHA),
+            )
+        except RuntimeError as err:
+            raise ValidationError(str(err))
 
     @property
     def output_dir(self):
@@ -114,12 +115,13 @@ class SlurmBatch(BuildStockBatchBase):
 
     @classmethod
     def get_apptainer_image(cls, cfg, os_version, os_sha):
-        exts_to_try = ["sif", "simg"]
+        exts_to_try = ["Apptainer.sif", "Singularity.simg"]
         sys_img_dir = cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR)
-        for ext in exts_to_try:
-            image_path = pathlib.Path(sys_img_dir, f"OpenStudio-{os_version}.{os_sha}-Singularity.{ext}")
+        image_paths = [pathlib.Path(sys_img_dir, f"OpenStudio-{os_version}.{os_sha}-{ext}") for ext in exts_to_try]
+        for image_path in image_paths:
             if image_path.exists():
                 return str(image_path)
+        raise RuntimeError(f"Could not find apptainer image: {' or '.join(map(str, image_paths))}")
 
     @property
     def weather_dir(self):

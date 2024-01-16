@@ -193,6 +193,7 @@ def test_qos_high_job_submit(basic_residential_project_file, monkeypatch, mocker
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
     mock_subprocess.run.return_value.stdout = "Submitted batch job 1\n"
     mock_subprocess.PIPE = None
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     Batch = eval(f"{hpc_name.capitalize()}Batch")
     mocker.patch.object(SlurmBatch, "weather_dir", None)
     project_filename, results_dir = basic_residential_project_file(hpc_name=hpc_name)
@@ -228,6 +229,7 @@ def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file, monk
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
     Batch = eval(f"{hpc_name.capitalize()}Batch")
     mocker.patch.object(Batch, "weather_dir", None)
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mock_subprocess.run.return_value.stdout = "Submitted batch job 1\n"
     mock_subprocess.PIPE = None
     project_filename, results_dir = basic_residential_project_file(
@@ -292,7 +294,7 @@ def test_run_building_process(mocker, basic_residential_project_file):
     rmtree_mock = mocker.patch("buildstockbatch.hpc.shutil.rmtree")
     mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.hpc.subprocess")
-
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mocker.patch.object(KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir")
     mocker.patch.object(KestrelBatch, "local_weather_dir", results_dir / "local_weather_dir")
     mocker.patch.object(KestrelBatch, "local_output_dir", results_dir)
@@ -382,7 +384,7 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     mocker.patch("buildstockbatch.hpc.shutil.rmtree")
     mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.hpc.subprocess")
-
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mocker.patch.object(KestrelBatch, "run_building", raise_error)
     mocker.patch.object(KestrelBatch, "local_output_dir", results_dir)
     mocker.patch.object(KestrelBatch, "results_dir", results_dir)
@@ -413,6 +415,7 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
     process_results_mocker = mocker.patch.object(BuildStockBatchBase, "process_results")
     queue_jobs_mocker = mocker.patch.object(KestrelBatch, "queue_jobs", return_value=[42])
     queue_post_processing_mocker = mocker.patch.object(KestrelBatch, "queue_post_processing")
+    mocker.patch.object(KestrelBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
 
     b = KestrelBatch(project_filename)
 

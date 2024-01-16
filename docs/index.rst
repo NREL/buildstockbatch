@@ -29,8 +29,6 @@ Amazon Web Services (beta).
 Updates & Changelog
 ===================
 
-:doc:`Migration from 0.19 to 0.20 <changelog/migration_0_20>`
-
 .. toctree::
    :maxdepth: 2
    :caption: Changes & Migration

@@ -17,6 +17,8 @@ import logging
 from lxml import objectify
 import os
 import numpy as np
+import pandas as pd
+import pyarrow as pa
 import re
 import requests
 import semver
@@ -219,6 +221,8 @@ class BuildStockBatchBase(object):
                 raise RuntimeError(f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.")
 
             tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            for col in actual_time_cols:
+                tsdf[col] = tsdf[col].astype(pd.ArrowDtype(pa.timestamp("s")))
             if os.path.isfile(schedules_filepath):
                 schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f"schedules_{x}", inplace=True)

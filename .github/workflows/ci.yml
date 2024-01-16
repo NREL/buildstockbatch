@@ -34,8 +34,8 @@ jobs:
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
       - name: Download and Install OpenStudio
         run: |
-          wget -q https://github.com/NREL/OpenStudio/releases/download/v3.7.0-rc1/OpenStudio-3.7.0-rc1+211bb633b0-Ubuntu-22.04-x86_64.deb
-          sudo apt install -y ./OpenStudio-3.7.0-rc1+211bb633b0-Ubuntu-22.04-x86_64.deb
+          wget -q https://github.com/NREL/OpenStudio/releases/download/v3.7.0/OpenStudio-3.7.0+d5269793f1-Ubuntu-22.04-x86_64.deb
+          sudo apt install -y ./OpenStudio-3.7.0+d5269793f1-Ubuntu-22.04-x86_64.deb
           openstudio openstudio_version
           which openstudio
       - name: Install buildstockbatch
@@ -67,14 +67,12 @@ jobs:
         with:
           name: coverage-report-html
           path: buildstockbatch/coverage/htmlreport/
-      - name: Report coverage to PR
-        uses: 5monkeys/cobertura-action@v13
+      - name: Save Coverage Report XML
+        uses: actions/upload-artifact@v3
         if: ${{ matrix.python-version == '3.11' }}
         with:
+          name: coverage-report-xml
           path: buildstockbatch/coverage/coverage.xml
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          minimum_coverage: 33
-          fail_below_threshold: true
       - name: Build documentation
         if: ${{ matrix.python-version == '3.11' }}
         run: |

@@ -16,23 +16,22 @@ Development Changelog
         github issues. These will be automatically linked in the documentation.
 
     .. change::
-        :tags: eagle, bugfix
-        :pullreq: 406
-        :tickets: 404
+        :tags: general
+        :pullreq: 421
 
-        Cleans out the ``/tmp/scratch`` folder on Eagle at the end of each array job.
-
-    .. change::
-        :tags: general, feature, kestrel
-        :pullreq: 405
-        :tickets: 313
-
-        Add support for NREL's Kestrel supercomputer.
+        Refactor docker_base to use inversion of control so that it can more strongly and easily ensure consistency
+        between various implementations (GCP implementation to come). This also includes teasing apart the several batch
+        prep steps (weather, assets, and jobs) into their own methods so they can each be more easily understood,
+        shared, and maintained.
 
     .. change::
-        :tags: general, postprocessing
-        :pullreq: 414
-        :tickets: 412
+        :tags: general
+        :pullreq: 422
 
-        Add support for an AWS service account on Kestrel/Eagle so the user
-        doesn't have to manage AWS keys. 
+        Refactor AWS code so it can be shared by the upcoming GCP implementation.
+
+    .. change::
+        :tags: general, bugfix
+        :pullreq: 426
+
+        A bugfix for gracefully handling empty data_point_out.json files.
