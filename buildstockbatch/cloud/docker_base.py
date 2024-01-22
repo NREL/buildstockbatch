@@ -24,6 +24,7 @@ import os
 import pandas as pd
 import pathlib
 import random
+import re
 import shutil
 import subprocess
 import tarfile
@@ -144,36 +145,47 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         raise NotImplementedError
 
-    def start_batch_job(self, batch_info):
+    def start_batch_job(self, batch_info, skip_tasks=None):
         """Create and start the Batch job on the cloud.
 
         Files used by the batch job will have been prepared and uploaded (by
         :func:`DockerBase.run_batch`, which is what runs this).
 
         :param batch_info: A :class:`DockerBatchBase.BatchInfo` containing information about the job
+        :param skip_tasks: A list of task numbers to skip (because they succeeded in a previous run).
         """
         raise NotImplementedError
 
-    def run_batch(self):
+    def run_batch(self, missing_only=False):
         """Prepare and start a Batch job on the cloud to run simulations.
 
         This does all the cloud-agnostic prep (such as preparing weather files, assets, and job
         definition), delegating to the implementations to upload those files to the cloud (using
         (:func:`upload_batch_files_to_cloud` and :func:`copy_files_at_cloud`), and then calls the
         implementation's :func:`start_batch_job` to actually create and start the batch job.
+
+        :param missing_only: If true, use asset files from a previous job and only run the simulations that don't
+            already have successful results from a previous run. Only supported by GcpBatch.
         """
+        if missing_only:
+            skip_tasks = self.find_done_tasks()
+        else:
+            skip_tasks = 0
+
         with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
             tmppath = pathlib.Path(tmpdir)
+            # TODO: skip more steps when retrying
             epws_to_copy, batch_info = self._run_batch_prep(tmppath)
 
-            # Copy all the files to cloud storage
-            logger.info("Uploading files for batch...")
-            self.upload_batch_files_to_cloud(tmppath)
+            if not missing_only:
+                # Copy all the files to cloud storage
+                logger.info("Uploading files for batch...")
+                self.upload_batch_files_to_cloud(tmppath)
 
-            logger.info("Copying duplicate weather files...")
-            self.copy_files_at_cloud(epws_to_copy)
+                logger.info("Copying duplicate weather files...")
+                self.copy_files_at_cloud(epws_to_copy)
 
-        self.start_batch_job(batch_info)
+        self.start_batch_job(batch_info, skip_tasks=skip_tasks)
 
     def _run_batch_prep(self, tmppath):
         """Do preparation for running the Batch jobs on the cloud, including producing and uploading
@@ -506,7 +518,7 @@ class DockerBatchBase(BuildStockBatchBase):
                     elif os.path.isfile(item):
                         os.remove(item)
 
-        # Upload simulation outputs tarfile to s3
+        # Upload simulation outputs tarfile to bucket
         fs.put(
             str(simulation_output_tar_filename),
             f"{output_path}/results/simulation_output/simulations_job{job_id}.tar.gz",
@@ -527,6 +539,19 @@ class DockerBatchBase(BuildStockBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    def find_done_tasks(self):
+        """Return a list of tasks that already have results present."""
+        fs = self.get_fs()
+
+        output_dir = f"{self.results_dir}/simulation_output/"
+        all_results = set(fs.ls(output_dir))
+        done_tasks = []
+        for f in all_results:
+            if m := re.match(".*results_job(\\d*).json.gz$", f):
+                done_tasks.append(int(m.group(1)))
+
+        return done_tasks
 
     def log_summary(self):
         """

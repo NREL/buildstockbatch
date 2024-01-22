@@ -154,6 +154,18 @@ You can optionally override the ``job_identifier`` from the command line
 quickly assign a new ID with each run without updating the config file.
 
 
+Retry failed tasks
+..................
+
+Occasionally, especially when using spot instances, tasks will fail for transient reasons, like
+the VM being preempted. While preempted tasks are automatically retried a few times, if they continue
+to fail, the entire job will fail and postprocessing will not run.
+
+If this happens, you can rerun the same job with the ``--missingonly`` flag. This will rerun only the
+tasks that didn't produce output files, then run postprocessing. Note: This flag assumes that your
+project config file has not changed since the previous run. If it has changed, the behavior is undefined.
+
+
 List existing jobs
 ..................
 

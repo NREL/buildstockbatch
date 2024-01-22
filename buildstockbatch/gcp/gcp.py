@@ -562,7 +562,7 @@ class GcpBatch(DockerBatchBase):
             for src, dest in files_to_copy
         )
 
-    def start_batch_job(self, batch_info):
+    def start_batch_job(self, batch_info, skip_tasks=None):
         """Implements :func:`DockerBase.start_batch_job`"""
         # Make sure the default subnet for this region has access to Google APIs when external IP addresses are blocked.
         subnet_client = compute_v1.SubnetworksClient()
@@ -600,6 +600,7 @@ class GcpBatch(DockerBatchBase):
             "JOB_NAME": self.job_identifier,
             "GCS_PREFIX": self.gcs_prefix,
             "GCS_BUCKET": self.gcs_bucket,
+            "MISSING_ONLY": str(bool(skip_tasks)),
         }
         bsb_runnable.environment = environment
 
@@ -631,9 +632,25 @@ class GcpBatch(DockerBatchBase):
             max_run_duration=f"{task_duration_secs}s",
         )
 
+        if skip_tasks:
+            # Save a list of tasks to rerun in a file on GCS.
+            job_count = 0
+            fs = self.get_fs()
+            with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
+                for task_id in range(batch_info.job_count):
+                    if task_id not in skip_tasks:
+                        f.write(f"{task_id}\n")
+                        job_count += 1
+            if job_count == 0:
+                raise ValidationError(
+                    f"There are no tasks to retry. All {batch_info.job_count} results files are present."
+                )
+        else:
+            job_count = batch_info.job_count
+
         # How many of these tasks to run.
         group = batch_v1.TaskGroup(
-            task_count=batch_info.job_count,
+            task_count=job_count,
             parallelism=gcp_cfg.get("parallelism", None),
             task_spec=task,
         )
@@ -699,7 +716,7 @@ class GcpBatch(DockerBatchBase):
         # Monitor job status while waiting for the job to complete
         n_completed_last_time = 0
         client = batch_v1.BatchServiceClient()
-        with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="task") as progress_bar:
+        with tqdm.tqdm(desc="Running Simulations", total=job_count, unit="task") as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED", "DELETION_IN_PROGRESS"):
                 time.sleep(10)
@@ -738,7 +755,7 @@ class GcpBatch(DockerBatchBase):
             tsv_logger.log_stats(logging.INFO)
 
     @classmethod
-    def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):
+    def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix, missing_only):
         """
         Run a few simulations inside a container.
 
@@ -750,12 +767,19 @@ class GcpBatch(DockerBatchBase):
         :param job_name: Job identifier
         :param gcs_bucket: GCS bucket for input and output files
         :param gcs_prefix: Prefix used for GCS files
+        :param missing_only: If true, only run sims missing from a previous run
         """
+
         # Local directory where we'll write files
         sim_dir = pathlib.Path("/var/simdata/openstudio")
 
         client = storage.Client()
         bucket = client.get_bucket(gcs_bucket)
+
+        if missing_only:
+            # Find task index of the original task we're retrying.
+            tasks = bucket.blob(f"{gcs_prefix}/results/missing_tasks.txt").download_as_bytes().decode()
+            task_index = int(tasks.split()[task_index])
 
         logger.info("Extracting assets TAR file")
         # Copy assets file to local machine to extract TAR file
@@ -1113,7 +1137,9 @@ def main():
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
         job_name = os.environ["JOB_NAME"]
-        GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix)
+        missing_only = os.environ.get("MISSING_ONLY") == "True"
+        GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix, missing_only)
+
     elif "POSTPROCESS" == os.environ.get("JOB_TYPE", ""):
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
@@ -1154,6 +1180,12 @@ def main():
             action="store_true",
             help="Verbose output - includes DEBUG logs if set",
         )
+        parser.add_argument(
+            "--missingonly",
+            action="store_true",
+            help="Only run simulations that are missing from a previous run, then run post-processing."
+            "Only uses the GCS path from the project file - all other inputs are pulled from previous run.",
+        )
         args = parser.parse_args()
 
         if args.verbose:
@@ -1185,7 +1217,7 @@ def main():
 
             batch.build_image()
             batch.push_image()
-            batch.run_batch()
+            batch.run_batch(missing_only=args.missingonly)
             batch.process_results()
 
 

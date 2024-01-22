@@ -1593,8 +1593,11 @@ class AwsBatch(DockerBatchBase):
             for src, dest in files_to_copy
         )
 
-    def start_batch_job(self, batch_info):
+    def start_batch_job(self, batch_info, missing_only=False):
         """Implements :func:`DockerBase.start_batch_job`"""
+        if missing_only:
+            raise NotImplementedError
+
         # Create the output directories
         fs = S3FileSystem()
         for upgrade_id in range(len(self.cfg.get("upgrades", [])) + 1):
