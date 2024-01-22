@@ -619,7 +619,7 @@ class GcpBatch(DockerBatchBase):
             runnables=[bsb_runnable],
             compute_resource=resources,
             # Allow retries, but only when the machine is preempted.
-            max_retry_count=3,
+            max_retry_count=5,
             lifecycle_policies=[
                 batch_v1.LifecyclePolicy(
                     action=batch_v1.LifecyclePolicy.Action.RETRY_TASK,
