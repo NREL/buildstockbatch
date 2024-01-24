@@ -163,7 +163,8 @@ to fail, the entire job will fail and postprocessing will not run.
 
 If this happens, you can rerun the same job with the ``--missingonly`` flag. This will rerun only the
 tasks that didn't produce output files, then run postprocessing. Note: This flag assumes that your
-project config file has not changed since the previous run. If it has changed, the behavior is undefined.
+project config file has not changed since the previous run, other than the job identifier.
+If it has changed, the behavior is undefined.
 
 
 List existing jobs

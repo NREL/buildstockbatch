@@ -633,18 +633,9 @@ class GcpBatch(DockerBatchBase):
         )
 
         if self.missing_only:
-            skip_tasks = self.find_done_tasks()
-            # Save a list of task numbers to rerun in a file on GCS.
-            # Task i of the new job will read line i of this file to find the
-            # task of the original job it should rerun.
-            job_count = 0
-            with self.get_fs().open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
-                for task_id in range(batch_info.job_count):
-                    if task_id not in skip_tasks:
-                        f.write(f"{task_id}\n")
-                        job_count += 1
-
-            if job_count:
+            # Save a list of task numbers to rerun in a file on GCS. Task i of the new job will read line i of
+            # this file to find the task of the original job it should rerun.
+            if job_count := self.find_missing_tasks(batch_info.job_count):
                 logger.info(f"Found {job_count} out of {batch_info.job_count} tasks to rerun.")
             else:
                 raise ValidationError(
@@ -772,9 +763,9 @@ class GcpBatch(DockerBatchBase):
         :param job_name: Job identifier
         :param gcs_bucket: GCS bucket for input and output files
         :param gcs_prefix: Prefix used for GCS files
-        :param missing_only: If true, only run tasks that are missing from a previous run
+        :param missing_only: If True, rerun a task from a previous job. The provided task_index is used as an index
+            into the list of tasks that need to be rerun.
         """
-
         # Local directory where we'll write files
         sim_dir = pathlib.Path("/var/simdata/openstudio")
 
@@ -785,6 +776,7 @@ class GcpBatch(DockerBatchBase):
             # Find task number of the original task we're retrying.
             tasks = bucket.blob(f"{gcs_prefix}/results/missing_tasks.txt").download_as_bytes().decode()
             task_index = int(tasks.split()[task_index])
+            logger.info(f"Rerunning task {task_index}")
 
         logger.info("Extracting assets TAR file")
         # Copy assets file to local machine to extract TAR file
@@ -1142,9 +1134,8 @@ def main():
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
         job_name = os.environ["JOB_NAME"]
-        missing_only = os.environ.get("MISSING_ONLY") == "True"
+        missing_only = os.environ["MISSING_ONLY"] == "True"
         GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix, missing_only)
-
     elif "POSTPROCESS" == os.environ.get("JOB_TYPE", ""):
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
@@ -1182,8 +1173,8 @@ def main():
         group.add_argument(
             "--missingonly",
             action="store_true",
-            help="Only run batches of simulations that are missing from a previous run, then run post-processing."
-            "Assumes that the project file is the same as the previous run, other than the job identifier."
+            help="Only run batches of simulations that are missing from a previous job, then run post-processing. "
+            "Assumes that the project file is the same as the previous job, other than the job identifier. "
             "Will not rerun individual failed simulations, only full batches that are missing.",
         )
         parser.add_argument(

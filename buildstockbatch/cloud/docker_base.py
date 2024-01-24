@@ -548,12 +548,13 @@ class DockerBatchBase(BuildStockBatchBase):
             elif os.path.isfile(item):
                 os.remove(item)
 
-    def find_done_tasks(self):
-        """Return a list of tasks that already have results present.
+    def find_missing_tasks(self, expected):
+        """Creates a file with a list of task numbers that are missing results.
 
         This only checks for results_job[ID].json.gz files in the results directory.
 
-        :returns: List of integer task numbers present in results.
+        :param expected: Number of result files expected.
+        :returns: The number of files that were missing.
         """
         fs = self.get_fs()
         done_tasks = []
@@ -561,7 +562,14 @@ class DockerBatchBase(BuildStockBatchBase):
             if m := re.match(".*results_job(\\d*).json.gz$", f):
                 done_tasks.append(int(m.group(1)))
 
-        return done_tasks
+        job_count = 0
+        with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
+            for task_id in range(expected):
+                if task_id not in done_tasks:
+                    f.write(f"{task_id}\n")
+                    job_count += 1
+
+        return job_count
 
     def log_summary(self):
         """
