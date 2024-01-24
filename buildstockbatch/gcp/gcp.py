@@ -170,12 +170,12 @@ class GcpBatch(DockerBatchBase):
     DEFAULT_PP_CPUS = 2
     DEFAULT_PP_MEMORY_MIB = 4096
 
-    def __init__(self, project_filename, job_identifier=None):
+    def __init__(self, project_filename, job_identifier=None, missing_only=False):
         """
         :param project_filename: Path to the project's configuration file.
         :param job_identifier: Optional job ID that will override gcp.job_identifier from the project file.
         """
-        super().__init__(project_filename)
+        super().__init__(project_filename, missing_only)
 
         if job_identifier:
             assert len(job_identifier) <= 48, "Job identifier must be no longer than 48 characters."
@@ -562,7 +562,7 @@ class GcpBatch(DockerBatchBase):
             for src, dest in files_to_copy
         )
 
-    def start_batch_job(self, batch_info, skip_tasks=None):
+    def start_batch_job(self, batch_info):
         """Implements :func:`DockerBase.start_batch_job`"""
         # Make sure the default subnet for this region has access to Google APIs when external IP addresses are blocked.
         subnet_client = compute_v1.SubnetworksClient()
@@ -600,7 +600,7 @@ class GcpBatch(DockerBatchBase):
             "JOB_NAME": self.job_identifier,
             "GCS_PREFIX": self.gcs_prefix,
             "GCS_BUCKET": self.gcs_bucket,
-            "MISSING_ONLY": str(bool(skip_tasks)),
+            "MISSING_ONLY": str(self.missing_only),
         }
         bsb_runnable.environment = environment
 
@@ -632,7 +632,8 @@ class GcpBatch(DockerBatchBase):
             max_run_duration=f"{task_duration_secs}s",
         )
 
-        if skip_tasks:
+        if self.missing_only:
+            skip_tasks = self.find_done_tasks()
             # Save a list of task numbers to rerun in a file on GCS.
             # Task i of the new job will read line i of this file to find the
             # task of the original job it should rerun.
@@ -1203,7 +1204,7 @@ def main():
         if args.validateonly:
             return True
 
-        batch = GcpBatch(args.project_filename, args.job_identifier)
+        batch = GcpBatch(args.project_filename, args.job_identifier, missing_only=args.missingonly)
         if args.clean:
             batch.clean()
             return
@@ -1222,7 +1223,7 @@ def main():
 
             batch.build_image()
             batch.push_image()
-            batch.run_batch(missing_only=args.missingonly)
+            batch.run_batch()
             batch.process_results()
 
 

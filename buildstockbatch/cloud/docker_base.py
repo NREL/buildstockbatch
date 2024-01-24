@@ -106,8 +106,13 @@ class DockerBatchBase(BuildStockBatchBase):
     CONTAINER_RUNTIME = ContainerRuntime.DOCKER
     MAX_JOB_COUNT = 10000
 
-    def __init__(self, project_filename):
+    def __init__(self, project_filename, missing_only=False):
+        """
+        :param missing_only: If true, use asset files from a previous job and only run the simulations
+            that don't already have successful results from a previous run. Support must be added in subclasses.
+        """
         super().__init__(project_filename)
+        self.missing_only = missing_only
 
         self.docker_client = docker.DockerClient.from_env()
         try:
@@ -143,44 +148,37 @@ class DockerBatchBase(BuildStockBatchBase):
 
         :param files_to_copy: a dict where the key is a file on the cloud to copy, and the value is
             the filename to copy the source file to. Both are relative to the ``tmppath`` used in
-            ``prep_batches()`` (so the implementation should prepend the bucket name and prefix
+            ``_run_batch_prep()`` (so the implementation should prepend the bucket name and prefix
             where they were uploaded to by ``upload_batch_files_to_cloud``).
         """
         raise NotImplementedError
 
-    def start_batch_job(self, batch_info, skip_tasks=None):
+    def start_batch_job(self, batch_info):
         """Create and start the Batch job on the cloud.
 
         Files used by the batch job will have been prepared and uploaded (by
         :func:`DockerBase.run_batch`, which is what runs this).
 
         :param batch_info: A :class:`DockerBatchBase.BatchInfo` containing information about the job
-        :param skip_tasks: A list of task numbers to skip (because they succeeded in a previous run).
         """
         raise NotImplementedError
 
-    def run_batch(self, missing_only=False):
+    def run_batch(self):
         """Prepare and start a Batch job on the cloud to run simulations.
 
         This does all the cloud-agnostic prep (such as preparing weather files, assets, and job
         definition), delegating to the implementations to upload those files to the cloud (using
         (:func:`upload_batch_files_to_cloud` and :func:`copy_files_at_cloud`), and then calls the
         implementation's :func:`start_batch_job` to actually create and start the batch job.
-
-        :param missing_only: If true, use asset files from a previous job and only run the simulations
-            that don't already have successful results from a previous run. Only supported by GcpBatch.
         """
-        if missing_only:
-            done_tasks = self.find_done_tasks()
-        else:
-            done_tasks = 0
 
         with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
             tmppath = pathlib.Path(tmpdir)
-            # TODO: skip more steps when retrying
             epws_to_copy, batch_info = self._run_batch_prep(tmppath)
 
-            if not missing_only:
+            # If we're rerunning failed tasks from a previous job, DO NOT overwite the job files.
+            # That would assign a new random set of buildings to each task, making the rerun useless.
+            if not self.missing_only:
                 # Copy all the files to cloud storage
                 logger.info("Uploading files for batch...")
                 self.upload_batch_files_to_cloud(tmppath)
@@ -188,7 +186,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 logger.info("Copying duplicate weather files...")
                 self.copy_files_at_cloud(epws_to_copy)
 
-        self.start_batch_job(batch_info, skip_tasks=done_tasks)
+        self.start_batch_job(batch_info)
 
     def _run_batch_prep(self, tmppath):
         """Do preparation for running the Batch jobs on the cloud, including producing and uploading
@@ -215,18 +213,22 @@ class DockerBatchBase(BuildStockBatchBase):
         :returns: DockerBatchBase.BatchInfo
         """
 
-        # Project configuration
-        logger.info("Writing project configuration for upload...")
-        with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
-            json.dump(self.cfg, f)
+        if not self.missing_only:
+            # Project configuration
+            logger.info("Writing project configuration for upload...")
+            with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
+                json.dump(self.cfg, f)
 
         # Collect simulations to queue (along with the EPWs those sims need)
         logger.info("Preparing simulation batch jobs...")
         batch_info, epws_needed = self._prep_jobs_for_batch(tmppath)
 
-        # Weather files
-        logger.info("Prepping weather files...")
-        epws_to_copy = self._prep_weather_files_for_batch(tmppath, epws_needed)
+        if self.missing_only:
+            epws_to_copy = None
+        else:
+            # Weather files
+            logger.info("Prepping weather files...")
+            epws_to_copy = self._prep_weather_files_for_batch(tmppath, epws_needed)
 
         return (epws_to_copy, batch_info)
 
@@ -379,6 +381,9 @@ class DockerBatchBase(BuildStockBatchBase):
                 )
         job_count = i
         logger.debug("Job count = {}".format(job_count))
+        batch_info = DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count)
+        if self.missing_only:
+            return batch_info, epws_needed
 
         # Compress job jsons
         jobs_dir = tmppath / "jobs"
@@ -409,7 +414,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 "lib/housing_characteristics",
             )
 
-        return DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count), epws_needed
+        return batch_info, epws_needed
 
     def _determine_epws_needed_for_batch(self, buildstock_df):
         """
