@@ -171,7 +171,6 @@ class DockerBatchBase(BuildStockBatchBase):
         (:func:`upload_batch_files_to_cloud` and :func:`copy_files_at_cloud`), and then calls the
         implementation's :func:`start_batch_job` to actually create and start the batch job.
         """
-
         with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
             tmppath = pathlib.Path(tmpdir)
             epws_to_copy, batch_info = self._run_batch_prep(tmppath)
