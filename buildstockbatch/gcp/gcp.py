@@ -633,15 +633,19 @@ class GcpBatch(DockerBatchBase):
         )
 
         if skip_tasks:
-            # Save a list of tasks to rerun in a file on GCS.
+            # Save a list of task numbers to rerun in a file on GCS.
+            # Task i of the new job will read line i of this file to find the
+            # task of the original job it should rerun.
             job_count = 0
-            fs = self.get_fs()
-            with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
+            with self.get_fs().open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
                 for task_id in range(batch_info.job_count):
                     if task_id not in skip_tasks:
                         f.write(f"{task_id}\n")
                         job_count += 1
-            if job_count == 0:
+
+            if job_count:
+                logger.info(f"Found {job_count} out of {batch_info.job_count} tasks to rerun.")
+            else:
                 raise ValidationError(
                     f"There are no tasks to retry. All {batch_info.job_count} results files are present."
                 )
@@ -767,7 +771,7 @@ class GcpBatch(DockerBatchBase):
         :param job_name: Job identifier
         :param gcs_bucket: GCS bucket for input and output files
         :param gcs_prefix: Prefix used for GCS files
-        :param missing_only: If true, only run sims missing from a previous run
+        :param missing_only: If true, only run tasks that are missing from a previous run
         """
 
         # Local directory where we'll write files
@@ -777,7 +781,7 @@ class GcpBatch(DockerBatchBase):
         bucket = client.get_bucket(gcs_bucket)
 
         if missing_only:
-            # Find task index of the original task we're retrying.
+            # Find task number of the original task we're retrying.
             tasks = bucket.blob(f"{gcs_prefix}/results/missing_tasks.txt").download_as_bytes().decode()
             task_index = int(tasks.split()[task_index])
 
@@ -1174,17 +1178,18 @@ def main():
             help="Only do postprocessing, useful for when the simulations are already done",
             action="store_true",
         )
+        group.add_argument(
+            "--missingonly",
+            action="store_true",
+            help="Only run batches of simulations that are missing from a previous run, then run post-processing."
+            "Assumes that the project file is the same as the previous run, other than the job identifier."
+            "Will not rerun individual failed simulations, only full batches that are missing.",
+        )
         parser.add_argument(
             "-v",
             "--verbose",
             action="store_true",
             help="Verbose output - includes DEBUG logs if set",
-        )
-        parser.add_argument(
-            "--missingonly",
-            action="store_true",
-            help="Only run simulations that are missing from a previous run, then run post-processing."
-            "Only uses the GCS path from the project file - all other inputs are pulled from previous run.",
         )
         args = parser.parse_args()
 

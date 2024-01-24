@@ -116,6 +116,9 @@ class DockerBatchBase(BuildStockBatchBase):
             logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
             raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
 
+    def get_fs(self):
+        return LocalFileSystem()
+
     @staticmethod
     def validate_project(project_file):
         super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
@@ -164,13 +167,13 @@ class DockerBatchBase(BuildStockBatchBase):
         (:func:`upload_batch_files_to_cloud` and :func:`copy_files_at_cloud`), and then calls the
         implementation's :func:`start_batch_job` to actually create and start the batch job.
 
-        :param missing_only: If true, use asset files from a previous job and only run the simulations that don't
-            already have successful results from a previous run. Only supported by GcpBatch.
+        :param missing_only: If true, use asset files from a previous job and only run the simulations
+            that don't already have successful results from a previous run. Only supported by GcpBatch.
         """
         if missing_only:
-            skip_tasks = self.find_done_tasks()
+            done_tasks = self.find_done_tasks()
         else:
-            skip_tasks = 0
+            done_tasks = 0
 
         with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
             tmppath = pathlib.Path(tmpdir)
@@ -185,7 +188,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 logger.info("Copying duplicate weather files...")
                 self.copy_files_at_cloud(epws_to_copy)
 
-        self.start_batch_job(batch_info, skip_tasks=skip_tasks)
+        self.start_batch_job(batch_info, skip_tasks=done_tasks)
 
     def _run_batch_prep(self, tmppath):
         """Do preparation for running the Batch jobs on the cloud, including producing and uploading
@@ -541,13 +544,15 @@ class DockerBatchBase(BuildStockBatchBase):
                 os.remove(item)
 
     def find_done_tasks(self):
-        """Return a list of tasks that already have results present."""
-        fs = self.get_fs()
+        """Return a list of tasks that already have results present.
 
-        output_dir = f"{self.results_dir}/simulation_output/"
-        all_results = set(fs.ls(output_dir))
+        This only checks for results_job[ID].json.gz files in the results directory.
+
+        :returns: List of integer task numbers present in results.
+        """
+        fs = self.get_fs()
         done_tasks = []
-        for f in all_results:
+        for f in fs.ls(f"{self.results_dir}/simulation_output/"):
             if m := re.match(".*results_job(\\d*).json.gz$", f):
                 done_tasks.append(int(m.group(1)))
 

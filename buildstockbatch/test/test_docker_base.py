@@ -172,3 +172,19 @@ def test_run_simulations(basic_residential_project_file):
         # Check that files were cleaned up correctly
         assert not os.listdir(sim_dir)
         os.chdir(old_cwd)
+
+
+def test_find_done_tasks(basic_residential_project_file, mocker):
+    project_filename, results_dir = basic_residential_project_file()
+    results_dir = os.path.join(results_dir, "results")
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    dbb = DockerBatchBase(project_filename)
+
+    existing_results = [1, 3, 5]
+    os.makedirs(os.path.join(results_dir, "simulation_output"))
+    for res in existing_results:
+        # Create empty results files
+        with open(os.path.join(results_dir, f"simulation_output/results_job{res}.json.gz"), "w"):
+            pass
+
+    assert sorted(dbb.find_done_tasks()) == existing_results
