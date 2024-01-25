@@ -4,10 +4,10 @@
 #   terraform init
 #
 # To see what changes will be applied:
-#   terraform plan
+#   terraform plan -var="gcp_project=myproject"
 #
 # To apply those changes:
-#   terraform apply
+#   terraform apply -var="gcp_project=myproject"
 #
 # Optionally set variables:
 #   terraform apply -var="gcp_project=myproject" -var="bucket_name=mybucket" -var="region=us-east1-b"

@@ -270,11 +270,10 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
     buildstock run locally, on Eagle, or on AWS cannot save to GCP.
 
 *  ``job_identifier``: A unique string that starts with an alphabetical character,
-   is up to 48 characters long, and only has letters, numbers or hyphens.
+   is up to 48 characters long, and only has lowercase letters, numbers and/or hyphens.
    This is used to name the GCP Batch and Cloud Run jobs to be created and
    differentiate them from other jobs.
-*  ``project``: The GCP Project ID in which the batch will be run and of the Artifact Registry
-   (where Docker images are stored).
+*  ``project``: The GCP Project ID in which the job will run.
 *  ``service_account``: Optional. The service account email address to use when running jobs on GCP.
    Default: the Compute Engine default service account of the GCP project.
 *  ``gcs``: Configuration for project data storage on GCP Cloud Storage.
@@ -287,7 +286,10 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
        may help. Default: 40 MiB
 
 *  ``region``: The GCP region in which the job will be run and the region of the Artifact Registry.
-*  ``batch_array_size``: Number of tasks to divide the simulations into. Max: 10000.
+   (e.g. ``us-central1``)
+*  ``batch_array_size``: Number of tasks to divide the simulations into. Tasks with fewer than 100
+   simulations each are recommended when using spot instances, to minimize lost/repeated work when
+   instances are preempted. Max: 10,000.
 *  ``parallelism``: Optional. Maximum number of tasks that can run in parallel. If not specified,
    uses `GCP's default behavior`_ (the lesser of ``batch_array_size`` and `job limits`_).
    Parallelism is also limited by Compute Engine quotas and limits (including vCPU quota).
@@ -298,29 +300,28 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
        repository.
 *  ``job_environment``: Optional. Specifies the computing requirements for each simulation.
 
-    *  ``vcpus``: Number of CPUs to allocate for running each simulation. Default: 1.
-    *  ``memory_mib``: Amount of RAM memory needed for each simulation in MiB. Default: 1024.
-       For large multifamily buildings this works better if set to 2048.
+    *  ``vcpus``: Optional. Number of CPUs to allocate for running each simulation. Default: 1.
+    *  ``memory_mib``: Optional. Amount of RAM memory to allocate for each simulation in MiB.
+       Default: 1024
     *  ``boot_disk_mib``: Optional. Extra boot disk size in MiB for each task. This affects how
        large the boot disk will be (see the `Batch OS environment docs`_ for details) of the
        machine(s) running simulations (which is the disk used by simulations). This will likely need
        to be set to at least 2,048 if more than 8 simulations will be run in parallel on the same
        machine (i.e., when vCPUs per machine_type ÷ vCPUs per sim > 8). Default: None (which should
        result in a 30 GB boot disk according to the docs linked above).
-    *  ``machine_type``: GCP Compute Engine machine type to use. If omitted, GCP Batch will
+    *  ``machine_type``: Optional. GCP Compute Engine machine type to use. If omitted, GCP Batch will
        choose a machine type based on the requested vCPUs and memory. If set, the machine type
        should have at least as many resources as requested for each simulation above. If it is
        large enough, multiple simulations will be run in parallel on the same machine. Usually safe
        to leave unset.
-    *  ``use_spot``: true or false. This tells the project whether to use
-       `Spot VMs <https://cloud.google.com/spot-vms>`_ for data simulations, which can reduce
-       costs by up to 91%. Default: false
+    *  ``use_spot``: Optional. Whether to use `Spot VMs <https://cloud.google.com/spot-vms>`_
+       for data simulations, which can reduce costs by up to 91%. Default: false
 *  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
    postprocessing.
 
-    *  ``cpus``: `Number of CPUs`_ to use. Default: 2.
-    *  ``memory_mib``: `Amount of RAM`_ needed in MiB. 2048 MiB per CPU is recommended. Default:
-       4096.
+    *  ``cpus``: Optional. `Number of CPUs`_ to use. Default: 2.
+    *  ``memory_mib``: Optional. `Amount of RAM`_ needed in MiB. At least 2048 MiB per CPU is recommended.
+       Default: 4096.
 
 .. _GCP's default behavior: https://cloud.google.com/python/docs/reference/batch/latest/google.cloud.batch_v1.types.TaskGroup
 .. _job limits: https://cloud.google.com/batch/quotas

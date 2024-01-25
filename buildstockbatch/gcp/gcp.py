@@ -5,16 +5,7 @@ buildstockbatch.gcp
 ~~~~~~~~~~~~~~~
 This class contains the object & methods that allow for usage of the library with GCP Batch.
 
-Architecture overview (these steps are split between GcpBatch and DockerBatchBase):
-    - Build a Docker image that includes OpenStudio and BuildStock Batch.
-    - Push the Docker image to GCP Artifact Registry.
-    - Run sampling, and split the generated buildings into batches.
-    - Collect all the required input files (including downloading weather files)
-      and upload them to Cloud Storage.
-    - Run a job on GCP Batch where each task runs one batch of simulations.
-      Uses the Docker image to run OpenStudio on Compute Engine VMs.
-    - Run a Cloud Run job for post-processing steps. Also uses the Docker image.
-    - Output files are written to a bucket in Cloud Storage.
+See the README for an overview of the architecture.
 
 :author: Robert LaThanh, Natalie Weires
 :copyright: (c) 2023 by The Alliance for Sustainable Energy
@@ -468,7 +459,7 @@ class GcpBatch(DockerBatchBase):
         """
         # GCP Batch job that runs the simulations
         if job := self.get_existing_batch_job():
-            logger.info("Batch job")
+            logger.info("--------------- Batch job ---------------")
             logger.info(f"  Name: {job.name}")
             logger.info(f"  UID: {job.uid}")
             logger.info(f"  Status: {job.status.state.name}")
@@ -490,7 +481,7 @@ class GcpBatch(DockerBatchBase):
             status = "Running"
             if last_execution.completion_time:
                 status = "Completed"
-            logger.info("Post-processing Cloud Run job")
+            logger.info("----- Post-processing Cloud Run job -----")
             logger.info(f"  Name: {job.name}")
             logger.info(f"  Status of latest run ({last_execution.name}): {status}")
             logger.debug(f"Full job info:\n{job}")

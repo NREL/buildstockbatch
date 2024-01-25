@@ -117,8 +117,7 @@ on S3 and queryable in Athena.
 Google Cloud Platform
 ~~~~~~~~~~~~~~~~~~~~~
 
-Running a batch on GCP is done by calling the ``buildstock_gcp`` command line
-tool.
+Run a project on GCP by calling the ``buildstock_gcp`` command line tool.
 
 .. command-output:: buildstock_gcp --help
    :ellipsis: 0,8
@@ -126,22 +125,23 @@ tool.
 The first time you run ``buildstock_gcp`` it may take several minutes,
 especially over a slower internet connection as it is downloading and building a docker image.
 
-GCP Specific Project configuration
+GCP specific project configuration
 ..................................
 
-For the project to run on GCP, you will need to add a ``gcp`` section to your config
+For the project to run on GCP, you will need to add a ``gcp`` section to your project
 file, something like this:
 
 .. code-block:: yaml
 
     gcp:
       job_identifier: national01
+      # The project, Artifact Registry repo, and GCS bucket must already exist.
       project: myorg_project
       region: us-central1
       artifact_registry:
-        repository: buildstockbatch
+        repository: buildstockbatch-docker
       gcs:
-        bucket: mybucket
+        bucket: buildstockbatch
         prefix: national01_run01
       use_spot: true
       batch_array_size: 10000
@@ -167,12 +167,20 @@ project config file has not changed since the previous run, other than the job i
 If it has changed, the behavior is undefined.
 
 
-List existing jobs
+Show existing jobs
 ..................
 
 Run ``buildstock_gcp your_project_file.yml [job_identifier] --show_jobs`` to see the existing
 jobs matching the project specified. This can show you whether a previously-started job
 has completed, is still running, or has already been cleaned up.
+
+
+Post-processing only
+.....................
+
+If ``buildstock_gcp`` is interrupted after the simulations are kicked off (i.e. the Batch job is
+running), the simulations will finish, but post-processing will not be started. You can run only
+the post-processing steps later with the ``--postprocessonly`` flag.
 
 
 Cleaning up after yourself
@@ -182,3 +190,10 @@ When the simulations and postprocessing are complete, run ``buildstock_gcp
 your_project_file.yml [job_identifier] --clean``. This will clean up all the GCP resources that
 were created to run the specified project, other than files in Cloud Storage. If the project is
 still running, it will be cancelled. Your output files will still be available in GCS.
+
+You can clean up files in Cloud Storage from the `GCP Console`_.
+
+If you make code changes between runs, you may want to occasionally clean up the docker
+images created for each run with ``docker image prune``.
+
+.. _GCP Console: https://console.cloud.google.com/storage/browser
