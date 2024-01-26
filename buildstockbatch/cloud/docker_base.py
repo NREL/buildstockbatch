@@ -175,7 +175,7 @@ class DockerBatchBase(BuildStockBatchBase):
             tmppath = pathlib.Path(tmpdir)
             epws_to_copy, batch_info = self._run_batch_prep(tmppath)
 
-            # If we're rerunning failed tasks from a previous job, DO NOT overwite the job files.
+            # If we're rerunning failed tasks from a previous job, DO NOT overwrite the job files.
             # That would assign a new random set of buildings to each task, making the rerun useless.
             if not self.missing_only:
                 # Copy all the files to cloud storage
@@ -556,19 +556,22 @@ class DockerBatchBase(BuildStockBatchBase):
         :returns: The number of files that were missing.
         """
         fs = self.get_fs()
-        done_tasks = []
+        done_tasks = set()
+
         for f in fs.ls(f"{self.results_dir}/simulation_output/"):
             if m := re.match(".*results_job(\\d*).json.gz$", f):
-                done_tasks.append(int(m.group(1)))
+                done_tasks.add(int(m.group(1)))
 
-        job_count = 0
+        missing_tasks = []
         with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
             for task_id in range(expected):
                 if task_id not in done_tasks:
                     f.write(f"{task_id}\n")
-                    job_count += 1
+                    missing_tasks.append(str(task_id))
 
-        return job_count
+        logger.info(f"Found missing tasks: {', '.join(missing_tasks)}")
+
+        return len(missing_tasks)
 
     def log_summary(self):
         """
