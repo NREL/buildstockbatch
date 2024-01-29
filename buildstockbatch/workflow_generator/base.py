@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class WorkflowGeneratorBase(object):
-
     def __init__(self, cfg, n_datapoints):
         self.cfg = cfg
         self.n_datapoints = n_datapoints

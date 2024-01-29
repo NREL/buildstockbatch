@@ -9,7 +9,6 @@ from buildstockbatch.test.shared_testing_stuff import resstock_directory
 
 
 def test_apply_logic_recursion():
-
     apply_logic = WorkflowGeneratorBase.make_apply_logic_arg(["one", "two", "three"])
     assert apply_logic == "(one&&two&&three)"
 

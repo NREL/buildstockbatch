@@ -3,7 +3,7 @@
 """
 buildstockbatch.base
 ~~~~~~~~~~~~~~~
-This is the base class mixed into the deployment specific classes (i.e. eagle, local)
+This is the base class mixed into the deployment specific classes (i.e. kestrel, local)
 
 :author: Noel Merket
 :copyright: (c) 2018 by The Alliance for Sustainable Energy
@@ -17,6 +17,8 @@ import logging
 from lxml import objectify
 import os
 import numpy as np
+import pandas as pd
+import pyarrow as pa
 import re
 import requests
 import semver
@@ -39,7 +41,6 @@ logger = logging.getLogger(__name__)
 
 
 class BuildStockBatchBase(object):
-
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
     DEFAULT_OS_VERSION = "3.6.1"
     DEFAULT_OS_SHA = "bb9481519e"
@@ -220,6 +221,8 @@ class BuildStockBatchBase(object):
                 raise RuntimeError(f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.")
 
             tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            for col in actual_time_cols:
+                tsdf[col] = tsdf[col].astype(pd.ArrowDtype(pa.timestamp("s")))
             if os.path.isfile(schedules_filepath):
                 schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f"schedules_{x}", inplace=True)
@@ -441,7 +444,10 @@ class BuildStockBatchBase(object):
         Validates that the parameter|options specified in the project yaml file is available in the options_lookup.tsv
         """
         cfg = get_project_configuration(project_file)
-        param_option_dict, invalid_options_lookup_str = BuildStockBatchBase.get_param_option_dict(project_file)
+        (
+            param_option_dict,
+            invalid_options_lookup_str,
+        ) = BuildStockBatchBase.get_param_option_dict(project_file)
         invalid_option_spec_counter = Counter()
         invalid_param_counter = Counter()
         invalid_option_counter_dict = defaultdict(Counter)

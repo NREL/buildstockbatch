@@ -20,20 +20,14 @@ from dask_cloudprovider.aws import FargateCluster
 import docker
 from fsspec.implementations.local import LocalFileSystem
 import gzip
-import hashlib
-import itertools
 from joblib import Parallel, delayed
 import json
 import logging
-import math
 import os
 import pathlib
 import random
 from s3fs import S3FileSystem
-import shutil
-import subprocess
 import tarfile
-import tempfile
 import re
 import time
 import tqdm
@@ -152,7 +146,6 @@ class AwsBatchEnv(AwsJobBase):
         logger.propagate = False
 
     def __repr__(self):
-
         return super().__repr__()
 
     def create_vpc(self):
@@ -759,7 +752,6 @@ class AwsBatchEnv(AwsJobBase):
                     raise
 
     def clean(self):
-
         # Get our vpc:
 
         response = self.ec2.describe_vpcs(
@@ -818,7 +810,6 @@ class AwsBatchEnv(AwsJobBase):
         # Delete compute enviornment
 
         try:
-
             self.batch.update_compute_environment(
                 computeEnvironment=self.batch_compute_environment_name, state="DISABLED"
             )
@@ -989,31 +980,7 @@ class AwsBatchEnv(AwsJobBase):
                 raise error
 
 
-class DockerBatchBase(BuildStockBatchBase):
-
-    CONTAINER_RUNTIME = ContainerRuntime.DOCKER
-
-    def __init__(self, project_filename):
-        super().__init__(project_filename)
-
-        self.docker_client = docker.DockerClient.from_env()
-        try:
-            self.docker_client.ping()
-        except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
-            logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
-            raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
-
-    @staticmethod
-    def validate_project(project_file):
-        super(DockerBatchBase, DockerBatchBase).validate_project(project_file)
-
-    @property
-    def docker_image(self):
-        return "nrel/openstudio:{}".format(self.os_version)
-
-
 class AwsBatch(DockerBatchBase):
-
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
@@ -1213,151 +1180,41 @@ class AwsBatch(DockerBatchBase):
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
         batch_env.clean()
 
-    def run_batch(self):
-        """
-        Run a batch of simulations using AWS Batch
+        sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
+        sns_env.clean()
 
-        This will
-            - perform the sampling
-            - package and upload the assets, including weather
-            - kick off a batch simulation on AWS
-        """
+    def upload_batch_files_to_cloud(self, tmppath):
+        """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
+        logger.debug("Uploading Batch files to S3")
+        upload_directory_to_s3(
+            tmppath,
+            self.cfg["aws"]["s3"]["bucket"],
+            self.cfg["aws"]["s3"]["prefix"],
+        )
 
-        # Generate buildstock.csv
-        buildstock_csv_filename = self.sampler.run_sampling()
-
-        # Compress and upload assets to S3
-        with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
-            prefix="bsb_"
-        ) as tmp_weather_dir:  # noqa: E501
-            self._weather_dir = tmp_weather_dir
-            self._get_weather_files()
-            tmppath = pathlib.Path(tmpdir)
-            logger.debug("Creating assets tarfile")
-            with tarfile.open(tmppath / "assets.tar.gz", "x:gz") as tar_f:
-                project_path = pathlib.Path(self.project_dir)
-                buildstock_path = pathlib.Path(self.buildstock_dir)
-                tar_f.add(buildstock_path / "measures", "measures")
-                if os.path.exists(buildstock_path / "resources/hpxml-measures"):
-                    tar_f.add(
-                        buildstock_path / "resources/hpxml-measures",
-                        "resources/hpxml-measures",
-                    )
-                tar_f.add(buildstock_path / "resources", "lib/resources")
-                tar_f.add(
-                    project_path / "housing_characteristics",
-                    "lib/housing_characteristics",
-                )
-
-            # Weather files
-            weather_path = tmppath / "weather"
-            os.makedirs(weather_path)
-
-            # Determine the unique weather files
-            epw_filenames = list(filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir)))
-            logger.debug("Calculating hashes for weather files")
-            epw_hashes = Parallel(n_jobs=-1, verbose=9)(
-                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
-                for epw_filename in epw_filenames
-            )
-            unique_epws = collections.defaultdict(list)
-            for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
-                unique_epws[epw_hash].append(epw_filename)
-
-            # Compress unique weather files
-            logger.debug("Compressing weather files")
-            Parallel(n_jobs=-1, verbose=9)(
-                delayed(compress_file)(
-                    pathlib.Path(self.weather_dir) / x[0],
-                    str(weather_path / x[0]) + ".gz",
-                )
-                for x in unique_epws.values()
-            )
-
-            logger.debug("Writing project configuration for upload")
-            with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
-                json.dump(self.cfg, f)
-
-            # Collect simulations to queue
-            df = read_csv(buildstock_csv_filename, index_col=0, dtype=str)
-            self.validate_buildstock_csv(self.project_filename, df)
-            building_ids = df.index.tolist()
-            n_datapoints = len(building_ids)
-            n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
-            logger.debug("Total number of simulations = {}".format(n_sims))
-
-            n_sims_per_job = math.ceil(n_sims / self.batch_array_size)
-            n_sims_per_job = max(n_sims_per_job, 2)
-            logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
-
-            baseline_sims = zip(building_ids, itertools.repeat(None))
-            upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
-            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
-            random.shuffle(all_sims)
-            all_sims_iter = iter(all_sims)
-
-            os.makedirs(tmppath / "jobs")
-
-            logger.info("Queueing jobs")
-            for i in itertools.count(0):
-                batch = list(itertools.islice(all_sims_iter, n_sims_per_job))
-                if not batch:
-                    break
-                job_json_filename = tmppath / "jobs" / "job{:05d}.json".format(i)
-                with open(job_json_filename, "w") as f:
-                    json.dump(
-                        {
-                            "job_num": i,
-                            "n_datapoints": n_datapoints,
-                            "batch": batch,
-                        },
-                        f,
-                        indent=4,
-                    )
-            array_size = i
-            logger.debug("Array size = {}".format(array_size))
-
-            # Compress job jsons
-            jobs_dir = tmppath / "jobs"
-            logger.debug("Compressing job jsons using gz")
-            tick = time.time()
-            with tarfile.open(tmppath / "jobs.tar.gz", "w:gz") as tf:
-                tf.add(jobs_dir, arcname="jobs")
-            tick = time.time() - tick
-            logger.debug("Done compressing job jsons using gz {:.1f} seconds".format(tick))
-            shutil.rmtree(jobs_dir)
-
-            os.makedirs(tmppath / "results" / "simulation_output")
-
-            logger.debug("Uploading files to S3")
-            upload_directory_to_s3(
-                tmppath,
-                self.cfg["aws"]["s3"]["bucket"],
-                self.cfg["aws"]["s3"]["prefix"],
-            )
-
-        # Copy the non-unique weather files on S3
-        epws_to_copy = []
-        for epws in unique_epws.values():
-            # The first in the list is already up there, copy the rest
-            for filename in epws[1:]:
-                epws_to_copy.append(
-                    (
-                        f"{self.cfg['aws']['s3']['prefix']}/weather/{epws[0]}.gz",
-                        f"{self.cfg['aws']['s3']['prefix']}/weather/{filename}.gz",
-                    )
-                )
-
+    def copy_files_at_cloud(self, files_to_copy):
+        """Implements :func:`DockerBase.copy_files_at_cloud`"""
         logger.debug("Copying weather files on S3")
         bucket = self.cfg["aws"]["s3"]["bucket"]
-        Parallel(n_jobs=-1, verbose=9)(delayed(copy_s3_file)(bucket, src, bucket, dest) for src, dest in epws_to_copy)
+        Parallel(n_jobs=-1, verbose=9)(
+            delayed(copy_s3_file)(
+                bucket,
+                f"{self.cfg['aws']['s3']['prefix']}/weather/{src}",
+                bucket,
+                f"{self.cfg['aws']['s3']['prefix']}/weather/{dest}",
+            )
+            for src, dest in files_to_copy
+        )
 
+    def start_batch_job(self, batch_info):
+        """Implements :func:`DockerBase.start_batch_job`"""
         # Create the output directories
         fs = S3FileSystem()
         for upgrade_id in range(len(self.cfg.get("upgrades", [])) + 1):
             fs.makedirs(
-                f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/timeseries/up{upgrade_id:02d}"
-            )  # noqa E501
+                f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/"
+                f"timeseries/up{upgrade_id:02d}"
+            )
 
         # Define the batch environment
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
@@ -1494,107 +1351,8 @@ class AwsBatch(DockerBatchBase):
                 with open(weather_dir / epw_filename, "wb") as f_out:
                     logger.debug("Extracting {}".format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
-        asset_dirs = os.listdir(sim_dir)
 
-        fs = S3FileSystem()
-        local_fs = LocalFileSystem()
-        reporting_measures = cls.get_reporting_measures(cfg)
-        dpouts = []
-        simulation_output_tar_filename = sim_dir.parent / "simulation_outputs.tar.gz"
-        with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
-            for building_id, upgrade_idx in jobs_d["batch"]:
-                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
-                sim_id = f"bldg{building_id:07d}up{upgrade_id:02d}"
-
-                # Create OSW
-                osw = cls.create_osw(cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx)
-                with open(os.path.join(sim_dir, "in.osw"), "w") as f:
-                    json.dump(osw, f, indent=4)
-
-                # Run Simulation
-                with open(sim_dir / "os_stdout.log", "w") as f_out:
-                    try:
-                        logger.debug("Running {}".format(sim_id))
-                        cli_cmd = ["openstudio", "run", "-w", "in.osw"]
-                        if cfg.get("baseline", dict()).get("custom_gems", False):
-                            cli_cmd = [
-                                "openstudio",
-                                "--bundle",
-                                "/var/oscli/Gemfile",
-                                "--bundle_path",
-                                "/var/oscli/gems",
-                                "--bundle_without",
-                                "native_ext",
-                                "run",
-                                "-w",
-                                "in.osw",
-                                "--debug",
-                            ]
-                        subprocess.run(
-                            cli_cmd,
-                            check=True,
-                            stdout=f_out,
-                            stderr=subprocess.STDOUT,
-                            cwd=str(sim_dir),
-                        )
-                    except subprocess.CalledProcessError:
-                        logger.debug(f"Simulation failed: see {sim_id}/os_stdout.log")
-
-                # Clean Up simulation directory
-                cls.cleanup_sim_dir(
-                    sim_dir,
-                    fs,
-                    f"{bucket}/{prefix}/results/simulation_output/timeseries",
-                    upgrade_id,
-                    building_id,
-                )
-
-                # Read data_point_out.json
-                dpout = postprocessing.read_simulation_outputs(
-                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
-                )
-                dpouts.append(dpout)
-
-                # Add the rest of the simulation outputs to the tar archive
-                logger.info("Archiving simulation outputs")
-                for dirpath, dirnames, filenames in os.walk(sim_dir):
-                    if dirpath == str(sim_dir):
-                        for dirname in set(dirnames).intersection(asset_dirs):
-                            dirnames.remove(dirname)
-                    for filename in filenames:
-                        abspath = os.path.join(dirpath, filename)
-                        relpath = os.path.relpath(abspath, sim_dir)
-                        simout_tar.add(abspath, os.path.join(sim_id, relpath))
-
-                # Clear directory for next simulation
-                logger.debug("Clearing out simulation directory")
-                for item in set(os.listdir(sim_dir)).difference(asset_dirs):
-                    if os.path.isdir(item):
-                        shutil.rmtree(item)
-                    elif os.path.isfile(item):
-                        os.remove(item)
-
-        # Upload simulation outputs tarfile to s3
-        fs.put(
-            str(simulation_output_tar_filename),
-            f"{bucket}/{prefix}/results/simulation_output/simulations_job{job_id}.tar.gz",
-        )
-
-        # Upload aggregated dpouts as a json file
-        with fs.open(
-            f"{bucket}/{prefix}/results/simulation_output/results_job{job_id}.json.gz",
-            "wb",
-        ) as f1:
-            with gzip.open(f1, "wt", encoding="utf-8") as f2:
-                json.dump(dpouts, f2)
-
-        # Remove files (it helps docker if we don't leave a bunch of files laying around)
-        os.remove(simulation_output_tar_filename)
-        for item in os.listdir(sim_dir):
-            if os.path.isdir(item):
-                shutil.rmtree(item)
-            elif os.path.isfile(item):
-                os.remove(item)
+        cls.run_simulations(cfg, jobs_d, job_id, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
 
     def get_fs(self):
         return S3FileSystem()

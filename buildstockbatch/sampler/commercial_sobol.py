@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class CommercialSobolSampler(BuildStockSampler):
-
     def __init__(self, parent, n_datapoints):
         """
         Initialize the sampler.
@@ -40,7 +39,7 @@ class CommercialSobolSampler(BuildStockSampler):
         """
         super().__init__(parent)
         self.validate_args(self.parent().project_filename, n_datapoints=n_datapoints)
-        if self.container_runtime == ContainerRuntime.SINGULARITY:
+        if self.container_runtime == ContainerRuntime.APPTAINER:
             self.csv_path = os.path.join(self.output_dir, "buildstock.csv")
         else:
             assert self.container_runtime in (

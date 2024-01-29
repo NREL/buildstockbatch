@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 
 
 class DownselectSamplerBase(BuildStockSampler):
-
     SUB_SAMPLER_CLASS = None
 
     def __init__(self, parent, n_datapoints, logic, resample=True, **kw):

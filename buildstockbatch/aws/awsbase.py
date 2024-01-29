@@ -8,7 +8,6 @@ boto_client_config = Config(retries={"max_attempts": 5, "mode": "standard"})
 
 
 class AWSIAMHelper:
-
     logger.propagate = False
 
     def __init__(self, session):
@@ -60,7 +59,6 @@ class AWSIAMHelper:
 
             p_counter = 1
             for policy in policies_list:
-
                 response = self.iam.put_role_policy(
                     RoleName=role_name,
                     PolicyName=f"{role_name}_policy_{p_counter}",
@@ -114,7 +112,6 @@ class AWSIAMHelper:
                 raise
 
     def delete_instance_profile(self, instance_profile_name):
-
         try:
             self.iam.delete_instance_profile(InstanceProfileName=instance_profile_name)
             logger.info(f"Instance profile {instance_profile_name} deleted.")
@@ -197,7 +194,6 @@ class AwsJobBase:
         return [{"key": k, "value": v} for k, v in tags.items()]
 
     def __repr__(self):
-
         return f"""
 Job Identifier: {self.job_identifier}
 S3 Bucket for Source Data:  {self.s3_bucket}

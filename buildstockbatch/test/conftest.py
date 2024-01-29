@@ -3,7 +3,6 @@ import pytest
 import shutil
 import tempfile
 import yaml
-from pathlib import Path
 
 OUTPUT_FOLDER_NAME = "output"
 
@@ -12,7 +11,7 @@ OUTPUT_FOLDER_NAME = "output"
 def basic_residential_project_file():
     with tempfile.TemporaryDirectory() as test_directory:
 
-        def _basic_residential_project_file(update_args={}, raw=False):
+        def _basic_residential_project_file(update_args={}, raw=False, hpc_name="eagle"):
             output_dir = "simulations_job0" if raw else "simulation_output"
             buildstock_directory = os.path.join(test_directory, "openstudio_buildstock")
             shutil.copytree(
@@ -44,11 +43,18 @@ def basic_residential_project_file():
 
             os.mkdir(os.path.join(output_directory, "housing_characteristics"))
             os.mkdir(os.path.join(buildstock_directory, project_directory, "housing_characteristics"))
+            weather_file_path = os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "test_inputs",
+                "test_openstudio_buildstock",
+                "resources",
+                "weather.zip",
+            )
             cfg = {
                 "buildstock_directory": buildstock_directory,
                 "project_directory": project_directory,
                 "output_directory": output_directory,
-                "weather_files_url": "https://s3.amazonaws.com/epwweatherfiles/project_resstock_national.zip",
+                "weather_files_path": weather_file_path,
                 "sampler": {"type": "residential_quota", "args": {"n_datapoints": 8}},
                 "workflow_generator": {
                     "type": "residential_hpxml",
@@ -101,7 +107,7 @@ def basic_residential_project_file():
                         "options": [{"option": "Infiltration|11.25 ACH50"}],
                     }
                 ],
-                "eagle": {
+                hpc_name: {
                     "sampling": {"time": 20},
                     "account": "testaccount",
                     "minutes_per_sim": 1,

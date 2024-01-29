@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalBatch(BuildStockBatchBase):
-
     CONTAINER_RUNTIME = ContainerRuntime.LOCAL_OPENSTUDIO
 
     def __init__(self, project_filename):
@@ -142,7 +141,6 @@ class LocalBatch(BuildStockBatchBase):
         i,
         upgrade_idx=None,
     ):
-
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
         try:

@@ -660,7 +660,6 @@ def i4_sobol(dim_num, seed):
         l = i4_bit_lo0(seed)
 
     elif seed <= seed_save:
-
         seed_save = 0
         l = 1
         lastq = zeros(dim_num)
@@ -673,7 +672,6 @@ def i4_sobol(dim_num, seed):
         l = i4_bit_lo0(seed)
 
     elif seed_save + 1 < seed:
-
         for seed_temp in range(int(seed_save + 1), int(seed)):
             l = i4_bit_lo0(seed_temp)
             for i in range(1, dim_num + 1):

@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 class PrecomputedSampler(BuildStockSampler):
-
     def __init__(self, parent, sample_file):
         """Precomputed Sampler
 
