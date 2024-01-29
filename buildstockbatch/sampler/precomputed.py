@@ -38,16 +38,16 @@ class PrecomputedSampler(BuildStockSampler):
 
     @classmethod
     def validate_args(cls, project_filename, **kw):
-        expected_args = set(['sample_file'])
+        expected_args = set(["sample_file"])
         for k, v in kw.items():
             expected_args.discard(k)
-            if k == 'sample_file':
+            if k == "sample_file":
                 if not isinstance(v, str):
-                    raise ValidationError('sample_file should be a path string')
+                    raise ValidationError("sample_file should be a path string")
                 if not os.path.exists(path_rel_to_file(project_filename, v)):
-                    raise ValidationError(f'sample_file doesn\'t exist: {v}')
+                    raise ValidationError(f"sample_file doesn't exist: {v}")
             else:
-                raise ValidationError(f'Unknown argument for sampler: {k}')
+                raise ValidationError(f"Unknown argument for sampler: {k}")
         return True
 
     def run_sampling(self):
