@@ -143,7 +143,8 @@ file, something like this:
       gcs:
         bucket: buildstockbatch
         prefix: national01_run01
-      use_spot: true
+      job_environment:
+        use_spot: true
       batch_array_size: 10000
 
 See :ref:`gcp-config` for details and other optional settings.

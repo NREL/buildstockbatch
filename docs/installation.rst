@@ -261,10 +261,11 @@ One-time GCP setup that can be shared by multiple users.
 
     * **Option 2**: Terraform
 
-      * Install `Terraform`_
-      * From the buildstockbatch/gcp/ directory, run the following with your chosen GCP project and region.
-        You can optionally specify the names of the storage bucket and artifact registery repository. See
-        `main.tf` for more details.
+      * Follow the :ref:`per-user-gcp` instructions below to install BuildStockBatch and the Google Cloud CLI.
+      * Install `Terraform`_.
+      * From the buildstockbatch/gcp/ directory, run the following with your chosen GCP project and region
+        (e.g. "us-central1"). You can optionally specify the names of the storage bucket and
+        artifact registery repository. See `main.tf` for more details.
 
         ::
 
@@ -283,6 +284,8 @@ One-time GCP setup that can be shared by multiple users.
 .. _Terraform: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
 
 
+.. _per-user-gcp:
+
 Per-user setup
 ..............
 One-time setup that each user needs to do on the workstation from which they'll launch and
@@ -293,7 +296,7 @@ manage BuildStockBatch runs.
    above (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
    to it).
 3. Download/Clone ResStock or ComStock.
-4. Set up GCP authentication
+4. Set up GCP authentication.
 
    * **Option 1**: Create and download a `Service Account Key`_.
 

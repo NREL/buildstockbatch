@@ -672,20 +672,30 @@ class GcpBatch(DockerBatchBase):
         # Start the job!
         created_job = client.create_job(create_request)
         job_name = created_job.name
-
-        logger.info("Newly created GCP Batch job")
-        logger.info(f"  Job name: {job_name}")
-        logger.info(f"  Job UID: {created_job.uid}")
         job_url = (
             "https://console.cloud.google.com/batch/jobsDetail/regions/"
             f"{self.region}/jobs/{self.job_identifier}/details?project={self.gcp_project}"
         )
+
         logger.info(
-            "Simulation output browser (Cloud Console): "
-            f"https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}"
-            "/results/simulation_output"
+            f"""
+╔══════════════════════════════════════════════════════════════════════════════╗
+║ GCP Batch Job for running simulations has started!                           ║
+║                                                                              ║
+║ You may interrupt the script and the job will continue to run, though        ║
+║ post-processing will not be triggered.                                       ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+Job name:
+    {job_name}
+Job UID:
+    {created_job.uid}
+🔗 See status at:
+    {job_url}
+Results output browser (Cloud Console):
+    https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/simulation_output
+"""
         )
-        logger.info(f"View GCP Batch job at {job_url}")
 
         # Monitor job status while waiting for the job to complete
         n_completed_last_time = 0
@@ -710,7 +720,10 @@ class GcpBatch(DockerBatchBase):
         logger.info(f"Batch job status: {job_status}")
         logger.info(f"Batch job tasks: {dict(task_counts)}")
         if job_status != "SUCCEEDED":
-            raise RuntimeError(f"Batch job failed. See GCP logs at {job_url}")
+            raise RuntimeError(
+                f"Batch job failed. See GCP logs at {job_url}. "
+                "Re-run this script with --missingonly to retry failed tasks."
+            )
         else:
             task_group = job_info.task_groups[0]
             task_spec = task_group.task_spec
@@ -918,8 +931,10 @@ class GcpBatch(DockerBatchBase):
 ║ You may interrupt the script and the job will continue to run.               ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 
-🔗 See status at: {self.postprocessing_job_console_url}.
-Results output browser (Cloud Console): https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/
+🔗 See status at:
+    {self.postprocessing_job_console_url}
+Results output browser (Cloud Console):
+    https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{self.gcs_prefix}/results/
 
 Run this script with --clean to clean up the GCP environment after post-processing is complete."""
                 )
