@@ -9,6 +9,4 @@ __schema_version__ = "0.3"
 __author__ = "Noel Merket"
 __author_email__ = "noel.merket@nrel.gov"
 __license__ = "BSD-3"
-__copyright__ = "Copyright {} The Alliance for Sustainable Energy".format(
-    dt.date.today().year
-)
+__copyright__ = "Copyright {} The Alliance for Sustainable Energy".format(dt.date.today().year)

@@ -45,25 +45,16 @@ def test_reference_scenario(basic_residential_project_file):
 
     with patch.object(BuildStockBatchBase, "weather_dir", None), patch.object(
         BuildStockBatchBase, "get_dask_client"
-    ) as get_dask_client_mock, patch.object(
-        BuildStockBatchBase, "results_dir", results_dir
-    ):
+    ) as get_dask_client_mock, patch.object(BuildStockBatchBase, "results_dir", results_dir):
         bsb = BuildStockBatchBase(project_filename)
         bsb.process_results()
         get_dask_client_mock.assert_called_once()
 
     # test results.csv files
     test_path = os.path.join(results_dir, "results_csvs")
-    test_csv = (
-        read_csv(os.path.join(test_path, "results_up01.csv.gz"))
-        .set_index("building_id")
-        .sort_index()
-    )
+    test_csv = read_csv(os.path.join(test_path, "results_up01.csv.gz")).set_index("building_id").sort_index()
     assert len(test_csv["apply_upgrade.reference_scenario"].unique()) == 1
-    assert (
-        test_csv["apply_upgrade.reference_scenario"].iloc[0]
-        == "example_reference_scenario"
-    )
+    assert test_csv["apply_upgrade.reference_scenario"].iloc[0] == "example_reference_scenario"
 
 
 def test_downselect_integer_options(basic_residential_project_file, mocker):
@@ -80,9 +71,7 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
                     col_idx = row.index("Days Shifted")
                 else:
                     # Convert values from "Day1" to "1.10" so we hit the bug
-                    row[col_idx] = "{0}.{0}0".format(
-                        re.search(r"Day(\d+)", row[col_idx]).group(1)
-                    )
+                    row[col_idx] = "{0}.{0}0".format(re.search(r"Day(\d+)", row[col_idx]).group(1))
                     valid_option_values.add(row[col_idx])
                 cf_out.writerow(row)
 
@@ -100,9 +89,7 @@ def test_downselect_integer_options(basic_residential_project_file, mocker):
         )
         mocker.patch.object(BuildStockBatchBase, "weather_dir", None)
         mocker.patch.object(BuildStockBatchBase, "results_dir", results_dir)
-        sampler_property_mock = mocker.patch.object(
-            BuildStockBatchBase, "sampler", new_callable=PropertyMock
-        )
+        sampler_property_mock = mocker.patch.object(BuildStockBatchBase, "sampler", new_callable=PropertyMock)
         sampler_mock = mocker.MagicMock()
         sampler_property_mock.return_value = sampler_mock
         sampler_mock.run_sampling = MagicMock(return_value=buildstock_csv)
@@ -141,9 +128,7 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         }
     }
     mocked_glueclient = MagicMock()
-    mocked_glueclient.get_crawler = MagicMock(
-        return_value={"Crawler": {"State": "READY"}}
-    )
+    mocked_glueclient.get_crawler = MagicMock(return_value={"Crawler": {"State": "READY"}})
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
     mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ["a", "b", "c"]]
     project_filename, results_dir = basic_residential_project_file(upload_config)
@@ -155,17 +140,12 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         / "buildstock.csv"
     )  # noqa: E501
     shutil.copy2(
-        Path(__file__).parent
-        / "test_results"
-        / "housing_characteristics"
-        / "buildstock.csv",
+        Path(__file__).parent / "test_results" / "housing_characteristics" / "buildstock.csv",
         buildstock_csv_path,
     )
     with patch.object(BuildStockBatchBase, "weather_dir", None), patch.object(
         BuildStockBatchBase, "output_dir", results_dir
-    ), patch.object(
-        BuildStockBatchBase, "get_dask_client"
-    ) as get_dask_client_mock, patch.object(
+    ), patch.object(BuildStockBatchBase, "get_dask_client") as get_dask_client_mock, patch.object(
         BuildStockBatchBase, "results_dir", results_dir
     ), patch.object(
         BuildStockBatchBase, "CONTAINER_RUNTIME", ContainerRuntime.LOCAL_OPENSTUDIO
@@ -190,25 +170,13 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
         if call_function == "create_crawler":
             crawler_para = call[2]  # 2 is for the keyword arguments
             crawler_created = True
-            assert (
-                crawler_para["DatabaseName"]
-                == upload_config["postprocessing"]["aws"]["athena"]["database_name"]
-            )
-            assert (
-                crawler_para["Role"]
-                == upload_config["postprocessing"]["aws"]["athena"]["glue_service_role"]
-            )
+            assert crawler_para["DatabaseName"] == upload_config["postprocessing"]["aws"]["athena"]["database_name"]
+            assert crawler_para["Role"] == upload_config["postprocessing"]["aws"]["athena"]["glue_service_role"]
             assert crawler_para["TablePrefix"] == OUTPUT_FOLDER_NAME + "_"
             assert crawler_para["Name"] == db_name + "_" + OUTPUT_FOLDER_NAME
             assert (
                 crawler_para["Targets"]["S3Targets"][0]["Path"]
-                == "s3://"
-                + s3_bucket
-                + "/"
-                + s3_prefix
-                + "/"
-                + OUTPUT_FOLDER_NAME
-                + "/"
+                == "s3://" + s3_bucket + "/" + s3_prefix + "/" + OUTPUT_FOLDER_NAME + "/"
             )
         if call_function == "start_crawler":
             assert crawler_created, "crawler attempted to start before creating"
@@ -228,23 +196,17 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     files_uploaded.remove((source_file_path, s3_file_path))
 
     s3_file_path = s3_path + "upgrades/upgrade=1/results_up01.parquet"
-    source_file_path = os.path.join(
-        source_path, "upgrades", "upgrade=1", "results_up01.parquet"
-    )
+    source_file_path = os.path.join(source_path, "upgrades", "upgrade=1", "results_up01.parquet")
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
     s3_file_path = s3_path + "timeseries/upgrade=0/group0.parquet"
-    source_file_path = os.path.join(
-        source_path, "timeseries", "upgrade=0", "group0.parquet"
-    )
+    source_file_path = os.path.join(source_path, "timeseries", "upgrade=0", "group0.parquet")
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
     s3_file_path = s3_path + "timeseries/upgrade=1/group0.parquet"
-    source_file_path = os.path.join(
-        source_path, "timeseries", "upgrade=1", "group0.parquet"
-    )
+    source_file_path = os.path.join(source_path, "timeseries", "upgrade=1", "group0.parquet")
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
@@ -263,9 +225,7 @@ def test_upload_files(mocked_boto3, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
-    assert (
-        len(files_uploaded) == 0
-    ), f"These files shouldn't have been uploaded: {files_uploaded}"
+    assert len(files_uploaded) == 0, f"These files shouldn't have been uploaded: {files_uploaded}"
 
 
 def test_write_parquet_no_index():
@@ -286,9 +246,7 @@ def test_skipping_baseline(basic_residential_project_file):
     )
 
     sim_output_path = os.path.join(results_dir, "simulation_output")
-    shutil.rmtree(
-        os.path.join(sim_output_path, "timeseries", "up00")
-    )  # remove timeseries results for baseline
+    shutil.rmtree(os.path.join(sim_output_path, "timeseries", "up00"))  # remove timeseries results for baseline
 
     # remove results.csv data for baseline from results_jobx.json.gz
     results_json_filename = os.path.join(sim_output_path, "results_job0.json.gz")
@@ -308,22 +266,16 @@ def test_skipping_baseline(basic_residential_project_file):
     # run postprocessing
     with patch.object(BuildStockBatchBase, "weather_dir", None), patch.object(
         BuildStockBatchBase, "get_dask_client"
-    ) as get_dask_client_mock, patch.object(
-        BuildStockBatchBase, "results_dir", results_dir
-    ):
+    ) as get_dask_client_mock, patch.object(BuildStockBatchBase, "results_dir", results_dir):
 
         bsb = BuildStockBatchBase(project_filename)
         bsb.process_results()
         get_dask_client_mock.assert_called_once()
 
-    up00_parquet = os.path.join(
-        results_dir, "parquet", "baseline", "results_up00.parquet"
-    )
+    up00_parquet = os.path.join(results_dir, "parquet", "baseline", "results_up00.parquet")
     assert not os.path.exists(up00_parquet)
 
-    up01_parquet = os.path.join(
-        results_dir, "parquet", "upgrades", "upgrade=1", "results_up01.parquet"
-    )
+    up01_parquet = os.path.join(results_dir, "parquet", "upgrades", "upgrade=1", "results_up01.parquet")
     assert os.path.exists(up01_parquet)
 
     up00_csv_gz = os.path.join(results_dir, "results_csvs", "results_up00.csv.gz")
@@ -346,9 +298,7 @@ def test_provide_buildstock_csv(basic_residential_project_file, mocker):
     sampling_output_csv = bsb.sampler.run_sampling()
     df2 = read_csv(sampling_output_csv, dtype=str)
     pd.testing.assert_frame_equal(df, df2)
-    assert (
-        df["Geometry Shared Walls"] == "None"
-    ).all()  # Verify None is being read properly
+    assert (df["Geometry Shared Walls"] == "None").all()  # Verify None is being read properly
     # Test file missing
     with open(project_filename, "r") as f:
         cfg = yaml.safe_load(f)

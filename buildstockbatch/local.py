@@ -47,9 +47,7 @@ class LocalBatch(BuildStockBatchBase):
         self._weather_dir = None
 
         # Create simulation_output dir
-        sim_out_ts_dir = os.path.join(
-            self.results_dir, "simulation_output", "timeseries"
-        )
+        sim_out_ts_dir = os.path.join(self.results_dir, "simulation_output", "timeseries")
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get("upgrades", [])) + 1):
             os.makedirs(os.path.join(sim_out_ts_dir, f"up{i:02d}"), exist_ok=True)
@@ -58,26 +56,18 @@ class LocalBatch(BuildStockBatchBase):
         # FIXME: Get working without docker
         if self.cfg.get("baseline", dict()).get("custom_gems", False):
             # TODO: Fix this stuff to work without docker
-            logger.info(
-                "Installing custom gems to docker volume: buildstockbatch_custom_gems"
-            )
+            logger.info("Installing custom gems to docker volume: buildstockbatch_custom_gems")
 
             docker_client = docker.client.from_env()
 
             # Create a volume to store the custom gems
-            docker_client.volumes.create(
-                name="buildstockbatch_custom_gems", driver="local"
-            )
-            simdata_vol = docker_client.volumes.create(
-                name="buildstockbatch_simdata_temp", driver="local"
-            )
+            docker_client.volumes.create(name="buildstockbatch_custom_gems", driver="local")
+            simdata_vol = docker_client.volumes.create(name="buildstockbatch_simdata_temp", driver="local")
 
             # Define directories to be mounted in the container
             mnt_gem_dir = "/var/oscli/gems"
             # Install custom gems to be used in the docker container
-            local_gemfile_path = os.path.join(
-                self.buildstock_dir, "resources", "Gemfile"
-            )
+            local_gemfile_path = os.path.join(self.buildstock_dir, "resources", "Gemfile")
             mnt_gemfile_path_orig = "/var/oscli/gemfile/Gemfile"
             docker_volume_mounts = {
                 "buildstockbatch_custom_gems": {"bind": mnt_gem_dir, "mode": "rw"},
@@ -88,14 +78,10 @@ class LocalBatch(BuildStockBatchBase):
             # Check that the Gemfile exists
             if not os.path.exists(local_gemfile_path):
                 print(f"local_gemfile_path = {local_gemfile_path}")
-                raise AttributeError(
-                    "baseline:custom_gems = True, but did not find Gemfile in /resources directory"
-                )
+                raise AttributeError("baseline:custom_gems = True, but did not find Gemfile in /resources directory")
 
             # Make the buildstock/resources/.custom_gems dir to store logs
-            local_log_dir = os.path.join(
-                self.buildstock_dir, "resources", ".custom_gems"
-            )
+            local_log_dir = os.path.join(self.buildstock_dir, "resources", ".custom_gems")
             if not os.path.exists(local_log_dir):
                 os.makedirs(local_log_dir)
 
@@ -110,9 +96,7 @@ class LocalBatch(BuildStockBatchBase):
                 volumes=docker_volume_mounts,
                 name="install_custom_gems",
             )
-            with open(
-                os.path.join(local_log_dir, "bundle_install_output.log"), "wb"
-            ) as f_out:
+            with open(os.path.join(local_log_dir, "bundle_install_output.log"), "wb") as f_out:
                 f_out.write(container_output)
 
             # Report out custom gems loaded by OpenStudio CLI
@@ -162,33 +146,25 @@ class LocalBatch(BuildStockBatchBase):
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
         try:
-            sim_id, sim_dir = cls.make_sim_dir(
-                i, upgrade_idx, os.path.join(results_dir, "simulation_output")
-            )
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(results_dir, "simulation_output"))
         except SimulationExists:
             return
         sim_path = pathlib.Path(sim_dir)
         buildstock_path = pathlib.Path(buildstock_dir)
 
         # Make symlinks to project and buildstock stuff
-        (sim_path / "measures").symlink_to(
-            buildstock_path / "measures", target_is_directory=True
-        )
+        (sim_path / "measures").symlink_to(buildstock_path / "measures", target_is_directory=True)
         (sim_path / "lib").symlink_to(buildstock_path / "lib", target_is_directory=True)
         (sim_path / "weather").symlink_to(weather_dir, target_is_directory=True)
         hpxml_measures_path = buildstock_path / "resources" / "hpxml-measures"
         if hpxml_measures_path.exists():
             resources_path = sim_path / "resources"
             resources_path.mkdir()
-            (resources_path / "hpxml-measures").symlink_to(
-                hpxml_measures_path, target_is_directory=True
-            )
+            (resources_path / "hpxml-measures").symlink_to(hpxml_measures_path, target_is_directory=True)
         else:
             resources_path = None
 
-        osw = cls.create_osw(
-            cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx
-        )
+        osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
         with open(sim_path / "in.osw", "w") as f:
             json.dump(osw, f, indent=4)
@@ -278,9 +254,7 @@ class LocalBatch(BuildStockBatchBase):
 
                 # Read data_point_out.json
                 reporting_measures = cls.get_reporting_measures(cfg)
-                dpout = postprocessing.read_simulation_outputs(
-                    fs, reporting_measures, sim_dir, upgrade_id, i
-                )
+                dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
                 return dpout
 
     def run_batch(self, n_jobs=None, measures_only=False, sampling_only=False):
@@ -319,9 +293,7 @@ class LocalBatch(BuildStockBatchBase):
         )
         upgrade_sims = []
         for i in range(len(self.cfg.get("upgrades", []))):
-            upgrade_sims.append(
-                map(functools.partial(run_building_d, upgrade_idx=i), building_ids)
-            )
+            upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
         if not self.skip_baseline_sims:
             baseline_sims = map(run_building_d, building_ids)
             all_sims = itertools.chain(baseline_sims, *upgrade_sims)
@@ -355,18 +327,14 @@ class LocalBatch(BuildStockBatchBase):
 
     @property
     def results_dir(self):
-        results_dir = self.cfg.get(
-            "output_directory", os.path.join(self.project_dir, "localResults")
-        )
+        results_dir = self.cfg.get("output_directory", os.path.join(self.project_dir, "localResults"))
         results_dir = self.path_rel_to_projectfile(results_dir)
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
         return results_dir
 
     def get_dask_client(self):
-        cluster = LocalCluster(
-            local_directory=os.path.join(self.results_dir, "dask-tmp")
-        )
+        cluster = LocalCluster(local_directory=os.path.join(self.results_dir, "dask-tmp"))
         return Client(cluster)
 
 
@@ -427,8 +395,7 @@ def main():
     )
     group.add_argument(
         "--uploadonly",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the "
-        "upload flag in yaml",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the " "upload flag in yaml",
         action="store_true",
     )
     group.add_argument(
@@ -436,14 +403,10 @@ def main():
         help="Only validate the project YAML file and references. Nothing is executed",
         action="store_true",
     )
-    group.add_argument(
-        "--samplingonly", help="Run the sampling only.", action="store_true"
-    )
+    group.add_argument("--samplingonly", help="Run the sampling only.", action="store_true")
     args = parser.parse_args()
     if not os.path.isfile(args.project_filename):
-        raise FileNotFoundError(
-            f"The project file {args.project_filename} doesn't exist"
-        )
+        raise FileNotFoundError(f"The project file {args.project_filename} doesn't exist")
 
     # Validate the project, and in case of the --validateonly flag return True if validation passes
     LocalBatch.validate_project(args.project_filename)

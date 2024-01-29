@@ -44,11 +44,7 @@ def test_resstock_local_batch(project_filename):
         n_datapoints = 2
     batch.cfg["sampler"]["args"]["n_datapoints"] = n_datapoints
 
-    local_weather_file = (
-        resstock_directory.parent
-        / "weather"
-        / batch.cfg["weather_files_url"].split("/")[-1]
-    )
+    local_weather_file = resstock_directory.parent / "weather" / batch.cfg["weather_files_url"].split("/")[-1]
     if local_weather_file.exists():
         del batch.cfg["weather_files_url"]
         batch.cfg["weather_files_path"] = str(local_weather_file)
@@ -63,12 +59,7 @@ def test_resstock_local_batch(project_filename):
 
     for upgrade_id in range(0, n_upgrades + 1):
         for bldg_id in range(1, n_datapoints + 1):
-            assert (
-                simout_path
-                / "timeseries"
-                / f"up{upgrade_id:02d}"
-                / f"bldg{bldg_id:07d}.parquet"
-            ).exists()
+            assert (simout_path / "timeseries" / f"up{upgrade_id:02d}" / f"bldg{bldg_id:07d}.parquet").exists()
 
     batch.process_results()
 
@@ -83,17 +74,9 @@ def test_resstock_local_batch(project_filename):
     ts_pq_path = out_path / "parquet" / "timeseries"
     for upgrade_id in range(0, n_upgrades + 1):
         assert (ts_pq_path / f"upgrade={upgrade_id}" / "group0.parquet").exists()
-        assert (
-            out_path / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz"
-        ).exists()
+        assert (out_path / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz").exists()
         if upgrade_id >= 1:
-            upg_pq = (
-                out_path
-                / "parquet"
-                / "upgrades"
-                / f"upgrade={upgrade_id}"
-                / f"results_up{upgrade_id:02d}.parquet"
-            )
+            upg_pq = out_path / "parquet" / "upgrades" / f"upgrade={upgrade_id}" / f"results_up{upgrade_id:02d}.parquet"
             assert upg_pq.exists()
             upg = pd.read_parquet(upg_pq, columns=["completed_status"])
             assert (upg["completed_status"] == "Success").all()
@@ -114,9 +97,7 @@ def test_local_simulation_timeout(mocker):
     mocker.patch("buildstockbatch.local.subprocess.run", mocked_subprocess_run)
     sleep_mock = mocker.patch("buildstockbatch.local.time.sleep")
 
-    cfg = get_project_configuration(
-        resstock_directory / "project_national" / "national_baseline.yml"
-    )
+    cfg = get_project_configuration(resstock_directory / "project_national" / "national_baseline.yml")
     cfg["max_minutes_per_sim"] = 5
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -145,9 +126,7 @@ def test_local_simulation_timeout(mocker):
             assert out_osw["completed_status"] == "Fail"
             assert msg_re.search(out_osw["timeout"])
 
-        err_log_re = re.compile(
-            r"\[\d\d:\d\d:\d\d ERROR\] Terminated \w+ after reaching max time"
-        )
+        err_log_re = re.compile(r"\[\d\d:\d\d:\d\d ERROR\] Terminated \w+ after reaching max time")
         with open(sim_path / "run" / "run.log", "r") as run_log:
             err_log_re.search(run_log.read())
         with open(sim_path / "run" / "failed.job", "r") as failed_job:

@@ -78,9 +78,7 @@ class EagleBatch(BuildStockBatchBase):
         logger.debug("Output directory = {}".format(output_dir))
         weather_dir = self.weather_dir  # noqa E841
 
-        self.singularity_image = self.get_singularity_image(
-            self.cfg, self.os_version, self.os_sha
-        )
+        self.singularity_image = self.get_singularity_image(self.cfg, self.os_version, self.os_sha)
 
     @classmethod
     def validate_project(cls, project_file):
@@ -97,8 +95,7 @@ class EagleBatch(BuildStockBatchBase):
         output_dir = path_rel_to_file(project_file, cfg["output_directory"])
         if not re.match(r"/(lustre/eaglefs/)?(scratch|projects)", output_dir):
             raise ValidationError(
-                f"`output_directory` must be in /scratch or /projects,"
-                f" `output_directory` = {output_dir}"
+                f"`output_directory` must be in /scratch or /projects," f" `output_directory` = {output_dir}"
             )
 
     @classmethod
@@ -110,15 +107,11 @@ class EagleBatch(BuildStockBatchBase):
             cfg.get("os_sha", cls.DEFAULT_OS_SHA),
         )
         if not os.path.exists(singularity_image):
-            raise ValidationError(
-                f"The singularity image does not exist: {singularity_image}"
-            )
+            raise ValidationError(f"The singularity image does not exist: {singularity_image}")
 
     @property
     def output_dir(self):
-        output_dir = path_rel_to_file(
-            self.project_filename, self.cfg["output_directory"]
-        )
+        output_dir = path_rel_to_file(self.project_filename, self.cfg["output_directory"])
         return output_dir
 
     @property
@@ -137,9 +130,7 @@ class EagleBatch(BuildStockBatchBase):
     def get_singularity_image(cls, cfg, os_version, os_sha):
         return os.path.join(
             cfg.get("sys_image_dir", cls.DEFAULT_SYS_IMAGE_DIR),
-            "OpenStudio-{ver}.{sha}-Singularity.simg".format(
-                ver=os_version, sha=os_sha
-            ),
+            "OpenStudio-{ver}.{sha}-Singularity.simg".format(ver=os_version, sha=os_sha),
         )
 
     @property
@@ -153,12 +144,7 @@ class EagleBatch(BuildStockBatchBase):
     def run_batch(self, sampling_only=False):
 
         # Create simulation_output dir
-        sim_out_ts_dir = (
-            pathlib.Path(self.output_dir)
-            / "results"
-            / "simulation_output"
-            / "timeseries"
-        )
+        sim_out_ts_dir = pathlib.Path(self.output_dir) / "results" / "simulation_output" / "timeseries"
         os.makedirs(sim_out_ts_dir, exist_ok=True)
         for i in range(0, len(self.cfg.get("upgrades", [])) + 1):
             os.makedirs(sim_out_ts_dir / f"up{i:02d}")
@@ -168,9 +154,7 @@ class EagleBatch(BuildStockBatchBase):
         destination_dir = os.path.dirname(self.sampler.csv_path)
         if os.path.exists(destination_dir):
             shutil.rmtree(destination_dir)
-        shutil.copytree(
-            os.path.join(self.project_dir, "housing_characteristics"), destination_dir
-        )
+        shutil.copytree(os.path.join(self.project_dir, "housing_characteristics"), destination_dir)
         logger.debug("Housing characteristics copied.")
 
         # run sampling
@@ -200,9 +184,7 @@ class EagleBatch(BuildStockBatchBase):
         #     larger than we need, now that we know n_sims
         n_sims_per_job = max(n_sims_per_job, self.min_sims_per_job)
 
-        upgrade_sims = itertools.product(
-            building_ids, range(len(self.cfg.get("upgrades", [])))
-        )
+        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
         if not self.skip_baseline_sims:
             # create batches of simulations
             baseline_sims = zip(building_ids, itertools.repeat(None))
@@ -217,9 +199,7 @@ class EagleBatch(BuildStockBatchBase):
             if not batch:
                 break
             logger.info("Queueing job {} ({} simulations)".format(i, len(batch)))
-            job_json_filename = os.path.join(
-                self.output_dir, "job{:03d}.json".format(i)
-            )
+            job_json_filename = os.path.join(self.output_dir, "job{:03d}.json".format(i))
             with open(job_json_filename, "w") as f:
                 json.dump(
                     {
@@ -248,9 +228,7 @@ class EagleBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / "measures",
             self.local_buildstock_dir / "measures",
         )
-        if os.path.exists(
-            pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures"
-        ):
+        if os.path.exists(pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures"):
             self.clear_and_copy_dir(
                 pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures",
                 self.local_buildstock_dir / "resources/hpxml-measures",
@@ -265,9 +243,7 @@ class EagleBatch(BuildStockBatchBase):
         shutil.copy2(self.singularity_image, self.local_singularity_img)
 
         # Run the job batch as normal
-        job_json_filename = os.path.join(
-            self.output_dir, "job{:03d}.json".format(job_array_number)
-        )
+        job_json_filename = os.path.join(self.output_dir, "job{:03d}.json".format(job_array_number))
         with open(job_json_filename, "r") as f:
             args = json.load(f)
 
@@ -285,18 +261,12 @@ class EagleBatch(BuildStockBatchBase):
         df.to_csv(buildstock_csv_path, index=False)
         logger.debug(f"Buildstock.csv trimmed to {len(df)} rows.")
 
-        traceback_file_path = (
-            self.local_output_dir
-            / "simulation_output"
-            / f"traceback{job_array_number}.out"
-        )
+        traceback_file_path = self.local_output_dir / "simulation_output" / f"traceback{job_array_number}.out"
 
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(
-                    self.output_dir, self.cfg, args["n_datapoints"], i, upgrade_idx
-                )
+                return self.run_building(self.output_dir, self.cfg, args["n_datapoints"], i, upgrade_idx)
             except Exception:
                 with open(traceback_file_path, "a") as f:
                     txt = get_error_details()
@@ -323,9 +293,7 @@ class EagleBatch(BuildStockBatchBase):
         # Compress simulation results
         if self.cfg.get("max_minutes_per_sim") is not None:
             time.sleep(60)  # Allow results JSON to finish writing
-        simout_filename = (
-            lustre_sim_out_dir / f"simulations_job{job_array_number}.tar.gz"
-        )
+        simout_filename = lustre_sim_out_dir / f"simulations_job{job_array_number}.tar.gz"
         logger.info(f"Compressing simulation outputs to {simout_filename}")
         local_sim_out_dir = self.local_output_dir / "simulation_output"
         subprocess.run(
@@ -355,16 +323,12 @@ class EagleBatch(BuildStockBatchBase):
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
         try:
-            sim_id, sim_dir = cls.make_sim_dir(
-                i, upgrade_idx, os.path.join(cls.local_output_dir, "simulation_output")
-            )
+            sim_id, sim_dir = cls.make_sim_dir(i, upgrade_idx, os.path.join(cls.local_output_dir, "simulation_output"))
         except SimulationExists as ex:
             sim_dir = ex.sim_dir
         else:
             # Generate the osw for this simulation
-            osw = cls.create_osw(
-                cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx
-            )
+            osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
             with open(os.path.join(sim_dir, "in.osw"), "w") as f:
                 json.dump(osw, f, indent=4)
 
@@ -375,9 +339,7 @@ class EagleBatch(BuildStockBatchBase):
             ]
 
             # Create a temporary directory for the simulation to use
-            with tempfile.TemporaryDirectory(
-                dir=cls.local_scratch, prefix=f"{sim_id}_"
-            ) as tmpdir:
+            with tempfile.TemporaryDirectory(dir=cls.local_scratch, prefix=f"{sim_id}_") as tmpdir:
 
                 # Build the command to instantiate and configure the singularity container the simulation is run inside
                 local_resources_dir = cls.local_buildstock_dir / "resources"
@@ -401,24 +363,12 @@ class EagleBatch(BuildStockBatchBase):
                 for src in dirs_to_mount:
                     container_mount = "/" + os.path.basename(src)
                     args.extend(["-B", "{}:{}:ro".format(src, container_mount)])
-                    container_symlink = os.path.join(
-                        "/var/simdata/openstudio", os.path.basename(src)
-                    )
-                    runscript.append(
-                        "ln -s {} {}".format(
-                            *map(shlex.quote, (container_mount, container_symlink))
-                        )
-                    )
+                    container_symlink = os.path.join("/var/simdata/openstudio", os.path.basename(src))
+                    runscript.append("ln -s {} {}".format(*map(shlex.quote, (container_mount, container_symlink))))
 
-                if os.path.exists(
-                    os.path.join(cls.local_buildstock_dir, "resources/hpxml-measures")
-                ):
-                    runscript.append(
-                        "ln -s /resources /var/simdata/openstudio/resources"
-                    )
-                    src = os.path.join(
-                        cls.local_buildstock_dir, "resources/hpxml-measures"
-                    )
+                if os.path.exists(os.path.join(cls.local_buildstock_dir, "resources/hpxml-measures")):
+                    runscript.append("ln -s /resources /var/simdata/openstudio/resources")
+                    src = os.path.join(cls.local_buildstock_dir, "resources/hpxml-measures")
                     container_mount = "/resources/hpxml-measures"
                     args.extend(["-B", "{}:{}:ro".format(src, container_mount)])
 
@@ -470,30 +420,18 @@ class EagleBatch(BuildStockBatchBase):
                                 "timeout": msg,
                             }
                             out_osw.write(json.dumps(out_msg, indent=3))
-                        with open(
-                            os.path.join(sim_dir, "run", "out.osw"), "a"
-                        ) as run_log:
-                            run_log.write(
-                                f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}"
-                            )
-                        with open(
-                            os.path.join(sim_dir, "run", "failed.job"), "w"
-                        ) as failed_job:
-                            failed_job.write(
-                                f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}"
-                            )
-                        time.sleep(
-                            60
-                        )  # Wait for EnergyPlus to release file locks and data_point.zip to finish
+                        with open(os.path.join(sim_dir, "run", "out.osw"), "a") as run_log:
+                            run_log.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        with open(os.path.join(sim_dir, "run", "failed.job"), "w") as failed_job:
+                            failed_job.write(f"[{end_time.strftime('%H:%M:%S')} ERROR] {msg}")
+                        time.sleep(60)  # Wait for EnergyPlus to release file locks and data_point.zip to finish
                     except subprocess.CalledProcessError:
                         pass
                     finally:
                         # Clean up the symbolic links we created in the container
                         for mount_dir in dirs_to_mount + [os.path.join(sim_dir, "lib")]:
                             try:
-                                os.unlink(
-                                    os.path.join(sim_dir, os.path.basename(mount_dir))
-                                )
+                                os.unlink(os.path.join(sim_dir, os.path.basename(mount_dir)))
                             except FileNotFoundError:
                                 pass
 
@@ -507,9 +445,7 @@ class EagleBatch(BuildStockBatchBase):
                         )
 
         reporting_measures = cls.get_reporting_measures(cfg)
-        dpout = postprocessing.read_simulation_outputs(
-            fs, reporting_measures, sim_dir, upgrade_id, i
-        )
+        dpout = postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, i)
         return dpout
 
     def queue_jobs(self, array_ids=None, hipri=False):
@@ -537,9 +473,7 @@ class EagleBatch(BuildStockBatchBase):
         # Estimate the wall time in minutes
         cores_per_node = 36
         minutes_per_sim = eagle_cfg["minutes_per_sim"]
-        walltime = math.ceil(
-            math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim
-        )
+        walltime = math.ceil(math.ceil(n_sims_per_job / cores_per_node) * minutes_per_sim)
 
         # Queue up simulations
         here = os.path.dirname(os.path.abspath(__file__))
@@ -590,14 +524,10 @@ class EagleBatch(BuildStockBatchBase):
         # Configuration values
         account = self.cfg["eagle"]["account"]
         walltime = self.cfg["eagle"].get("postprocessing", {}).get("time", "1:30:00")
-        memory = (
-            self.cfg["eagle"].get("postprocessing", {}).get("node_memory_mb", 85248)
-        )
+        memory = self.cfg["eagle"].get("postprocessing", {}).get("node_memory_mb", 85248)
         n_procs = self.cfg["eagle"].get("postprocessing", {}).get("n_procs", 18)
         n_workers = self.cfg["eagle"].get("postprocessing", {}).get("n_workers", 2)
-        print(
-            f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each."
-        )
+        print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
 
         if not upload_only:
@@ -620,8 +550,7 @@ class EagleBatch(BuildStockBatchBase):
                 last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
                 shutil.move(
                     filepath,
-                    filepath.parent
-                    / f"{filepath.stem}_{last_mod_date:%Y%m%d%H%M}{filepath.suffix}",
+                    filepath.parent / f"{filepath.stem}_{last_mod_date:%Y%m%d%H%M}{filepath.suffix}",
                 )
 
         env = {}
@@ -674,22 +603,14 @@ class EagleBatch(BuildStockBatchBase):
             cluster = LocalCluster(local_directory="/data/dask-tmp")
             return Client(cluster)
         else:
-            return Client(
-                scheduler_file=os.path.join(self.output_dir, "dask_scheduler.json")
-            )
+            return Client(scheduler_file=os.path.join(self.output_dir, "dask_scheduler.json"))
 
     def process_results(self, *args, **kwargs):
         # Check that all the jobs succeeded before proceeding
         failed_job_array_ids = self.get_failed_job_array_ids()
         if failed_job_array_ids:
-            logger.error(
-                "The following simulation jobs failed: {}".format(
-                    ", ".join(map(str, failed_job_array_ids))
-                )
-            )
-            logger.error(
-                "Please inspect those jobs and fix any problems before resubmitting."
-            )
+            logger.error("The following simulation jobs failed: {}".format(", ".join(map(str, failed_job_array_ids))))
+            logger.error("Please inspect those jobs and fix any problems before resubmitting.")
             logger.critical("Postprocessing cancelled.")
             return False
 
@@ -741,8 +662,7 @@ class EagleBatch(BuildStockBatchBase):
                 last_mod_date = dt.datetime.fromtimestamp(os.path.getmtime(filepath))
                 shutil.move(
                     filepath,
-                    prev_failed_job_out_dir
-                    / f"{filepath.name}_{last_mod_date:%Y%m%d%H%M}",
+                    prev_failed_job_out_dir / f"{filepath.name}_{last_mod_date:%Y%m%d%H%M}",
                 )
 
             # Delete simulation results for jobs we're about to rerun
@@ -831,21 +751,15 @@ def user_cli(argv=sys.argv[1:]):
         help="Only validate the project YAML file and references. Nothing is executed",
         action="store_true",
     )
-    group.add_argument(
-        "--samplingonly", help="Run the sampling only.", action="store_true"
-    )
-    group.add_argument(
-        "--rerun_failed", help="Rerun the failed jobs", action="store_true"
-    )
+    group.add_argument("--samplingonly", help="Run the sampling only.", action="store_true")
+    group.add_argument("--rerun_failed", help="Rerun the failed jobs", action="store_true")
 
     # parse CLI arguments
     args = parser.parse_args(argv)
 
     # load the yaml project file
     if not os.path.isfile(args.project_filename):
-        raise FileNotFoundError(
-            "The project file {} doesn't exist".format(args.project_filename)
-        )
+        raise FileNotFoundError("The project file {} doesn't exist".format(args.project_filename))
     project_filename = os.path.abspath(args.project_filename)
     with open(project_filename, "r") as f:
         cfg = yaml.load(f, Loader=yaml.SafeLoader)
@@ -873,9 +787,7 @@ def user_cli(argv=sys.argv[1:]):
     out_dir = cfg["output_directory"]
     if os.path.exists(out_dir):
         raise FileExistsError(
-            "The output directory {} already exists. Please delete it or choose another.".format(
-                out_dir
-            )
+            "The output directory {} already exists. Please delete it or choose another.".format(out_dir)
         )
     logger.info("Creating output directory {}".format(out_dir))
     os.makedirs(out_dir)

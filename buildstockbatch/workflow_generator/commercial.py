@@ -50,9 +50,7 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
         workflow_generator_args = cfg["workflow_generator"]["args"]
         schema_yml = re.sub(r"^ {8}", "", schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser="ruamel")
-        data = yamale.make_data(
-            content=json.dumps(workflow_generator_args), parser="ruamel"
-        )
+        data = yamale.make_data(content=json.dumps(workflow_generator_args), parser="ruamel")
         return yamale.validate(schema, data, strict=True)
 
     def reporting_measures(self):
@@ -117,31 +115,25 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
                 "arguments": {"run_measure": 1},
             }
             if "upgrade_name" in measure_d:
-                apply_upgrade_measure["arguments"]["upgrade_name"] = measure_d[
-                    "upgrade_name"
-                ]
+                apply_upgrade_measure["arguments"]["upgrade_name"] = measure_d["upgrade_name"]
             for opt_num, option in enumerate(measure_d["options"], 1):
-                apply_upgrade_measure["arguments"]["option_{}".format(opt_num)] = (
-                    option["option"]
-                )
+                apply_upgrade_measure["arguments"]["option_{}".format(opt_num)] = option["option"]
                 if "lifetime" in option:
-                    apply_upgrade_measure["arguments"][
-                        "option_{}_lifetime".format(opt_num)
-                    ] = option["lifetime"]
+                    apply_upgrade_measure["arguments"]["option_{}_lifetime".format(opt_num)] = option["lifetime"]
                 if "apply_logic" in option:
-                    apply_upgrade_measure["arguments"][
-                        "option_{}_apply_logic".format(opt_num)
-                    ] = self.make_apply_logic_arg(option["apply_logic"])
+                    apply_upgrade_measure["arguments"]["option_{}_apply_logic".format(opt_num)] = (
+                        self.make_apply_logic_arg(option["apply_logic"])
+                    )
                 for cost_num, cost in enumerate(option.get("costs", []), 1):
                     for arg in ("value", "multiplier"):
                         if arg not in cost:
                             continue
-                        apply_upgrade_measure["arguments"][
-                            "option_{}_cost_{}_{}".format(opt_num, cost_num, arg)
-                        ] = cost[arg]
+                        apply_upgrade_measure["arguments"]["option_{}_cost_{}_{}".format(opt_num, cost_num, arg)] = (
+                            cost[arg]
+                        )
             if "package_apply_logic" in measure_d:
-                apply_upgrade_measure["arguments"]["package_apply_logic"] = (
-                    self.make_apply_logic_arg(measure_d["package_apply_logic"])
+                apply_upgrade_measure["arguments"]["package_apply_logic"] = self.make_apply_logic_arg(
+                    measure_d["package_apply_logic"]
                 )
 
             build_existing_model_idx = list(

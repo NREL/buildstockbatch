@@ -9,6 +9,4 @@ resstock_directory = pathlib.Path(
         pathlib.Path(__file__).resolve().parent.parent.parent.parent / "resstock",
     )
 )
-resstock_required = pytest.mark.skipif(
-    not resstock_directory.exists(), reason="ResStock checkout is not found"
-)
+resstock_required = pytest.mark.skipif(not resstock_directory.exists(), reason="ResStock checkout is not found")
