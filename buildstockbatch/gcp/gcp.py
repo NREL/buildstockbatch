@@ -161,12 +161,12 @@ class GcpBatch(DockerBatchBase):
     DEFAULT_PP_CPUS = 2
     DEFAULT_PP_MEMORY_MIB = 4096
 
-    def __init__(self, project_filename, job_identifier=None):
+    def __init__(self, project_filename, job_identifier=None, missing_only=False):
         """
         :param project_filename: Path to the project's configuration file.
         :param job_identifier: Optional job ID that will override gcp.job_identifier from the project file.
         """
-        super().__init__(project_filename)
+        super().__init__(project_filename, missing_only)
 
         if job_identifier:
             assert len(job_identifier) <= 48, "Job identifier must be no longer than 48 characters."
@@ -591,6 +591,7 @@ class GcpBatch(DockerBatchBase):
             "JOB_NAME": self.job_identifier,
             "GCS_PREFIX": self.gcs_prefix,
             "GCS_BUCKET": self.gcs_bucket,
+            "MISSING_ONLY": str(self.missing_only),
         }
         bsb_runnable.environment = environment
 
@@ -622,9 +623,21 @@ class GcpBatch(DockerBatchBase):
             max_run_duration=f"{task_duration_secs}s",
         )
 
+        if self.missing_only:
+            # Save a list of task numbers to rerun in a file on GCS. Task i of the new job will read line i of
+            # this file to find the task of the original job it should rerun.
+            if job_count := self.find_missing_tasks(batch_info.job_count):
+                logger.info(f"Found {job_count} out of {batch_info.job_count} tasks to rerun.")
+            else:
+                raise ValidationError(
+                    f"There are no tasks to retry. All {batch_info.job_count} results files are present."
+                )
+        else:
+            job_count = batch_info.job_count
+
         # How many of these tasks to run.
         group = batch_v1.TaskGroup(
-            task_count=batch_info.job_count,
+            task_count=job_count,
             parallelism=gcp_cfg.get("parallelism", None),
             task_spec=task,
         )
@@ -700,7 +713,7 @@ Results output browser (Cloud Console):
         # Monitor job status while waiting for the job to complete
         n_completed_last_time = 0
         client = batch_v1.BatchServiceClient()
-        with tqdm.tqdm(desc="Running Simulations", total=batch_info.job_count, unit="task") as progress_bar:
+        with tqdm.tqdm(desc="Running Simulations", total=job_count, unit="task") as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED", "DELETION_IN_PROGRESS"):
                 time.sleep(10)
@@ -742,7 +755,7 @@ Results output browser (Cloud Console):
             tsv_logger.log_stats(logging.INFO)
 
     @classmethod
-    def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix):
+    def run_task(cls, task_index, job_name, gcs_bucket, gcs_prefix, missing_only):
         """
         Run a few simulations inside a container.
 
@@ -754,12 +767,20 @@ Results output browser (Cloud Console):
         :param job_name: Job identifier
         :param gcs_bucket: GCS bucket for input and output files
         :param gcs_prefix: Prefix used for GCS files
+        :param missing_only: If True, rerun a task from a previous job. The provided task_index is used as an index
+            into the list of tasks that need to be rerun.
         """
         # Local directory where we'll write files
         sim_dir = pathlib.Path("/var/simdata/openstudio")
 
         client = storage.Client()
         bucket = client.get_bucket(gcs_bucket)
+
+        if missing_only:
+            # Find task number of the original task we're retrying.
+            tasks = bucket.blob(f"{gcs_prefix}/results/missing_tasks.txt").download_as_bytes().decode()
+            task_index = int(tasks.split()[task_index])
+            logger.info(f"Rerunning task {task_index}")
 
         logger.info("Extracting assets TAR file")
         # Copy assets file to local machine to extract TAR file
@@ -1119,7 +1140,8 @@ def main():
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
         job_name = os.environ["JOB_NAME"]
-        GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix)
+        missing_only = os.environ["MISSING_ONLY"] == "True"
+        GcpBatch.run_task(task_index, job_name, gcs_bucket, gcs_prefix, missing_only)
     elif "POSTPROCESS" == os.environ.get("JOB_TYPE", ""):
         gcs_bucket = os.environ["GCS_BUCKET"]
         gcs_prefix = os.environ["GCS_PREFIX"]
@@ -1154,6 +1176,13 @@ def main():
             help="Only do postprocessing, useful for when the simulations are already done",
             action="store_true",
         )
+        group.add_argument(
+            "--missingonly",
+            action="store_true",
+            help="Only run batches of simulations that are missing from a previous job, then run post-processing. "
+            "Assumes that the project file is the same as the previous job, other than the job identifier. "
+            "Will not rerun individual failed simulations, only full batches that are missing.",
+        )
         parser.add_argument(
             "-v",
             "--verbose",
@@ -1172,7 +1201,7 @@ def main():
         if args.validateonly:
             return True
 
-        batch = GcpBatch(args.project_filename, args.job_identifier)
+        batch = GcpBatch(args.project_filename, args.job_identifier, missing_only=args.missingonly)
         if args.clean:
             batch.clean()
             return

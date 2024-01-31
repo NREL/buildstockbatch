@@ -24,6 +24,7 @@ import os
 import pandas as pd
 import pathlib
 import random
+import re
 import shutil
 import subprocess
 import tarfile
@@ -105,8 +106,13 @@ class DockerBatchBase(BuildStockBatchBase):
     CONTAINER_RUNTIME = ContainerRuntime.DOCKER
     MAX_JOB_COUNT = 10000
 
-    def __init__(self, project_filename):
+    def __init__(self, project_filename, missing_only=False):
+        """
+        :param missing_only: If true, use asset files from a previous job and only run the simulations
+            that don't already have successful results from a previous run. Support must be added in subclasses.
+        """
         super().__init__(project_filename)
+        self.missing_only = missing_only
 
         self.docker_client = docker.DockerClient.from_env()
         try:
@@ -114,6 +120,9 @@ class DockerBatchBase(BuildStockBatchBase):
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
             logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
             raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
+
+    def get_fs(self):
+        return LocalFileSystem()
 
     @staticmethod
     def validate_project(project_file):
@@ -139,7 +148,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
         :param files_to_copy: a dict where the key is a file on the cloud to copy, and the value is
             the filename to copy the source file to. Both are relative to the ``tmppath`` used in
-            ``prep_batches()`` (so the implementation should prepend the bucket name and prefix
+            ``_run_batch_prep()`` (so the implementation should prepend the bucket name and prefix
             where they were uploaded to by ``upload_batch_files_to_cloud``).
         """
         raise NotImplementedError
@@ -166,12 +175,15 @@ class DockerBatchBase(BuildStockBatchBase):
             tmppath = pathlib.Path(tmpdir)
             epws_to_copy, batch_info = self._run_batch_prep(tmppath)
 
-            # Copy all the files to cloud storage
-            logger.info("Uploading files for batch...")
-            self.upload_batch_files_to_cloud(tmppath)
+            # If we're rerunning failed tasks from a previous job, DO NOT overwrite the job files.
+            # That would assign a new random set of buildings to each task, making the rerun useless.
+            if not self.missing_only:
+                # Copy all the files to cloud storage
+                logger.info("Uploading files for batch...")
+                self.upload_batch_files_to_cloud(tmppath)
 
-            logger.info("Copying duplicate weather files...")
-            self.copy_files_at_cloud(epws_to_copy)
+                logger.info("Copying duplicate weather files...")
+                self.copy_files_at_cloud(epws_to_copy)
 
         self.start_batch_job(batch_info)
 
@@ -200,18 +212,22 @@ class DockerBatchBase(BuildStockBatchBase):
         :returns: DockerBatchBase.BatchInfo
         """
 
-        # Project configuration
-        logger.info("Writing project configuration for upload...")
-        with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
-            json.dump(self.cfg, f)
+        if not self.missing_only:
+            # Project configuration
+            logger.info("Writing project configuration for upload...")
+            with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
+                json.dump(self.cfg, f)
 
         # Collect simulations to queue (along with the EPWs those sims need)
         logger.info("Preparing simulation batch jobs...")
         batch_info, epws_needed = self._prep_jobs_for_batch(tmppath)
 
-        # Weather files
-        logger.info("Prepping weather files...")
-        epws_to_copy = self._prep_weather_files_for_batch(tmppath, epws_needed)
+        if self.missing_only:
+            epws_to_copy = None
+        else:
+            # Weather files
+            logger.info("Prepping weather files...")
+            epws_to_copy = self._prep_weather_files_for_batch(tmppath, epws_needed)
 
         return (epws_to_copy, batch_info)
 
@@ -364,6 +380,9 @@ class DockerBatchBase(BuildStockBatchBase):
                 )
         job_count = i
         logger.debug("Job count = {}".format(job_count))
+        batch_info = DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count)
+        if self.missing_only:
+            return batch_info, epws_needed
 
         # Compress job jsons
         jobs_dir = tmppath / "jobs"
@@ -394,7 +413,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 "lib/housing_characteristics",
             )
 
-        return DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count), epws_needed
+        return batch_info, epws_needed
 
     def _determine_epws_needed_for_batch(self, buildstock_df):
         """
@@ -506,7 +525,7 @@ class DockerBatchBase(BuildStockBatchBase):
                     elif os.path.isfile(item):
                         os.remove(item)
 
-        # Upload simulation outputs tarfile to s3
+        # Upload simulation outputs tarfile to bucket
         fs.put(
             str(simulation_output_tar_filename),
             f"{output_path}/results/simulation_output/simulations_job{job_id}.tar.gz",
@@ -527,6 +546,32 @@ class DockerBatchBase(BuildStockBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    def find_missing_tasks(self, expected):
+        """Creates a file with a list of task numbers that are missing results.
+
+        This only checks for results_job[ID].json.gz files in the results directory.
+
+        :param expected: Number of result files expected.
+        :returns: The number of files that were missing.
+        """
+        fs = self.get_fs()
+        done_tasks = set()
+
+        for f in fs.ls(f"{self.results_dir}/simulation_output/"):
+            if m := re.match(".*results_job(\\d*).json.gz$", f):
+                done_tasks.add(int(m.group(1)))
+
+        missing_tasks = []
+        with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
+            for task_id in range(expected):
+                if task_id not in done_tasks:
+                    f.write(f"{task_id}\n")
+                    missing_tasks.append(str(task_id))
+
+        logger.info(f"Found missing tasks: {', '.join(missing_tasks)}")
+
+        return len(missing_tasks)
 
     def log_summary(self):
         """
