@@ -24,4 +24,4 @@ See :doc:`changelog_2022_12_0` for details of changes since the last version.
 Schema Updates
 ==============
 
-No schema updates this time. 
+No schema updates this time.

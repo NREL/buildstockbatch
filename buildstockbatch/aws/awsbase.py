@@ -67,7 +67,6 @@ class AWSIAMHelper:
                 p_counter = p_counter + 1
 
             for managed_policy_arn in managed_policie_arns:
-
                 response = self.iam.attach_role_policy(PolicyArn=managed_policy_arn, RoleName=role_name)
 
             logger.info(f"Role {role_name} created")
@@ -138,7 +137,6 @@ class AWSIAMHelper:
 
 
 class AwsJobBase:
-
     logger.propagate = False
 
     def __init__(self, job_identifier, aws_config, boto3_session):

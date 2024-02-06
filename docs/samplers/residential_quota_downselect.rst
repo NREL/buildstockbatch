@@ -6,7 +6,7 @@ included in a project. For instance one might want to run the simulation only in
 one climate region or for certain vintages. However, it can be a considerable
 effort to create a new project and modify the housing characteristic
 distributions. The Residential Quota Downselect sampler adds a downselection
-capability to the :doc:`residential_quota`. 
+capability to the :doc:`residential_quota`.
 
 Downselecting can be performed in one of two ways: with and without resampling.
 Downselecting with resampling samples twice, once to determine how much smaller
@@ -16,7 +16,7 @@ specified in ``n_datapoints``.
 
 Downselecting without resampling skips that step. In this case the total sampled
 buildings returned will be the number left over after sampling the entire stock
-and then filtering down to the buildings that meet the criteria. 
+and then filtering down to the buildings that meet the criteria.
 
 
 
