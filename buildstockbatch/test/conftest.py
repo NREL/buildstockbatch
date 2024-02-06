@@ -11,9 +11,7 @@ OUTPUT_FOLDER_NAME = "output"
 def basic_residential_project_file():
     with tempfile.TemporaryDirectory() as test_directory:
 
-        def _basic_residential_project_file(
-            update_args={}, raw=False, hpc_name="eagle"
-        ):
+        def _basic_residential_project_file(update_args={}, raw=False, hpc_name="eagle"):
             output_dir = "simulations_job0" if raw else "simulation_output"
             buildstock_directory = os.path.join(test_directory, "openstudio_buildstock")
             shutil.copytree(
@@ -37,22 +35,14 @@ def basic_residential_project_file():
             )
 
             # move the job*.json file to appropriate location
-            if os.path.exists(
-                os.path.join(output_directory, "simulation_output", "job0.json")
-            ):
+            if os.path.exists(os.path.join(output_directory, "simulation_output", "job0.json")):
                 shutil.move(
                     os.path.join(output_directory, "simulation_output", "job0.json"),
-                    os.path.join(
-                        output_directory, "simulation_output", "..", "..", "job0.json"
-                    ),
+                    os.path.join(output_directory, "simulation_output", "..", "..", "job0.json"),
                 )
 
             os.mkdir(os.path.join(output_directory, "housing_characteristics"))
-            os.mkdir(
-                os.path.join(
-                    buildstock_directory, project_directory, "housing_characteristics"
-                )
-            )
+            os.mkdir(os.path.join(buildstock_directory, project_directory, "housing_characteristics"))
             weather_file_path = os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),
                 "test_inputs",

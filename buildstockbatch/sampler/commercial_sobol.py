@@ -62,10 +62,7 @@ class CommercialSobolSampler(BuildStockSampler):
             else:
                 raise ValidationError(f"Unknown argument for sampler: {k}")
         if len(expected_args) > 0:
-            raise ValidationError(
-                "The following sampler arguments are required: "
-                + ", ".join(expected_args)
-            )
+            raise ValidationError("The following sampler arguments are required: " + ", ".join(expected_args))
         return True
 
     def run_sampling(self):
@@ -87,15 +84,11 @@ class CommercialSobolSampler(BuildStockSampler):
         for tsv_file in os.listdir(self.buildstock_dir):
             if ".tsv" in tsv_file:
                 tsv_df = read_csv(os.path.join(self.buildstock_dir, tsv_file), sep="\t")
-                dependency_columns = [
-                    item for item in list(tsv_df) if "Dependency=" in item
-                ]
+                dependency_columns = [item for item in list(tsv_df) if "Dependency=" in item]
                 tsv_df[dependency_columns] = tsv_df[dependency_columns].astype("str")
                 tsv_hash[tsv_file.replace(".tsv", "")] = tsv_df
         dependency_hash, attr_order = self._com_order_tsvs(tsv_hash)
-        sample_matrix = self._com_execute_sobol_sampling(
-            attr_order.__len__(), sample_number
-        )
+        sample_matrix = self._com_execute_sobol_sampling(attr_order.__len__(), sample_number)
         csv_path = self.csv_path
         header = "Building,"
         for item in attr_order:
@@ -131,9 +124,7 @@ class CommercialSobolSampler(BuildStockSampler):
         :param n_samples: Number of samples to calculate
         :return: Pandas DataFrame object which contains the low discrepancy result of the sobol algorithm
         """
-        return pd.DataFrame(i4_sobol_generate(n_dims, n_samples, 0)).replace(
-            1.0, 0.999999
-        )
+        return pd.DataFrame(i4_sobol_generate(n_dims, n_samples, 0)).replace(1.0, 0.999999)
 
     @staticmethod
     def _com_order_tsvs(tsv_hash):
@@ -146,9 +137,7 @@ class CommercialSobolSampler(BuildStockSampler):
         dependency_hash = {}
         for attr in tsv_hash.keys():
             dependency_hash[attr] = [
-                item.replace("Dependency=", "")
-                for item in list(tsv_hash[attr])
-                if "Dependency=" in item
+                item.replace("Dependency=", "") for item in list(tsv_hash[attr]) if "Dependency=" in item
             ]
         attr_order = []
         for attr in dependency_hash.keys():
@@ -170,9 +159,7 @@ class CommercialSobolSampler(BuildStockSampler):
             elif max_iterations > 0:
                 max_iterations -= 1
             else:
-                raise RuntimeError(
-                    "Unable to resolve the dependency tree within the set iteration limit"
-                )
+                raise RuntimeError("Unable to resolve the dependency tree within the set iteration limit")
         return dependency_hash, attr_order
 
     @staticmethod
@@ -206,8 +193,7 @@ class CommercialSobolSampler(BuildStockSampler):
             tsv_dist_val = sample_vector[attr_index]
             for dependency in sample_dependency_hash[attr]:
                 tsv_lkup = tsv_lkup.loc[
-                    tsv_lkup.loc[:, "Dependency=" + dependency]
-                    == sample_dependency_hash[dependency]
+                    tsv_lkup.loc[:, "Dependency=" + dependency] == sample_dependency_hash[dependency]
                 ]
                 tsv_lkup = tsv_lkup.drop("Dependency=" + dependency, axis=1)
             if tsv_lkup.shape[0] == 0:
@@ -218,17 +204,9 @@ class CommercialSobolSampler(BuildStockSampler):
                 )
                 return
             if tsv_lkup.shape[0] != 1:
-                raise RuntimeError(
-                    "Unable to reduce tsv for {} to 1 row, index {}".format(
-                        attr, sample_index
-                    )
-                )
+                raise RuntimeError("Unable to reduce tsv for {} to 1 row, index {}".format(attr, sample_index))
             tsv_lkup_cdf = tsv_lkup.values.cumsum() > tsv_dist_val
-            option_values = [
-                item.replace("Option=", "")
-                for item in list(tsv_lkup)
-                if "Option=" in item
-            ]
+            option_values = [item.replace("Option=", "") for item in list(tsv_lkup) if "Option=" in item]
             attr_result = list(compress(option_values, tsv_lkup_cdf))[0]
             sample_dependency_hash[attr] = attr_result
             result_vector.append(attr_result)

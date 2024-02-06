@@ -9,13 +9,7 @@ import tarfile
 from unittest.mock import patch
 import gzip
 
-from buildstockbatch.hpc import (
-    eagle_cli,
-    kestrel_cli,
-    EagleBatch,
-    KestrelBatch,
-    SlurmBatch,
-)  # noqa: F401
+from buildstockbatch.hpc import eagle_cli, kestrel_cli, EagleBatch, KestrelBatch, SlurmBatch  # noqa: F401
 from buildstockbatch.base import BuildStockBatchBase
 from buildstockbatch.utils import get_project_configuration, read_csv
 
@@ -25,15 +19,10 @@ here = os.path.dirname(os.path.abspath(__file__))
 @patch("buildstockbatch.hpc.subprocess")
 def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_project_file):
     tar_filename = (
-        pathlib.Path(__file__).resolve().parent
-        / "test_results"
-        / "simulation_output"
-        / "simulations_job0.tar.gz"
+        pathlib.Path(__file__).resolve().parent / "test_results" / "simulation_output" / "simulations_job0.tar.gz"
     )  # noqa E501
     with tarfile.open(tar_filename, "r") as tarf:
-        osw_dict = json.loads(
-            tarf.extractfile("up00/bldg0000001/in.osw").read().decode("utf-8")
-        )
+        osw_dict = json.loads(tarf.extractfile("up00/bldg0000001/in.osw").read().decode("utf-8"))
 
     project_filename, results_dir = basic_residential_project_file()
     tmp_path = pathlib.Path(results_dir).parent
@@ -44,9 +33,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
 
     with patch.object(KestrelBatch, "weather_dir", None), patch.object(
         KestrelBatch, "create_osw", return_value=osw_dict
-    ), patch.object(
-        KestrelBatch, "make_sim_dir", return_value=("bldg0000001up00", sim_path)
-    ), patch.object(
+    ), patch.object(KestrelBatch, "make_sim_dir", return_value=("bldg0000001up00", sim_path)), patch.object(
         KestrelBatch, "local_scratch", tmp_path
     ):
         # Normal run
@@ -126,15 +113,11 @@ def _test_env_vars_passed(mock_subprocess, hpc_name):
 @pytest.mark.parametrize("hpc_name", ["eagle", "kestrel"])
 def test_user_cli(basic_residential_project_file, monkeypatch, mocker, hpc_name):
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
-    mock_validate_apptainer_image = mocker.patch(
-        "buildstockbatch.hpc.SlurmBatch.validate_apptainer_image_hpc"
-    )
+    mock_validate_apptainer_image = mocker.patch("buildstockbatch.hpc.SlurmBatch.validate_apptainer_image_hpc")
     mock_validate_output_directory = mocker.patch(
         f"buildstockbatch.hpc.{hpc_name.capitalize()}Batch.validate_output_directory_{hpc_name}"
     )
-    mock_validate_options = mocker.patch(
-        "buildstockbatch.base.BuildStockBatchBase.validate_options_lookup"
-    )
+    mock_validate_options = mocker.patch("buildstockbatch.base.BuildStockBatchBase.validate_options_lookup")
 
     mock_validate_options.return_value = True
     mock_validate_output_directory.return_value = True
@@ -206,15 +189,11 @@ def test_user_cli(basic_residential_project_file, monkeypatch, mocker, hpc_name)
 
 
 @pytest.mark.parametrize("hpc_name", ["eagle", "kestrel"])
-def test_qos_high_job_submit(
-    basic_residential_project_file, monkeypatch, mocker, hpc_name
-):
+def test_qos_high_job_submit(basic_residential_project_file, monkeypatch, mocker, hpc_name):
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
     mock_subprocess.run.return_value.stdout = "Submitted batch job 1\n"
     mock_subprocess.PIPE = None
-    mocker.patch.object(
-        SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif"
-    )
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     Batch = eval(f"{hpc_name.capitalize()}Batch")
     mocker.patch.object(SlurmBatch, "weather_dir", None)
     project_filename, results_dir = basic_residential_project_file(hpc_name=hpc_name)
@@ -246,15 +225,11 @@ def test_qos_high_job_submit(
 
 
 @pytest.mark.parametrize("hpc_name", ["eagle", "kestrel"])
-def test_queue_jobs_minutes_per_sim(
-    mocker, basic_residential_project_file, monkeypatch, hpc_name
-):
+def test_queue_jobs_minutes_per_sim(mocker, basic_residential_project_file, monkeypatch, hpc_name):
     mock_subprocess = mocker.patch("buildstockbatch.hpc.subprocess")
     Batch = eval(f"{hpc_name.capitalize()}Batch")
     mocker.patch.object(Batch, "weather_dir", None)
-    mocker.patch.object(
-        SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif"
-    )
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mock_subprocess.run.return_value.stdout = "Submitted batch job 1\n"
     mock_subprocess.PIPE = None
     project_filename, results_dir = basic_residential_project_file(
@@ -305,14 +280,10 @@ def test_run_building_process(mocker, basic_residential_project_file):
     with open(results_dir / "job001.json", "w") as f:
         json.dump(job_json, f)
 
-    sample_buildstock_csv = pd.DataFrame.from_records(
-        [{"Building": i, "Dummy Column": i * i} for i in range(10)]
-    )
+    sample_buildstock_csv = pd.DataFrame.from_records([{"Building": i, "Dummy Column": i * i} for i in range(10)])
     os.makedirs(results_dir / "housing_characteristics", exist_ok=True)
     os.makedirs(results_dir / "weather", exist_ok=True)
-    sample_buildstock_csv.to_csv(
-        results_dir / "housing_characteristics" / "buildstock.csv", index=False
-    )
+    sample_buildstock_csv.to_csv(results_dir / "housing_characteristics" / "buildstock.csv", index=False)
 
     def sequential_parallel(**kwargs):
         kw2 = kwargs.copy()
@@ -323,15 +294,9 @@ def test_run_building_process(mocker, basic_residential_project_file):
     rmtree_mock = mocker.patch("buildstockbatch.hpc.shutil.rmtree")
     mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.hpc.subprocess")
-    mocker.patch.object(
-        SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif"
-    )
-    mocker.patch.object(
-        KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir"
-    )
-    mocker.patch.object(
-        KestrelBatch, "local_weather_dir", results_dir / "local_weather_dir"
-    )
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
+    mocker.patch.object(KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir")
+    mocker.patch.object(KestrelBatch, "local_weather_dir", results_dir / "local_weather_dir")
     mocker.patch.object(KestrelBatch, "local_output_dir", results_dir)
     mocker.patch.object(
         KestrelBatch,
@@ -344,20 +309,14 @@ def test_run_building_process(mocker, basic_residential_project_file):
     def make_sim_dir_mock(building_id, upgrade_idx, base_dir, overwrite_existing=False):
         real_upgrade_idx = 0 if upgrade_idx is None else upgrade_idx + 1
         sim_id = f"bldg{building_id:07d}up{real_upgrade_idx:02d}"
-        sim_dir = os.path.join(
-            base_dir, f"up{real_upgrade_idx:02d}", f"bldg{building_id:07d}"
-        )
+        sim_dir = os.path.join(base_dir, f"up{real_upgrade_idx:02d}", f"bldg{building_id:07d}")
         return sim_id, sim_dir
 
     mocker.patch.object(KestrelBatch, "make_sim_dir", make_sim_dir_mock)
-    sampler_prop_mock = mocker.patch.object(
-        KestrelBatch, "sampler", new_callable=mocker.PropertyMock
-    )
+    sampler_prop_mock = mocker.patch.object(KestrelBatch, "sampler", new_callable=mocker.PropertyMock)
     sampler_mock = mocker.MagicMock()
     sampler_prop_mock.return_value = sampler_mock
-    sampler_mock.csv_path = (
-        results_dir.parent / "housing_characteristic2" / "buildstock.csv"
-    )
+    sampler_mock.csv_path = results_dir.parent / "housing_characteristic2" / "buildstock.csv"
     sampler_mock.run_sampling = mocker.MagicMock(return_value="buildstock.csv")
 
     b = KestrelBatch(project_filename)
@@ -370,19 +329,11 @@ def test_run_building_process(mocker, basic_residential_project_file):
     rmtree_mock.assert_any_call(b.local_housing_characteristics_dir)
 
     # check results job-json
-    refrence_path = (
-        pathlib.Path(__file__).resolve().parent / "test_results" / "reference_files"
-    )
+    refrence_path = pathlib.Path(__file__).resolve().parent / "test_results" / "reference_files"
 
-    refrence_list = json.loads(
-        gzip.open(refrence_path / "results_job1.json.gz", "r").read()
-    )
+    refrence_list = json.loads(gzip.open(refrence_path / "results_job1.json.gz", "r").read())
 
-    output_list = json.loads(
-        gzip.open(
-            results_dir / "simulation_output" / "results_job1.json.gz", "r"
-        ).read()
-    )
+    output_list = json.loads(gzip.open(results_dir / "simulation_output" / "results_job1.json.gz", "r").read())
 
     refrence_list = [json.dumps(d) for d in refrence_list]
     output_list = [json.dumps(d) for d in output_list]
@@ -392,35 +343,16 @@ def test_run_building_process(mocker, basic_residential_project_file):
     ts_files = list(refrence_path.glob("**/*.parquet"))
 
     def compare_ts_parquets(source, dst):
-        test_pq = (
-            pd.read_parquet(source)
-            .reset_index()
-            .drop(columns=["index"])
-            .rename(columns=str.lower)
-        )
-        reference_pq = (
-            pd.read_parquet(dst)
-            .reset_index()
-            .drop(columns=["index"])
-            .rename(columns=str.lower)
-        )
+        test_pq = pd.read_parquet(source).reset_index().drop(columns=["index"]).rename(columns=str.lower)
+        reference_pq = pd.read_parquet(dst).reset_index().drop(columns=["index"]).rename(columns=str.lower)
         pd.testing.assert_frame_equal(test_pq, reference_pq)
 
     for file in ts_files:
-        results_file = (
-            results_dir
-            / "results"
-            / "simulation_output"
-            / "timeseries"
-            / file.parent.name
-            / file.name
-        )
+        results_file = results_dir / "results" / "simulation_output" / "timeseries" / file.parent.name / file.name
         compare_ts_parquets(file, results_file)
 
     # Check that buildstock.csv was trimmed properly
-    local_buildstock_df = read_csv(
-        results_dir / "local_housing_characteristics_dir" / "buildstock.csv", dtype=str
-    )
+    local_buildstock_df = read_csv(results_dir / "local_housing_characteristics_dir" / "buildstock.csv", dtype=str)
     unique_buildings = {str(x[0]) for x in job_json["batch"]}
     assert len(unique_buildings) == len(local_buildstock_df)
     assert unique_buildings == set(local_buildstock_df["Building"])
@@ -434,15 +366,11 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     with open(results_dir / "job001.json", "w") as f:
         json.dump(job_json, f)
 
-    sample_buildstock_csv = pd.DataFrame.from_records(
-        [{"Building": i, "Dummy Column": i * i} for i in range(10)]
-    )
+    sample_buildstock_csv = pd.DataFrame.from_records([{"Building": i, "Dummy Column": i * i} for i in range(10)])
     os.makedirs(results_dir / "housing_characteristics", exist_ok=True)
     os.makedirs(results_dir / "local_housing_characteristics", exist_ok=True)
     os.makedirs(results_dir / "weather", exist_ok=True)
-    sample_buildstock_csv.to_csv(
-        results_dir / "housing_characteristics" / "buildstock.csv", index=False
-    )
+    sample_buildstock_csv.to_csv(results_dir / "housing_characteristics" / "buildstock.csv", index=False)
 
     def raise_error(*args, **kwargs):
         raise RuntimeError("A problem happened")
@@ -456,18 +384,12 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     mocker.patch("buildstockbatch.hpc.shutil.rmtree")
     mocker.patch("buildstockbatch.hpc.Parallel", sequential_parallel)
     mocker.patch("buildstockbatch.hpc.subprocess")
-    mocker.patch.object(
-        SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif"
-    )
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mocker.patch.object(KestrelBatch, "run_building", raise_error)
     mocker.patch.object(KestrelBatch, "local_output_dir", results_dir)
     mocker.patch.object(KestrelBatch, "results_dir", results_dir)
-    mocker.patch.object(
-        KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir"
-    )
-    mocker.patch.object(
-        KestrelBatch, "local_weather_dir", results_dir / "local_weather_dir"
-    )
+    mocker.patch.object(KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir")
+    mocker.patch.object(KestrelBatch, "local_weather_dir", results_dir / "local_weather_dir")
     mocker.patch.object(
         KestrelBatch,
         "local_housing_characteristics_dir",
@@ -491,15 +413,9 @@ def test_rerun_failed_jobs(mocker, basic_residential_project_file):
     mocker.patch.object(KestrelBatch, "weather_dir", None)
     mocker.patch.object(KestrelBatch, "results_dir", results_dir)
     process_results_mocker = mocker.patch.object(BuildStockBatchBase, "process_results")
-    queue_jobs_mocker = mocker.patch.object(
-        KestrelBatch, "queue_jobs", return_value=[42]
-    )
-    queue_post_processing_mocker = mocker.patch.object(
-        KestrelBatch, "queue_post_processing"
-    )
-    mocker.patch.object(
-        KestrelBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif"
-    )
+    queue_jobs_mocker = mocker.patch.object(KestrelBatch, "queue_jobs", return_value=[42])
+    queue_post_processing_mocker = mocker.patch.object(KestrelBatch, "queue_post_processing")
+    mocker.patch.object(KestrelBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
 
     b = KestrelBatch(project_filename)
 

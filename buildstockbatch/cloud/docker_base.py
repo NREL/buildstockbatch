@@ -30,13 +30,7 @@ import time
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.utils import (
-    ContainerRuntime,
-    calc_hash_for_file,
-    compress_file,
-    read_csv,
-    get_bool_env_var,
-)
+from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress_file, read_csv, get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +64,8 @@ class DockerBatchBase(BuildStockBatchBase):
         try:
             self.docker_client.ping()
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
-            logger.error(
-                "The docker server did not respond, make sure Docker Desktop is started then retry."
-            )
-            raise RuntimeError(
-                "The docker server did not respond, make sure Docker Desktop is started then retry."
-            )
+            logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
+            raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
 
     @staticmethod
     def validate_project(project_file):
@@ -202,14 +192,10 @@ class DockerBatchBase(BuildStockBatchBase):
             self._get_weather_files()
 
             # Determine the unique weather files
-            epw_filenames = list(
-                filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir))
-            )
+            epw_filenames = list(filter(lambda x: x.endswith(".epw"), os.listdir(self.weather_dir)))
             logger.info("Calculating hashes for weather files")
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
-                delayed(calc_hash_for_file)(
-                    pathlib.Path(self.weather_dir) / epw_filename
-                )
+                delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
                 for epw_filename in epw_filenames
             )
             # keep track of unique EPWs that may have dupes, and to compress and upload to cloud
@@ -219,9 +205,7 @@ class DockerBatchBase(BuildStockBatchBase):
             for epw_filename, epw_hash in zip(epw_filenames, epw_hashes):
                 if bool(unique_epws[epw_hash]):
                     # not the first file with this hash (it's a duplicate). add to ``epws_to_copy``
-                    epws_to_copy.append(
-                        (unique_epws[epw_hash][0] + ".gz", epw_filename + ".gz")
-                    )
+                    epws_to_copy.append((unique_epws[epw_hash][0] + ".gz", epw_filename + ".gz"))
                 unique_epws[epw_hash].append(epw_filename)
 
             # Compress unique weather files and save to ``tmp_weather_out_path``, which will get
@@ -246,10 +230,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 total_count += count
                 if count > 1:
                     dupe_count += count - 1
-                    bytes = (
-                        os.path.getsize(str(tmp_weather_out_path / epws[0]) + ".gz")
-                        * dupe_count
-                    )
+                    bytes = os.path.getsize(str(tmp_weather_out_path / epws[0]) + ".gz") * dupe_count
                     dupe_bytes = bytes * (count - 1)
             logger.info(
                 f"Identified {dupe_count:,} duplicate weather files "
@@ -276,9 +257,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
         # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
         baseline_sims = zip(building_ids, itertools.repeat(None))
-        upgrade_sims = itertools.product(
-            building_ids, range(len(self.cfg.get("upgrades", [])))
-        )
+        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
         all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
@@ -334,9 +313,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 "lib/housing_characteristics",
             )
 
-        return DockerBatchBase.BatchInfo(
-            n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count
-        )
+        return DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count)
 
     @classmethod
     def get_epws_to_download(cls, sim_dir, jobs_d):
@@ -349,9 +326,7 @@ class DockerBatchBase(BuildStockBatchBase):
         :returns: Set of epw filenames needed for this batch of simulations.
         """
         # Make a lookup of which parameter points to the weather file from options_lookup.tsv
-        with open(
-            sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8"
-        ) as f:
+        with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
             tsv_reader = csv.reader(f, delimiter="\t")
             next(tsv_reader)  # skip headers
             param_name = None
@@ -411,9 +386,7 @@ class DockerBatchBase(BuildStockBatchBase):
                 sim_id = f"bldg{building_id:07d}up{upgrade_id:02d}"
 
                 # Create OSW
-                osw = cls.create_osw(
-                    cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx
-                )
+                osw = cls.create_osw(cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx)
                 with open(os.path.join(sim_dir, "in.osw"), "w") as f:
                     json.dump(osw, f, indent=4)
 
