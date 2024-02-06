@@ -62,7 +62,9 @@ def backoff(thefunc, *args, **kwargs):
             caught_error = False
             for pat in error_patterns:
                 if re.search(pat, error_code):
-                    logger.debug(f"{error_code}: Waiting and retrying in {delay} seconds")
+                    logger.debug(
+                        f"{error_code}: Waiting and retrying in {delay} seconds"
+                    )
                     caught_error = True
                     time.sleep(delay)
                     delay *= backoff_mult
@@ -88,7 +90,9 @@ def upload_directory_to_s3(local_directory, bucket, prefix):
                 if filename.startswith("."):
                     continue
                 local_filepath = pathlib.Path(dirpath, filename)
-                s3_key = pathlib.PurePosixPath(prefix, local_filepath.relative_to(local_dir_abs))
+                s3_key = pathlib.PurePosixPath(
+                    prefix, local_filepath.relative_to(local_dir_abs)
+                )
                 yield local_filepath, s3_key
 
     logger.debug("Uploading {} => {}/{}".format(local_dir_abs, bucket, prefix))
@@ -131,7 +135,9 @@ class AwsBatchEnv(AwsJobBase):
         self.batch = self.session.client("batch", config=boto_client_config)
         self.ec2 = self.session.client("ec2", config=boto_client_config)
         self.ec2r = self.session.resource("ec2", config=boto_client_config)
-        self.step_functions = self.session.client("stepfunctions", config=boto_client_config)
+        self.step_functions = self.session.client(
+            "stepfunctions", config=boto_client_config
+        )
         self.aws_lambda = self.session.client("lambda", config=boto_client_config)
         self.s3 = self.session.client("s3", config=boto_client_config)
         self.s3_res = self.session.resource("s3", config=boto_client_config)
@@ -266,7 +272,9 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the public subnet
 
-        pub_response = self.ec2.create_subnet(CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
+        pub_response = self.ec2.create_subnet(
+            CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id
+        )
 
         logger.info("EIP allocated.")
 
@@ -298,7 +306,9 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create an internet gateway
 
-        self.ec2.attach_internet_gateway(InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
+        self.ec2.attach_internet_gateway(
+            InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id
+        )
 
         logger.info("Internet Gateway attached.")
 
@@ -333,7 +343,9 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create a NAT Gateway
 
-        nat_response = self.ec2.create_nat_gateway(AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id)
+        nat_response = self.ec2.create_nat_gateway(
+            AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id
+        )
 
         self.nat_gateway_id = nat_response["NatGateway"]["NatGatewayId"]
 
@@ -361,10 +373,14 @@ class AwsBatchEnv(AwsJobBase):
 
         # Associate the private route to the private subnet
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1)
+        self.ec2.associate_route_table(
+            RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1
+        )
         logger.info("Route table associated with subnet.")
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2)
+        self.ec2.associate_route_table(
+            RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2
+        )
         logger.info("Route table associated with subnet.")
 
         # Associate the NAT gateway with the private route
@@ -423,7 +439,9 @@ class AwsBatchEnv(AwsJobBase):
             self.batch_service_role_name,
             "batch",
             f"Service role for Batch environment {self.job_identifier}",
-            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"],
+            managed_policie_arns=[
+                "arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole"
+            ],
         )
 
         # Instance Role for Batch compute environment
@@ -432,13 +450,17 @@ class AwsBatchEnv(AwsJobBase):
             self.batch_instance_role_name,
             "ec2",
             f"Instance role for Batch compute environment {self.job_identifier}",
-            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"],
+            managed_policie_arns=[
+                "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+            ],
         )
 
         # Instance Profile
 
         try:
-            response = self.iam.create_instance_profile(InstanceProfileName=self.batch_instance_profile_name)
+            response = self.iam.create_instance_profile(
+                InstanceProfileName=self.batch_instance_profile_name
+            )
 
             self.instance_profile_arn = response["InstanceProfile"]["Arn"]
 
@@ -452,7 +474,9 @@ class AwsBatchEnv(AwsJobBase):
         except Exception as e:
             if "EntityAlreadyExists" in str(e):
                 logger.info("ECS Instance Profile not created - already exists")
-                response = self.iam.get_instance_profile(InstanceProfileName=self.batch_instance_profile_name)
+                response = self.iam.get_instance_profile(
+                    InstanceProfileName=self.batch_instance_profile_name
+                )
                 self.instance_profile_arn = response["InstanceProfile"]["Arn"]
 
         # ECS Task Policy
@@ -557,7 +581,9 @@ class AwsBatchEnv(AwsJobBase):
                 self.batch_spot_service_role_name,
                 "spotfleet",
                 f"Spot Fleet role for Batch compute environment {self.job_identifier}",
-                managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"],
+                managed_policie_arns=[
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"
+                ],
             )
 
     def create_compute_environment(self, maxCPUs=10000):
@@ -582,13 +608,18 @@ class AwsBatchEnv(AwsJobBase):
                 },
             )
         except ClientError as error:
-            if error.response["Error"]["Code"] == "InvalidLaunchTemplateName.AlreadyExistsException":
+            if (
+                error.response["Error"]["Code"]
+                == "InvalidLaunchTemplateName.AlreadyExistsException"
+            ):
                 logger.debug("Launch template exists, skipping creation")
             else:
                 raise error
 
         while True:
-            lt_resp = self.ec2.describe_launch_templates(LaunchTemplateNames=[self.launch_template_name])
+            lt_resp = self.ec2.describe_launch_templates(
+                LaunchTemplateNames=[self.launch_template_name]
+            )
             launch_templates = lt_resp["LaunchTemplates"]
             next_token = lt_resp.get("NextToken")
             while next_token:
@@ -599,9 +630,13 @@ class AwsBatchEnv(AwsJobBase):
                 launch_templates.extend(lt_resp["LaunchTemplates"])
                 next_token = lt_resp.get("NextToken")
             n_launch_templates = len(launch_templates)
-            assert n_launch_templates <= 1, f"There are {n_launch_templates} launch templates, this shouldn't happen."
+            assert (
+                n_launch_templates <= 1
+            ), f"There are {n_launch_templates} launch templates, this shouldn't happen."
             if n_launch_templates == 0:
-                logger.debug(f"Waiting for the launch template {self.launch_template_name} to be created")
+                logger.debug(
+                    f"Waiting for the launch template {self.launch_template_name} to be created"
+                )
                 time.sleep(5)
             if n_launch_templates == 1:
                 break
@@ -633,7 +668,9 @@ class AwsBatchEnv(AwsJobBase):
             else:
                 compute_resources["type"] = "EC2"
 
-            compute_resources["tags"] = self.get_tags(Name=f"{self.job_identifier} batch instance")
+            compute_resources["tags"] = self.get_tags(
+                Name=f"{self.job_identifier} batch instance"
+            )
 
             self.batch.create_compute_environment(
                 computeEnvironmentName=self.batch_compute_environment_name,
@@ -644,11 +681,15 @@ class AwsBatchEnv(AwsJobBase):
                 tags=self.get_tags(),
             )
 
-            logger.info(f"Compute environment {self.batch_compute_environment_name} created.")
+            logger.info(
+                f"Compute environment {self.batch_compute_environment_name} created."
+            )
 
         except Exception as e:
             if "Object already exists" in str(e):
-                logger.info(f"Compute environment {self.batch_compute_environment_name} not created - already exists")
+                logger.info(
+                    f"Compute environment {self.batch_compute_environment_name} not created - already exists"
+                )
             else:
                 raise
 
@@ -680,7 +721,9 @@ class AwsBatchEnv(AwsJobBase):
 
             except Exception as e:
                 if "Object already exists" in str(e):
-                    logger.info(f"Job queue {self.batch_job_queue_name} not created - already exists")
+                    logger.info(
+                        f"Job queue {self.batch_job_queue_name} not created - already exists"
+                    )
                     response = self.batch.describe_job_queues(
                         jobQueues=[
                             self.batch_job_queue_name,
@@ -691,7 +734,10 @@ class AwsBatchEnv(AwsJobBase):
 
                 elif "is not valid" in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.warning("wating a few seconds for compute environment creation: " + str(e))
+                    logger.warning(
+                        "wating a few seconds for compute environment creation: "
+                        + str(e)
+                    )
                     time.sleep(5)
 
                 else:
@@ -747,7 +793,10 @@ class AwsBatchEnv(AwsJobBase):
             except Exception as e:
                 if "not in VALID state" in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.warning("5 second sleep initiated to wait for job queue creation due to error: " + str(e))
+                    logger.warning(
+                        "5 second sleep initiated to wait for job queue creation due to error: "
+                        + str(e)
+                    )
                     time.sleep(5)
                 else:
                     raise
@@ -787,25 +836,35 @@ class AwsBatchEnv(AwsJobBase):
                 default_group_id = group["GroupId"]
                 dsg = self.ec2r.SecurityGroup(default_group_id)
                 if len(dsg.ip_permissions_egress):
-                    response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
+                    response = dsg.revoke_egress(
+                        IpPermissions=dsg.ip_permissions_egress
+                    )
 
         try:
-            self.batch.update_job_queue(jobQueue=self.batch_job_queue_name, state="DISABLED")
+            self.batch.update_job_queue(
+                jobQueue=self.batch_job_queue_name, state="DISABLED"
+            )
 
             while True:
                 try:
-                    response = self.batch.delete_job_queue(jobQueue=self.batch_job_queue_name)
+                    response = self.batch.delete_job_queue(
+                        jobQueue=self.batch_job_queue_name
+                    )
                     logger.info(f"Job queue {self.batch_job_queue_name} deleted.")
                     break
                 except Exception as e:
                     if "Cannot delete, resource is being modified" in str(e):
-                        logger.info("Job queue being modified - sleeping until ready...")
+                        logger.info(
+                            "Job queue being modified - sleeping until ready..."
+                        )
                         time.sleep(5)
                     else:
                         raise
         except Exception as e:
             if "does not exist" in str(e):
-                logger.info(f"Job queue {self.batch_job_queue_name} missing, skipping...")
+                logger.info(
+                    f"Job queue {self.batch_job_queue_name} missing, skipping..."
+                )
 
         # Delete compute enviornment
 
@@ -819,26 +878,38 @@ class AwsBatchEnv(AwsJobBase):
                     response = self.batch.delete_compute_environment(
                         computeEnvironment=self.batch_compute_environment_name
                     )
-                    logger.info(f"Compute environment {self.batch_compute_environment_name} deleted.")
+                    logger.info(
+                        f"Compute environment {self.batch_compute_environment_name} deleted."
+                    )
                     break
                 except Exception as e:
-                    if "Cannot delete, resource is being modified" in str(e) or "found existing JobQueue" in str(e):
-                        logger.info("Compute environment being modified - sleeping until ready...")
+                    if "Cannot delete, resource is being modified" in str(
+                        e
+                    ) or "found existing JobQueue" in str(e):
+                        logger.info(
+                            "Compute environment being modified - sleeping until ready..."
+                        )
                         time.sleep(5)
                     else:
                         raise
         except Exception as e:
             if "does not exist" in str(e):
-                logger.info(f"Compute environment {self.batch_compute_environment_name} missing, skipping...")
+                logger.info(
+                    f"Compute environment {self.batch_compute_environment_name} missing, skipping..."
+                )
             else:
                 raise
 
         # Delete Launch Template
         try:
-            self.ec2.delete_launch_template(LaunchTemplateName=self.launch_template_name)
+            self.ec2.delete_launch_template(
+                LaunchTemplateName=self.launch_template_name
+            )
         except Exception as e:
             if "does not exist" in str(e):
-                logger.info(f"Launch template {self.launch_template_name} does not exist, skipping...")
+                logger.info(
+                    f"Launch template {self.launch_template_name} does not exist, skipping..."
+                )
             else:
                 raise
 
@@ -846,7 +917,9 @@ class AwsBatchEnv(AwsJobBase):
         self.iam_helper.delete_role(self.batch_spot_service_role_name)
         self.iam_helper.delete_role(self.batch_ecs_task_role_name)
         # Instance profile order of removal
-        self.iam_helper.remove_role_from_instance_profile(self.batch_instance_profile_name)
+        self.iam_helper.remove_role_from_instance_profile(
+            self.batch_instance_profile_name
+        )
         self.iam_helper.delete_role(self.batch_instance_role_name)
         self.iam_helper.delete_instance_profile(self.batch_instance_profile_name)
 
@@ -866,7 +939,9 @@ class AwsBatchEnv(AwsJobBase):
         for vpc in response["Vpcs"]:
             this_vpc = vpc["VpcId"]
 
-            s3gw_response = self.ec2.describe_vpc_endpoints(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
+            s3gw_response = self.ec2.describe_vpc_endpoints(
+                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
+            )
 
             for s3gw in s3gw_response["VpcEndpoints"]:
                 this_s3gw = s3gw["VpcEndpointId"]
@@ -874,7 +949,9 @@ class AwsBatchEnv(AwsJobBase):
                 if s3gw["State"] != "deleted":
                     self.ec2.delete_vpc_endpoints(VpcEndpointIds=[this_s3gw])
 
-            ng_response = self.ec2.describe_nat_gateways(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
+            ng_response = self.ec2.describe_nat_gateways(
+                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
+            )
 
             for natgw in ng_response["NatGateways"]:
                 this_natgw = natgw["NatGatewayId"]
@@ -882,7 +959,9 @@ class AwsBatchEnv(AwsJobBase):
                 if natgw["State"] != "deleted":
                     self.ec2.delete_nat_gateway(NatGatewayId=this_natgw)
 
-            rtas_response = self.ec2.describe_route_tables(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
+            rtas_response = self.ec2.describe_route_tables(
+                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
+            )
 
             for route_table in rtas_response["RouteTables"]:
                 route_table_id = route_table["RouteTableId"]
@@ -894,7 +973,9 @@ class AwsBatchEnv(AwsJobBase):
                         rt_counter = 10
                         while rt_counter:
                             try:
-                                response = self.ec2.delete_route_table(RouteTableId=route_table_id)
+                                response = self.ec2.delete_route_table(
+                                    RouteTableId=route_table_id
+                                )
                                 logger.info("Route table removed.")
                                 break
                             except Exception as e:
@@ -918,14 +999,20 @@ class AwsBatchEnv(AwsJobBase):
                             try:
                                 try:
                                     self.ec2.detach_internet_gateway(
-                                        InternetGatewayId=internet_gateway["InternetGatewayId"],
+                                        InternetGatewayId=internet_gateway[
+                                            "InternetGatewayId"
+                                        ],
                                         VpcId=attachment["VpcId"],
                                     )
                                 except Exception as e:
-                                    logger.info(f"Error on Internet Gateway disassociation - ignoring... {str(e)}")
+                                    logger.info(
+                                        f"Error on Internet Gateway disassociation - ignoring... {str(e)}"
+                                    )
 
                                 self.ec2.delete_internet_gateway(
-                                    InternetGatewayId=internet_gateway["InternetGatewayId"]
+                                    InternetGatewayId=internet_gateway[
+                                        "InternetGatewayId"
+                                    ]
                                 )
                                 logger.info("Internet Gateway deleted.")
                                 break
@@ -939,7 +1026,9 @@ class AwsBatchEnv(AwsJobBase):
                                 else:
                                     raise
 
-            subn_response = self.ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
+            subn_response = self.ec2.describe_subnets(
+                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
+            )
 
             for subnet in subn_response["Subnets"]:
                 while True:
@@ -948,7 +1037,9 @@ class AwsBatchEnv(AwsJobBase):
                         break
                     except Exception as e:
                         if "DependencyViolation" in str(e):
-                            logger.info("Subnet cannot be deleted as dependencies are still being deleted. Sleeping...")
+                            logger.info(
+                                "Subnet cannot be deleted as dependencies are still being deleted. Sleeping..."
+                            )
                             time.sleep(10)
                         else:
                             raise
@@ -984,11 +1075,15 @@ class AwsBatch(DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
-        self.job_identifier = re.sub("[^0-9a-zA-Z]+", "_", self.cfg["aws"]["job_identifier"])[:10]
+        self.job_identifier = re.sub(
+            "[^0-9a-zA-Z]+", "_", self.cfg["aws"]["job_identifier"]
+        )[:10]
 
         self.project_filename = project_filename
         self.region = self.cfg["aws"]["region"]
-        self.ecr = boto3.client("ecr", region_name=self.region, config=boto_client_config)
+        self.ecr = boto3.client(
+            "ecr", region_name=self.region, config=boto_client_config
+        )
         self.s3 = boto3.client("s3", region_name=self.region, config=boto_client_config)
         self.s3_bucket = self.cfg["aws"]["s3"]["bucket"]
         self.s3_bucket_prefix = self.cfg["aws"]["s3"]["prefix"].rstrip("/")
@@ -1000,7 +1095,9 @@ class AwsBatch(DockerBatchBase):
     def validate_dask_settings(project_file):
         cfg = get_project_configuration(project_file)
         if "emr" in cfg["aws"]:
-            logger.warning("The `aws.emr` configuration is no longer used and is ignored. Recommend removing.")
+            logger.warning(
+                "The `aws.emr` configuration is no longer used and is ignored. Recommend removing."
+            )
         dask_cfg = cfg["aws"]["dask"]
         errors = []
         mem_rules = {
@@ -1013,16 +1110,22 @@ class AwsBatch(DockerBatchBase):
         for node_type in ("scheduler", "worker"):
             mem = dask_cfg.get(f"{node_type}_memory", 8 * 1024)
             if mem % 1024 != 0:
-                errors.append(f"`aws.dask.{node_type}_memory` = {mem}, needs to be a multiple of 1024.")
+                errors.append(
+                    f"`aws.dask.{node_type}_memory` = {mem}, needs to be a multiple of 1024."
+                )
             mem_gb = mem // 1024
-            min_gb, max_gb, incr_gb = mem_rules[dask_cfg.get(f"{node_type}_cpu", 2 * 1024)]
+            min_gb, max_gb, incr_gb = mem_rules[
+                dask_cfg.get(f"{node_type}_cpu", 2 * 1024)
+            ]
             if not (min_gb <= mem_gb <= max_gb and (mem_gb - min_gb) % incr_gb == 0):
                 errors.append(
                     f"`aws.dask.{node_type}_memory` = {mem}, "
                     f"should be between {min_gb * 1024} and {max_gb * 1024} in a multiple of {incr_gb * 1024}."
                 )
         if errors:
-            errors.append("See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html")
+            errors.append(
+                "See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html"
+            )
             raise ValidationError("\n".join(errors))
 
         return True
@@ -1071,22 +1174,32 @@ class AwsBatch(DockerBatchBase):
         """
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / "Dockerfile").exists():
-            raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
+            raise RuntimeError(
+                f"The needs to be run from the root of the repo, found {root_path}"
+            )
 
         # Make the buildstock/resources/.aws_docker_image dir to store logs
-        local_log_dir = os.path.join(self.buildstock_dir, "resources", ".aws_docker_image")
+        local_log_dir = os.path.join(
+            self.buildstock_dir, "resources", ".aws_docker_image"
+        )
         if not os.path.exists(local_log_dir):
             os.makedirs(local_log_dir)
 
         # Determine whether or not to build the image with custom gems bundled in
         if self.cfg.get("baseline", dict()).get("custom_gems", False):
             # Ensure the custom Gemfile exists in the buildstock dir
-            local_gemfile_path = os.path.join(self.buildstock_dir, "resources", "Gemfile")
+            local_gemfile_path = os.path.join(
+                self.buildstock_dir, "resources", "Gemfile"
+            )
             if not os.path.exists(local_gemfile_path):
-                raise AttributeError(f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}")
+                raise AttributeError(
+                    f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}"
+                )
 
             # Copy the custom Gemfile into the buildstockbatch repo
-            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
+            bsb_root = os.path.join(
+                os.path.abspath(__file__), os.pardir, os.pardir, os.pardir
+            )
             new_gemfile_path = os.path.join(bsb_root, "Gemfile")
             shutil.copyfile(local_gemfile_path, new_gemfile_path)
             logger.info(f"Copying custom Gemfile from {local_gemfile_path}")
@@ -1099,7 +1212,9 @@ class AwsBatch(DockerBatchBase):
             # which stops before bundling custom gems into the image
             stage = "buildstockbatch"
 
-        logger.info(f"Building docker image stage: {stage} from OpenStudio {self.os_version}")
+        logger.info(
+            f"Building docker image stage: {stage} from OpenStudio {self.os_version}"
+        )
         img, build_logs = self.docker_client.images.build(
             path=str(root_path),
             tag=self.docker_image,
@@ -1151,16 +1266,22 @@ class AwsBatch(DockerBatchBase):
         """
         auth_token = self.ecr.get_authorization_token()
         dkr_user, dkr_pass = (
-            base64.b64decode(auth_token["authorizationData"][0]["authorizationToken"]).decode("ascii").split(":")
+            base64.b64decode(auth_token["authorizationData"][0]["authorizationToken"])
+            .decode("ascii")
+            .split(":")
         )
         repo_url = self.container_repo["repositoryUri"]
         registry_url = "https://" + repo_url.split("/")[0]
-        resp = self.docker_client.login(username=dkr_user, password=dkr_pass, registry=registry_url)
+        resp = self.docker_client.login(
+            username=dkr_user, password=dkr_pass, registry=registry_url
+        )
         logger.debug(resp)
         image = self.docker_client.images.get(self.docker_image)
         image.tag(repo_url, tag=self.job_identifier)
         last_status = None
-        for x in self.docker_client.images.push(repo_url, tag=self.job_identifier, stream=True):
+        for x in self.docker_client.images.push(
+            repo_url, tag=self.job_identifier, stream=True
+        ):
             try:
                 y = json.loads(x)
             except json.JSONDecodeError:
@@ -1177,7 +1298,9 @@ class AwsBatch(DockerBatchBase):
         """
         logger.info("Beginning cleanup of AWS resources...")
 
-        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
+        batch_env = AwsBatchEnv(
+            self.job_identifier, self.cfg["aws"], self.boto3_session
+        )
         batch_env.clean()
 
     def upload_batch_files_to_cloud(self, tmppath):
@@ -1214,7 +1337,9 @@ class AwsBatch(DockerBatchBase):
             )
 
         # Define the batch environment
-        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
+        batch_env = AwsBatchEnv(
+            self.job_identifier, self.cfg["aws"], self.boto3_session
+        )
         logger.info(
             "Launching Batch environment - (resource configs will not be updated on subsequent executions, but new job revisions will be created):"  # noqa 501
         )
@@ -1246,14 +1371,18 @@ class AwsBatch(DockerBatchBase):
 
         # Monitor job status
         n_succeeded_last_time = 0
-        with tqdm.tqdm(desc="Running Simulations", total=self.batch_array_size) as progress_bar:
+        with tqdm.tqdm(
+            desc="Running Simulations", total=self.batch_array_size
+        ) as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED"):
                 time.sleep(10)
                 job_desc_resp = batch_env.batch.describe_jobs(jobs=[job_info["jobId"]])
                 job_status = job_desc_resp["jobs"][0]["status"]
 
-                jobs_resp = batch_env.batch.list_jobs(arrayJobId=job_info["jobId"], jobStatus="SUCCEEDED")
+                jobs_resp = batch_env.batch.list_jobs(
+                    arrayJobId=job_info["jobId"], jobStatus="SUCCEEDED"
+                )
                 n_succeeded = len(jobs_resp["jobSummaryList"])
                 next_token = jobs_resp.get("nextToken")
                 while next_token is not None:
@@ -1302,7 +1431,9 @@ class AwsBatch(DockerBatchBase):
         jobs_file_path = sim_dir.parent / "jobs.tar.gz"
         s3.download_file(bucket, f"{prefix}/jobs.tar.gz", str(jobs_file_path))
         with tarfile.open(jobs_file_path, "r") as tar_f:
-            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8")
+            jobs_d = json.load(
+                tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8"
+            )
         logger.debug("Number of simulations = {}".format(len(jobs_d["batch"])))
 
         logger.debug("Getting weather files")
@@ -1310,7 +1441,9 @@ class AwsBatch(DockerBatchBase):
         os.makedirs(weather_dir, exist_ok=True)
 
         # Make a lookup of which parameter points to the weather file from options_lookup.tsv
-        with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
+        with open(
+            sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8"
+        ) as f:
             tsv_reader = csv.reader(f, delimiter="\t")
             next(tsv_reader)  # skip headers
             param_name = None
@@ -1322,7 +1455,9 @@ class AwsBatch(DockerBatchBase):
                         raise RuntimeError(
                             f"The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}"
                         )  # noqa: E501
-                    epw_filename = row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
+                    epw_filename = (
+                        row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
+                    )
                     param_name = row[0]
                     option_name = row[1]
                     epws_by_option[option_name] = epw_filename
@@ -1349,7 +1484,9 @@ class AwsBatch(DockerBatchBase):
                     logger.debug("Extracting {}".format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 
-        cls.run_simulations(cfg, job_id, jobs_d, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
+        cls.run_simulations(
+            cfg, job_id, jobs_d, sim_dir, S3FileSystem(), f"{bucket}/{prefix}"
+        )
 
     def get_fs(self):
         return S3FileSystem()
@@ -1357,7 +1494,9 @@ class AwsBatch(DockerBatchBase):
     def get_dask_client(self):
         dask_cfg = self.cfg["aws"]["dask"]
 
-        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
+        batch_env = AwsBatchEnv(
+            self.job_identifier, self.cfg["aws"], self.boto3_session
+        )
         m = 1024
         self.dask_cluster = FargateCluster(
             region_name=self.region,
@@ -1391,7 +1530,9 @@ class AwsBatch(DockerBatchBase):
             cfg = deepcopy(self.cfg)
             container_buildstock_dir = str(container_workpath / "buildstock")
             cfg["buildstock_directory"] = container_buildstock_dir
-            cfg["project_directory"] = str(pathlib.Path(self.project_dir).relative_to(self.buildstock_dir))
+            cfg["project_directory"] = str(
+                pathlib.Path(self.project_dir).relative_to(self.buildstock_dir)
+            )
 
             with open(tmppath / "project_config.yml", "w") as f:
                 f.write(yaml.dump(cfg, Dumper=yaml.SafeDumper))
@@ -1415,7 +1556,10 @@ class AwsBatch(DockerBatchBase):
                 ["python3", "-m", "buildstockbatch.aws.aws", container_cfg_path],
                 volumes={
                     tmpdir: {"bind": str(container_workpath), "mode": "rw"},
-                    self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
+                    self.buildstock_dir: {
+                        "bind": container_buildstock_dir,
+                        "mode": "ro",
+                    },
                 },
                 environment=env,
                 name="bsb_post",

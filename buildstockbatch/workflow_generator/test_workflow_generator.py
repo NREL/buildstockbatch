@@ -12,10 +12,14 @@ def test_apply_logic_recursion():
     apply_logic = WorkflowGeneratorBase.make_apply_logic_arg(["one", "two", "three"])
     assert apply_logic == "(one&&two&&three)"
 
-    apply_logic = WorkflowGeneratorBase.make_apply_logic_arg({"and": ["one", "two", "three"]})
+    apply_logic = WorkflowGeneratorBase.make_apply_logic_arg(
+        {"and": ["one", "two", "three"]}
+    )
     assert apply_logic == "(one&&two&&three)"
 
-    apply_logic = WorkflowGeneratorBase.make_apply_logic_arg({"or": ["four", "five", "six"]})
+    apply_logic = WorkflowGeneratorBase.make_apply_logic_arg(
+        {"or": ["four", "five", "six"]}
+    )
     assert apply_logic == "(four||five||six)"
 
     apply_logic = WorkflowGeneratorBase.make_apply_logic_arg({"not": "seven"})
@@ -72,11 +76,36 @@ def test_residential_hpxml(mocker):
 
     build_existing_model_step = steps[0]
     assert build_existing_model_step["measure_dir_name"] == "BuildExistingModel"
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_month"] == 2
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_day_of_month"] == 1
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_end_month"] == 2
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_end_day_of_month"] == 28
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2010
+    assert (
+        build_existing_model_step["arguments"][
+            "simulation_control_run_period_begin_month"
+        ]
+        == 2
+    )
+    assert (
+        build_existing_model_step["arguments"][
+            "simulation_control_run_period_begin_day_of_month"
+        ]
+        == 1
+    )
+    assert (
+        build_existing_model_step["arguments"][
+            "simulation_control_run_period_end_month"
+        ]
+        == 2
+    )
+    assert (
+        build_existing_model_step["arguments"][
+            "simulation_control_run_period_end_day_of_month"
+        ]
+        == 28
+    )
+    assert (
+        build_existing_model_step["arguments"][
+            "simulation_control_run_period_calendar_year"
+        ]
+        == 2010
+    )
 
     apply_upgrade_step = steps[1]
     assert apply_upgrade_step["measure_dir_name"] == "ApplyUpgrade"
@@ -87,13 +116,25 @@ def test_residential_hpxml(mocker):
     simulation_output_step = steps[3]
     assert simulation_output_step["measure_dir_name"] == "ReportSimulationOutput"
     assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
-    assert simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
-    assert simulation_output_step["arguments"]["include_annual_fuel_consumptions"] is True
-    assert simulation_output_step["arguments"]["include_annual_end_use_consumptions"] is True
-    assert simulation_output_step["arguments"]["include_annual_system_use_consumptions"] is False
+    assert (
+        simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
+    )
+    assert (
+        simulation_output_step["arguments"]["include_annual_fuel_consumptions"] is True
+    )
+    assert (
+        simulation_output_step["arguments"]["include_annual_end_use_consumptions"]
+        is True
+    )
+    assert (
+        simulation_output_step["arguments"]["include_annual_system_use_consumptions"]
+        is False
+    )
     assert simulation_output_step["arguments"]["include_annual_emissions"] is True
     assert simulation_output_step["arguments"]["include_annual_emission_fuels"] is True
-    assert simulation_output_step["arguments"]["include_annual_emission_end_uses"] is True
+    assert (
+        simulation_output_step["arguments"]["include_annual_emission_end_uses"] is True
+    )
     assert simulation_output_step["arguments"]["include_annual_total_loads"] is True
     assert simulation_output_step["arguments"]["include_annual_unmet_hours"] is True
     assert simulation_output_step["arguments"]["include_annual_peak_fuels"] is True
@@ -102,22 +143,55 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step["arguments"]["include_annual_hot_water_uses"] is True
     assert simulation_output_step["arguments"]["include_annual_hvac_summary"] is True
     assert simulation_output_step["arguments"]["include_annual_resilience"] is True
-    assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is True
-    assert simulation_output_step["arguments"]["include_timeseries_fuel_consumptions"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
-    assert simulation_output_step["arguments"]["include_timeseries_system_use_consumptions"] is False
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_total_consumptions"]
+        is True
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_fuel_consumptions"]
+        is False
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"]
+        is True
+    )
+    assert (
+        simulation_output_step["arguments"][
+            "include_timeseries_system_use_consumptions"
+        ]
+        is False
+    )
     assert simulation_output_step["arguments"]["include_timeseries_emissions"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_emission_fuels"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_emission_end_uses"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_hot_water_uses"] is False
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_emission_fuels"]
+        is False
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_emission_end_uses"]
+        is False
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_hot_water_uses"]
+        is False
+    )
     assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
-    assert simulation_output_step["arguments"]["include_timeseries_component_loads"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_unmet_hours"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is False
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_component_loads"]
+        is False
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_unmet_hours"] is False
+    )
+    assert (
+        simulation_output_step["arguments"]["include_timeseries_zone_temperatures"]
+        is False
+    )
     assert simulation_output_step["arguments"]["include_timeseries_airflows"] is False
     assert simulation_output_step["arguments"]["include_timeseries_weather"] is False
     assert simulation_output_step["arguments"]["include_timeseries_resilience"] is False
-    assert simulation_output_step["arguments"]["timeseries_timestamp_convention"] == "end"
+    assert (
+        simulation_output_step["arguments"]["timeseries_timestamp_convention"] == "end"
+    )
     assert simulation_output_step["arguments"]["timeseries_num_decimal_places"] == 3
     assert simulation_output_step["arguments"]["add_timeseries_dst_column"] is True
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
@@ -259,7 +333,9 @@ def test_com_default_workflow_generator_extended(mocker):
     assert reporting_measure_step["measure_type"] == "ReportingMeasure"
     assert reporting_measure_step["arguments"] == {}
     # Should only be one instance of SimulationOutputReport
-    assert [d["measure_dir_name"] == "SimulationOutputReport" for d in osw["steps"]].count(True) == 1
+    assert [
+        d["measure_dir_name"] == "SimulationOutputReport" for d in osw["steps"]
+    ].count(True) == 1
     # Should get TimeseriesCSVExport if included in args
     reporting_measure_step = osw["steps"][1]
     assert reporting_measure_step["measure_dir_name"] == "TimeseriesCSVExport"
@@ -268,7 +344,10 @@ def test_com_default_workflow_generator_extended(mocker):
     assert reporting_measure_step["arguments"]["inc_output_variables"] == "true"
     # Should have the openstudio report
     reporting_measure_step = osw["steps"][2]
-    assert reporting_measure_step["measure_dir_name"] == "f8e23017-894d-4bdf-977f-37e3961e6f42"
+    assert (
+        reporting_measure_step["measure_dir_name"]
+        == "f8e23017-894d-4bdf-977f-37e3961e6f42"
+    )
     assert reporting_measure_step["measure_type"] == "ReportingMeasure"
     assert reporting_measure_step["arguments"]["building_summary_section"] == "true"
     assert reporting_measure_step["arguments"]["schedules_overview_section"] == "true"

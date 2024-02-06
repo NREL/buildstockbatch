@@ -34,7 +34,9 @@ import yaml
 
 here = os.path.dirname(os.path.abspath(__file__))
 example_yml_dir = os.path.join(here, "test_inputs")
-resources_dir = os.path.join(here, "test_inputs", "test_openstudio_buildstock", "resources")
+resources_dir = os.path.join(
+    here, "test_inputs", "test_openstudio_buildstock", "resources"
+)
 
 
 def filter_logs(logs, level):
@@ -67,11 +69,15 @@ def test_aws_batch_validation_is_static():
 
 
 def test_complete_schema_passes_validation():
-    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, "complete-schema.yml"))
+    assert BuildStockBatchBase.validate_project_schema(
+        os.path.join(example_yml_dir, "complete-schema.yml")
+    )
 
 
 def test_minimal_schema_passes_validation():
-    assert BuildStockBatchBase.validate_project_schema(os.path.join(example_yml_dir, "minimal-schema.yml"))
+    assert BuildStockBatchBase.validate_project_schema(
+        os.path.join(example_yml_dir, "minimal-schema.yml")
+    )
 
 
 @pytest.mark.parametrize(
@@ -129,9 +135,13 @@ def test_xor_violations_fail(project_file, expected):
 )
 def test_validation_integration(project_file, base_expected, eagle_expected):
     # patch the validate_options_lookup function to always return true for this case
-    with patch.object(BuildStockBatchBase, "validate_options_lookup", lambda _: True), patch.object(
+    with patch.object(
+        BuildStockBatchBase, "validate_options_lookup", lambda _: True
+    ), patch.object(
         BuildStockBatchBase, "validate_measure_references", lambda _: True
-    ), patch.object(BuildStockBatchBase, "validate_workflow_generator", lambda _: True), patch.object(
+    ), patch.object(
+        BuildStockBatchBase, "validate_workflow_generator", lambda _: True
+    ), patch.object(
         BuildStockBatchBase, "validate_postprocessing_spec", lambda _: True
     ), patch.object(
         SlurmBatch, "validate_apptainer_image_hpc", lambda _: True
@@ -182,10 +192,14 @@ def test_bad_measures(project_file):
         except (ValidationError, YamaleError) as er:
             er = str(er)
             assert "'1.5' is not a int" in er
-            assert "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')" in er
+            assert (
+                "'huorly' not in ('none', 'timestep', 'hourly', 'daily', 'monthly')"
+                in er
+            )
         else:
             raise Exception(
-                "measures_and_arguments was supposed to raise ValidationError for" " enforce-validate-measures-bad.yml"
+                "measures_and_arguments was supposed to raise ValidationError for"
+                " enforce-validate-measures-bad.yml"
             )
 
 
@@ -193,7 +207,9 @@ def test_bad_measures(project_file):
     "project_file",
     [
         os.path.join(example_yml_dir, "enforce-validate-measures-good-2.yml"),
-        os.path.join(example_yml_dir, "enforce-validate-measures-good-2-with-anchors.yml"),
+        os.path.join(
+            example_yml_dir, "enforce-validate-measures-good-2-with-anchors.yml"
+        ),
     ],
 )
 def test_good_measures(project_file):
@@ -258,7 +274,9 @@ def test_bad_options_validation(project_file):
         assert "Floor Insulation: '*' cannot be mixed with other options" in er
 
     else:
-        raise Exception("validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml")
+        raise Exception(
+            "validate_options was supposed to raise ValueError for enforce-validate-options-bad.yml"
+        )
 
 
 @pytest.mark.parametrize(
@@ -289,7 +307,8 @@ def test_bad_measures_validation(project_file):
 
     else:
         raise Exception(
-            "validate_measure_references was supposed to raise ValueError for " "enforce-validate-measures-bad.yml"
+            "validate_measure_references was supposed to raise ValueError for "
+            "enforce-validate-measures-bad.yml"
         )
 
 
@@ -306,10 +325,14 @@ def test_bad_postprocessing_spec_validation(project_file):
         er = str(er)
         assert "bad_partition_column" in er
     else:
-        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-bad-2.yml")
+        raise Exception(
+            "validate_options was supposed to raise ValidationError for enforce-validate-options-bad-2.yml"
+        )
 
 
-@pytest.mark.parametrize("project_file", [os.path.join(example_yml_dir, "enforce-validate-options-good.yml")])
+@pytest.mark.parametrize(
+    "project_file", [os.path.join(example_yml_dir, "enforce-validate-options-good.yml")]
+)
 def test_logic_validation_fail(project_file):
     try:
         BuildStockBatchBase.validate_logic(project_file)
@@ -319,7 +342,9 @@ def test_logic_validation_fail(project_file):
         assert "'Vintage' occurs 2 times in a 'and' block" in er
         assert "'Vintage' occurs 2 times in a '&&' block" in er
     else:
-        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
+        raise Exception(
+            "validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml"
+        )
 
 
 @pytest.mark.parametrize(
@@ -335,7 +360,9 @@ def test_number_of_options_apply_upgrade():
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     cfg = get_project_configuration(str(proj_filename))
     cfg["upgrades"][-1]["options"] = cfg["upgrades"][-1]["options"] * 10
-    cfg["upgrades"][0]["options"][0]["costs"] = cfg["upgrades"][0]["options"][0]["costs"] * 5
+    cfg["upgrades"][0]["options"][0]["costs"] = (
+        cfg["upgrades"][0]["options"][0]["costs"] * 5
+    )
     with tempfile.TemporaryDirectory() as tmpdir:
         tmppath = pathlib.Path(tmpdir)
         new_proj_filename = tmppath / "project.yml"
@@ -437,11 +464,15 @@ def test_validate_apptainer_image():
         temp_yml = pathlib.Path(tmpdir, "temp.yml")
         with open(temp_yml, "w") as f:
             yaml.dump(cfg, f, Dumper=yaml.SafeDumper)
-        with pytest.raises(ValidationError, match=r"Could not find apptainer image: .+\.sif or .+\.simg"):
+        with pytest.raises(
+            ValidationError,
+            match=r"Could not find apptainer image: .+\.sif or .+\.simg",
+        ):
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
         for ext in ["Apptainer.sif", "Singularity.simg"]:
             filename = pathlib.Path(
-                tmpdir, f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}"
+                tmpdir,
+                f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}",
             )
             filename.touch()
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
@@ -453,7 +484,11 @@ def test_validate_sampler_good_buildstock(basic_residential_project_file):
         {
             "sampler": {
                 "type": "precomputed",
-                "args": {"sample_file": str(os.path.join(resources_dir, "buildstock_good.csv"))},
+                "args": {
+                    "sample_file": str(
+                        os.path.join(resources_dir, "buildstock_good.csv")
+                    )
+                },
             }
         }
     )
@@ -465,7 +500,11 @@ def test_validate_sampler_bad_buildstock(basic_residential_project_file):
         {
             "sampler": {
                 "type": "precomputed",
-                "args": {"sample_file": str(os.path.join(resources_dir, "buildstock_bad.csv"))},
+                "args": {
+                    "sample_file": str(
+                        os.path.join(resources_dir, "buildstock_bad.csv")
+                    )
+                },
             }
         }
     )
@@ -473,10 +512,27 @@ def test_validate_sampler_bad_buildstock(basic_residential_project_file):
         BuildStockBatchBase.validate_sampler(project_filename)
     except ValidationError as er:
         er = str(er)
-        assert "Option 1940-1950 in column Vintage of buildstock_csv is not available in options_lookup.tsv" in er
-        assert "Option TX in column State of buildstock_csv is not available in options_lookup.tsv" in er
-        assert "Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv" in er
-        assert "Column Insulation in buildstock_csv is not available in options_lookup.tsv" in er
-        assert "Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv" in er
+        assert (
+            "Option 1940-1950 in column Vintage of buildstock_csv is not available in options_lookup.tsv"
+            in er
+        )
+        assert (
+            "Option TX in column State of buildstock_csv is not available in options_lookup.tsv"
+            in er
+        )
+        assert (
+            "Option nan in column Insulation Wall of buildstock_csv is not available in options_lookup.tsv"
+            in er
+        )
+        assert (
+            "Column Insulation in buildstock_csv is not available in options_lookup.tsv"
+            in er
+        )
+        assert (
+            "Column ZipPlusCode in buildstock_csv is not available in options_lookup.tsv"
+            in er
+        )
     else:
-        raise Exception("validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml")
+        raise Exception(
+            "validate_options was supposed to raise ValidationError for enforce-validate-options-good.yml"
+        )

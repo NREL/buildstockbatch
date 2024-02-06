@@ -19,7 +19,9 @@ postprocessing.performance_report = MagicMock()
 
 def test_report_additional_results_csv_columns(basic_residential_project_file):
     reporting_measures = ["ReportingMeasure1", "ReportingMeasure2"]
-    project_filename, results_dir = basic_residential_project_file({"reporting_measures": reporting_measures})
+    project_filename, results_dir = basic_residential_project_file(
+        {"reporting_measures": reporting_measures}
+    )
 
     fs = LocalFileSystem()
 
@@ -40,7 +42,11 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
         sim_dir = str(filename.parent.parent)
         upgrade_id = int(re.search(r"up(\d+)", sim_dir).group(1))
         building_id = int(re.search(r"bldg(\d+)", sim_dir).group(1))
-        dpouts2.append(postprocessing.read_simulation_outputs(fs, reporting_measures, sim_dir, upgrade_id, building_id))
+        dpouts2.append(
+            postprocessing.read_simulation_outputs(
+                fs, reporting_measures, sim_dir, upgrade_id, building_id
+            )
+        )
 
     with gzip.open(sim_out_dir / "results_job0.json.gz", "wt", encoding="utf-8") as f:
         json.dump(dpouts2, f)
@@ -50,7 +56,9 @@ def test_report_additional_results_csv_columns(basic_residential_project_file):
     postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
     for upgrade_id in (0, 1):
-        df = read_csv(str(results_dir / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz"))
+        df = read_csv(
+            str(results_dir / "results_csvs" / f"results_up{upgrade_id:02d}.csv.gz")
+        )
         assert (df["reporting_measure1.column_1"] == 1).all()
         assert (df["reporting_measure1.column_2"] == 2).all()
         assert (df["reporting_measure2.column_3"] == 3).all()
@@ -66,7 +74,9 @@ def test_empty_results_assertion(basic_residential_project_file, capsys):
     shutil.rmtree(sim_out_dir)  # no results
     cfg = get_project_configuration(project_filename)
 
-    with pytest.raises(ValueError, match=r"No simulation results found to post-process"):
+    with pytest.raises(
+        ValueError, match=r"No simulation results found to post-process"
+    ):
         assert postprocessing.combine_results(fs, results_dir, cfg, do_timeseries=False)
 
 
@@ -86,7 +96,9 @@ def test_large_parquet_combine(basic_residential_project_file):
 
 
 @pytest.mark.parametrize("keep_individual_timeseries", [True, False])
-def test_keep_individual_timeseries(keep_individual_timeseries, basic_residential_project_file, mocker):
+def test_keep_individual_timeseries(
+    keep_individual_timeseries, basic_residential_project_file, mocker
+):
     project_filename, results_dir = basic_residential_project_file(
         {"postprocessing": {"keep_individual_timeseries": keep_individual_timeseries}}
     )
@@ -110,7 +122,9 @@ def test_upgrade_missing_ts(basic_residential_project_file, mocker, caplog):
 
     project_filename, results_dir = basic_residential_project_file()
     results_path = pathlib.Path(results_dir)
-    for filename in (results_path / "simulation_output" / "timeseries" / "up01").glob("*.parquet"):
+    for filename in (results_path / "simulation_output" / "timeseries" / "up01").glob(
+        "*.parquet"
+    ):
         os.remove(filename)
 
     mocker.patch.object(BuildStockBatchBase, "weather_dir", None)

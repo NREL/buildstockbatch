@@ -62,26 +62,37 @@ class BuildStockBatchBase(object):
 
         self.buildstock_dir = self.cfg["buildstock_directory"]
         if not os.path.isdir(self.buildstock_dir):
-            raise FileNotFoundError(f"buildstock_directory = {self.buildstock_dir} is not a directory.")
-        self.project_dir = os.path.join(self.buildstock_dir, self.cfg["project_directory"])
+            raise FileNotFoundError(
+                f"buildstock_directory = {self.buildstock_dir} is not a directory."
+            )
+        self.project_dir = os.path.join(
+            self.buildstock_dir, self.cfg["project_directory"]
+        )
         if not os.path.isdir(self.project_dir):
-            raise FileNotFoundError(f"project_directory = {self.project_dir} is not a directory.")
+            raise FileNotFoundError(
+                f"project_directory = {self.project_dir} is not a directory."
+            )
 
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg.get("os_version", self.DEFAULT_OS_VERSION)
         self.os_sha = self.cfg.get("os_sha", self.DEFAULT_OS_SHA)
-        logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
+        logger.debug(
+            f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}"
+        )
 
     @staticmethod
     def get_sampler_class(sampler_name):
-        sampler_class_name = "".join(x.capitalize() for x in sampler_name.strip().split("_")) + "Sampler"
+        sampler_class_name = (
+            "".join(x.capitalize() for x in sampler_name.strip().split("_")) + "Sampler"
+        )
         return getattr(sampler, sampler_class_name)
 
     @staticmethod
     def get_workflow_generator_class(workflow_generator_name):
         workflow_generator_class_name = (
-            "".join(x.capitalize() for x in workflow_generator_name.strip().split("_")) + "WorkflowGenerator"
+            "".join(x.capitalize() for x in workflow_generator_name.strip().split("_"))
+            + "WorkflowGenerator"
         )
         return getattr(workflow_generator, workflow_generator_class_name)
 
@@ -114,7 +125,9 @@ class BuildStockBatchBase(object):
                         f.write(chunk)
                 f.seek(0)
                 with zipfile.ZipFile(f, "r") as zf:
-                    logger.debug("Extracting weather files to: {}".format(self.weather_dir))
+                    logger.debug(
+                        "Extracting weather files to: {}".format(self.weather_dir)
+                    )
                     zf.extractall(self.weather_dir)
 
     @property
@@ -136,8 +149,12 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def get_reporting_measures(cls, cfg):
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
-        wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
+        WorkflowGenerator = cls.get_workflow_generator_class(
+            cfg["workflow_generator"]["type"]
+        )
+        wg = WorkflowGenerator(
+            cfg, 1
+        )  # Number of datapoints doesn't really matter here
         return wg.reporting_measures()
 
     def run_batch(self):
@@ -145,7 +162,9 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def create_osw(cls, cfg, n_datapoints, *args, **kwargs):
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
+        WorkflowGenerator = cls.get_workflow_generator_class(
+            cfg["workflow_generator"]["type"]
+        )
         osw_generator = WorkflowGenerator(cfg, n_datapoints)
         return osw_generator.create_osw(*args, **kwargs)
 
@@ -168,7 +187,9 @@ class BuildStockBatchBase(object):
                     sim_dir,
                 )
             elif os.path.exists(os.path.join(sim_dir, "run", "failed.job")):
-                raise SimulationExists("{} exists and failed".format(sim_id), sim_id, sim_dir)
+                raise SimulationExists(
+                    "{} exists and failed".format(sim_id), sim_id, sim_dir
+                )
             else:
                 shutil.rmtree(sim_dir)
 
@@ -214,13 +235,21 @@ class BuildStockBatchBase(object):
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
             possible_time_cols = ["time", "Time", "TimeDST", "TimeUTC"]
-            cols = read_csv(timeseries_filepath, index_col=False, nrows=0).columns.tolist()
+            cols = read_csv(
+                timeseries_filepath, index_col=False, nrows=0
+            ).columns.tolist()
             actual_time_cols = [c for c in cols if c in possible_time_cols]
             if not actual_time_cols:
-                logger.error(f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.")
-                raise RuntimeError(f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}.")
+                logger.error(
+                    f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}."
+                )
+                raise RuntimeError(
+                    f"Did not find any time column ({possible_time_cols}) in {timeseries_filepath}."
+                )
 
-            tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
+            tsdf = read_csv(
+                timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows
+            )
             for col in actual_time_cols:
                 tsdf[col] = tsdf[col].astype(pd.ArrowDtype(pa.timestamp("s")))
             if os.path.isfile(schedules_filepath):
@@ -290,7 +319,9 @@ class BuildStockBatchBase(object):
         if os.path.isabs(buildstock_dir):
             return os.path.abspath(buildstock_dir)
         else:
-            return os.path.abspath(os.path.join(os.path.dirname(project_file), buildstock_dir))
+            return os.path.abspath(
+                os.path.join(os.path.dirname(project_file), buildstock_dir)
+            )
 
     @classmethod
     def validate_openstudio_path(cls, project_file):
@@ -306,10 +337,14 @@ class BuildStockBatchBase(object):
         except FileNotFoundError:
             raise ValidationError(f"Cannot find openstudio at `{cls.openstudio_exe()}`")
         if proc_out.returncode != 0:
-            raise ValidationError(f"OpenStudio failed with the following error {proc_out.stderr}")
+            raise ValidationError(
+                f"OpenStudio failed with the following error {proc_out.stderr}"
+            )
         actual_os_version, actual_os_sha = proc_out.stdout.strip().split("+")
         if os_version != actual_os_version:
-            raise ValidationError(f"OpenStudio version is {actual_os_version}, expected is {os_version}")
+            raise ValidationError(
+                f"OpenStudio version is {actual_os_version}, expected is {os_version}"
+            )
         if os_sha != actual_os_sha:
             raise ValidationError(
                 f"OpenStudio version is correct at {os_version}, but the shas don't match. "
@@ -334,7 +369,9 @@ class BuildStockBatchBase(object):
             else:
                 sample_file = os.path.abspath(sample_file)
             buildstock_df = read_csv(sample_file, dtype=str)
-            return BuildStockBatchBase.validate_buildstock_csv(project_file, buildstock_df)
+            return BuildStockBatchBase.validate_buildstock_csv(
+                project_file, buildstock_df
+            )
         return True
 
     @staticmethod
@@ -347,7 +384,9 @@ class BuildStockBatchBase(object):
             if column in {"Building"}:
                 continue
             if column not in param_option_dict:
-                errors.append(f"Column {column} in buildstock_csv is not available in options_lookup.tsv")
+                errors.append(
+                    f"Column {column} in buildstock_csv is not available in options_lookup.tsv"
+                )
                 continue
             if "*" in param_option_dict[column]:
                 continue  # skip validating options when wildcard is present
@@ -365,16 +404,22 @@ class BuildStockBatchBase(object):
     @classmethod
     def validate_workflow_generator(cls, project_file):
         cfg = get_project_configuration(project_file)
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
+        WorkflowGenerator = cls.get_workflow_generator_class(
+            cfg["workflow_generator"]["type"]
+        )
         return WorkflowGenerator.validate(cfg)
 
     @staticmethod
     def validate_project_schema(project_file):
         cfg = get_project_configuration(project_file)
         schema_version = cfg.get("schema_version")
-        version_schema = os.path.join(os.path.dirname(__file__), "schemas", f"v{schema_version}.yaml")
+        version_schema = os.path.join(
+            os.path.dirname(__file__), "schemas", f"v{schema_version}.yaml"
+        )
         if not os.path.isfile(version_schema):
-            logger.error(f"Could not find validation schema for YAML version {schema_version}")
+            logger.error(
+                f"Could not find validation schema for YAML version {schema_version}"
+            )
             raise FileNotFoundError(version_schema)
         schema = yamale.make_schema(version_schema)
         data = yamale.make_data(project_file, parser="ruamel")
@@ -394,7 +439,9 @@ class BuildStockBatchBase(object):
         partition_cols = cfg.get("postprocessing", {}).get("partition_columns", [])
         invalid_cols = [c for c in partition_cols if c not in param_option_dict.keys()]
         if invalid_cols:
-            raise ValidationError(f"The following partition columns are not valid: {invalid_cols}")
+            raise ValidationError(
+                f"The following partition columns are not valid: {invalid_cols}"
+            )
         return True
 
     @staticmethod
@@ -404,8 +451,12 @@ class BuildStockBatchBase(object):
         if int(major) >= 0:
             if int(minor) >= 0:
                 # xor
-                if ("weather_files_url" in cfg.keys()) is ("weather_files_path" in cfg.keys()):
-                    raise ValidationError("Both/neither weather_files_url and weather_files_path found in yaml root")
+                if ("weather_files_url" in cfg.keys()) is (
+                    "weather_files_path" in cfg.keys()
+                ):
+                    raise ValidationError(
+                        "Both/neither weather_files_url and weather_files_path found in yaml root"
+                    )
 
         return True
 
@@ -420,7 +471,9 @@ class BuildStockBatchBase(object):
         try:
             with open(options_lookup_path, "r") as f:
                 options = csv.DictReader(f, delimiter="\t")
-                invalid_options_lookup_str = ""  # Holds option/parameter names with invalid characters
+                invalid_options_lookup_str = (
+                    ""  # Holds option/parameter names with invalid characters
+                )
                 for row in options:
                     for col in ["Parameter Name", "Option Name"]:
                         invalid_chars = set(row[col]).intersection(set("|&()"))
@@ -430,9 +483,16 @@ class BuildStockBatchBase(object):
                     param_name, opt_name = row["Parameter Name"], row["Option Name"]
                     param_option_dict[row["Parameter Name"]].add(row["Option Name"])
                     if opt_name == "*" and row["Measure Dir"]:
-                        invalid_options_lookup_str += f"{param_name}: '*' cannot pass arguments to measure.\n"
-                    if "*" in param_option_dict[param_name] and len(param_option_dict[param_name]) > 1:
-                        invalid_options_lookup_str += f"{param_name}: '*' cannot be mixed with other options\n"
+                        invalid_options_lookup_str += (
+                            f"{param_name}: '*' cannot pass arguments to measure.\n"
+                        )
+                    if (
+                        "*" in param_option_dict[param_name]
+                        and len(param_option_dict[param_name]) > 1
+                    ):
+                        invalid_options_lookup_str += (
+                            f"{param_name}: '*' cannot be mixed with other options\n"
+                        )
         except FileNotFoundError as err:
             logger.error(f"Options lookup file not found at: '{options_lookup_path}'")
             raise err
@@ -462,7 +522,9 @@ class BuildStockBatchBase(object):
                      if not returns error message, close matches, and specifies where the error occurred (source_str)
             """
             if "||" in option_str and "&&" in option_str:
-                invalid_option_spec_counter[(option_str, "has both || and && (not supported)")] += 1
+                invalid_option_spec_counter[
+                    (option_str, "has both || and && (not supported)")
+                ] += 1
                 return ""
 
             if "||" in option_str or "&&" in option_str:
@@ -470,7 +532,9 @@ class BuildStockBatchBase(object):
                 errors = ""
                 broken_options = option_str.split(splitter)
                 if broken_options[-1] == "":
-                    invalid_option_spec_counter[(option_str, "has trailing 'splitter'")] += 1
+                    invalid_option_spec_counter[
+                        (option_str, "has trailing 'splitter'")
+                    ] += 1
                     return ""
                 for broken_option_str in broken_options:
                     new_source_str = source_str + f" in composite option '{option_str}'"
@@ -492,15 +556,21 @@ class BuildStockBatchBase(object):
                 return ""
 
             if parameter_name not in param_option_dict:
-                close_match = difflib.get_close_matches(parameter_name, param_option_dict.keys(), 1)
+                close_match = difflib.get_close_matches(
+                    parameter_name, param_option_dict.keys(), 1
+                )
                 close_match = close_match[0] if close_match else ""
                 invalid_param_counter[(parameter_name, close_match)] += 1
                 return ""
 
             if not option_name or option_name not in param_option_dict[parameter_name]:
-                close_match = difflib.get_close_matches(option_name, list(param_option_dict[parameter_name]), 1)
+                close_match = difflib.get_close_matches(
+                    option_name, list(param_option_dict[parameter_name]), 1
+                )
                 close_match = close_match[0] if close_match else ""
-                invalid_option_counter_dict[parameter_name][(option_name, close_match)] += 1
+                invalid_option_counter_dict[parameter_name][
+                    (option_name, close_match)
+                ] += 1
                 return ""
 
             return ""
@@ -520,38 +590,62 @@ class BuildStockBatchBase(object):
                 return [(source_str, inp)]
             elif type(inp) == list:
                 return sum(
-                    [get_all_option_str(source_str + f", in entry {count}", entry) for count, entry in enumerate(inp)],
+                    [
+                        get_all_option_str(source_str + f", in entry {count}", entry)
+                        for count, entry in enumerate(inp)
+                    ],
                     [],
                 )
             elif type(inp) == dict:
                 if len(inp) > 1:
-                    raise ValidationError(f"{source_str} the logic is malformed. Dict can't have more than one entry")
+                    raise ValidationError(
+                        f"{source_str} the logic is malformed. Dict can't have more than one entry"
+                    )
                 source_str += f", in {list(inp.keys())[0]}"
-                return sum([get_all_option_str(source_str, i) for i in inp.values()], [])
+                return sum(
+                    [get_all_option_str(source_str, i) for i in inp.values()], []
+                )
 
         # store all of the option_str in the project file as a list of (source_str, option_str) tuple
         source_option_str_list = []
 
         if "upgrades" in cfg:
             for upgrade_count, upgrade in enumerate(cfg["upgrades"]):
-                upgrade_name = upgrade.get("upgrade_name", "") + f" (Upgrade Number: {upgrade_count})"
+                upgrade_name = (
+                    upgrade.get("upgrade_name", "")
+                    + f" (Upgrade Number: {upgrade_count})"
+                )
                 source_str_upgrade = f"In upgrade '{upgrade_name}'"
                 for option_count, option in enumerate(upgrade["options"]):
-                    option_name = option.get("option", "") + f" (Option Number: {option_count})"
-                    source_str_option = source_str_upgrade + f", in option '{option_name}'"
-                    source_option_str_list.append((source_str_option, option.get("option")))
+                    option_name = (
+                        option.get("option", "") + f" (Option Number: {option_count})"
+                    )
+                    source_str_option = (
+                        source_str_upgrade + f", in option '{option_name}'"
+                    )
+                    source_option_str_list.append(
+                        (source_str_option, option.get("option"))
+                    )
                     if "apply_logic" in option:
                         source_str_logic = source_str_option + ", in apply_logic"
-                        source_option_str_list += get_all_option_str(source_str_logic, option["apply_logic"])
+                        source_option_str_list += get_all_option_str(
+                            source_str_logic, option["apply_logic"]
+                        )
 
                 if "package_apply_logic" in upgrade:
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
-                    source_option_str_list += get_all_option_str(source_str_package, upgrade["package_apply_logic"])
+                    source_option_str_list += get_all_option_str(
+                        source_str_package, upgrade["package_apply_logic"]
+                    )
 
         #  TODO: refactor this into Sampler.validate_args
         if "downselect" in cfg or "downselect" in cfg.get("sampler", {}).get("type"):
             source_str = "In downselect"
-            logic = cfg["downselect"]["logic"] if "downselect" in cfg else cfg["sampler"]["args"]["logic"]
+            logic = (
+                cfg["downselect"]["logic"]
+                if "downselect" in cfg
+                else cfg["sampler"]["args"]["logic"]
+            )
             source_option_str_list += get_all_option_str(source_str, logic)
 
         # Gather all the errors in the option_str, if any
@@ -560,7 +654,11 @@ class BuildStockBatchBase(object):
             error_message += get_errors(source_str, option_str)
 
         if error_message:
-            error_message = "Following option/parameter entries have problem:\n" + error_message + "\n"
+            error_message = (
+                "Following option/parameter entries have problem:\n"
+                + error_message
+                + "\n"
+            )
 
         if invalid_option_spec_counter:
             error_message += "* Following option/parameter entries have problem:\n"
@@ -568,7 +666,9 @@ class BuildStockBatchBase(object):
                 error_message += f"  '{invalid_entry}' {error} - used '{count}' times\n"
 
         if invalid_param_counter:
-            error_message += "* Following parameters do not exist in options_lookup.tsv\n"
+            error_message += (
+                "* Following parameters do not exist in options_lookup.tsv\n"
+            )
             for (param, close_match), count in invalid_param_counter.items():
                 error_message += f"  '{param}' - used '{count}' times."
                 if close_match:
@@ -640,7 +740,9 @@ class BuildStockBatchBase(object):
                 assert len(logic) == 1
                 for key, val in logic.items():
                     if key not in ["or", "and", "not"]:
-                        raise ValidationError(f"Invalid key {key}. Only 'or', 'and' and 'not' is allowed.")
+                        raise ValidationError(
+                            f"Invalid key {key}. Only 'or', 'and' and 'not' is allowed."
+                        )
                     return get_logic_problems(val, parent=key)
             elif isinstance(logic, str):
                 if "&&" not in logic:
@@ -648,19 +750,28 @@ class BuildStockBatchBase(object):
                 entries = logic.split("&&")
                 return get_logic_problems(entries, parent="&&")
             else:
-                raise ValidationError(f"Invalid logic element {logic} with type {type(logic)}")
+                raise ValidationError(
+                    f"Invalid logic element {logic} with type {type(logic)}"
+                )
 
         all_problems = []
         if "upgrades" in cfg:
             for upgrade_count, upgrade in enumerate(cfg["upgrades"]):
                 upgrade_name = upgrade.get("upgrade_name", "")
-                source_str_upgrade = f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
+                source_str_upgrade = (
+                    f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
+                )
                 for option_count, option in enumerate(upgrade["options"]):
                     option_name = option.get("option", "")
-                    source_str_option = source_str_upgrade + f", option '{option_name}' (Option Number:{option_count})"
+                    source_str_option = (
+                        source_str_upgrade
+                        + f", option '{option_name}' (Option Number:{option_count})"
+                    )
                     if "apply_logic" in option:
                         if problems := get_logic_problems(option["apply_logic"]):
-                            all_problems.append((source_str_option, problems, option["apply_logic"]))
+                            all_problems.append(
+                                (source_str_option, problems, option["apply_logic"])
+                            )
 
                 if "package_apply_logic" in upgrade:
                     source_str_package = source_str_upgrade + ", in package_apply_logic"
@@ -676,7 +787,11 @@ class BuildStockBatchBase(object):
         #  TODO: refactor this into Sampler.validate_args
         if "downselect" in cfg or "downselect" in cfg.get("sampler", {}).get("type"):
             source_str = "in downselect logic"
-            logic = cfg["downselect"]["logic"] if "downselect" in cfg else cfg["sampler"]["args"]["logic"]
+            logic = (
+                cfg["downselect"]["logic"]
+                if "downselect" in cfg
+                else cfg["sampler"]["args"]["logic"]
+            )
             if problems := get_logic_problems(logic):
                 all_problems.append((source_str, problems, logic))
 
@@ -724,7 +839,10 @@ class BuildStockBatchBase(object):
             """
             if measure_str not in measure_dirs:
                 closest = difflib.get_close_matches(measure_str, list(measure_dirs))
-                return f"Measure directory {measure_str} not found. Closest matches: {closest}" f" {source_str}\n"
+                return (
+                    f"Measure directory {measure_str} not found. Closest matches: {closest}"
+                    f" {source_str}\n"
+                )
             return ""
 
         source_measures_str_list = []
@@ -741,7 +859,9 @@ class BuildStockBatchBase(object):
         if not error_message:
             return True
         else:
-            error_message = "Measure name(s)/directory(ies) is(are) invalid. \n" + error_message
+            error_message = (
+                "Measure name(s)/directory(ies) is(are) invalid. \n" + error_message
+            )
             logger.error(error_message)
             raise ValidationError(error_message)
 
@@ -784,7 +904,9 @@ class BuildStockBatchBase(object):
         """
         cfg = get_project_configuration(project_file)
 
-        buildstock_rb = os.path.join(cfg["buildstock_directory"], "resources/buildstock.rb")
+        buildstock_rb = os.path.join(
+            cfg["buildstock_directory"], "resources/buildstock.rb"
+        )
         if os.path.exists(buildstock_rb):
             with open(buildstock_rb, "r") as f:
                 versions = dict(
@@ -821,7 +943,9 @@ class BuildStockBatchBase(object):
         :rtype: bool
         """
         cfg = get_project_configuration(project_file)
-        measure_xml_filename = os.path.join(cfg["buildstock_directory"], "measures", "ApplyUpgrade", "measure.xml")
+        measure_xml_filename = os.path.join(
+            cfg["buildstock_directory"], "measures", "ApplyUpgrade", "measure.xml"
+        )
         if os.path.exists(measure_xml_filename):
             measure_xml_tree = objectify.parse(measure_xml_filename)
             measure_xml = measure_xml_tree.getroot()
@@ -832,10 +956,14 @@ class BuildStockBatchBase(object):
                 if m_option:
                     option_number = int(m_option.group(1))
                     n_options_in_measure = max(option_number, n_options_in_measure)
-                m_costs = re.match(r"^option_(\d+)_cost_(\d+)_value", str(argument.name))
+                m_costs = re.match(
+                    r"^option_(\d+)_cost_(\d+)_value", str(argument.name)
+                )
                 if m_costs:
                     cost_number = int(m_costs.group(2))
-                    n_costs_per_option_in_measure = max(cost_number, n_costs_per_option_in_measure)
+                    n_costs_per_option_in_measure = max(
+                        cost_number, n_costs_per_option_in_measure
+                    )
             n_options_in_cfg = 0
             n_costs_in_cfg = 0
             for upgrade in cfg.get("upgrades", []):
@@ -914,14 +1042,22 @@ class BuildStockBatchBase(object):
             wfg_args = self.cfg["workflow_generator"].get("args", {})
             if self.cfg["workflow_generator"]["type"] == "residential_hpxml":
                 if "simulation_output_report" in wfg_args.keys():
-                    if "timeseries_frequency" in wfg_args["simulation_output_report"].keys():
-                        do_timeseries = wfg_args["simulation_output_report"]["timeseries_frequency"] != "none"
+                    if (
+                        "timeseries_frequency"
+                        in wfg_args["simulation_output_report"].keys()
+                    ):
+                        do_timeseries = (
+                            wfg_args["simulation_output_report"]["timeseries_frequency"]
+                            != "none"
+                        )
             else:
                 do_timeseries = "timeseries_csv_export" in wfg_args.keys()
 
             fs = self.get_fs()
             if not skip_combine:
-                postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+                postprocessing.combine_results(
+                    fs, self.results_dir, self.cfg, do_timeseries=do_timeseries
+                )
 
             aws_conf = self.cfg.get("postprocessing", {}).get("aws", {})
             if "s3" in aws_conf or "aws" in self.cfg:
