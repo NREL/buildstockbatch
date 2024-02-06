@@ -30,7 +30,7 @@ import time
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress_file, read_csv
+from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress_file, read_csv, get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,9 @@ class DockerBatchBase(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
+
+        if get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
+            return
 
         self.docker_client = docker.DockerClient.from_env()
         try:

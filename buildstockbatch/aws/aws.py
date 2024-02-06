@@ -13,7 +13,7 @@ import argparse
 import base64
 import boto3
 from botocore.exceptions import ClientError
-import collections
+from copy import deepcopy
 import csv
 from dask.distributed import Client
 from dask_cloudprovider.aws import FargateCluster
@@ -29,18 +29,21 @@ import random
 from s3fs import S3FileSystem
 import tarfile
 import re
+import tempfile
 import time
 import tqdm
 import io
+import yaml
 
 from buildstockbatch.base import ValidationError, BuildStockBatchBase
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
+from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch import postprocessing
 from buildstockbatch.utils import (
     ContainerRuntime,
     log_error_details,
     get_project_configuration,
-    read_csv,
+    get_bool_env_var,
 )
 
 logger = logging.getLogger(__name__)
@@ -278,7 +281,6 @@ class AwsBatchEnv(AwsJobBase):
         # Create and elastic IP for the NAT Gateway
 
         try:
-
             ip_response = self.ec2.allocate_address(Domain="vpc")
 
             self.nat_ip_allocation = ip_response["AllocationId"]
@@ -743,7 +745,6 @@ class AwsBatchEnv(AwsJobBase):
                 return resp
 
             except Exception as e:
-
                 if "not in VALID state" in str(e):
                     # Need to wait a second for the compute environment to complete registration
                     logger.warning("5 second sleep initiated to wait for job queue creation due to error: " + str(e))
@@ -789,7 +790,6 @@ class AwsBatchEnv(AwsJobBase):
                     response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
 
         try:
-
             self.batch.update_job_queue(jobQueue=self.batch_job_queue_name, state="DISABLED")
 
             while True:
@@ -1180,9 +1180,6 @@ class AwsBatch(DockerBatchBase):
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
         batch_env.clean()
 
-        sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
-        sns_env.clean()
-
     def upload_batch_files_to_cloud(self, tmppath):
         """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
         logger.debug("Uploading Batch files to S3")
@@ -1245,11 +1242,11 @@ class AwsBatch(DockerBatchBase):
         )
 
         # start job
-        job_info = batch_env.submit_job(array_size=array_size)
+        job_info = batch_env.submit_job(array_size=self.batch_array_size)
 
         # Monitor job status
         n_succeeded_last_time = 0
-        with tqdm.tqdm(desc="Running Simulations", total=array_size) as progress_bar:
+        with tqdm.tqdm(desc="Running Simulations", total=self.batch_array_size) as progress_bar:
             job_status = None
             while job_status not in ("SUCCEEDED", "FAILED"):
                 time.sleep(10)
@@ -1352,7 +1349,7 @@ class AwsBatch(DockerBatchBase):
                     logger.debug("Extracting {}".format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 
-        cls.run_simulations(cfg, jobs_d, job_id, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
+        cls.run_simulations(cfg, job_id, jobs_d, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
 
     def get_fs(self):
         return S3FileSystem()
@@ -1385,6 +1382,55 @@ class AwsBatch(DockerBatchBase):
     def upload_results(self, *args, **kwargs):
         """Do nothing because the results are already on S3"""
         return self.s3_bucket, self.s3_bucket_prefix + "/results/parquet"
+
+    def process_results(self, *args, **kwargs):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = pathlib.Path(tmpdir)
+            container_workpath = pathlib.PurePosixPath("/var/simdata/openstudio")
+
+            cfg = deepcopy(self.cfg)
+            container_buildstock_dir = str(container_workpath / "buildstock")
+            cfg["buildstock_directory"] = container_buildstock_dir
+            cfg["project_directory"] = str(pathlib.Path(self.project_dir).relative_to(self.buildstock_dir))
+
+            with open(tmppath / "project_config.yml", "w") as f:
+                f.write(yaml.dump(cfg, Dumper=yaml.SafeDumper))
+            container_cfg_path = str(container_workpath / "project_config.yml")
+
+            with open(tmppath / "args.json", "w") as f:
+                json.dump([args, kwargs], f)
+
+            credentials = boto3.Session().get_credentials().get_frozen_credentials()
+            env = {
+                "AWS_ACCESS_KEY_ID": credentials.access_key,
+                "AWS_SECRET_ACCESS_KEY": credentials.secret_key,
+            }
+            if credentials.token:
+                env["AWS_SESSION_TOKEN"] = credentials.token
+            env["POSTPROCESSING_INSIDE_DOCKER_CONTAINER"] = "true"
+
+            logger.info("Starting container for postprocessing")
+            container = self.docker_client.containers.run(
+                self.image_url,
+                ["python3", "-m", "buildstockbatch.aws.aws", container_cfg_path],
+                volumes={
+                    tmpdir: {"bind": str(container_workpath), "mode": "rw"},
+                    self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
+                },
+                environment=env,
+                name="bsb_post",
+                auto_remove=True,
+                detach=True,
+            )
+            for msg in container.logs(stream=True):
+                logger.debug(msg)
+
+    def _process_results_inside_container(self):
+        with open("/var/simdata/openstudio/args.json", "r") as f:
+            args, kwargs = json.load(f)
+
+        logger.info("Running postprocessing in container")
+        super().process_results(*args, **kwargs)
 
 
 @log_error_details()
@@ -1429,6 +1475,12 @@ def main():
         job_name = os.environ["JOB_NAME"]
         region = os.environ["REGION"]
         AwsBatch.run_job(job_id, s3_bucket, s3_prefix, job_name, region)
+    elif get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("project_filename")
+        args = parser.parse_args()
+        batch = AwsBatch(args.project_filename)
+        batch._process_results_inside_container()
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument("project_filename")
