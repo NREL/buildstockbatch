@@ -209,8 +209,17 @@ class GcpBatch(DockerBatchBase):
 
         # Check that GCP bucket exists
         bucket = cfg["gcp"]["gcs"]["bucket"]
+        output_dir = os.path.join(cfg["gcp"]["gcs"]["prefix"], "results", "simulation_output")
         storage_client = storage.Client(project=gcp_project)
         assert storage_client.bucket(bucket).exists(), f"GCS bucket {bucket} does not exist in project {gcp_project}"
+
+        blobs = storage_client.bucket(bucket).list_blobs(prefix=os.path.join(output_dir, "results_job"))
+        for blob in blobs:
+            raise ValidationError(
+                f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                "Remove these files or chose a different file prefix. "
+                f"https://console.cloud.google.com/storage/browser/{bucket}/{output_dir}"
+            )
 
         # Check that artifact registry repository exists
         repo = cfg["gcp"]["artifact_registry"]["repository"]
