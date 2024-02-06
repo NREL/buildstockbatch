@@ -220,35 +220,37 @@ class GcpBatch(DockerBatchBase):
             blobs_exist = True
             break
 
-        if blobs_exist:
-            user_choice = input(f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                        "Do you want to delete these files? (yes/no): ").strip().lower()
-            prefix_for_deletion = os.path.join(cfg["gcp"]["gcs"]["prefix"])
-            blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
+        if not self.missing_only:
+            if blobs_exist:
+                prefix_for_deletion = os.path.join(cfg["gcp"]["gcs"]["prefix"])
+                blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
+            
+                user_choice = input(f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                            "Do you want to delete all the files in {prefix_for_deletion}? (yes/no): ").strip().lower()
 
-            if user_choice == "yes":
-                for blob in blobs_for_deletion:
-                    try:
-                        blob.delete()
-                    except Exception as e:
-                        print(f"Failed to delete {blob.name}: {e}")
+                if user_choice == "yes":
+                    for blob in blobs_for_deletion:
+                        try:
+                            blob.delete()
+                        except Exception as e:
+                            print(f"Failed to delete {blob.name}: {e}")
 
-                # Confirm deletion
-                remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=os.path.join(output_dir, "results_job")))
-                if not remaining_blobs:
-                    print("All specified files have been confirmed deleted. You can now proceed with your operation.")
+                    # Confirm deletion
+                    remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=os.path.join(output_dir, "results_job")))
+                    if not remaining_blobs:
+                        print("All specified files have been confirmed deleted. You can now proceed with your operation.")
+                    else:
+                        print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
+
+                elif user_choice == "no":
+                    raise ValidationError(
+                    f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                    "If you do not wish to delete them choose a different file prefix. "
+                    f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
+                )
                 else:
-                    print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
-
-            elif user_choice == "no":
-                raise ValidationError(
-                f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                "If you do not wish to delete them choose a different file prefix. "
-                f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
-            )
-            else:
-                raise ValidationError(
-                f"Invalid input!")
+                    raise ValidationError(
+                    f"Invalid input!")
 
         # Check that artifact registry repository exists
         repo = cfg["gcp"]["artifact_registry"]["repository"]
