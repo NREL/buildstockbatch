@@ -56,7 +56,7 @@ setuptools.setup(
             "sphinx_paramlinks",
             "changelog",
             "flake8",
-            "black",
+            "black~=24.0",
             "rope",
             "doc8",
             "pre-commit",
