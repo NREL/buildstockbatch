@@ -191,7 +191,7 @@ class GcpBatch(DockerBatchBase):
         return f"projects/{gcp_project}/locations/{region}/repositories/{repo}"
 
     @staticmethod
-    def validate_gcp_args(project_file):
+    def validate_gcp_args(project_file, missing_only):
         cfg = get_project_configuration(project_file)
         assert "gcp" in cfg, 'Project config must contain a "gcp" section'
         gcp_project = cfg["gcp"]["project"]
@@ -220,7 +220,6 @@ class GcpBatch(DockerBatchBase):
             blobs_exist = True
             break
 
-        
         if blobs_exist:
             prefix_for_deletion = cfg["gcp"]["gcs"]["prefix"]
             blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
@@ -229,11 +228,11 @@ class GcpBatch(DockerBatchBase):
                         f"Do you want to delete all the files in {prefix_for_deletion}? (yes/no): ").strip().lower()
 
             if user_choice == "yes":
-                for blob in blobs_for_deletion:
-                    try:
-                        blob.delete()
-                    except Exception as e:
-                        print(f"Failed to delete {blob.name}: {e}")
+                try:
+                    blobs_for_deletion_object = [blob for blob in blobs_for_deletion]
+                    storage_client.bucket(bucket).delete_blobs(blobs_for_deletion_object)
+                except Exception as e:
+                    print(f"Failed to delete files: {e}")
 
                 # Confirm deletion
                 remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion))
@@ -243,18 +242,11 @@ class GcpBatch(DockerBatchBase):
                     print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
 
             elif user_choice == "no":
-                user_choice_missing = input(f"Output files are already present in bucket {bucket}!"
-                        "Is this a missingonly run? (yes/no): ").strip().lower()
-
-                if user_choice_missing == "no":
-                    raise ValidationError(
-                    f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                    "If you do not wish to delete them choose a different file prefix. "
-                    f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
-                )
-
-                if user_choice_missing == "yes":
-                    print(f"This is a run with --missingonly flag. Output files can remain in bucket {bucket}")
+                raise ValidationError(
+                f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                "If you do not wish to delete them choose a different file prefix. "
+                f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
+            )
             
             else:
                 raise ValidationError(
@@ -298,9 +290,9 @@ class GcpBatch(DockerBatchBase):
             )
 
     @staticmethod
-    def validate_project(project_file):
+    def validate_project(project_file, missing_only=False):
         super(GcpBatch, GcpBatch).validate_project(project_file)
-        GcpBatch.validate_gcp_args(project_file)
+        GcpBatch.validate_gcp_args(project_file,missing_only)
 
     @property
     def docker_image(self):
