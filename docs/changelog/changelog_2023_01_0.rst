@@ -15,7 +15,7 @@ v2023.01.0 Changelog
         Adds ``include_timeseries_unmet_hours`` and
         ``timeseries_num_decimal_places`` arguments to the Residential HPXML
         Workflow Generator.
-    
+
     .. change::
         :tags: bugfix, validation
         :pulreq: 342

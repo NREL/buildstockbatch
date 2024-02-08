@@ -27,4 +27,4 @@ Generator: ``timeseries_num_decimal_places`` and
 Schema Updates
 ==============
 
-No schema updates this time. 
+No schema updates this time.
