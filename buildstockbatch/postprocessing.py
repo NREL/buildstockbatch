@@ -554,11 +554,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 f"partitions which go into {ngroup} column group(s) of {partition_columns}"
             )
 
-            if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
-            else:
-                assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}"
+            ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
 
             fs.makedirs(ts_out_loc)
             logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
