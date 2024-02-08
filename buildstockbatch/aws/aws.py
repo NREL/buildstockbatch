@@ -17,8 +17,6 @@ from copy import deepcopy
 import csv
 from dask.distributed import Client
 from dask_cloudprovider.aws import FargateCluster
-import docker
-from fsspec.implementations.local import LocalFileSystem
 import gzip
 from joblib import Parallel, delayed
 import json
@@ -27,6 +25,7 @@ import os
 import pathlib
 import random
 from s3fs import S3FileSystem
+import shutil
 import tarfile
 import re
 import tempfile
@@ -35,12 +34,10 @@ import tqdm
 import io
 import yaml
 
-from buildstockbatch.base import ValidationError, BuildStockBatchBase
+from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch.cloud.docker_base import DockerBatchBase
-from buildstockbatch import postprocessing
 from buildstockbatch.utils import (
-    ContainerRuntime,
     log_error_details,
     get_project_configuration,
     get_bool_env_var,
@@ -1074,20 +1071,19 @@ class AwsBatch(DockerBatchBase):
             raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
 
         # Make the buildstock/resources/.aws_docker_image dir to store logs
-        local_log_dir = os.path.join(self.buildstock_dir, "resources", ".aws_docker_image")
+        local_log_dir = pathlib.Path(self.buildstock_dir, "resources", ".aws_docker_image")
         if not os.path.exists(local_log_dir):
             os.makedirs(local_log_dir)
 
         # Determine whether or not to build the image with custom gems bundled in
         if self.cfg.get("baseline", dict()).get("custom_gems", False):
             # Ensure the custom Gemfile exists in the buildstock dir
-            local_gemfile_path = os.path.join(self.buildstock_dir, "resources", "Gemfile")
-            if not os.path.exists(local_gemfile_path):
+            local_gemfile_path = pathlib.Path(self.buildstock_dir, "resources", "Gemfile")
+            if not local_gemfile_path.exists():
                 raise AttributeError(f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}")
 
             # Copy the custom Gemfile into the buildstockbatch repo
-            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
-            new_gemfile_path = os.path.join(bsb_root, "Gemfile")
+            new_gemfile_path = root_path / "Gemfile"
             shutil.copyfile(local_gemfile_path, new_gemfile_path)
             logger.info(f"Copying custom Gemfile from {local_gemfile_path}")
 

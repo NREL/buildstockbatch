@@ -23,10 +23,6 @@ def test_custom_gem_install(basic_residential_project_file):
     cfg["aws"]["s3"] = {}
     cfg["aws"]["s3"]["bucket"] = "resbldg-datasets"
     cfg["aws"]["s3"]["prefix"] = "testing/external_demo_project"
-    cfg["aws"]["emr"] = {}
-    cfg["aws"]["emr"]["manager_instance_type"] = "m5.xlarge"
-    cfg["aws"]["emr"]["worker_instance_type"] = "r5.4xlarge"
-    cfg["aws"]["emr"]["worker_instance_count"] = 1
     cfg["aws"]["region"] = "us-west-2"
     cfg["aws"]["use_spot"] = True
     cfg["aws"]["batch_array_size"] = 100
@@ -64,10 +60,6 @@ def test_no_custom_gem_install(basic_residential_project_file):
     cfg["aws"]["s3"] = {}
     cfg["aws"]["s3"]["bucket"] = "resbldg-datasets"
     cfg["aws"]["s3"]["prefix"] = "testing/external_demo_project"
-    cfg["aws"]["emr"] = {}
-    cfg["aws"]["emr"]["manager_instance_type"] = "m5.xlarge"
-    cfg["aws"]["emr"]["worker_instance_type"] = "r5.4xlarge"
-    cfg["aws"]["emr"]["worker_instance_count"] = 1
     cfg["aws"]["region"] = "us-west-2"
     cfg["aws"]["use_spot"] = True
     cfg["aws"]["batch_array_size"] = 100
