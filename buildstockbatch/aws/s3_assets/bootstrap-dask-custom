@@ -47,7 +47,7 @@ python=3.7 \
 "s3fs>=0.4.2,<0.5.0" \
 "numpy>=1.20.0" \
 conda-pack \
-tornado=5 
+tornado=5
 
 aws s3 cp "$1" $HOME/postprocessing.tar.gz
 pip install $HOME/postprocessing.tar.gz
@@ -104,4 +104,3 @@ yarn:
 EOT
 # Also set ARROW_LIBHDFS_DIR in ~/.bashrc so it's set for the local user
 echo -e '\nexport ARROW_LIBHDFS_DIR=/usr/lib/hadoop/lib/native' >> $HOME/.bashrc
-

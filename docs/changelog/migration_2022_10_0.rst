@@ -15,7 +15,7 @@ It has been a while since our last formal release. A lot has changed in both
 ResStock and ComStock in that time. This is the first release that formally
 supports the new HPXML based workflow for ResStock. It is also the first formal
 version that supports ComStock. (Prior to this ComStock was being run from a
-separate branch.) 
+separate branch.)
 
 Most users have been using their own branches or environments built from
 ``develop`` to get the features they need. Hopefully this allows most users to

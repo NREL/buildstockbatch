@@ -12,7 +12,7 @@ upgrades:
           - or:
             - Insulation Slab|Good Option
             - Insulation Slab|None
-          - not: 
+          - not:
             - Insulation Wall|Good Option
             - Insulation Wall|Good Option  # Two Insulation Wall under 'not'. Should be caught by logic validator
           - and:

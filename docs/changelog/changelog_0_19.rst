@@ -47,8 +47,8 @@
         :pullreq: 179
         :tickets: 178
 
-        Fixing dependency conflict in installation. 
-        
+        Fixing dependency conflict in installation.
+
     .. change::
         :tags: schema, change
         :pullreq: 177
@@ -78,7 +78,7 @@
         :tags: aws, bugfix
         :pullreq: 163
 
-        Fix bug in AWS postprocessing. 
+        Fix bug in AWS postprocessing.
 
     .. change::
         :tags: bugfix, aws

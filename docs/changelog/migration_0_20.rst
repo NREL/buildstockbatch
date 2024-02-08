@@ -173,7 +173,7 @@ Reporting Measures in Workflows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``reporting_measures`` configuration key that now resides under ``workflow_generator.args``
-allows measure arguments to be passed to reporting measures. 
+allows measure arguments to be passed to reporting measures.
 
 Old Spec:
 
