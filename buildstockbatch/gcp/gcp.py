@@ -220,37 +220,38 @@ class GcpBatch(DockerBatchBase):
             blobs_exist = True
             break
 
-        if blobs_exist:
-            prefix_for_deletion = cfg["gcp"]["gcs"]["prefix"]
-            blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
+        if not missing_only: 
+            if blobs_exist:
+                prefix_for_deletion = cfg["gcp"]["gcs"]["prefix"]
+                blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
         
-            user_choice = input(f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                        f"Do you want to delete all the files in {prefix_for_deletion}? (yes/no): ").strip().lower()
+                user_choice = input(f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                            f"Do you want to delete all the files in {prefix_for_deletion}? (yes/no): ").strip().lower()
 
-            if user_choice == "yes":
-                try:
-                    blobs_for_deletion_object = [blob for blob in blobs_for_deletion]
-                    storage_client.bucket(bucket).delete_blobs(blobs_for_deletion_object)
-                except Exception as e:
-                    print(f"Failed to delete files: {e}")
+                if user_choice == "yes":
+                    try:
+                        blobs_for_deletion_object = [blob for blob in blobs_for_deletion]
+                        storage_client.bucket(bucket).delete_blobs(blobs_for_deletion_object)
+                    except Exception as e:
+                        print(f"Failed to delete files: {e}")
 
-                # Confirm deletion
-                remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion))
-                if not remaining_blobs:
-                    print("All specified files have been confirmed deleted. You can now proceed with your operation.")
-                else:
-                    print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
+                    # Confirm deletion
+                    remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion))
+                    if not remaining_blobs:
+                        print("All specified files have been confirmed deleted. You can now proceed with your operation.")
+                    else:
+                        print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
 
-            elif user_choice == "no":
-                raise ValidationError(
-                f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                "If you do not wish to delete them choose a different file prefix. "
-                f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
-            )
+                elif user_choice == "no":
+                    raise ValidationError(
+                    f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
+                    "If you do not wish to delete them choose a different file prefix. "
+                    f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
+                )
             
-            else:
-                raise ValidationError(
-                f"Invalid input!")
+                else:
+                    raise ValidationError(
+                    f"Invalid input!")
 
         # Check that artifact registry repository exists
         repo = cfg["gcp"]["artifact_registry"]["repository"]
@@ -1225,7 +1226,7 @@ def main():
             logger.setLevel(logging.INFO)
 
         # validate the project, and if --validateonly flag is set, return True if validation passes
-        GcpBatch.validate_project(os.path.abspath(args.project_filename))
+        GcpBatch.validate_project(os.path.abspath(args.project_filename), args.missingonly)
         if args.validateonly:
             return True
 
