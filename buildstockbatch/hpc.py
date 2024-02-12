@@ -254,7 +254,9 @@ class SlurmBatch(BuildStockBatchBase):
         @delayed
         def run_building_d(i, upgrade_idx):
             try:
-                return self.run_building(self.output_dir, self.cfg, args["n_datapoints"], i, upgrade_idx)
+                return self.run_building(
+                    self.output_dir, self.cfg, self.os_hescore_dir, args["n_datapoints"], i, upgrade_idx
+                )
             except Exception:
                 with open(traceback_file_path, "a") as f:
                     txt = get_error_details()
@@ -323,7 +325,7 @@ class SlurmBatch(BuildStockBatchBase):
         self.local_apptainer_img.unlink(missing_ok=True)
 
     @classmethod
-    def run_building(cls, output_dir, cfg, n_datapoints, i, upgrade_idx=None):
+    def run_building(cls, output_dir, cfg, os_hescore_dir, n_datapoints, i, upgrade_idx=None):
         fs = LocalFileSystem()
         upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
 
@@ -376,6 +378,9 @@ class SlurmBatch(BuildStockBatchBase):
                     src = cls.local_buildstock_dir / "resources" / "hpxml-measures"
                     container_mount = "/resources/hpxml-measures"
                     args.extend(["-B", f"{src}:{container_mount}:ro"])
+
+                if os_hescore_dir:
+                    args.extend(["-B", "/projects/hescore/weather:/opt/OpenStudio-HEScore/weather:ro"])
 
                 # Build the openstudio command that will be issued within the
                 # apptainer container If custom gems are to be used in the

@@ -47,11 +47,14 @@ def get_project_configuration(project_file):
 
     # Set absolute paths
     cfg["buildstock_directory"] = path_rel_to_file(project_file, cfg["buildstock_directory"])
-    # if 'precomputed_sample' in cfg.get('baseline', {}):
-    #     cfg['baseline']['precomputed_sample'] = \
-    #         path_rel_to_file(project_file, cfg['baseline']['precomputed_sample'])
+
     if "weather_files_path" in cfg:
         cfg["weather_files_path"] = path_rel_to_file(project_file, cfg["weather_files_path"])
+
+    if cfg.get("workflow_generator", {}).get("type") == "residential_hpxml_hes":
+        cfg["workflow_generator"]["args"]["build_existing_model"]["os_hescore_directory"] = path_rel_to_file(
+            project_file, cfg["workflow_generator"]["args"]["build_existing_model"]["os_hescore_directory"]
+        )
 
     return cfg
 
