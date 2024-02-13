@@ -20,7 +20,7 @@ RUN wget https://www.python.org/ftp/python/3.8.8/Python-3.8.8.tgz && \
 
 COPY . /buildstock-batch/
 RUN python3.8 -m pip install "dask[distributed]" --upgrade
-RUN python3.8 -m pip install "bokeh"
+RUN python3.8 -m pip install "bokeh" -upgrade
 RUN python3.8 -m pip install /buildstock-batch
 
 WORKDIR /app/
