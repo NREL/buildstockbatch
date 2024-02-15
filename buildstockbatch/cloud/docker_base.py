@@ -558,9 +558,12 @@ class DockerBatchBase(BuildStockBatchBase):
         fs = self.get_fs()
         done_tasks = set()
 
-        for f in fs.ls(f"{self.results_dir}/simulation_output/"):
-            if m := re.match(".*results_job(\\d*).json.gz$", f):
-                done_tasks.add(int(m.group(1)))
+        try:
+            for f in fs.ls(f"{self.results_dir}/simulation_output/"):
+                if m := re.match(".*results_job(\\d*).json.gz$", f):
+                    done_tasks.add(int(m.group(1)))
+        except FileNotFoundError:
+            logger.warning("No completed task files found. Running all tasks.")
 
         missing_tasks = []
         with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
