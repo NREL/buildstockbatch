@@ -111,10 +111,15 @@ class SlurmBatch(BuildStockBatchBase):
     def clear_and_copy_dir(src, dst):
         if os.path.exists(dst):
             shutil.rmtree(dst, ignore_errors=True)
-        while True:
-            time.sleep(0.1)
-            if not os.path.exists(dst):
+        max_iter = 200  # 20 seconds
+        for i in range(max_iter):
+            try:
                 shutil.copytree(src, dst)
+            except FileExistsError as ex:
+                if i >= max_iter - 1:  # on the last iteration
+                    raise ex
+                time.sleep(0.1)
+            else:
                 break
 
     @classmethod
