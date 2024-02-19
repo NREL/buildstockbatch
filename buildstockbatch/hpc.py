@@ -111,7 +111,11 @@ class SlurmBatch(BuildStockBatchBase):
     def clear_and_copy_dir(src, dst):
         if os.path.exists(dst):
             shutil.rmtree(dst, ignore_errors=True)
-        shutil.copytree(src, dst)
+        while True:
+            time.sleep(0.1)
+            if not os.path.exists(dst):
+                shutil.copytree(src, dst)
+                break
 
     @classmethod
     def get_apptainer_image(cls, cfg, os_version, os_sha):
