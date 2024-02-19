@@ -175,20 +175,11 @@ class AwsBatchEnv(AwsJobBase):
         self.vpc_id = response["Vpc"]["VpcId"]
         logger.info(f"VPC {self.vpc_id} created")
 
-        while True:
-            try:
-                self.ec2.create_tags(
-                    Resources=[self.vpc_id],
-                    Tags=self.get_tags_uppercase(Name=self.job_identifier),
-                )
-                break
-            except Exception as e:
-                if "InvalidVpcID.NotFound" in str(e):
-                    logger.info("Cannot tag VPC.  VPC not yet created. Sleeping...")
-                    time.sleep(5)
-                else:
-                    raise
-
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.vpc_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
         # Find the default security group
 
         sec_response = self.ec2.describe_security_groups(
@@ -728,26 +719,17 @@ class AwsBatchEnv(AwsJobBase):
         Submits the created job definition and version to be run.
         """
 
-        while True:
-            try:
-                resp = self.batch.submit_job(
-                    jobName=self.job_identifier,
-                    jobQueue=self.batch_job_queue_name,
-                    arrayProperties={"size": array_size},
-                    jobDefinition=self.job_definition_arn,
-                    tags=self.get_tags(),
-                )
+        resp = backoff(
+            self.batch.submit_job,
+            jobName=self.job_identifier,
+            jobQueue=self.batch_job_queue_name,
+            arrayProperties={"size": array_size},
+            jobDefinition=self.job_definition_arn,
+            tags=self.get_tags(),
+        )
 
-                logger.info(f"Job {self.job_identifier} submitted.")
-                return resp
-
-            except Exception as e:
-                if "not in VALID state" in str(e):
-                    # Need to wait a second for the compute environment to complete registration
-                    logger.warning("5 second sleep initiated to wait for job queue creation due to error: " + str(e))
-                    time.sleep(5)
-                else:
-                    raise
+        logger.info(f"Job {self.job_identifier} submitted.")
+        return resp
 
     def clean(self):
         # Get our vpc:
