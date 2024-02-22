@@ -163,9 +163,9 @@ def test_log_summary(basic_residential_project_file, mocker, caplog):
         os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
             "test_results",
-            "results_csvs",
+            "parquet",
         ),
-        os.path.join(results_dir, "results_csvs"),
+        os.path.join(results_dir, "parquet"),
     )
 
     with caplog.at_level(logging.INFO):

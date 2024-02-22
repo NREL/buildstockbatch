@@ -469,25 +469,24 @@ class DockerBatchBase(BuildStockBatchBase):
     def log_summary(self):
         """
         Log a summary of how many simulations succeeded, failed, or ended with other statuses.
-        Uses the `completed_status` column of the files in results_csvs/results_*.csv.gz.
+        Uses the `completed_status` column of the files in results/parquet/.../results_up*.parquet.
         """
         fs = self.get_fs()
         # Summary of simulation statuses across all upgrades
         status_summary = {}
         total_counts = collections.defaultdict(int)
 
-        results_csv_dir = f"{self.results_dir}/results_csvs/"
+        results_glob = f"{self.results_dir}/parquet/**/results_up*.parquet"
         try:
-            results_files = fs.ls(results_csv_dir)
+            results_files = fs.glob(results_glob)
         except FileNotFoundError:
-            logger.info(f"No results CSV files found at {results_csv_dir}")
+            logger.info(f"No results parquet files found at {results_glob}")
             return
 
         for result in results_files:
             upgrade_id = result.split(".")[0][-2:]
             with fs.open(result) as f:
-                with gzip.open(f) as gf:
-                    df = pd.read_csv(gf, usecols=["completed_status"])
+                df = pd.read_parquet(f, columns=["completed_status"])
             # Dict mapping from status (e.g. "Success") to count
             statuses = df.groupby("completed_status").size().to_dict()
             status_summary[upgrade_id] = statuses
