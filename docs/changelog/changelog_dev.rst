@@ -35,3 +35,10 @@ Development Changelog
         :pullreq: 426
 
         A bugfix for gracefully handling empty data_point_out.json files.
+
+    .. change::
+        :tags: general
+        :pullreq: 436
+
+        Clean up handling of weather files in GCP/AWS implementations: only upload files that are required,
+        and fail with clearer messaging if any files are missing.
