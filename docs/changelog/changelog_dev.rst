@@ -35,3 +35,9 @@ Development Changelog
         :pullreq: 426
 
         A bugfix for gracefully handling empty data_point_out.json files.
+
+    .. change::
+        :tags: general
+        :pullreq: 435
+
+        Add helper to log a summary of how many simulations succeeded and failed at the end of a job.
