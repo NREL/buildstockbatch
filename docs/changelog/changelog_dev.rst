@@ -35,3 +35,9 @@ Development Changelog
         :pullreq: 426
 
         A bugfix for gracefully handling empty data_point_out.json files.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 437
+
+        Add a ``step_failures`` section to json results files with error messages from OpenStudio simulations.
