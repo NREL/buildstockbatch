@@ -293,8 +293,16 @@ manage BuildStockBatch runs.
 
 1. Install `Docker`_. This is needed by the script to manage Docker images (pull, push, etc).
 2. Get BuildStockBatch and set up a Python environment for it using the :ref:`python` instructions
-   above (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
-   to it).
+   above. (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
+   with the command below.)
+
+   * Install with the ``[gcp]`` option to include GCP-specific dependencies:
+
+    ::
+
+        cd /path/to/buildstockbatch
+        python -m pip install -e ".[gcp]"
+
 3. Download/Clone ResStock or ComStock.
 4. Set up GCP authentication.
 

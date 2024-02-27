@@ -1530,7 +1530,9 @@ class AwsBatch(DockerBatchBase):
         if not (root_path / "Dockerfile").exists():
             raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
         logger.debug("Building docker image")
-        self.docker_client.images.build(path=str(root_path), tag=self.docker_image, rm=True)
+        self.docker_client.images.build(
+            path=str(root_path), tag=self.docker_image, rm=True, buildargs={"CLOUD_PLATFORM": "aws"}
+        )
 
     def push_image(self):
         """

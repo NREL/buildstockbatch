@@ -390,7 +390,7 @@ class GcpBatch(DockerBatchBase):
             rm=True,
             target=stage,
             platform="linux/amd64",
-            buildargs={"OS_VER": self.os_version},
+            buildargs={"OS_VER": self.os_version, "CLOUD_PLATFORM": "gcp"},
         )
         build_image_log = os.path.join(local_log_dir, "build_image.log")
         with open(build_image_log, "w") as f_out:
