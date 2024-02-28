@@ -309,25 +309,27 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
        to be set to at least 2,048 if more than 8 simulations will be run in parallel on the same
        machine (i.e., when vCPUs per machine_type ÷ vCPUs per sim > 8). Default: None (which should
        result in a 30 GB boot disk according to the docs linked above).
-    *  ``machine_type``: Optional. GCP Compute Engine machine type to use. If omitted, GCP Batch will
+    *  ``machine_type``: Optional. GCP Compute Engine `machine type`_ to use. If omitted, GCP Batch will
        choose a machine type based on the requested vCPUs and memory. If set, the machine type
        should have at least as many resources as requested for each simulation above. If it is
-       large enough, multiple simulations will be run in parallel on the same machine. Usually safe
-       to leave unset.
+       large enough, multiple simulations will be run in parallel on the same machine. Typically
+       this is a type from the `E2 series`_. Usually safe to leave unset.
     *  ``use_spot``: Optional. Whether to use `Spot VMs <https://cloud.google.com/spot-vms>`_
        for data simulations, which can reduce costs by up to 91%. Default: false
 *  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
    postprocessing.
 
-    *  ``cpus``: Optional. `Number of CPUs`_ to use. Default: 2.
+    *  ``cpus``: Optional. `Number of CPUs`_ to use. Use up to 8 for large jobs. Default: 2.
     *  ``memory_mib``: Optional. `Amount of RAM`_ needed in MiB. At least 2048 MiB per CPU is recommended.
-       Default: 4096.
+       Use up to 32768 MiB for large jobs. Default: 4096 MiB.
 
 .. _GCP's default behavior: https://cloud.google.com/python/docs/reference/batch/latest/google.cloud.batch_v1.types.TaskGroup
 .. _job limits: https://cloud.google.com/batch/quotas
 .. _Batch OS environment docs: https://cloud.google.com/batch/docs/vm-os-environment-overview#default
 .. _Number of CPUs: https://cloud.google.com/run/docs/configuring/services/cpu
 .. _Amount of RAM: https://cloud.google.com/run/docs/configuring/services/memory-limits
+.. _machine type: https://cloud.google.com/compute/docs/general-purpose-machines
+.. _E2 series: https://cloud.google.com/compute/docs/general-purpose-machines#e2_machine_types
 
 .. _postprocessing:
 
