@@ -34,6 +34,6 @@ pdsh -w $SLURM_JOB_NODELIST_PACK_GROUP_1 "free -h"
 pdsh -w $SLURM_JOB_NODELIST_PACK_GROUP_1 "df -i; df -h"
 
 $MY_PYTHON_ENV/bin/dask scheduler --scheduler-file $SCHEDULER_FILE &> $OUT_DIR/dask_scheduler.out &
-pdsh -w $SLURM_JOB_NODELIST_PACK_GROUP_1 "source /kfs2/shared-projects/buildstock/aws_credentials.sh; $MY_PYTHON_ENV/bin/dask worker --scheduler-file $SCHEDULER_FILE --local-directory /tmp/scratch/dask --nworkers ${NPROCS} --nthreads 1 --memory-limit ${MEMORY}MB" &> $OUT_DIR/dask_workers.out &
+pdsh -w $SLURM_JOB_NODELIST_PACK_GROUP_1 "source /kfs2/shared-projects/buildstock/aws_credentials.sh; $MY_PYTHON_ENV/bin/dask worker --scheduler-file $SCHEDULER_FILE --local-directory $LOCAL_SCRATCH/dask --nworkers ${NPROCS} --nthreads 1 --memory-limit ${MEMORY}MB" &> $OUT_DIR/dask_workers.out &
 
 time python -u -m buildstockbatch.hpc kestrel "$PROJECTFILE"
