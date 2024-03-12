@@ -620,6 +620,7 @@ class SlurmBatch(BuildStockBatchBase):
 
         args = [
             "sbatch",
+            "--tmp=1000000",
             "--account={}".format(account),
             "--time={}".format(walltime),
             "--export={}".format(",".join(env_export.keys())),
@@ -627,6 +628,7 @@ class SlurmBatch(BuildStockBatchBase):
             "--output=postprocessing.out",
             "--nodes=1",
             ":",
+            "--tmp=1000000",
             "--mem={}".format(memory),
             "--output=dask_workers.out",
             "--nodes={}".format(n_workers),
