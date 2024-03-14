@@ -191,7 +191,7 @@ class GcpBatch(DockerBatchBase):
         return f"projects/{gcp_project}/locations/{region}/repositories/{repo}"
 
     @staticmethod
-    def validate_gcp_args(project_file, missing_only):
+    def validate_gcp_args(project_file, missing_only, pp_only):
         cfg = get_project_configuration(project_file)
         assert "gcp" in cfg, 'Project config must contain a "gcp" section'
         gcp_project = cfg["gcp"]["project"]
@@ -220,7 +220,7 @@ class GcpBatch(DockerBatchBase):
             blobs_exist = True
             break
 
-        if not missing_only: 
+        if not (missing_only or pp_only): 
             if blobs_exist:
                 prefix_for_deletion = cfg["gcp"]["gcs"]["prefix"]
                 blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
@@ -291,9 +291,9 @@ class GcpBatch(DockerBatchBase):
             )
 
     @staticmethod
-    def validate_project(project_file, missing_only=False):
+    def validate_project(project_file, missing_only=False, pp_only=False):
         super(GcpBatch, GcpBatch).validate_project(project_file)
-        GcpBatch.validate_gcp_args(project_file,missing_only)
+        GcpBatch.validate_gcp_args(project_file,missing_only,pp_only)
 
     @property
     def docker_image(self):
@@ -1226,7 +1226,7 @@ def main():
             logger.setLevel(logging.INFO)
 
         # validate the project, and if --validateonly flag is set, return True if validation passes
-        GcpBatch.validate_project(os.path.abspath(args.project_filename), args.missingonly)
+        GcpBatch.validate_project(os.path.abspath(args.project_filename), args.missingonly, args.postprocessonly)
         if args.validateonly:
             return True
 
