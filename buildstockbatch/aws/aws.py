@@ -679,7 +679,7 @@ class AwsBatchEnv(AwsJobBase):
 
                 elif "is not valid" in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.warning("wating a few seconds for compute environment creation: " + str(e))
+                    logger.warning("waiting a few seconds for compute environment creation: " + str(e))
                     time.sleep(5)
 
                 else:
