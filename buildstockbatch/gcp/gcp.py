@@ -190,8 +190,56 @@ class GcpBatch(DockerBatchBase):
         """Returns the full name of a repository in Artifact Registry."""
         return f"projects/{gcp_project}/locations/{region}/repositories/{repo}"
 
+    def check_output_dir(self):
+        """Check for existing results files in the output directory."""
+        storage_client = storage.Client(project=self.gcp_project)
+        output_dir = os.path.join(self.cfg["gcp"]["gcs"]["prefix"], "results", "simulation_output")
+        bucket = storage_client.bucket(self.gcs_bucket)
+        blobs = bucket.list_blobs(prefix=os.path.join(output_dir, "results_job"))
+
+        try:
+            blob = next(blobs)
+        except StopIteration:
+            return
+
+        prefix_for_deletion = self.cfg["gcp"]["gcs"]["prefix"]
+        blobs_for_deletion = bucket.list_blobs(prefix=prefix_for_deletion)
+        user_choice = (
+            input(
+                f"Output files are already present in bucket {self.gcs_bucket}! For example, {blob.name} exists. "
+                f"Do you want to permanently delete all the files in {prefix_for_deletion}? (yes/no): "
+            )
+            .strip()
+            .lower()
+        )
+
+        if user_choice == "yes":
+            logger.info("Deleting files...")
+            try:
+                blobs_for_deletion_object = [blob for blob in blobs_for_deletion]
+                bucket.delete_blobs(blobs_for_deletion_object)
+            except Exception as e:
+                logger.error(f"Failed to delete files: {e}")
+
+            # Confirm deletion
+            remaining_blobs = list(bucket.list_blobs(prefix=prefix_for_deletion))
+            if not remaining_blobs:
+                logger.info("All specified files have been confirmed deleted. You can now proceed with your operation.")
+            else:
+                logger.warning(
+                    "Deletion confirmed for some files, but some still remain. Please check GCS for details."
+                )
+        elif user_choice == "no":
+            raise ValidationError(
+                f"Output files are already present in bucket {self.gcs_bucket}! For example, {blob.name} exists. "
+                "If you do not wish to delete them choose a different file prefix. "
+                f"https://console.cloud.google.com/storage/browser/{self.gcs_bucket}/{prefix_for_deletion}"
+            )
+        else:
+            raise ValidationError("Invalid input!")
+
     @staticmethod
-    def validate_gcp_args(project_file, missing_only, pp_only):
+    def validate_gcp_args(project_file):
         cfg = get_project_configuration(project_file)
         assert "gcp" in cfg, 'Project config must contain a "gcp" section'
         gcp_project = cfg["gcp"]["project"]
@@ -209,49 +257,8 @@ class GcpBatch(DockerBatchBase):
 
         # Check that GCP bucket exists
         bucket = cfg["gcp"]["gcs"]["bucket"]
-        output_dir = os.path.join(cfg["gcp"]["gcs"]["prefix"], "results", "simulation_output")
         storage_client = storage.Client(project=gcp_project)
         assert storage_client.bucket(bucket).exists(), f"GCS bucket {bucket} does not exist in project {gcp_project}"
-
-        blobs_exist = False
-        blobs = storage_client.bucket(bucket).list_blobs(prefix=os.path.join(output_dir, "results_job"))
-
-        for blob in blobs:
-            blobs_exist = True
-            break
-
-        if not (missing_only or pp_only): 
-            if blobs_exist:
-                prefix_for_deletion = cfg["gcp"]["gcs"]["prefix"]
-                blobs_for_deletion = storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion)
-        
-                user_choice = input(f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                            f"Do you want to delete all the files in {prefix_for_deletion}? (yes/no): ").strip().lower()
-
-                if user_choice == "yes":
-                    try:
-                        blobs_for_deletion_object = [blob for blob in blobs_for_deletion]
-                        storage_client.bucket(bucket).delete_blobs(blobs_for_deletion_object)
-                    except Exception as e:
-                        print(f"Failed to delete files: {e}")
-
-                    # Confirm deletion
-                    remaining_blobs = list(storage_client.bucket(bucket).list_blobs(prefix=prefix_for_deletion))
-                    if not remaining_blobs:
-                        print("All specified files have been confirmed deleted. You can now proceed with your operation.")
-                    else:
-                        print(f"Deletion confirmed for some files, but some still remain. Please check GCS for details.")
-
-                elif user_choice == "no":
-                    raise ValidationError(
-                    f"Output files are already present in bucket {bucket}! For example, {blob.name} exists. "
-                    "If you do not wish to delete them choose a different file prefix. "
-                    f"https://console.cloud.google.com/storage/browser/{bucket}/{prefix_for_deletion}"
-                )
-            
-                else:
-                    raise ValidationError(
-                    f"Invalid input!")
 
         # Check that artifact registry repository exists
         repo = cfg["gcp"]["artifact_registry"]["repository"]
@@ -291,9 +298,9 @@ class GcpBatch(DockerBatchBase):
             )
 
     @staticmethod
-    def validate_project(project_file, missing_only=False, pp_only=False):
+    def validate_project(project_file):
         super(GcpBatch, GcpBatch).validate_project(project_file)
-        GcpBatch.validate_gcp_args(project_file,missing_only,pp_only)
+        GcpBatch.validate_gcp_args(project_file)
 
     @property
     def docker_image(self):
@@ -383,7 +390,7 @@ class GcpBatch(DockerBatchBase):
             rm=True,
             target=stage,
             platform="linux/amd64",
-            buildargs={"OS_VER": self.os_version},
+            buildargs={"OS_VER": self.os_version, "CLOUD_PLATFORM": "gcp"},
         )
         build_image_log = os.path.join(local_log_dir, "build_image.log")
         with open(build_image_log, "w") as f_out:
@@ -1226,7 +1233,7 @@ def main():
             logger.setLevel(logging.INFO)
 
         # validate the project, and if --validateonly flag is set, return True if validation passes
-        GcpBatch.validate_project(os.path.abspath(args.project_filename), args.missingonly, args.postprocessonly)
+        GcpBatch.validate_project(os.path.abspath(args.project_filename))
         if args.validateonly:
             return True
 
@@ -1246,6 +1253,8 @@ def main():
         else:
             if batch.check_for_existing_jobs():
                 return
+            if not args.missingonly:
+                batch.check_output_dir()
 
             batch.build_image()
             batch.push_image()
