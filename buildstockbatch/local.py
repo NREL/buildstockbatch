@@ -420,7 +420,7 @@ def main():
     if args.measures_only or args.samplingonly:
         return
     if args.uploadonly:
-        batch.process_results(skip_combine=True, force_upload=True)
+        batch.process_results(skip_combine=True)
     else:
         batch.process_results()
 
