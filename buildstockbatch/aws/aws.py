@@ -167,7 +167,8 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the VPC
 
-        response = self.ec2.create_vpc(
+        response = backoff(
+            self.ec2.create_vpc,
             CidrBlock=self.vpc_cidr,
             AmazonProvidedIpv6CidrBlock=False,
             InstanceTenancy="default",
@@ -192,7 +193,8 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info(f"Security group {self.batch_security_group} created for vpc/job.")
 
-        response = self.ec2.authorize_security_group_ingress(
+        response = backoff(
+            self.ec2.authorize_security_group_ingress,
             GroupId=self.batch_security_group,
             IpPermissions=[
                 {
@@ -208,7 +210,8 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the private subnets
 
-        priv_response_1 = self.ec2.create_subnet(
+        priv_response_1 = backoff(
+            self.ec2.create_subnet,
             CidrBlock=self.priv_subnet_cidr_1,
             AvailabilityZone=f"{self.region}a",
             VpcId=self.vpc_id,
@@ -218,7 +221,8 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        priv_response_2 = self.ec2.create_subnet(
+        priv_response_2 = backoff(
+            self.ec2.create_subnet,
             CidrBlock=self.priv_subnet_cidr_2,
             AvailabilityZone=f"{self.region}b",
             VpcId=self.vpc_id,
@@ -254,7 +258,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the public subnet
 
-        pub_response = self.ec2.create_subnet(CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
+        pub_response = backoff(self.ec2.create_subnet, CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
 
         logger.info("EIP allocated.")
 
@@ -268,25 +272,21 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create and elastic IP for the NAT Gateway
 
-        try:
-            ip_response = self.ec2.allocate_address(Domain="vpc")
+        ip_response = backoff(self.ec2.allocate_address, Domain="vpc")
 
-            self.nat_ip_allocation = ip_response["AllocationId"]
+        self.nat_ip_allocation = ip_response["AllocationId"]
 
-            logger.info("EIP allocated.")
+        logger.info("EIP allocated.")
 
-            self.ec2.create_tags(
-                Resources=[self.nat_ip_allocation],
-                Tags=self.get_tags_uppercase(Name=self.job_identifier),
-            )
-
-        except Exception as e:
-            if "AddressLimitExceeded" in str(e):
-                raise
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.nat_ip_allocation],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
 
         # Create an internet gateway
 
-        self.ec2.attach_internet_gateway(InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
+        backoff(self.ec2.attach_internet_gateway, InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
 
         logger.info("Internet Gateway attached.")
 
@@ -302,26 +302,18 @@ class AwsBatchEnv(AwsJobBase):
 
         # Modify the default route table to be used as the public route
 
-        while True:
-            try:
-                self.ec2.create_route(
-                    DestinationCidrBlock="0.0.0.0/0",
-                    GatewayId=self.internet_gateway_id,
-                    RouteTableId=self.pub_route_table_id,
-                )
-                logger.info("Route created for Internet Gateway.")
-                break
-
-            except Exception as e:
-                if "NotFound" in str(e):
-                    time.sleep(5)
-                    logger.info("Internet Gateway not yet created. Sleeping...")
-                else:
-                    raise
+        backoff(
+            self.ec2.create_route,
+            DestinationCidrBlock="0.0.0.0/0",
+            GatewayId=self.internet_gateway_id,
+            RouteTableId=self.pub_route_table_id,
+        )
 
         # Create a NAT Gateway
 
-        nat_response = self.ec2.create_nat_gateway(AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id)
+        nat_response = backoff(
+            self.ec2.create_nat_gateway, AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id
+        )
 
         self.nat_gateway_id = nat_response["NatGateway"]["NatGatewayId"]
 
@@ -335,7 +327,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create a new private route table
 
-        prt_response = self.ec2.create_route_table(VpcId=self.vpc_id)
+        prt_response = backoff(self.ec2.create_route_table, VpcId=self.vpc_id)
 
         self.priv_route_table_id = prt_response["RouteTable"]["RouteTableId"]
 
@@ -349,31 +341,27 @@ class AwsBatchEnv(AwsJobBase):
 
         # Associate the private route to the private subnet
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1)
+        backoff(
+            self.ec2.associate_route_table, RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1
+        )
         logger.info("Route table associated with subnet.")
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2)
+        backoff(
+            self.ec2.associate_route_table, RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2
+        )
         logger.info("Route table associated with subnet.")
 
         # Associate the NAT gateway with the private route
 
-        while True:
-            try:
-                self.ec2.create_route(
-                    DestinationCidrBlock="0.0.0.0/0",
-                    NatGatewayId=self.nat_gateway_id,
-                    RouteTableId=self.priv_route_table_id,
-                )
-                logger.info("Route created for subnet.")
-                break
-            except Exception as e:
-                if "InvalidNatGatewayID.NotFound" in str(e):
-                    time.sleep(5)
-                    logger.info("Nat Gateway not yet created. Sleeping...")
-                else:
-                    raise
+        backoff(
+            self.ec2.create_route,
+            DestinationCidrBlock="0.0.0.0/0",
+            NatGatewayId=self.nat_gateway_id,
+            RouteTableId=self.priv_route_table_id,
+        )
 
-        gateway_response = self.ec2.create_vpc_endpoint(
+        gateway_response = backoff(
+            self.ec2.create_vpc_endpoint,
             VpcId=self.vpc_id,
             ServiceName=f"com.amazonaws.{self.region}.s3",
             RouteTableIds=[self.priv_route_table_id, self.pub_route_table_id],
