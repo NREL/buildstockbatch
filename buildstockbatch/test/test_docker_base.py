@@ -1,4 +1,5 @@
 """Tests for the DockerBatchBase class."""
+
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import json
