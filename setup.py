@@ -39,9 +39,9 @@ setuptools.setup(
         "fsspec",
         "yamale",
         "ruamel.yaml",
-        "awsretry",
         "lxml",
         "semver",
+        "tqdm",
     ],
     extras_require={
         "dev": [
@@ -56,11 +56,14 @@ setuptools.setup(
             "sphinx_paramlinks",
             "changelog",
             "flake8",
-            "black",
+            "black~=24.0",
             "rope",
             "doc8",
             "pre-commit",
-        ]
+        ],
+        "aws": [
+            "dask-cloudprovider[aws]",
+        ],
     },
     entry_points={
         "console_scripts": [

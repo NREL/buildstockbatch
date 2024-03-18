@@ -1,24 +1,21 @@
-FROM nrel/openstudio:2.9.1
+ARG OS_VER
+FROM --platform=linux/amd64 nrel/openstudio:$OS_VER as buildstockbatch
 
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-
-RUN sudo apt update && \
-    sudo apt install -y wget build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev libssl-dev \
-    libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev libffi-dev zlib1g-dev
-
-RUN wget https://www.python.org/ftp/python/3.8.8/Python-3.8.8.tgz && \
-    tar xzf Python-3.8.8.tgz && \
-    cd Python-3.8.8 && \
-    ./configure --enable-optimizations && \
-    make altinstall && \
-    rm -rf Python-3.8.8 && \
-    rm -rf Python-3.8.8.tgz
-
-RUN sudo apt install -y -V ca-certificates lsb-release && \
-    wget https://apache.bintray.com/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
-    sudo apt install -y -V ./apache-arrow-archive-keyring-latest-$(lsb_release --codename --short).deb && \
-    sudo apt update && \
-    sudo apt install -y -V libarrow-dev libarrow-glib-dev libarrow-dataset-dev libparquet-dev libparquet-glib-dev
-
+RUN sudo apt update && sudo apt install -y python3-pip
+RUN sudo -H pip install --upgrade pip
 COPY . /buildstock-batch/
-RUN python3.8 -m pip install /buildstock-batch
+RUN python3 -m pip install "/buildstock-batch[aws]"
+
+# Base plus custom gems
+FROM buildstockbatch as buildstockbatch-custom-gems
+RUN sudo cp /buildstock-batch/Gemfile /var/oscli/
+# OpenStudio's docker image sets ENV BUNDLE_WITHOUT=native_ext
+# https://github.com/NREL/docker-openstudio/blob/3.2.1/Dockerfile#L12
+# which overrides anything set via bundle config commands.
+# Unset this so that bundle config commands work properly.
+RUN unset BUNDLE_WITHOUT
+# Note the addition of 'set' in bundle config commands
+RUN bundle config set git.allow_insecure true
+RUN bundle config set path /var/oscli/gems/
+RUN bundle config set without 'test development native_ext'
+RUN bundle install --gemfile /var/oscli/Gemfile
