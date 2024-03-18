@@ -30,7 +30,7 @@ import time
 
 from buildstockbatch import postprocessing
 from buildstockbatch.base import BuildStockBatchBase
-from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress_file, read_csv
+from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress_file, read_csv, get_bool_env_var
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +56,9 @@ class DockerBatchBase(BuildStockBatchBase):
 
     def __init__(self, project_filename):
         super().__init__(project_filename)
+
+        if get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
+            return
 
         self.docker_client = docker.DockerClient.from_env()
         try:
@@ -248,12 +251,7 @@ class DockerBatchBase(BuildStockBatchBase):
         n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
         logger.debug("Total number of simulations = {}".format(n_sims))
 
-        # This is the maximum number of jobs that can be in an array
-        if self.batch_array_size <= self.MAX_JOB_COUNT:
-            max_array_size = self.batch_array_size
-        else:
-            max_array_size = self.MAX_JOB_COUNT
-        n_sims_per_job = math.ceil(n_sims / max_array_size)
+        n_sims_per_job = math.ceil(n_sims / self.batch_array_size)
         n_sims_per_job = max(n_sims_per_job, 2)
         logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
 
@@ -396,8 +394,23 @@ class DockerBatchBase(BuildStockBatchBase):
                 with open(sim_dir / "os_stdout.log", "w") as f_out:
                     try:
                         logger.debug("Running {}".format(sim_id))
+                        cli_cmd = ["openstudio", "run", "-w", "in.osw"]
+                        if cfg.get("baseline", dict()).get("custom_gems", False):
+                            cli_cmd = [
+                                "openstudio",
+                                "--bundle",
+                                "/var/oscli/Gemfile",
+                                "--bundle_path",
+                                "/var/oscli/gems",
+                                "--bundle_without",
+                                "native_ext",
+                                "run",
+                                "-w",
+                                "in.osw",
+                                "--debug",
+                            ]
                         subprocess.run(
-                            ["openstudio", "run", "-w", "in.osw"],
+                            cli_cmd,
                             check=True,
                             stdout=f_out,
                             stderr=subprocess.STDOUT,

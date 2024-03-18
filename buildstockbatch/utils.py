@@ -139,3 +139,7 @@ def compress_file(in_filename, out_filename):
 def calc_hash_for_file(filename):
     with open(filename, "rb") as f:
         return hashlib.sha256(f.read()).hexdigest()
+
+
+def get_bool_env_var(varname):
+    return os.environ.get(varname, "0").lower() in ("true", "t", "1", "y", "yes")
