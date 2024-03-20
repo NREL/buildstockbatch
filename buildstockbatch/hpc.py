@@ -489,7 +489,7 @@ class SlurmBatch(BuildStockBatchBase):
             "--time={}".format(cfg[cls.HPC_NAME].get("sampling", {}).get("time", 60)),
             "--account={}".format(cfg[cls.HPC_NAME]["account"]),
             "--nodes=1",
-            "--mem={}".format(self.DEFAULT_NODE_MEMORY_MB),
+            "--mem={}".format(cls.DEFAULT_NODE_MEMORY_MB),
             "--export={}".format(",".join(env.keys())),
             "--output=sampling.out",
             hpc_sh,
