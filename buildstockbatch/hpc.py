@@ -41,16 +41,13 @@ from buildstockbatch.utils import (
     path_rel_to_file,
     get_project_configuration,
     read_csv,
+    get_bool_env_var,
 )
 from buildstockbatch import postprocessing
 from buildstockbatch.__version__ import __version__ as bsb_version
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
-
-
-def get_bool_env_var(varname):
-    return os.environ.get(varname, "0").lower() in ("true", "t", "1", "y", "yes")
 
 
 class SlurmBatch(BuildStockBatchBase):
@@ -959,7 +956,7 @@ def main():
         assert not measures_only
         assert not sampling_only
         if upload_only:
-            batch.process_results(skip_combine=True, force_upload=True)
+            batch.process_results(skip_combine=True)
         else:
             batch.process_results()
     else:

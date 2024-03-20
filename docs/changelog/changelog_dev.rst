@@ -35,3 +35,9 @@ Development Changelog
         :pullreq: 426
 
         A bugfix for gracefully handling empty data_point_out.json files.
+
+    .. change::
+        :tags: aws, feature
+        :pullreq: 345
+
+        Major update to get AWS Batch run environment working.

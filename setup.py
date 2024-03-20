@@ -24,6 +24,11 @@ gcp_requires = [
     "tqdm",
 ]
 
+aws_requires = [
+    "dask-cloudprovider[aws]",
+]
+
+
 setuptools.setup(
     name=metadata["__title__"],
     version=metadata["__version__"],
@@ -49,9 +54,9 @@ setuptools.setup(
         "fsspec",
         "yamale",
         "ruamel.yaml",
-        "awsretry",
         "lxml",
         "semver",
+        "tqdm",
     ],
     extras_require={
         "dev": [
@@ -66,14 +71,15 @@ setuptools.setup(
             "sphinx_paramlinks",
             "changelog",
             "flake8",
-            "black",
+            "black~=24.0",
             "rope",
             "doc8",
             "pre-commit",
         ]
-        + gcp_requires,
+        + gcp_requires
+        + aws_requires,
         "gcp": gcp_requires,
-        "aws": [],
+        "aws": aws_requires,
     },
     entry_points={
         "console_scripts": [

@@ -64,18 +64,20 @@ aws-spec:
   spot_bid_percent: num(min=1, max=100, required=False)
   batch_array_size: num(min=1, max=10000, required=True)
   notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', name='email', required=True)
-  emr: include('aws-emr-spec', required=False)
+  dask: include('aws-dask-spec', required=True)
   job_environment: include('aws-job-environment', required=False)
+  tags: map(str(), str(), required=False)
 
 aws-job-environment:
   vcpus: int(min=1, max=36, required=False)
   memory: int(min=1024, required=False)
 
-aws-emr-spec:
-  manager_instance_type: str(required=False)
-  worker_instance_type: str(required=False)
-  worker_instance_count: int(min=1, required=False)
-  dask_worker_vcores: int(min=1, required=False)
+aws-dask-spec:
+  scheduler_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  scheduler_memory: int(min=1024, required=False)
+  worker_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  worker_memory: int(min=1024, required=False)
+  n_workers: int(min=1, required=True)
 
 hpc-spec:
   account: str(required=True)

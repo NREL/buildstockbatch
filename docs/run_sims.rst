@@ -84,6 +84,11 @@ tool.
 .. command-output:: buildstock_aws --help
    :ellipsis: 0,8
 
+The first time you run it may take several minutes to build and upload the
+docker image. ``buildstock_aws`` needs to stay running and connected to the
+internet while the batch simulation is running on AWS. We have found it useful
+to run from an EC2 instance for convenience, but that is not strictly necessary.
+
 AWS Specific Project configuration
 ..................................
 
@@ -93,7 +98,7 @@ file, something like this:
 .. code-block:: yaml
 
     aws:
-      # The job_identifier should be unique, start with alpha, and limited to 10 chars or data loss can occur
+      # The job_identifier should be unique, start with alpha, and limited to 10 chars
       job_identifier: national01
       s3:
         bucket: myorg-resstock
@@ -101,18 +106,26 @@ file, something like this:
       region: us-west-2
       use_spot: true
       batch_array_size: 10000
-      # To receive email updates on job progress accept the request to receive emails that will be sent from Amazon
-      notifications_email: your_email@somewhere.com
+      dask:
+        n_workers: 8
+      notifications_email: your_email@somewhere.com  # doesn't work right now
 
 See :ref:`aws-config` for details.
 
 Cleaning up after yourself
 ..........................
 
-When the simulation and postprocessing is all complete, run ``buildstock_aws
---clean your_project_file.yml``. This will clean up all the AWS resources that
-were created on your behalf to run the simulations. Your results will still be
-on S3 and queryable in Athena.
+When the batch is done, ``buildstock_aws`` should clean up after itself.
+However, if something goes wrong, the cleanup script can be run with the
+``--clean`` option like so:
+
+::
+
+  buildstock_aws --clean your_project_file.yml
+
+This will clean up all the AWS resources that were created on your behalf to run
+the simulations. Your results will still be on S3 and queryable in Athena.
+
 
 Google Cloud Platform
 ~~~~~~~~~~~~~~~~~~~~~

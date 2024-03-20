@@ -568,27 +568,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 f"partitions which go into {ngroup} column group(s) of {partition_columns}"
             )
 
-            # TODO: The scheme and trailing slashes are probably not necessary. After verifying, we
-            #  can remove the conditionals here (i.e., set `ts_out_loc` without conditions).
-            #
-            #  Trailing Slash:
-            #  `concat_and_normalize`, which is what uses this (ts_out_loc), appends a "/" before
-            #  also appending the output filename (which is good design). So, this (ts_out_loc)
-            #  should not have a trailing slash. With a trailing slash, the filenames generated in
-            #  concat_and_normalize end up with a double-slash, which doesn't work with
-            #  GCSFileSystem. While this apparently works fine with LocalFileSystem and
-            #  S3FileSystem, we should still remove the extraneous trailing slashes from them.
-            #
-            #  Scheme:
-            #  The scheme ("s3://" for S3) is likely unnecessary since anywhere the path is used,
-            #  it's used with `fs`.
-            if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
-            elif isinstance(fs, GCSFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
-            else:
-                assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
+            ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
 
             fs.makedirs(ts_out_loc)
             logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
@@ -605,7 +585,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 )
             )
             partition_vals_list = [
-                list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else []
+                (list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else [])
                 for bldg_id_list in bldg_id_groups
             ]
 

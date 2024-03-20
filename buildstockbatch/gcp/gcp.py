@@ -72,11 +72,13 @@ def upload_directory_to_GCS(local_directory, bucket, prefix, chunk_size_mib=None
             blob_name_prefix=prefix,
             raise_exception=True,
             # Default chunk size is 40 MiB
-            blob_constructor_kwargs={
-                "chunk_size": chunk_size_mib * 1024 * 1024,
-            }
-            if chunk_size_mib
-            else None,
+            blob_constructor_kwargs=(
+                {
+                    "chunk_size": chunk_size_mib * 1024 * 1024,
+                }
+                if chunk_size_mib
+                else None
+            ),
         )
     except requests.exceptions.ConnectionError as e:
         raise requests.exceptions.ConnectionError(

@@ -218,42 +218,59 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
    on AWS. In a future version we will break backwards compatibility in the
    config file and have more consistent options.
 
-*  ``job_identifier``: A unique string that starts with an alphabetical character,
+*  ``job_identifier``: (required) A unique string that starts with an alphabetical character,
    is up to 10 characters long, and only has letters, numbers or underscore.
    This is used to name all the AWS service objects to be created and
    differentiate it from other jobs.
-*  ``s3``: Configuration for project data storage on s3. When running on AWS,
+*  ``s3``: (required) Configuration for project data storage on s3. When running on AWS,
    this overrides the s3 configuration in the :ref:`post-config-opts`.
 
     *  ``bucket``: The s3 bucket this project will use for simulation output and processed data storage.
     *  ``prefix``: The s3 prefix at which the data will be stored.
 
-*  ``region``: The AWS region in which the batch will be run and data stored.
-*  ``use_spot``: true or false. Defaults to false if missing. This tells the project
+*  ``region``: (required) The AWS region in which the batch will be run and data stored. Probably "us-west-2" if you're at NREL.
+*  ``use_spot``: (optional) true or false. Defaults to true if missing. This tells the project
    to use the `Spot Market <https://aws.amazon.com/ec2/spot/>`_ for data
    simulations, which typically yields about 60-70% cost savings.
-*  ``spot_bid_percent``: Percent of on-demand price you're willing to pay for
+*  ``spot_bid_percent``: (optional) Percent of on-demand price you're willing to pay for
    your simulations. The batch will wait to run until the price drops below this
-   level.
-*  ``batch_array_size``: Number of concurrent simulations to run. Max: 10000.
-*  ``notifications_email``: Email to notify you of simulation completion.
+   level. Usually leave this one blank.
+*  ``batch_array_size``: (required) Number of concurrent simulations to run. Max: 10,000.
+   Unless this is a small run with fewer than 100,000 simulations, just set this
+   to 10,000.
+*  ``notifications_email``: (required) Email to notify you of simulation completion.
    You'll receive an email at the beginning where you'll need to accept the
-   subscription to receive further notification emails.
-*  ``emr``: Optional key to specify options for postprocessing using an EMR cluster. Generally the defaults should work fine.
+   subscription to receive further notification emails. This doesn't work right now.
+*  ``dask``: (required) Dask configuration for postprocessing
 
-    * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
-    * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
-      Increase this for a large dataset. Default: 2.
-    * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
+   * ``n_workers``: (required) Number of dask workers to use.
+   * ``scheduler_cpu``: (optional) One of ``[1024, 2048, 4096, 8192, 16384]``.
+     Default: 2048. CPU to allocate for the scheduler task. 1024 = 1 VCPU. See
+     `Fargate Task CPU and memory`_ for allowable combinations of CPU and
+     memory.
+   * ``scheduler_memory``: (optional) Amount of memory to allocate to the
+     scheduler task. Default: 8192. See `Fargate Task CPU and memory`_ for
+     allowable combinations of CPU and memory.
+   * ``worker_cpu``: (optional) One of ``[1024, 2048, 4096, 8192, 16384]``.
+     Default: 2048. CPU to allocate for the worker tasks. 1024 = 1 VCPU. See
+     `Fargate Task CPU and memory`_ for allowable combinations of CPU and
+     memory.
+   * ``worker_memory``: (optional) Amount of memory to allocate to the worker
+     tasks. Default: 8192. See `Fargate Task CPU and memory`_ for allowable
+     combinations of CPU and memory.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
 
-    * ``vcpus``: Number of CPUs needed. default: 1.
-    * ``memory``: Amount of RAM memory needed for each simulation in MiB. default 1024. For large multifamily buildings
+    * ``vcpus``: (optional) Number of CPUs needed. Default: 1. This probably doesn't need to be changed.
+    * ``memory``: (optional) Amount of RAM memory needed for each simulation in MiB. default 1024. For large multifamily buildings
       this works better if set to 2048.
+*  ``tags``: (optional) This is a list of key-value pairs to attach as tags to
+   all the AWS objects created in the process of running the simulation. If you
+   are at NREL, please fill out the following tags so we can track and allocate
+   costs: ``billingId``, ``org``, and ``owner``.
 
 
 .. _instance type: https://aws.amazon.com/ec2/instance-types/
+.. _Fargate Task CPU and memory: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-tasks-services.html#fargate-tasks-size
 
 
 .. _gcp-config:
@@ -363,7 +380,8 @@ Athena. This process requires appropriate access to an AWS account to be
 configured on your machine. You will need to set this up wherever you use
 buildstockbatch. If you don't have keys, consult your AWS administrator to get
 them set up. The appropriate keys are already installed on Eagle and Kestrel, so
-no action is required.
+no action is required. If you run on AWS, this step is already done since the
+simulation outputs are already on S3.
 
 * :ref:`Local AWS setup instructions <aws-user-config-local>`
 * `Detailed instructions from AWS <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_

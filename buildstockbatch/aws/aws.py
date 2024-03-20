@@ -10,11 +10,15 @@ This class contains the object & methods that allow for usage of the library wit
 :license: BSD-3
 """
 import argparse
-from awsretry import AWSRetry
 import base64
 import boto3
 from botocore.exceptions import ClientError
+from copy import deepcopy
+import csv
+from dask.distributed import Client
+from dask_cloudprovider.aws import FargateCluster
 import gzip
+import hashlib
 from joblib import Parallel, delayed
 import json
 import logging
@@ -22,23 +26,55 @@ import os
 import pathlib
 import random
 from s3fs import S3FileSystem
+import shutil
 import tarfile
 import re
+import tempfile
 import time
+import tqdm
 import io
-import zipfile
+import yaml
 
-from buildstockbatch.aws.awsbase import AwsJobBase
+from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch.base import ValidationError
 from buildstockbatch.cloud import docker_base
 from buildstockbatch.cloud.docker_base import DockerBatchBase
-from buildstockbatch.utils import log_error_details, get_project_configuration
+from buildstockbatch.utils import (
+    log_error_details,
+    get_project_configuration,
+    get_bool_env_var,
+)
 
 logger = logging.getLogger(__name__)
 
 
+def backoff(thefunc, *args, **kwargs):
+    backoff_mult = 1.1
+    delay = 3
+    tries = 5
+    error_patterns = [r"\w+.NotFound"]
+    while tries > 0:
+        try:
+            result = thefunc(*args, **kwargs)
+        except ClientError as error:
+            error_code = error.response["Error"]["Code"]
+            caught_error = False
+            for pat in error_patterns:
+                if re.search(pat, error_code):
+                    logger.debug(f"{error_code}: Waiting and retrying in {delay} seconds")
+                    caught_error = True
+                    time.sleep(delay)
+                    delay *= backoff_mult
+                    tries -= 1
+                    break
+            if not caught_error:
+                raise error
+        else:
+            return result
+
+
 def upload_file_to_s3(*args, **kwargs):
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", config=boto_client_config)
     s3.upload_file(*args, **kwargs)
 
 
@@ -62,14 +98,25 @@ def upload_directory_to_s3(local_directory, bucket, prefix):
     )
 
 
+def compress_file(in_filename, out_filename):
+    with gzip.open(str(out_filename), "wb") as f_out:
+        with open(str(in_filename), "rb") as f_in:
+            shutil.copyfileobj(f_in, f_out)
+
+
+def calc_hash_for_file(filename):
+    with open(filename, "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()
+
+
 def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
-    s3 = boto3.client("s3")
+    s3 = boto3.client("s3", config=boto_client_config)
     s3.copy({"Bucket": src_bucket, "Key": src_key}, dest_bucket, dest_key)
 
 
 class AwsBatchEnv(AwsJobBase):
     """
-    Class to manage the AWS Batch environment and Step Function controller.
+    Class to manage the AWS Batch environment.
     """
 
     def __init__(self, job_name, aws_config, boto3_session):
@@ -80,14 +127,13 @@ class AwsBatchEnv(AwsJobBase):
         """
         super().__init__(job_name, aws_config, boto3_session)
 
-        self.batch = self.session.client("batch")
-        self.ec2 = self.session.client("ec2")
-        self.ec2r = self.session.resource("ec2")
-        self.emr = self.session.client("emr")
-        self.step_functions = self.session.client("stepfunctions")
-        self.aws_lambda = self.session.client("lambda")
-        self.s3 = self.session.client("s3")
-        self.s3_res = self.session.resource("s3")
+        self.batch = self.session.client("batch", config=boto_client_config)
+        self.ec2 = self.session.client("ec2", config=boto_client_config)
+        self.ec2r = self.session.resource("ec2", config=boto_client_config)
+        self.step_functions = self.session.client("stepfunctions", config=boto_client_config)
+        self.aws_lambda = self.session.client("lambda", config=boto_client_config)
+        self.s3 = self.session.client("s3", config=boto_client_config)
+        self.s3_res = self.session.resource("s3", config=boto_client_config)
 
         self.task_role_arn = None
         self.job_definition_arn = None
@@ -96,66 +142,17 @@ class AwsBatchEnv(AwsJobBase):
         self.service_role_arn = None
         self.instance_profile_arn = None
         self.job_queue_arn = None
+        self.s3_gateway_endpoint_id = None
+        self.prefix_list_id = None
 
         logger.propagate = False
 
     def __repr__(self):
         return super().__repr__()
 
-    def create_emr_lambda_roles(self):
-        """
-        Create supporting IAM roles for Lambda support.
-        """
-
-        # EMR
-
-        lambda_policy = {
-            "Version": "2012-10-17",
-            "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Action": "logs:CreateLogGroup",
-                    "Resource": f"arn:aws:logs:{self.region}:{self.account}:*",
-                },
-                {
-                    "Effect": "Allow",
-                    "Action": ["logs:CreateLogStream", "logs:PutLogEvents"],
-                    "Resource": [f"arn:aws:logs:{self.region}:{self.account}:log-group:/aws/lambda/launchemr:*"],
-                },
-                {
-                    "Effect": "Allow",
-                    "Action": "elasticmapreduce:RunJobFlow",
-                    "Resource": "*",
-                },
-                {
-                    "Effect": "Allow",
-                    "Action": "iam:PassRole",
-                    "Resource": [
-                        f"arn:aws:iam::{self.account}:role/EMR_DefaultRole",
-                        f"arn:aws:iam::{self.account}:role/EMR_EC2_DefaultRole",
-                        f"arn:aws:iam::{self.account}:role/EMR_AutoScaling_DefaultRole",
-                        self.emr_job_flow_role_arn,
-                        self.emr_service_role_arn,
-                    ],
-                },
-                {
-                    "Effect": "Allow",
-                    "Action": "s3:GetObject",
-                    "Resource": [f"arn:aws:s3:::{self.s3_bucket}/*"],
-                },
-            ],
-        }
-
-        self.lambda_emr_job_step_execution_role_arn = self.iam_helper.role_stitcher(
-            self.lambda_emr_job_step_execution_role,
-            "lambda",
-            f"Lambda execution role for {self.lambda_emr_job_step_function_name}",
-            policies_list=[json.dumps(lambda_policy, indent=4)],
-        )
-
     def create_vpc(self):
         cidrs_in_use = set()
-        vpc_response = AWSRetry.backoff()(self.ec2.describe_vpcs)()
+        vpc_response = self.ec2.describe_vpcs()
         for vpc in vpc_response["Vpcs"]:
             cidrs_in_use.add(vpc["CidrBlock"])
             for cidr_assoc in vpc["CidrBlockAssociationSet"]:
@@ -172,7 +169,8 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the VPC
 
-        response = self.ec2.create_vpc(
+        response = backoff(
+            self.ec2.create_vpc,
             CidrBlock=self.vpc_cidr,
             AmazonProvidedIpv6CidrBlock=False,
             InstanceTenancy="default",
@@ -180,20 +178,11 @@ class AwsBatchEnv(AwsJobBase):
         self.vpc_id = response["Vpc"]["VpcId"]
         logger.info(f"VPC {self.vpc_id} created")
 
-        while True:
-            try:
-                self.ec2.create_tags(
-                    Resources=[self.vpc_id],
-                    Tags=[{"Key": "Name", "Value": self.job_identifier}],
-                )
-                break
-            except Exception as e:
-                if "InvalidVpcID.NotFound" in str(e):
-                    logger.info("Cannot tag VPC.  VPC not yet created. Sleeping...")
-                    time.sleep(5)
-                else:
-                    raise
-
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.vpc_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
         # Find the default security group
 
         sec_response = self.ec2.describe_security_groups(
@@ -206,7 +195,8 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info(f"Security group {self.batch_security_group} created for vpc/job.")
 
-        response = self.ec2.authorize_security_group_ingress(
+        response = backoff(
+            self.ec2.authorize_security_group_ingress,
             GroupId=self.batch_security_group,
             IpPermissions=[
                 {
@@ -222,7 +212,8 @@ class AwsBatchEnv(AwsJobBase):
 
         # Create the private subnets
 
-        priv_response_1 = self.ec2.create_subnet(
+        priv_response_1 = backoff(
+            self.ec2.create_subnet,
             CidrBlock=self.priv_subnet_cidr_1,
             AvailabilityZone=f"{self.region}a",
             VpcId=self.vpc_id,
@@ -232,7 +223,8 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        priv_response_2 = self.ec2.create_subnet(
+        priv_response_2 = backoff(
+            self.ec2.create_subnet,
             CidrBlock=self.priv_subnet_cidr_2,
             AvailabilityZone=f"{self.region}b",
             VpcId=self.vpc_id,
@@ -242,61 +234,61 @@ class AwsBatchEnv(AwsJobBase):
 
         logger.info("Private subnet created.")
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[self.priv_vpc_subnet_id_1],
-            Tags=[{"Key": "Name", "Value": self.job_identifier}],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
         )
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[self.priv_vpc_subnet_id_2],
-            Tags=[{"Key": "Name", "Value": self.job_identifier}],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
         )
 
         ig_response = self.ec2.create_internet_gateway()
 
         self.internet_gateway_id = ig_response["InternetGateway"]["InternetGatewayId"]
 
-        AWSRetry.backoff()(self.ec2.create_tags)(
+        backoff(
+            self.ec2.create_tags,
             Resources=[self.internet_gateway_id],
-            Tags=[{"Key": "Name", "Value": self.job_identifier}],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
         )
 
         logger.info(f"Internet gateway {self.internet_gateway_id} created.")
 
         # Create the public subnet
 
-        pub_response = self.ec2.create_subnet(CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
+        pub_response = backoff(self.ec2.create_subnet, CidrBlock=self.pub_subnet_cidr, VpcId=self.vpc_id)
 
         logger.info("EIP allocated.")
 
         self.pub_vpc_subnet_id = pub_response["Subnet"]["SubnetId"]
 
-        self.ec2.create_tags(
+        backoff(
+            self.ec2.create_tags,
             Resources=[self.pub_vpc_subnet_id],
-            Tags=[{"Key": "Name", "Value": self.job_identifier}],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
         )
 
         # Create and elastic IP for the NAT Gateway
 
-        try:
-            ip_response = self.ec2.allocate_address(Domain="vpc")
+        ip_response = backoff(self.ec2.allocate_address, Domain="vpc")
 
-            self.nat_ip_allocation = ip_response["AllocationId"]
+        self.nat_ip_allocation = ip_response["AllocationId"]
 
-            logger.info("EIP allocated.")
+        logger.info("EIP allocated.")
 
-            self.ec2.create_tags(
-                Resources=[self.nat_ip_allocation],
-                Tags=[{"Key": "Name", "Value": self.job_identifier}],
-            )
-
-        except Exception as e:
-            if "AddressLimitExceeded" in str(e):
-                raise
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.nat_ip_allocation],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
 
         # Create an internet gateway
 
-        self.ec2.attach_internet_gateway(InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
+        backoff(self.ec2.attach_internet_gateway, InternetGatewayId=self.internet_gateway_id, VpcId=self.vpc_id)
 
         logger.info("Internet Gateway attached.")
 
@@ -312,69 +304,82 @@ class AwsBatchEnv(AwsJobBase):
 
         # Modify the default route table to be used as the public route
 
-        while True:
-            try:
-                self.ec2.create_route(
-                    DestinationCidrBlock="0.0.0.0/0",
-                    GatewayId=self.internet_gateway_id,
-                    RouteTableId=self.pub_route_table_id,
-                )
-                logger.info("Route created for Internet Gateway.")
-                break
-
-            except Exception as e:
-                if "NotFound" in str(e):
-                    time.sleep(5)
-                    logger.info("Internet Gateway not yet created. Sleeping...")
-                else:
-                    raise
+        backoff(
+            self.ec2.create_route,
+            DestinationCidrBlock="0.0.0.0/0",
+            GatewayId=self.internet_gateway_id,
+            RouteTableId=self.pub_route_table_id,
+        )
 
         # Create a NAT Gateway
 
-        nat_response = self.ec2.create_nat_gateway(AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id)
+        nat_response = backoff(
+            self.ec2.create_nat_gateway, AllocationId=self.nat_ip_allocation, SubnetId=self.pub_vpc_subnet_id
+        )
 
         self.nat_gateway_id = nat_response["NatGateway"]["NatGatewayId"]
+
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.nat_gateway_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
 
         logger.info("NAT Gateway created.")
 
         # Create a new private route table
 
-        prt_response = self.ec2.create_route_table(VpcId=self.vpc_id)
+        prt_response = backoff(self.ec2.create_route_table, VpcId=self.vpc_id)
 
         self.priv_route_table_id = prt_response["RouteTable"]["RouteTableId"]
 
         logger.info("Route table created.")
 
-        AWSRetry.backoff()(self.ec2.create_tags)(
-            Resources=[self.priv_route_table_id],
-            Tags=[{"Key": "Name", "Value": self.job_identifier}],
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.nat_gateway_id, self.priv_route_table_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
         )
 
         # Associate the private route to the private subnet
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1)
+        backoff(
+            self.ec2.associate_route_table, RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_1
+        )
         logger.info("Route table associated with subnet.")
 
-        self.ec2.associate_route_table(RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2)
+        backoff(
+            self.ec2.associate_route_table, RouteTableId=self.priv_route_table_id, SubnetId=self.priv_vpc_subnet_id_2
+        )
         logger.info("Route table associated with subnet.")
 
         # Associate the NAT gateway with the private route
 
-        while True:
-            try:
-                self.ec2.create_route(
-                    DestinationCidrBlock="0.0.0.0/0",
-                    NatGatewayId=self.nat_gateway_id,
-                    RouteTableId=self.priv_route_table_id,
-                )
-                logger.info("Route created for subnet.")
-                break
-            except Exception as e:
-                if "InvalidNatGatewayID.NotFound" in str(e):
-                    time.sleep(5)
-                    logger.info("Nat Gateway not yet created. Sleeping...")
-                else:
-                    raise
+        backoff(
+            self.ec2.create_route,
+            DestinationCidrBlock="0.0.0.0/0",
+            NatGatewayId=self.nat_gateway_id,
+            RouteTableId=self.priv_route_table_id,
+        )
+
+        gateway_response = backoff(
+            self.ec2.create_vpc_endpoint,
+            VpcId=self.vpc_id,
+            ServiceName=f"com.amazonaws.{self.region}.s3",
+            RouteTableIds=[self.priv_route_table_id, self.pub_route_table_id],
+            VpcEndpointType="Gateway",
+            PolicyDocument='{"Statement": [{"Action": "*", "Effect": "Allow", "Resource": "*", "Principal": "*"}]}',
+        )
+
+        logger.info("S3 gateway created for VPC.")
+
+        self.s3_gateway_endpoint_id = gateway_response["VpcEndpoint"]["VpcEndpointId"]
+
+        backoff(
+            self.ec2.create_tags,
+            Resources=[self.s3_gateway_endpoint_id],
+            Tags=self.get_tags_uppercase(Name=self.job_identifier),
+        )
 
     def generate_name_value_inputs(self, var_dictionary):
         """
@@ -541,6 +546,44 @@ class AwsBatchEnv(AwsJobBase):
 
         """
 
+        logger.debug(f"Creating launch template {self.launch_template_name}")
+        try:
+            self.ec2.create_launch_template(
+                LaunchTemplateName=self.launch_template_name,
+                LaunchTemplateData={
+                    "BlockDeviceMappings": [
+                        {
+                            "DeviceName": "/dev/xvda",
+                            "Ebs": {"VolumeSize": 100, "VolumeType": "gp2"},
+                        }
+                    ]
+                },
+            )
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "InvalidLaunchTemplateName.AlreadyExistsException":
+                logger.debug("Launch template exists, skipping creation")
+            else:
+                raise error
+
+        while True:
+            lt_resp = self.ec2.describe_launch_templates(LaunchTemplateNames=[self.launch_template_name])
+            launch_templates = lt_resp["LaunchTemplates"]
+            next_token = lt_resp.get("NextToken")
+            while next_token:
+                lt_resp = self.ec2.describe_launch_templates(
+                    LaunchTemplateNames=[self.launch_template_name],
+                    NextToken=next_token,
+                )
+                launch_templates.extend(lt_resp["LaunchTemplates"])
+                next_token = lt_resp.get("NextToken")
+            n_launch_templates = len(launch_templates)
+            assert n_launch_templates <= 1, f"There are {n_launch_templates} launch templates, this shouldn't happen."
+            if n_launch_templates == 0:
+                logger.debug(f"Waiting for the launch template {self.launch_template_name} to be created")
+                time.sleep(5)
+            if n_launch_templates == 1:
+                break
+
         try:
             compute_resources = {
                 "minvCpus": 0,
@@ -549,7 +592,9 @@ class AwsBatchEnv(AwsJobBase):
                 "instanceTypes": [
                     "optimal",
                 ],
-                "imageId": self.batch_compute_environment_ami,
+                "launchTemplate": {
+                    "launchTemplateName": self.launch_template_name,
+                },
                 "subnets": [self.priv_vpc_subnet_id_1, self.priv_vpc_subnet_id_2],
                 "securityGroupIds": [self.batch_security_group],
                 "instanceRole": self.instance_profile_arn,
@@ -566,12 +611,15 @@ class AwsBatchEnv(AwsJobBase):
             else:
                 compute_resources["type"] = "EC2"
 
+            compute_resources["tags"] = self.get_tags(Name=f"{self.job_identifier} batch instance")
+
             self.batch.create_compute_environment(
                 computeEnvironmentName=self.batch_compute_environment_name,
                 type="MANAGED",
                 state="ENABLED",
                 computeResources=compute_resources,
                 serviceRole=self.service_role_arn,
+                tags=self.get_tags(),
             )
 
             logger.info(f"Compute environment {self.batch_compute_environment_name} created.")
@@ -599,6 +647,7 @@ class AwsBatchEnv(AwsJobBase):
                             "computeEnvironment": self.batch_compute_environment_name,
                         },
                     ],
+                    tags=self.get_tags(),
                 )
 
                 # print("JOB QUEUE")
@@ -620,9 +669,7 @@ class AwsBatchEnv(AwsJobBase):
 
                 elif "is not valid" in str(e):
                     # Need to wait a second for the compute environment to complete registration
-                    logger.warning(
-                        "5 second sleep initiated to wait for compute environment creation due to error: " + str(e)
-                    )
+                    logger.warning("waiting a few seconds for compute environment creation: " + str(e))
                     time.sleep(5)
 
                 else:
@@ -652,6 +699,7 @@ class AwsBatchEnv(AwsJobBase):
                 "environment": self.generate_name_value_inputs(env_vars),
             },
             retryStrategy={"attempts": 2},
+            tags=self.get_tags(),
         )
 
         self.job_definition_arn = response["jobDefinitionArn"]
@@ -661,206 +709,17 @@ class AwsBatchEnv(AwsJobBase):
         Submits the created job definition and version to be run.
         """
 
-        while True:
-            try:
-                self.batch.submit_job(
-                    jobName=self.job_identifier,
-                    jobQueue=self.batch_job_queue_name,
-                    arrayProperties={"size": array_size},
-                    jobDefinition=self.job_definition_arn,
-                )
-
-                logger.info(f"Job {self.job_identifier} submitted.")
-                break
-
-            except Exception as e:
-                if "not in VALID state" in str(e):
-                    # Need to wait a second for the compute environment to complete registration
-                    logger.warning("5 second sleep initiated to wait for job queue creation due to error: " + str(e))
-                    time.sleep(5)
-                else:
-                    raise
-
-    def create_state_machine_roles(self):
-        lambda_policy = f"""{{
-    "Version": "2012-10-17",
-    "Statement": [
-        {{
-            "Effect": "Allow",
-            "Action": [
-                "lambda:InvokeFunction"
-            ],
-            "Resource": [
-                "arn:aws:lambda:*:*:function:{self.lambda_emr_job_step_function_name}"
-            ]
-        }}
-    ]
-}}
-
-        """
-
-        batch_policy = """{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "batch:SubmitJob",
-                "batch:DescribeJobs",
-                "batch:TerminateJob"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "events:PutTargets",
-                "events:PutRule",
-                "events:DescribeRule"
-            ],
-            "Resource": [
-               "arn:aws:events:*:*:rule/StepFunctionsGetEventsForBatchJobsRule"
-            ]
-        }
-    ]
-}
-
-        """
-
-        sns_policy = f"""{{
-            "Version": "2012-10-17",
-            "Statement": [
-                {{
-                    "Effect": "Allow",
-                    "Action": [
-                        "sns:Publish"
-                    ],
-                    "Resource": "arn:aws:sns:*:*:{self.sns_state_machine_topic}"
-                }}
-            ]
-        }}
-        """
-
-        policies_list = [lambda_policy, batch_policy, sns_policy]
-
-        self.state_machine_role_arn = self.iam_helper.role_stitcher(
-            self.state_machine_role_name,
-            "states",
-            "Permissions for statemachine to run jobs",
-            policies_list=policies_list,
+        resp = backoff(
+            self.batch.submit_job,
+            jobName=self.job_identifier,
+            jobQueue=self.batch_job_queue_name,
+            arrayProperties={"size": array_size},
+            jobDefinition=self.job_definition_arn,
+            tags=self.get_tags(),
         )
 
-    def create_state_machine(self):
-        job_definition = f"""{{
-  "Comment": "An example of the Amazon States Language for notification on an AWS Batch job completion",
-  "StartAt": "Submit Batch Job",
-  "States": {{
-    "Submit Batch Job": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::batch:submitJob.sync",
-      "Parameters": {{
-        "JobDefinition": "{self.job_definition_arn}",
-        "JobName": "{self.job_identifier}",
-        "JobQueue": "{self.job_queue_arn}",
-         "ArrayProperties": {{
-                        "Size.$": "$.array_size"
-                    }}
-    }},
-      "Next": "Notify Batch Success",
-      "Catch": [
-        {{
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify Batch Failure"
-        }}
-      ]
-    }},
-    "Notify Batch Success": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Batch job submitted through Step Functions succeeded",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "Next": "Run EMR Job"
-    }},
-    "Notify Batch Failure": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "Batch job submitted through Step Functions failed",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "Next": "Job Failure"
-    }},
-    "Run EMR Job": {{
-      "Type": "Task",
-      "Resource": "arn:aws:lambda:{self.region}:{self.account}:function:{self.lambda_emr_job_step_function_name}",
-      "Next": "Notify EMR Job Success",
-      "Catch": [
-        {{
-          "ErrorEquals": [ "States.ALL" ],
-          "Next": "Notify EMR Job Failure"
-        }}
-      ]
-    }},
-    "Notify EMR Job Success": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "EMR Job succeeded",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "End": true
-    }},
-    "Notify EMR Job Failure": {{
-      "Type": "Task",
-      "Resource": "arn:aws:states:::sns:publish",
-      "Parameters": {{
-        "Message": "EMR job failed",
-        "TopicArn": "arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}"
-      }},
-      "Next": "Job Failure"
-    }},
-    "Job Failure": {{
-      "Type": "Fail"
-    }}
-  }}
-}}
-
-        """
-
-        while True:
-            try:
-                response = self.step_functions.create_state_machine(
-                    name=self.state_machine_name,
-                    definition=job_definition,
-                    roleArn=self.state_machine_role_arn,
-                )
-
-                # print(response)
-                self.state_machine_arn = response["stateMachineArn"]
-                logger.info(f"State machine {self.state_machine_name} created.")
-                break
-            except Exception as e:
-                if "AccessDeniedException" in str(e):
-                    logger.info("State machine role not yet registered, sleeping...")
-                    time.sleep(5)
-                elif "StateMachineAlreadyExists" in str(e):
-                    logger.info("State machine already exists, skipping...")
-                    self.state_machine_arn = f"arn:aws:states:{self.region}:{self.account}:stateMachine:{self.state_machine_name}"  # noqa E501
-
-                    break
-                else:
-                    raise
-
-    def start_state_machine_execution(self, array_size):
-        self.step_functions.start_execution(
-            stateMachineArn=self.state_machine_arn,
-            name=f"{self.state_machine_name}_execution_{int(time.time())}",
-            input=f'{{"array_size": {array_size}}}',
-        )
-
-        logger.info(f"Starting state machine {self.state_machine_name}.")
+        logger.info(f"Job {self.job_identifier} submitted.")
+        return resp
 
     def clean(self):
         # Get our vpc:
@@ -880,24 +739,6 @@ class AwsBatchEnv(AwsJobBase):
         except (KeyError, IndexError):
             self.vpc_id = None
 
-        logger.info("Cleaning up EMR.")
-
-        try:
-            self.emr.terminate_job_flows(JobFlowIds=[self.emr_cluster_name])
-            logger.info(f"EMR cluster {self.emr_cluster_name} deleted.")
-
-        except Exception as e:
-            if "ResourceNotFoundException" in str(e):
-                logger.info(f"EMR cluster {self.emr_cluster_name} already MIA - skipping...")
-
-        self.iam_helper.remove_role_from_instance_profile(self.emr_instance_profile_name)
-        self.iam_helper.delete_instance_profile(self.emr_instance_profile_name)
-        self.iam_helper.delete_role(self.emr_job_flow_role_name)
-        self.iam_helper.delete_role(self.emr_service_role_name)
-
-        logger.info(f"EMR clean complete.  Results bucket and data {self.s3_bucket} have not been deleted.")
-
-        logger.info(f"Deleting Security group {self.emr_cluster_security_group_name}.")
         default_sg_response = self.ec2.describe_security_groups(
             Filters=[
                 {
@@ -916,72 +757,6 @@ class AwsBatchEnv(AwsJobBase):
                 dsg = self.ec2r.SecurityGroup(default_group_id)
                 if len(dsg.ip_permissions_egress):
                     response = dsg.revoke_egress(IpPermissions=dsg.ip_permissions_egress)
-
-        sg_response = AWSRetry.backoff()(self.ec2.describe_security_groups)(
-            Filters=[
-                {
-                    "Name": "group-name",
-                    "Values": [
-                        self.emr_cluster_security_group_name,
-                    ],
-                },
-            ]
-        )
-
-        try:
-            group_id = sg_response["SecurityGroups"][0]["GroupId"]
-            sg = self.ec2r.SecurityGroup(group_id)
-            if len(sg.ip_permissions):
-                sg.revoke_ingress(IpPermissions=sg.ip_permissions)
-
-            while True:
-                try:
-                    self.ec2.delete_security_group(GroupId=group_id)
-                    break
-                except ClientError:
-                    logger.info("Waiting for security group ingress rules to be removed ...")
-                    time.sleep(5)
-
-            logger.info(f"Deleted security group {self.emr_cluster_security_group_name}.")
-        except Exception as e:
-            if "does not exist" in str(e) or "list index out of range" in str(e):
-                logger.info(f"Security group {self.emr_cluster_security_group_name} does not exist - skipping...")
-            else:
-                raise
-
-        try:
-            self.aws_lambda.delete_function(FunctionName=self.lambda_emr_job_step_function_name)
-        except Exception as e:
-            if "Function not found" in str(e):
-                logger.info(f"Function {self.lambda_emr_job_step_function_name} not found, skipping...")
-            else:
-                raise
-
-        try:
-            self.s3.delete_object(Bucket=self.s3_bucket, Key=self.s3_lambda_code_emr_cluster_key)
-            logger.info(
-                f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} deleted."  # noqa E501
-            )
-        except Exception as e:
-            if "NoSuchBucket" in str(e):
-                logger.info(
-                    f"S3 object {self.s3_lambda_code_emr_cluster_key} for bucket {self.s3_bucket} missing - not deleted."  # noqa E501
-                )
-            else:
-                raise
-
-        self.iam_helper.delete_role(self.lambda_emr_job_step_execution_role)
-
-        state_machines = self.step_functions.list_state_machines()
-
-        for sm in state_machines["stateMachines"]:
-            if sm["name"] == self.state_machine_name:
-                self.state_machine_arn = sm["stateMachineArn"]
-                self.step_functions.delete_state_machine(stateMachineArn=self.state_machine_arn)
-                logger.info(f"Deleted state machine {self.state_machine_name}.")
-                break
-
-        self.iam_helper.delete_role(self.state_machine_role_name)
 
         try:
             self.batch.update_job_queue(jobQueue=self.batch_job_queue_name, state="DISABLED")
@@ -1027,6 +802,15 @@ class AwsBatchEnv(AwsJobBase):
             else:
                 raise
 
+        # Delete Launch Template
+        try:
+            self.ec2.delete_launch_template(LaunchTemplateName=self.launch_template_name)
+        except Exception as e:
+            if "does not exist" in str(e):
+                logger.info(f"Launch template {self.launch_template_name} does not exist, skipping...")
+            else:
+                raise
+
         self.iam_helper.delete_role(self.batch_service_role_name)
         self.iam_helper.delete_role(self.batch_spot_service_role_name)
         self.iam_helper.delete_role(self.batch_ecs_task_role_name)
@@ -1037,7 +821,7 @@ class AwsBatchEnv(AwsJobBase):
 
         # Find Nat Gateways and VPCs
 
-        response = AWSRetry.backoff()(self.ec2.describe_vpcs)(
+        response = self.ec2.describe_vpcs(
             Filters=[
                 {
                     "Name": "tag:Name",
@@ -1051,9 +835,15 @@ class AwsBatchEnv(AwsJobBase):
         for vpc in response["Vpcs"]:
             this_vpc = vpc["VpcId"]
 
-            ng_response = AWSRetry.backoff()(self.ec2.describe_nat_gateways)(
-                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
-            )
+            s3gw_response = self.ec2.describe_vpc_endpoints(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
+
+            for s3gw in s3gw_response["VpcEndpoints"]:
+                this_s3gw = s3gw["VpcEndpointId"]
+
+                if s3gw["State"] != "deleted":
+                    self.ec2.delete_vpc_endpoints(VpcEndpointIds=[this_s3gw])
+
+            ng_response = self.ec2.describe_nat_gateways(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
 
             for natgw in ng_response["NatGateways"]:
                 this_natgw = natgw["NatGatewayId"]
@@ -1061,9 +851,7 @@ class AwsBatchEnv(AwsJobBase):
                 if natgw["State"] != "deleted":
                     self.ec2.delete_nat_gateway(NatGatewayId=this_natgw)
 
-            rtas_response = AWSRetry.backoff()(self.ec2.describe_route_tables)(
-                Filters=[{"Name": "vpc-id", "Values": [this_vpc]}]
-            )
+            rtas_response = self.ec2.describe_route_tables(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
 
             for route_table in rtas_response["RouteTables"]:
                 route_table_id = route_table["RouteTableId"]
@@ -1082,14 +870,13 @@ class AwsBatchEnv(AwsJobBase):
                                 rt_counter = rt_counter - 1
                                 if "DependencyViolation" in str(e):
                                     logger.info(
-                                        "Waiting for association to be released before deleting route table.  "
-                                        "Sleeping..."
-                                    )
+                                        "Waiting for association to be released before deleting route table.  Sleeping..."
+                                    )  # noqa E501
                                     time.sleep(5)
                                 else:
                                     raise
 
-            igw_response = AWSRetry.backoff()(self.ec2.describe_internet_gateways)(
+            igw_response = self.ec2.describe_internet_gateways(
                 Filters=[{"Name": "tag:Name", "Values": [self.job_identifier]}]
             )
 
@@ -1135,7 +922,7 @@ class AwsBatchEnv(AwsJobBase):
                         else:
                             raise
 
-            AWSRetry.backoff()(self.ec2.delete_vpc)(VpcId=this_vpc)
+            self.ec2.delete_vpc(VpcId=this_vpc)
 
         # Find the Elastic IP from the NAT
         response = self.ec2.describe_addresses(
@@ -1153,315 +940,13 @@ class AwsBatchEnv(AwsJobBase):
 
             response = self.ec2.release_address(AllocationId=this_address)
 
-    def create_emr_security_groups(self):
         try:
-            response = self.ec2.create_security_group(
-                Description="EMR Job Flow Security Group (full cluster access)",
-                GroupName=self.emr_cluster_security_group_name,
-                VpcId=self.vpc_id,
-            )
-            self.emr_cluster_security_group_id = response["GroupId"]
-
-        except Exception as e:
-            if "already exists for VPC" in str(e):
-                logger.info("Security group for EMR already exists, skipping ...")
-                response = self.ec2.describe_security_groups(
-                    Filters=[
-                        {
-                            "Name": "group-name",
-                            "Values": [
-                                self.emr_cluster_security_group_name,
-                            ],
-                        },
-                    ]
-                )
-
-                self.emr_cluster_security_group_id = response["SecurityGroups"][0]["GroupId"]
+            self.ec2.delete_security_group(GroupName=f"dask-{self.job_identifier}")
+        except ClientError as error:
+            if error.response["Error"]["Code"] == "InvalidGroup.NotFound":
+                pass
             else:
-                raise
-
-        try:
-            response = self.ec2.authorize_security_group_ingress(
-                GroupId=self.emr_cluster_security_group_id,
-                IpPermissions=[
-                    dict(
-                        IpProtocol="-1",
-                        UserIdGroupPairs=[
-                            dict(
-                                GroupId=self.emr_cluster_security_group_id,
-                                UserId=self.account,
-                            )
-                        ],
-                    )
-                ],
-            )
-        except Exception as e:
-            if "already exists" in str(e):
-                logger.info("Security group egress rule for EMR already exists, skipping ...")
-            else:
-                raise
-
-    def create_emr_iam_roles(self):
-        self.emr_service_role_arn = self.iam_helper.role_stitcher(
-            self.emr_service_role_name,
-            "elasticmapreduce",
-            f"EMR Service Role {self.job_identifier}",
-            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole"],
-        )
-
-        emr_policy = """{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "VisualEditor0",
-            "Effect": "Allow",
-            "Action": [
-                "glue:GetCrawler",
-                "glue:CreateTable",
-                "glue:DeleteCrawler",
-                "glue:StartCrawler",
-                "glue:StopCrawler",
-                "glue:DeleteTable",
-                "glue:ListCrawlers",
-                "glue:UpdateCrawler",
-                "glue:CreateCrawler",
-                "glue:GetCrawlerMetrics",
-                "glue:BatchDeleteTable"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Sid": "VisualEditor1",
-            "Effect": "Allow",
-            "Action": [
-                "iam:PassRole"
-            ],
-            "Resource": "arn:aws:iam::*:role/service-role/AWSGlueServiceRole-default"
-        }
-    ]
-}"""
-
-        self.emr_job_flow_role_arn = self.iam_helper.role_stitcher(
-            self.emr_job_flow_role_name,
-            "ec2",
-            f"EMR Job Flow Role {self.job_identifier}",
-            managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"],
-            policies_list=[emr_policy],
-        )
-
-        try:
-            response = self.iam.create_instance_profile(InstanceProfileName=self.emr_instance_profile_name)
-
-            self.emr_instance_profile_arn = response["InstanceProfile"]["Arn"]
-
-            logger.info("EMR Instance Profile created")
-
-            response = self.iam.add_role_to_instance_profile(
-                InstanceProfileName=self.emr_instance_profile_name,
-                RoleName=self.emr_job_flow_role_name,
-            )
-
-        except Exception as e:
-            if "EntityAlreadyExists" in str(e):
-                logger.info("EMR Instance Profile not created - already exists")
-                response = self.iam.get_instance_profile(InstanceProfileName=self.emr_instance_profile_name)
-                self.emr_instance_profile_arn = response["InstanceProfile"]["Arn"]
-
-    def upload_assets(self):
-        logger.info("Uploading EMR support assets...")
-        fs = S3FileSystem()
-        here = os.path.dirname(os.path.abspath(__file__))
-        emr_folder = f"{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}"
-        fs.makedirs(emr_folder)
-
-        # bsb_post.sh
-        bsb_post_bash = f"""#!/bin/bash
-
-aws s3 cp "s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/bsb_post.py" bsb_post.py
-/home/hadoop/miniconda/bin/python bsb_post.py "{self.s3_bucket}" "{self.s3_bucket_prefix}"
-
-        """
-        with fs.open(f"{emr_folder}/bsb_post.sh", "w", encoding="utf-8") as f:
-            f.write(bsb_post_bash)
-
-        # bsb_post.py
-        fs.put(os.path.join(here, "s3_assets", "bsb_post.py"), f"{emr_folder}/bsb_post.py")
-
-        # bootstrap-dask-custom
-        fs.put(
-            os.path.join(here, "s3_assets", "bootstrap-dask-custom"),
-            f"{emr_folder}/bootstrap-dask-custom",
-        )
-
-        # postprocessing.py
-        with fs.open(f"{emr_folder}/postprocessing.tar.gz", "wb") as f:
-            with tarfile.open(fileobj=f, mode="w:gz") as tarf:
-                tarf.add(
-                    os.path.join(here, "..", "postprocessing.py"),
-                    arcname="postprocessing.py",
-                )
-                tarf.add(
-                    os.path.join(here, "s3_assets", "setup_postprocessing.py"),
-                    arcname="setup.py",
-                )
-
-        logger.info("EMR support assets uploaded.")
-
-    def create_emr_cluster_function(self):
-        script_name = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bsb_post.sh"
-        bootstrap_action = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/{self.s3_emr_folder_name}/bootstrap-dask-custom"  # noqa E501
-
-        run_job_flow_args = dict(
-            Name=self.emr_cluster_name,
-            LogUri=self.emr_log_uri,
-            ReleaseLabel="emr-5.23.0",
-            Instances={
-                "InstanceGroups": [
-                    {
-                        "Market": "SPOT" if self.batch_use_spot else "ON_DEMAND",
-                        "InstanceRole": "MASTER",
-                        "InstanceType": self.emr_manager_instance_type,
-                        "InstanceCount": 1,
-                    },
-                    {
-                        "Market": "SPOT" if self.batch_use_spot else "ON_DEMAND",
-                        "InstanceRole": "CORE",
-                        "InstanceType": self.emr_worker_instance_type,
-                        "InstanceCount": self.emr_worker_instance_count,
-                    },
-                ],
-                "Ec2SubnetId": self.priv_vpc_subnet_id_1,
-                "KeepJobFlowAliveWhenNoSteps": False,
-                "EmrManagedMasterSecurityGroup": self.emr_cluster_security_group_id,
-                "EmrManagedSlaveSecurityGroup": self.emr_cluster_security_group_id,
-                "ServiceAccessSecurityGroup": self.batch_security_group,
-            },
-            Applications=[
-                {"Name": "Hadoop"},
-            ],
-            BootstrapActions=[
-                {
-                    "Name": "launchFromS3",
-                    "ScriptBootstrapAction": {
-                        "Path": bootstrap_action,
-                        "Args": [f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emr/postprocessing.tar.gz"],
-                    },
-                },
-            ],
-            Steps=[
-                {
-                    "Name": "Dask",
-                    "ActionOnFailure": "TERMINATE_CLUSTER",
-                    "HadoopJarStep": {
-                        "Jar": "s3://us-east-1.elasticmapreduce/libs/script-runner/script-runner.jar",
-                        "Args": [script_name],
-                    },
-                },
-            ],
-            VisibleToAllUsers=True,
-            JobFlowRole=self.emr_instance_profile_name,
-            ServiceRole=self.emr_service_role_name,
-            Tags=[
-                {"Key": "org", "Value": "ops"},
-            ],
-            AutoScalingRole="EMR_AutoScaling_DefaultRole",
-            ScaleDownBehavior="TERMINATE_AT_TASK_COMPLETION",
-            EbsRootVolumeSize=100,
-        )
-
-        with io.BytesIO() as f:
-            f.write(json.dumps(run_job_flow_args).encode())
-            f.seek(0)
-            self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_emr_config_key)
-
-        lambda_filename = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            "s3_assets",
-            "lambda_function.py",
-        )
-        with open(lambda_filename, "r") as f:
-            function_script = f.read()
-        with io.BytesIO() as f:
-            with zipfile.ZipFile(f, mode="w", compression=zipfile.ZIP_STORED) as zf:
-                zi = zipfile.ZipInfo("emr_function.py")
-                zi.date_time = time.localtime()
-                zi.external_attr = 0o100755 << 16
-                zf.writestr(zi, function_script, zipfile.ZIP_DEFLATED)
-            f.seek(0)
-            self.s3.upload_fileobj(f, self.s3_bucket, self.s3_lambda_code_emr_cluster_key)
-
-        while True:
-            try:
-                self.aws_lambda.create_function(
-                    FunctionName=self.lambda_emr_job_step_function_name,
-                    Runtime="python3.7",
-                    Role=self.lambda_emr_job_step_execution_role_arn,
-                    Handler="emr_function.lambda_handler",
-                    Code={
-                        "S3Bucket": self.s3_bucket,
-                        "S3Key": self.s3_lambda_code_emr_cluster_key,
-                    },
-                    Description=f"Lambda for emr cluster execution on job {self.job_identifier}",
-                    Timeout=900,
-                    MemorySize=128,
-                    Publish=True,
-                    Environment={
-                        "Variables": {
-                            "REGION": self.region,
-                            "BUCKET": self.s3_bucket,
-                            "EMR_CONFIG_JSON_KEY": self.s3_lambda_emr_config_key,
-                        }
-                    },
-                    Tags={"job": self.job_identifier},
-                )
-
-                logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} created.")
-                break
-
-            except Exception as e:
-                if "role defined for the function cannot be assumed" in str(e):
-                    logger.info(
-                        f"Lambda role not registered for {self.lambda_emr_job_step_function_name} - sleeping ..."
-                    )
-                    time.sleep(5)
-                elif "Function already exist" in str(e):
-                    logger.info(f"Lambda function {self.lambda_emr_job_step_function_name} exists, skipping...")
-                    break
-                elif "ARN does not refer to a valid principal" in str(e):
-                    logger.info("Waiting for roles/permissions to propagate to allow Lambda function creation ...")
-                    time.sleep(5)
-                else:
-                    raise
-
-
-class AwsSNS(AwsJobBase):
-    def __init__(self, job_name, aws_config, boto3_session):
-        super().__init__(job_name, aws_config, boto3_session)
-        self.sns = self.session.client("sns")
-        self.sns_state_machine_topic_arn = None
-
-    def create_topic(self):
-        response = self.sns.create_topic(Name=self.sns_state_machine_topic)
-
-        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} created.")
-
-        self.sns_state_machine_topic_arn = response["TopicArn"]
-
-    def subscribe_to_topic(self):
-        self.sns.subscribe(
-            TopicArn=self.sns_state_machine_topic_arn,
-            Protocol="email",
-            Endpoint=self.operator_email,
-        )
-
-        logger.info(
-            f"Operator {self.operator_email} subscribed to topic - please confirm via email to recieve state machine progress messages."  # noqa 501
-        )
-
-    def clean(self):
-        self.sns.delete_topic(TopicArn=f"arn:aws:sns:{self.region}:{self.account}:{self.sns_state_machine_topic}")
-
-        logger.info(f"Simple notifications topic {self.sns_state_machine_topic} deleted.")
+                raise error
 
 
 class AwsBatch(DockerBatchBase):
@@ -1472,8 +957,8 @@ class AwsBatch(DockerBatchBase):
 
         self.project_filename = project_filename
         self.region = self.cfg["aws"]["region"]
-        self.ecr = boto3.client("ecr", region_name=self.region)
-        self.s3 = boto3.client("s3", region_name=self.region)
+        self.ecr = boto3.client("ecr", region_name=self.region, config=boto_client_config)
+        self.s3 = boto3.client("s3", region_name=self.region, config=boto_client_config)
         self.s3_bucket = self.cfg["aws"]["s3"]["bucket"]
         self.s3_bucket_prefix = self.cfg["aws"]["s3"]["prefix"].rstrip("/")
         self.batch_env_use_spot = self.cfg["aws"]["use_spot"]
@@ -1481,33 +966,52 @@ class AwsBatch(DockerBatchBase):
         self.boto3_session = boto3.Session(region_name=self.region)
 
     @staticmethod
-    def validate_instance_types(project_file):
+    def validate_dask_settings(project_file):
         cfg = get_project_configuration(project_file)
-        aws_config = cfg["aws"]
-        boto3_session = boto3.Session(region_name=aws_config["region"])
-        ec2 = boto3_session.client("ec2")
-        job_base = AwsJobBase("genericjobid", aws_config, boto3_session)
-        instance_types_requested = set()
-        instance_types_requested.add(job_base.emr_manager_instance_type)
-        instance_types_requested.add(job_base.emr_worker_instance_type)
-        inst_type_resp = ec2.describe_instance_type_offerings(
-            Filters=[{"Name": "instance-type", "Values": list(instance_types_requested)}]
-        )
-        instance_types_available = set([x["InstanceType"] for x in inst_type_resp["InstanceTypeOfferings"]])
-        if not instance_types_requested == instance_types_available:
-            instance_types_not_available = instance_types_requested - instance_types_available
-            raise ValidationError(
-                f"The instance type(s) {', '.join(instance_types_not_available)} are not available in region {aws_config['region']}."  # noqa E501
-            )
+        if "emr" in cfg["aws"]:
+            logger.warning("The `aws.emr` configuration is no longer used and is ignored. Recommend removing.")
+        dask_cfg = cfg["aws"]["dask"]
+        errors = []
+        mem_rules = {
+            1024: (2, 8, 1),
+            2048: (4, 16, 1),
+            4096: (8, 30, 1),
+            8192: (16, 60, 4),
+            16384: (32, 120, 8),
+        }
+        for node_type in ("scheduler", "worker"):
+            mem = dask_cfg.get(f"{node_type}_memory", 8 * 1024)
+            if mem % 1024 != 0:
+                errors.append(f"`aws.dask.{node_type}_memory` = {mem}, needs to be a multiple of 1024.")
+            mem_gb = mem // 1024
+            min_gb, max_gb, incr_gb = mem_rules[dask_cfg.get(f"{node_type}_cpu", 2 * 1024)]
+            if not (min_gb <= mem_gb <= max_gb and (mem_gb - min_gb) % incr_gb == 0):
+                errors.append(
+                    f"`aws.dask.{node_type}_memory` = {mem}, "
+                    f"should be between {min_gb * 1024} and {max_gb * 1024} in a multiple of {incr_gb * 1024}."
+                )
+        if errors:
+            errors.append("See https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html")
+            raise ValidationError("\n".join(errors))
+
+        return True
 
     @staticmethod
     def validate_project(project_file):
         super(AwsBatch, AwsBatch).validate_project(project_file)
-        AwsBatch.validate_instance_types(project_file)
+        AwsBatch.validate_dask_settings(project_file)
 
     @property
     def docker_image(self):
         return "nrel/buildstockbatch"
+
+    @property
+    def results_dir(self):
+        return f"{self.s3_bucket}/{self.s3_bucket_prefix}/results"
+
+    @property
+    def output_dir(self):
+        return f"{self.s3_bucket}/{self.s3_bucket_prefix}"
 
     @property
     def container_repo(self):
@@ -1522,6 +1026,10 @@ class AwsBatch(DockerBatchBase):
             repo = resp["repository"]
         return repo
 
+    @property
+    def image_url(self):
+        return f"{self.container_repo['repositoryUri']}:{self.job_identifier}"
+
     def build_image(self):
         """
         Build the docker image to use in the batch simulation
@@ -1529,10 +1037,80 @@ class AwsBatch(DockerBatchBase):
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / "Dockerfile").exists():
             raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
-        logger.debug("Building docker image")
-        self.docker_client.images.build(
-            path=str(root_path), tag=self.docker_image, rm=True, buildargs={"CLOUD_PLATFORM": "aws"}
+
+        # Make the buildstock/resources/.aws_docker_image dir to store logs
+        local_log_dir = pathlib.Path(self.buildstock_dir, "resources", ".aws_docker_image")
+        if not os.path.exists(local_log_dir):
+            os.makedirs(local_log_dir)
+
+        # Determine whether or not to build the image with custom gems bundled in
+        if self.cfg.get("baseline", dict()).get("custom_gems", False):
+            # Ensure the custom Gemfile exists in the buildstock dir
+            local_gemfile_path = pathlib.Path(self.buildstock_dir, "resources", "Gemfile")
+            if not local_gemfile_path.exists():
+                raise AttributeError(f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}")
+
+            # Copy the custom Gemfile into the buildstockbatch repo
+            new_gemfile_path = root_path / "Gemfile"
+            shutil.copyfile(local_gemfile_path, new_gemfile_path)
+            logger.info(f"Copying custom Gemfile from {local_gemfile_path}")
+
+            # Choose the custom-gems stage in the Dockerfile,
+            # which runs bundle install to build custom gems into the image
+            stage = "buildstockbatch-custom-gems"
+        else:
+            # Choose the base stage in the Dockerfile,
+            # which stops before bundling custom gems into the image
+            stage = "buildstockbatch"
+
+        logger.info(f"Building docker image stage: {stage} from OpenStudio {self.os_version}")
+        img, build_logs = self.docker_client.images.build(
+            path=str(root_path),
+            tag=self.docker_image,
+            rm=True,
+            target=stage,
+            platform="linux/amd64",
+            buildargs={
+                "OS_VER": self.os_version,
+                "CLOUD_PLATFORM": "aws",
+            },
         )
+        build_image_log = os.path.join(local_log_dir, "build_image.log")
+        with open(build_image_log, "w") as f_out:
+            f_out.write("Built image")
+            for line in build_logs:
+                for itm_type, item_msg in line.items():
+                    if itm_type in ["stream", "status"]:
+                        try:
+                            f_out.write(f"{item_msg}")
+                        except UnicodeEncodeError:
+                            pass
+        logger.debug(f"Review docker image build log: {build_image_log}")
+
+        # Report and confirm the openstudio version from the image
+        os_ver_cmd = "openstudio openstudio_version"
+        container_output = self.docker_client.containers.run(
+            self.docker_image, os_ver_cmd, remove=True, name="list_openstudio_version"
+        )
+        assert self.os_version in container_output.decode()
+
+        # Report gems included in the docker image.
+        # The OpenStudio Docker image installs the default gems
+        # to /var/oscli/gems, and the custom docker image
+        # overwrites these with the custom gems.
+        list_gems_cmd = (
+            "openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems "
+            "--bundle_without native_ext gem_list"
+        )
+        container_output = self.docker_client.containers.run(
+            self.docker_image, list_gems_cmd, remove=True, name="list_gems"
+        )
+        gem_list_log = os.path.join(local_log_dir, "openstudio_gem_list_output.log")
+        with open(gem_list_log, "wb") as f_out:
+            f_out.write(container_output)
+        for line in container_output.decode().split("\n"):
+            logger.debug(line)
+        logger.debug(f"Review custom gems list at: {gem_list_log}")
 
     def push_image(self):
         """
@@ -1568,9 +1146,6 @@ class AwsBatch(DockerBatchBase):
 
         batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
         batch_env.clean()
-
-        sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
-        sns_env.clean()
 
     def upload_batch_files_to_cloud(self, tmppath):
         """Implements :func:`DockerBase.upload_batch_files_to_cloud`"""
@@ -1624,37 +1199,44 @@ class AwsBatch(DockerBatchBase):
             REGION=self.region,
         )
 
-        image_url = "{}:{}".format(self.container_repo["repositoryUri"], self.job_identifier)
-
         job_env_cfg = self.cfg["aws"].get("job_environment", {})
         batch_env.create_job_definition(
-            image_url,
-            command=["python3.8", "-m", "buildstockbatch.aws.aws"],
+            self.image_url,
+            command=["python3", "-m", "buildstockbatch.aws.aws"],
             vcpus=job_env_cfg.get("vcpus", 1),
             memory=job_env_cfg.get("memory", 1024),
             env_vars=env_vars,
         )
 
-        # SNS Topic
-        sns_env = AwsSNS(self.job_identifier, self.cfg["aws"], self.boto3_session)
-        sns_env.create_topic()
-        sns_env.subscribe_to_topic()
-
-        # State machine
-        batch_env.create_state_machine_roles()
-        batch_env.create_state_machine()
-
-        # EMR Function
-        batch_env.upload_assets()
-        batch_env.create_emr_iam_roles()
-        batch_env.create_emr_security_groups()
-        batch_env.create_emr_lambda_roles()
-        batch_env.create_emr_cluster_function()
-
         # start job
-        batch_env.start_state_machine_execution(batch_info.job_count)
+        job_info = batch_env.submit_job(array_size=self.batch_array_size)
 
-        logger.info("Batch job submitted. Check your email to subscribe to notifications.")
+        # Monitor job status
+        n_succeeded_last_time = 0
+        with tqdm.tqdm(desc="Running Simulations", total=self.batch_array_size) as progress_bar:
+            job_status = None
+            while job_status not in ("SUCCEEDED", "FAILED"):
+                time.sleep(10)
+                job_desc_resp = batch_env.batch.describe_jobs(jobs=[job_info["jobId"]])
+                job_status = job_desc_resp["jobs"][0]["status"]
+
+                jobs_resp = batch_env.batch.list_jobs(arrayJobId=job_info["jobId"], jobStatus="SUCCEEDED")
+                n_succeeded = len(jobs_resp["jobSummaryList"])
+                next_token = jobs_resp.get("nextToken")
+                while next_token is not None:
+                    jobs_resp = batch_env.batch.list_jobs(
+                        arrayJobId=job_info["jobId"],
+                        jobStatus="SUCCEEDED",
+                        nextToken=next_token,
+                    )
+                    n_succeeded += len(jobs_resp["jobSummaryList"])
+                    next_token = jobs_resp.get("nextToken")
+                progress_bar.update(n_succeeded - n_succeeded_last_time)
+                n_succeeded_last_time = n_succeeded
+
+        logger.info(f"Batch job status: {job_status}")
+        if job_status == "FAILED":
+            raise RuntimeError("Batch Job Failed. Go look at the CloudWatch logs.")
 
     @classmethod
     def run_job(cls, job_id, bucket, prefix, job_name, region):
@@ -1667,7 +1249,7 @@ class AwsBatch(DockerBatchBase):
         """
 
         logger.debug(f"region: {region}")
-        s3 = boto3.client("s3")
+        s3 = boto3.client("s3", config=boto_client_config)
 
         sim_dir = pathlib.Path("/var/simdata/openstudio")
 
@@ -1695,6 +1277,36 @@ class AwsBatch(DockerBatchBase):
         os.makedirs(weather_dir, exist_ok=True)
 
         epws_to_download = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
+        # Make a lookup of which parameter points to the weather file from options_lookup.tsv
+        with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
+            tsv_reader = csv.reader(f, delimiter="\t")
+            next(tsv_reader)  # skip headers
+            param_name = None
+            epws_by_option = {}
+            for row in tsv_reader:
+                row_has_epw = [x.endswith(".epw") for x in row[2:]]
+                if sum(row_has_epw):
+                    if row[0] != param_name and param_name is not None:
+                        raise RuntimeError(
+                            f"The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}"
+                        )  # noqa: E501
+                    epw_filename = row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
+                    param_name = row[0]
+                    option_name = row[1]
+                    epws_by_option[option_name] = epw_filename
+
+        # Look through the buildstock.csv to find the appropriate location and epw
+        epws_to_download = set()
+        building_ids = [x[0] for x in jobs_d["batch"]]
+        with open(
+            sim_dir / "lib" / "housing_characteristics" / "buildstock.csv",
+            "r",
+            encoding="utf-8",
+        ) as f:
+            csv_reader = csv.DictReader(f)
+            for row in csv_reader:
+                if int(row["Building"]) in building_ids:
+                    epws_to_download.add(epws_by_option[row[param_name]])
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:
@@ -1705,7 +1317,88 @@ class AwsBatch(DockerBatchBase):
                     logger.debug("Extracting {}".format(epw_filename))
                     f_out.write(gzip.decompress(f_gz.getvalue()))
 
-        cls.run_simulations(cfg, jobs_d, job_id, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
+        cls.run_simulations(cfg, job_id, jobs_d, sim_dir, S3FileSystem(), f"{bucket}/{prefix}")
+
+    def get_fs(self):
+        return S3FileSystem()
+
+    def get_dask_client(self):
+        dask_cfg = self.cfg["aws"]["dask"]
+
+        batch_env = AwsBatchEnv(self.job_identifier, self.cfg["aws"], self.boto3_session)
+        m = 1024
+        self.dask_cluster = FargateCluster(
+            region_name=self.region,
+            fargate_spot=True,
+            image=self.image_url,
+            cluster_name_template=f"dask-{self.job_identifier}",
+            scheduler_cpu=dask_cfg.get("scheduler_cpu", 2 * m),
+            scheduler_mem=dask_cfg.get("scheduler_memory", 8 * m),
+            worker_cpu=dask_cfg.get("worker_cpu", 2 * m),
+            worker_mem=dask_cfg.get("worker_memory", 8 * m),
+            n_workers=dask_cfg["n_workers"],
+            task_role_policies=["arn:aws:iam::aws:policy/AmazonS3FullAccess"],
+            tags=batch_env.get_tags(),
+        )
+        self.dask_client = Client(self.dask_cluster)
+        return self.dask_client
+
+    def cleanup_dask(self):
+        self.dask_client.close()
+        self.dask_cluster.close()
+
+    def upload_results(self, *args, **kwargs):
+        """Do nothing because the results are already on S3"""
+        return self.s3_bucket, self.s3_bucket_prefix + "/results/parquet"
+
+    def process_results(self, *args, **kwargs):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = pathlib.Path(tmpdir)
+            container_workpath = pathlib.PurePosixPath("/var/simdata/openstudio")
+
+            cfg = deepcopy(self.cfg)
+            container_buildstock_dir = str(container_workpath / "buildstock")
+            cfg["buildstock_directory"] = container_buildstock_dir
+            cfg["project_directory"] = str(pathlib.Path(self.project_dir).relative_to(self.buildstock_dir))
+
+            with open(tmppath / "project_config.yml", "w") as f:
+                f.write(yaml.dump(cfg, Dumper=yaml.SafeDumper))
+            container_cfg_path = str(container_workpath / "project_config.yml")
+
+            with open(tmppath / "args.json", "w") as f:
+                json.dump([args, kwargs], f)
+
+            credentials = boto3.Session().get_credentials().get_frozen_credentials()
+            env = {
+                "AWS_ACCESS_KEY_ID": credentials.access_key,
+                "AWS_SECRET_ACCESS_KEY": credentials.secret_key,
+            }
+            if credentials.token:
+                env["AWS_SESSION_TOKEN"] = credentials.token
+            env["POSTPROCESSING_INSIDE_DOCKER_CONTAINER"] = "true"
+
+            logger.info("Starting container for postprocessing")
+            container = self.docker_client.containers.run(
+                self.image_url,
+                ["python3", "-m", "buildstockbatch.aws.aws", container_cfg_path],
+                volumes={
+                    tmpdir: {"bind": str(container_workpath), "mode": "rw"},
+                    self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
+                },
+                environment=env,
+                name="bsb_post",
+                auto_remove=True,
+                detach=True,
+            )
+            for msg in container.logs(stream=True):
+                logger.debug(msg)
+
+    def _process_results_inside_container(self):
+        with open("/var/simdata/openstudio/args.json", "r") as f:
+            args, kwargs = json.load(f)
+
+        logger.info("Running postprocessing in container")
+        super().process_results(*args, **kwargs)
 
 
 @log_error_details()
@@ -1750,18 +1443,35 @@ def main():
         job_name = os.environ["JOB_NAME"]
         region = os.environ["REGION"]
         AwsBatch.run_job(job_id, s3_bucket, s3_prefix, job_name, region)
+    elif get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("project_filename")
+        args = parser.parse_args()
+        batch = AwsBatch(args.project_filename)
+        batch._process_results_inside_container()
     else:
         parser = argparse.ArgumentParser()
         parser.add_argument("project_filename")
-        parser.add_argument(
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument(
             "-c",
             "--clean",
             action="store_true",
             help="After the simulation is done, run with --clean to clean up AWS environment",
         )
-        parser.add_argument(
+        group.add_argument(
             "--validateonly",
             help="Only validate the project YAML file and references. Nothing is executed",
+            action="store_true",
+        )
+        group.add_argument(
+            "--postprocessonly",
+            help="Only do postprocessing, useful for when the simulations are already done",
+            action="store_true",
+        )
+        group.add_argument(
+            "--crawl",
+            help="Only do the crawling in Athena. When simulations and postprocessing are done.",
             action="store_true",
         )
         args = parser.parse_args()
@@ -1774,10 +1484,18 @@ def main():
         batch = AwsBatch(args.project_filename)
         if args.clean:
             batch.clean()
+        elif args.postprocessonly:
+            batch.build_image()
+            batch.push_image()
+            batch.process_results()
+        elif args.crawl:
+            batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
             batch.build_image()
             batch.push_image()
             batch.run_batch()
+            batch.process_results()
+            batch.clean()
 
 
 if __name__ == "__main__":

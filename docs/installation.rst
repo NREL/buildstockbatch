@@ -66,6 +66,8 @@ For Windows, the process is similar.
 
 .. _python:
 
+.. _bsb-python:
+
 BuildStockBatch Python Library
 ..............................
 
@@ -232,14 +234,49 @@ Amazon Web Services (Beta)
 
 .. warning::
 
-   The AWS version of buildstockbatch is currently broken. A remedy is in
-   progress. Thanks for your patience.
+   The AWS version of buildstockbatch is in active development. Use at your own
+   risk. It's provided as-is with no promise of support.
 
-The installation instructions are the same as the :ref:`local-install`
-installation. You will need to use an AWS account with appropriate permissions.
-The first time you run ``buildstock_aws`` it may take several minutes,
-especially over a slower internet connection as it is downloading and building a docker image.
+Docker
+......
 
+Install either `Docker Desktop <https://docs.docker.com/get-docker/>`_ of
+`Docker Engine <https://docs.docker.com/engine/install/>`_ for your platform.
+
+BuildStockBatch Python Library
+..............................
+
+Instal the buildstockbatch python library as described in :ref:`bsb-python` for
+the local installation. You'll need to install with the ``aws`` extra as follows.
+
+For a standard installation
+
+::
+
+   cd /path/to/buildstockbatch
+   python -m pip install -e ".[aws]"
+
+For developer installation
+
+::
+
+   cd /path/to/buildstockbatch
+   python -m pip install -e ".[dev,aws]"
+   pre-commit install
+
+AWS User Configuration
+......................
+
+Follow the instructions for :ref:`aws-user-config-local` on the local install.
+Your AWS user account or role needs to have pretty expansive permissions to
+create IAM roles, VPCs, compute resources, etc.
+
+.. todo::
+
+   Define permission set needed.
+
+   For NREL users, the typical ``resbldg-user`` or ``developers`` role in the
+   nrel-aws-resbldg account is probably insufficient.
 
 Google Cloud Platform
 ~~~~~~~~~~~~~~~~~~~~~
