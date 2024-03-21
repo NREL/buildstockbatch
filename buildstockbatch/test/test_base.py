@@ -133,7 +133,7 @@ def test_upload_files(mocker, basic_residential_project_file):
         return_value={"Crawler": {"State": "READY", "LastCrawl": {"Status": "SUCCEEDED"}}}
     )
     mocked_boto3.client = MagicMock(return_value=mocked_glueclient)
-    mocked_boto3.resource().Bucket().objects.filter.side_effect = [[], ["a", "b", "c"]]
+    mocked_boto3.resource("s3").Bucket(s3_bucket).objects.filter.side_effect = [[], ["a", "b", "c"]]
     project_filename, results_dir = basic_residential_project_file(upload_config)
     buildstock_csv_path = (
         Path(results_dir).parent
@@ -160,7 +160,7 @@ def test_upload_files(mocker, basic_residential_project_file):
     files_uploaded = []
     crawler_created = False
     crawler_started = False
-    for call in mocked_boto3.mock_calls[2:] + mocked_boto3.client().mock_calls:
+    for call in mocked_boto3.mock_calls + mocked_boto3.client().mock_calls:
         call_function = call[0].split(".")[-1]  # 0 is for the function name
         if call_function == "resource":
             assert call[1][0] in ["s3"]  # call[1] is for the positional arguments
