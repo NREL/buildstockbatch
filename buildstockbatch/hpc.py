@@ -586,13 +586,13 @@ class SlurmBatch(BuildStockBatchBase):
         print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
 
-        if not upload_only:
-            for subdir in ("parquet", "results_csvs"):
-                subdirpath = pathlib.Path(self.output_dir, "results", subdir)
-                if subdirpath.exists():
-                    raise FileExistsError(
-                        f"{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again."
-                    )  # noqa E501
+        # if not upload_only:
+        #     for subdir in ("parquet", "results_csvs"):
+        #         subdirpath = pathlib.Path(self.output_dir, "results", subdir)
+        #         if subdirpath.exists():
+        #             raise FileExistsError(
+        #                 f"{subdirpath} already exists. This means you may have run postprocessing already. If you are sure you want to rerun, delete that directory and try again."
+        #             )  # noqa E501
 
         # Move old output logs and config to make way for new ones
         for filename in (
