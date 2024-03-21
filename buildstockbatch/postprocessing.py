@@ -433,11 +433,11 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         with fs.open(checkpoint_filename, "r") as f:
             checkpoint = json.load(f)
     else:
-        checkpoint = {"upgrades_processed": [], "all_ts_cols": None}
+        checkpoint = {"upgrades_processed": []}
 
     if do_timeseries:
         # Look at all the parquet files to see what columns are in all of them.
-        if checkpoint["all_ts_cols"] is not None:
+        if checkpoint.get("all_ts_cols") is not None:
             all_ts_cols_sorted = checkpoint["all_ts_cols"]
         else:
             logger.info("Collecting all the columns in timeseries parquet files.")
