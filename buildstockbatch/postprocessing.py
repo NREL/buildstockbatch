@@ -428,28 +428,41 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     ]
     results_df = dd.from_delayed(delayed_results_dfs, verify_meta=False)
 
+    checkpoint_filename = f"{results_dir}/checkpoints.json"
+    if fs.exists(checkpoint_filename):
+        with fs.open(checkpoint_filename, "r") as f:
+            checkpoint = json.load(f)
+    else:
+        checkpoint = {"upgrades_processed": [], "all_ts_cols": None}
+
     if do_timeseries:
         # Look at all the parquet files to see what columns are in all of them.
-        logger.info("Collecting all the columns in timeseries parquet files.")
-        do_timeseries = False
-        all_ts_cols = set()
-        for upgrade_folder in fs.glob(f"{ts_in_dir}/up*"):
-            ts_filenames = fs.ls(upgrade_folder)
-            if ts_filenames:
-                do_timeseries = True
-                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
-                files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= files_bag.map(partial(get_cols, fs)).fold(lambda x, y: x.union(y)).compute()
-                logger.info("Collected all the columns")
-            else:
-                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+        if checkpoint["all_ts_cols"] is not None:
+            all_ts_cols_sorted = checkpoint["all_ts_cols"]
+        else:
+            logger.info("Collecting all the columns in timeseries parquet files.")
+            do_timeseries = False
+            all_ts_cols = set()
+            for upgrade_folder in fs.glob(f"{ts_in_dir}/up*"):
+                ts_filenames = fs.ls(upgrade_folder)
+                if ts_filenames:
+                    do_timeseries = True
+                    logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
+                    files_bag = db.from_sequence(ts_filenames, partition_size=100)
+                    all_ts_cols |= files_bag.map(partial(get_cols, fs)).fold(lambda x, y: x.union(y)).compute()
+                    logger.info("Collected all the columns")
+                else:
+                    logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
-        # Sort the columns
-        all_ts_cols_sorted = ["building_id"] + sorted(x for x in all_ts_cols if x.startswith("time"))
-        all_ts_cols.difference_update(all_ts_cols_sorted)
-        all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith("]")))
-        all_ts_cols.difference_update(all_ts_cols_sorted)
-        all_ts_cols_sorted.extend(sorted(all_ts_cols))
+            # Sort the columns
+            all_ts_cols_sorted = ["building_id"] + sorted(x for x in all_ts_cols if x.startswith("time"))
+            all_ts_cols.difference_update(all_ts_cols_sorted)
+            all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith("]")))
+            all_ts_cols.difference_update(all_ts_cols_sorted)
+            all_ts_cols_sorted.extend(sorted(all_ts_cols))
+            checkpoint["all_ts_cols"] = all_ts_cols_sorted
+            with fs.open(checkpoint_filename, "w") as f:
+                json.dump(checkpoint, f)
         logger.info(f"Got {len(all_ts_cols_sorted)} columns in total")
         logger.info(f"The columns are: {all_ts_cols_sorted}")
     else:
@@ -457,12 +470,6 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     results_df_groups = results_df.groupby("upgrade")
     upgrade_list = get_upgrade_list(cfg)
-    checkpoint_filename = f"{results_dir}/checkpoints.json"
-    if fs.exists(checkpoint_filename):
-        with fs.open(checkpoint_filename, "r") as f:
-            checkpoint = json.load(f)
-    else:
-        checkpoint = {"upgrades_processed": []}
     for upgrade_id in checkpoint["upgrades_processed"]:
         logger.info(f"Upgrade {upgrade_id} has already been processed, skipping.")
     upgrade_list = sorted(set(upgrade_list).difference(checkpoint["upgrades_processed"]))
