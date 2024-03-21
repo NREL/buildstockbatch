@@ -396,9 +396,9 @@ class DockerBatchBase(BuildStockBatchBase):
 
     def _determine_weather_files_needed_for_batch(self, buildstock_df):
         """
-        Gets the list of EPW filenames required for a batch of simulations.
+        Gets the list of weather filenames required for a batch of simulations.
         :param buildstock_df: DataFrame of the buildstock batch being simulated.
-        :returns: Set of EPW filenames needed for this batch of simulations.
+        :returns: Set of weather filenames needed for this batch of simulations.
         """
         # Fetch the mapping for building to weather file from options_lookup.tsv
         epws_by_option, param_name = _epws_by_option(
