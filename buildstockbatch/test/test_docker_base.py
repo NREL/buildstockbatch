@@ -37,21 +37,22 @@ def test_run_batch_prep(basic_residential_project_file, mocker):
 
     with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
         tmppath = pathlib.Path(tmpdir)
-        epws_to_copy, batch_info = dbb._run_batch_prep(tmppath)
+        files_to_copy, batch_info = dbb._run_batch_prep(tmppath)
         sampler_mock.run_sampling.assert_called_once()
 
-        # There are three weather files...
+        # There are three sets of weather files...
         #   * "G2500210.epw" is unique; check for it (gz'd) in tmppath
         #   * "G2601210.epw" and "G2601390.epw" are dupes. One should be in
-        #     tmppath; one should be copied to the other according to ``epws_to_copy``
+        #     tmppath; one should be copied to the other according to ``files_to_copy``
+        #   Same for the .ddy and .stat files.
         assert os.path.isfile(tmppath / "weather" / "G2500210.epw.gz")
         assert os.path.isfile(tmppath / "weather" / "G2601210.epw.gz") or os.path.isfile(
             tmppath / "weather" / "G2601390.epw.gz"
         )
-        src, dest = epws_to_copy[0]
-        assert src in ("G2601210.epw.gz", "G2601390.epw.gz")
-        assert dest in ("G2601210.epw.gz", "G2601390.epw.gz")
-        assert src != dest
+        assert ("G2601210.epw.gz", "G2601390.epw.gz") in files_to_copy or (
+            "G2601390.epw.gz",
+            "G2601210.epw.gz",
+        ) in files_to_copy
 
         # Three job files should be created, with 10 total simulations, split
         # into batches of 4, 4, and 2 simulations.
@@ -79,7 +80,7 @@ def test_run_batch_prep(basic_residential_project_file, mocker):
                 assert [building, 0] in simulations
 
 
-def test_get_epws_to_download():
+def test_get_weather_files_to_download():
     resources_dir_path = pathlib.Path(resources_dir)
     options_file = resources_dir_path / "options_lookup.tsv"
     buildstock_file = resources_dir_path / "buildstock_good.csv"
@@ -100,8 +101,18 @@ def test_get_epws_to_download():
             ],
         }
 
-        epws = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
-        assert epws == {"weather/G2500210.epw", "weather/G2601390.epw"}
+        files = docker_base.determine_weather_files_needed_for_job(sim_dir, jobs_d)
+        assert files == {
+            "empty.epw",
+            "empty.stat",
+            "empty.ddy",
+            "weather/G2500210.epw",
+            "weather/G2601390.epw",
+            "weather/G2500210.ddy",
+            "weather/G2601390.ddy",
+            "weather/G2500210.stat",
+            "weather/G2601390.stat",
+        }
 
 
 def test_run_simulations(basic_residential_project_file):

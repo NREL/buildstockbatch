@@ -1271,7 +1271,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         weather_dir = sim_dir / "weather"
         os.makedirs(weather_dir, exist_ok=True)
 
-        epws_to_download = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
+        epws_to_download = docker_base.determine_weather_files_needed_for_job(sim_dir, jobs_d)
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:

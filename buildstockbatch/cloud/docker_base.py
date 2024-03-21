@@ -13,7 +13,6 @@ import csv
 from dataclasses import dataclass
 import docker
 from fsspec.implementations.local import LocalFileSystem
-import glob
 import gzip
 import itertools
 from joblib import Parallel, delayed
@@ -36,18 +35,22 @@ from buildstockbatch.utils import ContainerRuntime, calc_hash_for_file, compress
 logger = logging.getLogger(__name__)
 
 
-def determine_epws_needed_for_job(sim_dir, jobs_d):
+def determine_weather_files_needed_for_job(sim_dir, jobs_d):
     """
     Gets the list of filenames for the weather data required for a job of simulations.
+
     :param sim_dir: Path to the directory where job files are stored
     :param jobs_d: Contents of a single job JSON file; contains the list of buildings to simulate in this job.
-    :returns: Set of epw filenames needed for this job of simulations.
+
+    :returns: Set of weather filenames needed for this job of simulations.
     """
     # Fetch the mapping for building to weather file from options_lookup.tsv
     epws_by_option, param_name = _epws_by_option(sim_dir / "lib" / "resources" / "options_lookup.tsv")
 
+    # ComStock requires these empty files to exist.
+    files_to_download = set(["empty.epw", "empty.stat", "empty.ddy"])
+
     # Look through the buildstock.csv to find the appropriate location and epw
-    epws_to_download = set()
     building_ids = [x[0] for x in jobs_d["batch"]]
     with open(
         sim_dir / "lib" / "housing_characteristics" / "buildstock.csv",
@@ -57,9 +60,11 @@ def determine_epws_needed_for_job(sim_dir, jobs_d):
         csv_reader = csv.DictReader(f)
         for row in csv_reader:
             if int(row["Building"]) in building_ids:
-                epws_to_download.add(epws_by_option[row[param_name]])
+                epw_file = epws_by_option[row[param_name]]
+                root, _ = os.path.splitext(epw_file)
+                files_to_download.update((f"{root}.epw", f"{root}.stat", f"{root}.ddy"))
 
-    return epws_to_download
+    return files_to_download
 
 
 def _epws_by_option(options_lookup_path):
@@ -164,14 +169,14 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
             tmppath = pathlib.Path(tmpdir)
-            epws_to_copy, batch_info = self._run_batch_prep(tmppath)
+            weather_files_to_copy, batch_info = self._run_batch_prep(tmppath)
 
             # Copy all the files to cloud storage
             logger.info("Uploading files for batch...")
             self.upload_batch_files_to_cloud(tmppath)
 
             logger.info("Copying duplicate weather files...")
-            self.copy_files_at_cloud(epws_to_copy)
+            self.copy_files_at_cloud(weather_files_to_copy)
 
         self.start_batch_job(batch_info)
 
@@ -207,16 +212,16 @@ class DockerBatchBase(BuildStockBatchBase):
 
         # Collect simulations to queue (along with the EPWs those sims need)
         logger.info("Preparing simulation batch jobs...")
-        batch_info, epws_needed = self._prep_jobs_for_batch(tmppath)
+        batch_info, files_needed = self._prep_jobs_for_batch(tmppath)
 
         # Weather files
         logger.info("Prepping weather files...")
-        epws_to_copy = self._prep_weather_files_for_batch(tmppath, epws_needed)
+        epws_to_copy = self._prep_weather_files_for_batch(tmppath, files_needed)
 
         return (epws_to_copy, batch_info)
 
-    def _prep_weather_files_for_batch(self, tmppath, epws_needed_set):
-        """Prepare the weather files (EPWs) needed by the batch.
+    def _prep_weather_files_for_batch(self, tmppath, weather_files_needed_set):
+        """Prepare the weather files needed by the batch.
 
         1. Downloads, if necessary, and extracts weather files to ``self._weather_dir``.
         2. Ensures that all EPWs needed by the batch are present.
@@ -229,7 +234,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
         :param tmppath: Unique weather files (compressed) will be copied into a 'weather' subdir
             of this path.
-        :param epws_needed_set: A set of weather filenames needed by the batch.
+        :param weather_files_needed_set: A set of weather filenames needed by the batch.
 
         :returns: an array of tuples where the first value is the filename of a file that will be
             uploaded to cloud storage (because it's in the ``tmppath``), and the second value is the
@@ -242,12 +247,12 @@ class DockerBatchBase(BuildStockBatchBase):
             # Downloads, if necessary, and extracts weather files to ``self._weather_dir``
             self._get_weather_files()
 
-            # Ensure all needed EPWs are present
+            # Ensure all needed weather files are present
             logger.info("Ensuring all needed weather files are present...")
-            epw_files = set(map(lambda x: x.split("/")[-1], glob.glob(f"{self.weather_dir}/*.epw")))
+            weather_files = os.listdir(self.weather_dir)
             missing_epws = set()
-            for needed_epw in epws_needed_set:
-                if needed_epw not in epw_files:
+            for needed_epw in weather_files_needed_set:
+                if needed_epw not in weather_files:
                     missing_epws.add(needed_epw)
             if missing_epws:
                 raise ValidationError(
@@ -258,7 +263,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
             # Determine the unique weather files
             logger.info("Calculating hashes for weather files")
-            epw_filenames = list(epws_needed_set)
+            epw_filenames = list(weather_files_needed_set)
             epw_hashes = Parallel(n_jobs=-1, verbose=9)(
                 delayed(calc_hash_for_file)(pathlib.Path(self.weather_dir) / epw_filename)
                 for epw_filename in epw_filenames
@@ -298,7 +303,7 @@ class DockerBatchBase(BuildStockBatchBase):
                     dupe_count += count - 1
                     dupe_bytes += bytes * (count - 1)
             logger.info(
-                f"Weather files: {len(epws_needed_set):,}/{len(epw_files):,} referenced; "
+                f"Weather files: {len(weather_files_needed_set):,}/{len(weather_files):,} referenced; "
                 f"{len(unique_epws):,} unique ({(upload_bytes / 1024 / 1024):,.1f} MiB to upload), "
                 f"{dupe_count:,} duplicates ({(dupe_bytes / 1024 / 1024):,.1f} MiB saved from uploading)"
             )
@@ -333,7 +338,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
         # Ensure all weather files are available
         logger.debug("Determining which weather files are needed...")
-        epws_needed = self._determine_epws_needed_for_batch(df)
+        files_needed = self._determine_weather_files_needed_for_batch(df)
 
         # Write each batch of simulations to a file.
         logger.info("Queueing jobs")
@@ -384,9 +389,12 @@ class DockerBatchBase(BuildStockBatchBase):
                 "lib/housing_characteristics",
             )
 
-        return DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count), epws_needed
+        return (
+            DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count),
+            files_needed,
+        )
 
-    def _determine_epws_needed_for_batch(self, buildstock_df):
+    def _determine_weather_files_needed_for_batch(self, buildstock_df):
         """
         Gets the list of EPW filenames required for a batch of simulations.
         :param buildstock_df: DataFrame of the buildstock batch being simulated.
@@ -398,7 +406,7 @@ class DockerBatchBase(BuildStockBatchBase):
         )
 
         # Iterate over all values in the `param_name` column and collect the referenced EPWs
-        epws_needed = set()
+        files_needed = set(["empty.epw", "empty.stat", "empty.ddy"])
         for lookup_value in buildstock_df[param_name]:
             if not lookup_value:
                 raise ValidationError(
@@ -409,11 +417,12 @@ class DockerBatchBase(BuildStockBatchBase):
             if not epw_path:
                 raise ValidationError(f"Did not find an EPW for '{lookup_value}'")
 
-            # Add just the filename (without relative path)
-            epws_needed.add(epw_path.split("/")[-1])
+            # Add just the filenames (without relative path)
+            root, _ = os.path.splitext(os.path.basename(epw_path))
+            files_needed.update((f"{root}.epw", f"{root}.stat", f"{root}.ddy"))
 
-        logger.debug(f"Unique EPWs needed for this buildstock: {len(epws_needed):,}")
-        return epws_needed
+        logger.debug(f"Unique weather files needed for this buildstock: {len(files_needed):,}")
+        return files_needed
 
     @classmethod
     def run_simulations(cls, cfg, job_id, jobs_d, sim_dir, fs, output_path):
