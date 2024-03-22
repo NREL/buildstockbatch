@@ -363,9 +363,14 @@ def get_upgrade_list(cfg):
 
 
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
+    common_metadata_filename = f"{parquet_root_dir}/_common_metadata"
+    metadata_filename = f"{parquet_root_dir}/_metadata"
+    for filename in [common_metadata_filename, metadata_filename]:
+        if fs.exists(filename):
+            fs.rm(filename)
     df = dd.read_parquet(parquet_root_dir)
     sch = pa.Schema.from_pandas(df._meta_nonempty)
-    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata")
+    parquet.write_metadata(sch, common_metadata_filename)
     logger.info(f"Written _common_metadata to {parquet_root_dir}")
 
     if partition_columns:
@@ -525,6 +530,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
 
+        if fs.exists(results_parquet_dir):
+            fs.rm(results_parquet_dir, recursive=True)
         fs.makedirs(results_parquet_dir)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         logger.info(f"Writing {parquet_filename}")
@@ -576,6 +583,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
+            if fs.exists(ts_out_loc):
+                fs.rm(ts_out_loc, recursive=True)
             fs.makedirs(ts_out_loc)
             logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
 
