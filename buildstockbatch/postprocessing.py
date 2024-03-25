@@ -363,9 +363,14 @@ def get_upgrade_list(cfg):
 
 
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
+    common_metadata_filename = f"{parquet_root_dir}/_common_metadata"
+    metadata_filename = f"{parquet_root_dir}/_metadata"
+    for filename in [common_metadata_filename, metadata_filename]:
+        if fs.exists(filename):
+            fs.rm(filename)
     df = dd.read_parquet(parquet_root_dir)
     sch = pa.Schema.from_pandas(df._meta_nonempty)
-    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata")
+    parquet.write_metadata(sch, common_metadata_filename)
     logger.info(f"Written _common_metadata to {parquet_root_dir}")
 
     if partition_columns:
@@ -405,7 +410,7 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     # create the postprocessing results directories
     for dr in dirs:
-        fs.makedirs(dr)
+        fs.makedirs(dr, exist_ok=True)
 
     # Results "CSV"
     results_json_files = fs.glob(f"{sim_output_dir}/results_job*.json.gz")
@@ -428,28 +433,41 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
     ]
     results_df = dd.from_delayed(delayed_results_dfs, verify_meta=False)
 
+    checkpoint_filename = f"{results_dir}/checkpoints.json"
+    if fs.exists(checkpoint_filename):
+        with fs.open(checkpoint_filename, "r") as f:
+            checkpoint = json.load(f)
+    else:
+        checkpoint = {"upgrades_processed": []}
+
     if do_timeseries:
         # Look at all the parquet files to see what columns are in all of them.
-        logger.info("Collecting all the columns in timeseries parquet files.")
-        do_timeseries = False
-        all_ts_cols = set()
-        for upgrade_folder in fs.glob(f"{ts_in_dir}/up*"):
-            ts_filenames = fs.ls(upgrade_folder)
-            if ts_filenames:
-                do_timeseries = True
-                logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
-                files_bag = db.from_sequence(ts_filenames, partition_size=100)
-                all_ts_cols |= files_bag.map(partial(get_cols, fs)).fold(lambda x, y: x.union(y)).compute()
-                logger.info("Collected all the columns")
-            else:
-                logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
+        if checkpoint.get("all_ts_cols") is not None:
+            all_ts_cols_sorted = checkpoint["all_ts_cols"]
+        else:
+            logger.info("Collecting all the columns in timeseries parquet files.")
+            do_timeseries = False
+            all_ts_cols = set()
+            for upgrade_folder in fs.glob(f"{ts_in_dir}/up*"):
+                ts_filenames = fs.ls(upgrade_folder)
+                if ts_filenames:
+                    do_timeseries = True
+                    logger.info(f"Found {len(ts_filenames)} files for upgrade {Path(upgrade_folder).name}.")
+                    files_bag = db.from_sequence(ts_filenames, partition_size=100)
+                    all_ts_cols |= files_bag.map(partial(get_cols, fs)).fold(lambda x, y: x.union(y)).compute()
+                    logger.info("Collected all the columns")
+                else:
+                    logger.info(f"There are no timeseries files for upgrade {Path(upgrade_folder).name}.")
 
-        # Sort the columns
-        all_ts_cols_sorted = ["building_id"] + sorted(x for x in all_ts_cols if x.startswith("time"))
-        all_ts_cols.difference_update(all_ts_cols_sorted)
-        all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith("]")))
-        all_ts_cols.difference_update(all_ts_cols_sorted)
-        all_ts_cols_sorted.extend(sorted(all_ts_cols))
+            # Sort the columns
+            all_ts_cols_sorted = ["building_id"] + sorted(x for x in all_ts_cols if x.startswith("time"))
+            all_ts_cols.difference_update(all_ts_cols_sorted)
+            all_ts_cols_sorted.extend(sorted(x for x in all_ts_cols if not x.endswith("]")))
+            all_ts_cols.difference_update(all_ts_cols_sorted)
+            all_ts_cols_sorted.extend(sorted(all_ts_cols))
+            checkpoint["all_ts_cols"] = all_ts_cols_sorted
+            with fs.open(checkpoint_filename, "w") as f:
+                json.dump(checkpoint, f)
         logger.info(f"Got {len(all_ts_cols_sorted)} columns in total")
         logger.info(f"The columns are: {all_ts_cols_sorted}")
     else:
@@ -457,6 +475,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
     results_df_groups = results_df.groupby("upgrade")
     upgrade_list = get_upgrade_list(cfg)
+    for upgrade_id in checkpoint["upgrades_processed"]:
+        logger.info(f"Upgrade {upgrade_id} has already been processed, skipping.")
+    upgrade_list = sorted(set(upgrade_list).difference(checkpoint["upgrades_processed"]))
     partition_columns = cfg.get("postprocessing", {}).get("partition_columns", [])
     partition_columns = [c.lower() for c in partition_columns]
     df_partition_columns = [f"build_existing_model.{c}" for c in partition_columns]
@@ -509,6 +530,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
         else:
             results_parquet_dir = f"{parquet_dir}/upgrades/upgrade={upgrade_id}"
 
+        if fs.exists(results_parquet_dir):
+            fs.rm(results_parquet_dir, recursive=True)
         fs.makedirs(results_parquet_dir)
         parquet_filename = f"{results_parquet_dir}/results_up{upgrade_id:02d}.parquet"
         logger.info(f"Writing {parquet_filename}")
@@ -560,6 +583,8 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 assert isinstance(fs, S3FileSystem)
                 ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
 
+            if fs.exists(ts_out_loc):
+                fs.rm(ts_out_loc, recursive=True)
             fs.makedirs(ts_out_loc)
             logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
 
@@ -596,7 +621,10 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                     )
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
-    logger.info("All aggregation completed. ")
+        checkpoint["upgrades_processed"].append(upgrade_id)
+        with fs.open(checkpoint_filename, "w") as f:
+            json.dump(checkpoint, f)
+    logger.info("All aggregation completed.")
     if do_timeseries:
         logger.info("Writing timeseries metadata files")
         write_metadata_files(fs, ts_dir, partition_columns)

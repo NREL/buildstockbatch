@@ -139,7 +139,9 @@ You can get a list of installed environments by looking in the envs directory
 
    ls /kfs2/shared-projects/buildstock/envs
 
-Developer Installaion
+.. _kestrel_dev_install:
+
+Developer Installation
 ......................
 
 For those doing development work on buildstockbatch (not most users), a new
@@ -193,6 +195,8 @@ You can get a list of installed environments by looking in the envs directory
 ::
 
    ls /shared-projects/buildstock/envs
+
+.. _eagle_dev_install:
 
 Developer installation
 ......................
