@@ -64,6 +64,7 @@ For Windows, the process is similar.
 .. _set a Windows environment Variable: https://www.computerhope.com/issues/ch000549.htm
 .. _OpenStudio release: https://github.com/NREL/OpenStudio/releases
 
+
 .. _bsb-python:
 
 BuildStockBatch Python Library

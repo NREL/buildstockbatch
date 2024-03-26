@@ -18,7 +18,6 @@ import csv
 from dask.distributed import Client
 from dask_cloudprovider.aws import FargateCluster
 import gzip
-import hashlib
 from joblib import Parallel, delayed
 import json
 import logging
@@ -101,11 +100,6 @@ def compress_file(in_filename, out_filename):
     with gzip.open(str(out_filename), "wb") as f_out:
         with open(str(in_filename), "rb") as f_in:
             shutil.copyfileobj(f_in, f_out)
-
-
-def calc_hash_for_file(filename):
-    with open(filename, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
 
 
 def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
@@ -1372,13 +1366,13 @@ def main():
         if args.clean:
             batch.clean()
         elif args.postprocessonly:
-            batch.build_image()
+            batch.build_image("aws")
             batch.push_image()
             batch.process_results()
         elif args.crawl:
             batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
-            batch.build_image()
+            batch.build_image("aws")
             batch.push_image()
             batch.run_batch()
             batch.process_results()

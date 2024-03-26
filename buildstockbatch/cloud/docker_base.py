@@ -119,9 +119,6 @@ class DockerBatchBase(BuildStockBatchBase):
         if get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
             return
 
-        if get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
-            return
-
         self.docker_client = docker.DockerClient.from_env()
         try:
             self.docker_client.ping()
@@ -165,10 +162,13 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         raise NotImplementedError
 
-    def build_image(self):
+    def build_image(self, platform):
         """
         Build the docker image to use in the batch simulation
+
+        :param platform: String specifying the platform to build for. Must be "aws" or "gcp".
         """
+        assert platform in ("aws", "gcp")
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / "Dockerfile").exists():
             raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
@@ -205,7 +205,7 @@ class DockerBatchBase(BuildStockBatchBase):
             rm=True,
             target=stage,
             platform="linux/amd64",
-            buildargs={"OS_VER": self.os_version},
+            buildargs={"OS_VER": self.os_version, "CLOUD_PLATFORM": platform},
         )
         build_image_log = os.path.join(local_log_dir, "build_image.log")
         with open(build_image_log, "w") as f_out:
@@ -352,7 +352,6 @@ class DockerBatchBase(BuildStockBatchBase):
             # Ensure all needed weather files are present
             logger.info("Ensuring all needed weather files are present...")
             weather_files = os.listdir(self.weather_dir)
-
             missing_epws = set()
             for needed_epw in weather_files_needed_set:
                 if needed_epw not in weather_files:
@@ -657,6 +656,7 @@ class DockerBatchBase(BuildStockBatchBase):
         This only checks for results_job[ID].json.gz files in the results directory.
 
         :param expected: Number of result files expected.
+
         :returns: The number of files that were missing.
         """
         fs = self.get_fs()
@@ -683,7 +683,6 @@ class DockerBatchBase(BuildStockBatchBase):
     def log_summary(self):
         """
         Log a summary of how many simulations succeeded, failed, or ended with other statuses.
-
         Uses the `completed_status` column of the files in results/parquet/.../results_up*.parquet.
         """
         fs = self.get_fs()
