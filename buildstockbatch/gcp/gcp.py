@@ -372,8 +372,7 @@ class GcpBatch(DockerBatchBase):
                 raise AttributeError(f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}")
 
             # Copy the custom Gemfile into the buildstockbatch repo
-            bsb_root = os.path.join(os.path.abspath(__file__), os.pardir, os.pardir, os.pardir)
-            new_gemfile_path = os.path.join(bsb_root, "Gemfile")
+            new_gemfile_path = os.path.join(root_path, "Gemfile")
             shutil.copyfile(local_gemfile_path, new_gemfile_path)
             logger.info(f"Copying custom Gemfile from {local_gemfile_path}")
 
@@ -855,7 +854,7 @@ Results output browser (Cloud Console):
         weather_dir = sim_dir / "weather"
         os.makedirs(weather_dir, exist_ok=True)
 
-        epws_to_download = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
+        epws_to_download = docker_base.determine_weather_files_needed_for_job(sim_dir, jobs_d)
 
         # Download and unzip the epws needed for these simulations
         for epw_filename in epws_to_download:
