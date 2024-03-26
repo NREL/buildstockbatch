@@ -38,7 +38,7 @@ def test_custom_gem_install(basic_residential_project_file):
     gem_list_log_log_path = os.path.join(
         buildstock_directory,
         "resources",
-        ".aws_docker_image",
+        ".cloud_docker_image",
         "openstudio_gem_list_output.log",
     )
     assert os.path.exists(gem_list_log_log_path)
@@ -75,7 +75,7 @@ def test_no_custom_gem_install(basic_residential_project_file):
     gem_list_log_log_path = os.path.join(
         buildstock_directory,
         "resources",
-        ".aws_docker_image",
+        ".cloud_docker_image",
         "openstudio_gem_list_output.log",
     )
     assert os.path.exists(gem_list_log_log_path)

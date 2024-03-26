@@ -153,6 +153,85 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         raise NotImplementedError
 
+    def build_image(self):
+        """
+        Build the docker image to use in the batch simulation
+        """
+        root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
+        if not (root_path / "Dockerfile").exists():
+            raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
+
+        # Make the buildstock/resources/.build_docker_image dir to store logs
+        local_log_dir = pathlib.Path(self.buildstock_dir, "resources", ".cloud_docker_image")
+        if not os.path.exists(local_log_dir):
+            os.makedirs(local_log_dir)
+
+        # Determine whether or not to build the image with custom gems bundled in
+        if self.cfg.get("baseline", dict()).get("custom_gems", False):
+            # Ensure the custom Gemfile exists in the buildstock dir
+            local_gemfile_path = pathlib.Path(self.buildstock_dir, "resources", "Gemfile")
+            if not local_gemfile_path.exists():
+                raise AttributeError(f"baseline:custom_gems = True, but did not find Gemfile at {local_gemfile_path}")
+
+            # Copy the custom Gemfile into the buildstockbatch repo
+            new_gemfile_path = root_path / "Gemfile"
+            shutil.copyfile(local_gemfile_path, new_gemfile_path)
+            logger.info(f"Copying custom Gemfile from {local_gemfile_path}")
+
+            # Choose the custom-gems stage in the Dockerfile,
+            # which runs bundle install to build custom gems into the image
+            stage = "buildstockbatch-custom-gems"
+        else:
+            # Choose the base stage in the Dockerfile,
+            # which stops before bundling custom gems into the image
+            stage = "buildstockbatch"
+
+        logger.info(f"Building docker image stage: {stage} from OpenStudio {self.os_version}")
+        img, build_logs = self.docker_client.images.build(
+            path=str(root_path),
+            tag=self.docker_image,
+            rm=True,
+            target=stage,
+            platform="linux/amd64",
+            buildargs={"OS_VER": self.os_version},
+        )
+        build_image_log = os.path.join(local_log_dir, "build_image.log")
+        with open(build_image_log, "w") as f_out:
+            f_out.write("Built image")
+            for line in build_logs:
+                for itm_type, item_msg in line.items():
+                    if itm_type in ["stream", "status"]:
+                        try:
+                            f_out.write(f"{item_msg}")
+                        except UnicodeEncodeError:
+                            pass
+        logger.debug(f"Review docker image build log: {build_image_log}")
+
+        # Report and confirm the openstudio version from the image
+        os_ver_cmd = "openstudio openstudio_version"
+        container_output = self.docker_client.containers.run(
+            self.docker_image, os_ver_cmd, remove=True, name="list_openstudio_version"
+        )
+        assert self.os_version in container_output.decode()
+
+        # Report gems included in the docker image.
+        # The OpenStudio Docker image installs the default gems
+        # to /var/oscli/gems, and the custom docker image
+        # overwrites these with the custom gems.
+        list_gems_cmd = (
+            "openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems "
+            "--bundle_without native_ext gem_list"
+        )
+        container_output = self.docker_client.containers.run(
+            self.docker_image, list_gems_cmd, remove=True, name="list_gems"
+        )
+        gem_list_log = os.path.join(local_log_dir, "openstudio_gem_list_output.log")
+        with open(gem_list_log, "wb") as f_out:
+            f_out.write(container_output)
+        for line in container_output.decode().split("\n"):
+            logger.debug(line)
+        logger.debug(f"Review custom gems list at: {gem_list_log}")
+
     def start_batch_job(self, batch_info):
         """Create and start the Batch job on the cloud.
 
