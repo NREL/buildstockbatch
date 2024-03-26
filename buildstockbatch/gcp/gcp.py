@@ -654,8 +654,9 @@ class GcpBatch(DockerBatchBase):
             boot_disk_mib=job_env_cfg.get("boot_disk_mib", None),
         )
 
-        # Give three minutes per simulation, plus ten minutes for job overhead
-        task_duration_secs = 60 * (10 + batch_info.n_sims_per_job * 3)
+        # Use specified time per simulation, plus ten minutes for job overhead.
+        minutes_per_sim = job_env_cfg.get("minutes_per_sim", 3)
+        task_duration_secs = 60 * (10 + batch_info.n_sims_per_job * minutes_per_sim)
         task = batch_v1.TaskSpec(
             runnables=[bsb_runnable],
             compute_resource=resources,

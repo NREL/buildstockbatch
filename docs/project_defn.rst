@@ -333,6 +333,8 @@ using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://clou
        this is a type from the `E2 series`_. Usually safe to leave unset.
     *  ``use_spot``: Optional. Whether to use `Spot VMs <https://cloud.google.com/spot-vms>`_
        for data simulations, which can reduce costs by up to 91%. Default: false
+    *  ``minutes_per_sim``: Optional. Maximum time per simulation. Default works well for ResStock,
+       but this should be increased for ComStock. Default: 3 minutes
 *  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
    postprocessing.
 

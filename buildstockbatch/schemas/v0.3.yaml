@@ -48,6 +48,7 @@ gcp-job-environment-spec:
   boot_disk_mib: int(required=False)
   machine_type: str(required=False)
   use_spot: bool(required=False)
+  minutes_per_sim: num(min=0.05, max=480, required=False)
 
 gcp-postprocessing_environment-spec:
   # Limits documented at
