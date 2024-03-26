@@ -258,6 +258,7 @@ class DockerBatchBase(BuildStockBatchBase):
         :param tmppath: Unique weather files (compressed) will be copied into a 'weather' subdir
             of this path.
         :param weather_files_needed_set: A set of weather filenames needed by the batch.
+
         :returns: an array of tuples where the first value is the filename of a file that will be
             uploaded to cloud storage (because it's in the ``tmppath``), and the second value is the
             filename that the first should be copied to.
@@ -429,7 +430,7 @@ class DockerBatchBase(BuildStockBatchBase):
 
         :param buildstock_df: DataFrame of the buildstock batch being simulated.
 
-        :returns: Set of EPW filenames needed for this batch of simulations.
+        :returns: Set of weather filenames needed for this batch of simulations.
         """
         # Fetch the mapping for building to weather file from options_lookup.tsv
         epws_by_option, param_name = _epws_by_option(
@@ -448,7 +449,7 @@ class DockerBatchBase(BuildStockBatchBase):
             if not epw_path:
                 raise ValidationError(f"Did not find an EPW for '{lookup_value}'")
 
-            # Add just the filename (without relative path)
+            # Add just the filenames (without relative path)
             root, _ = os.path.splitext(os.path.basename(epw_path))
             files_needed.update((f"{root}.epw", f"{root}.stat", f"{root}.ddy"))
 
