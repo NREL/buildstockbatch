@@ -20,6 +20,7 @@ import json
 import logging
 import math
 import os
+import pandas as pd
 import pathlib
 import random
 import shutil
@@ -66,6 +67,9 @@ class DockerBatchBase(BuildStockBatchBase):
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
             logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
             raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
+
+    def get_fs(self):
+        return LocalFileSystem()
 
     @staticmethod
     def validate_project(project_file):
@@ -474,3 +478,52 @@ class DockerBatchBase(BuildStockBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    def log_summary(self):
+        """
+        Log a summary of how many simulations succeeded, failed, or ended with other statuses.
+        Uses the `completed_status` column of the files in results/parquet/.../results_up*.parquet.
+        """
+        fs = self.get_fs()
+        # Summary of simulation statuses across all upgrades
+        status_summary = {}
+        total_counts = collections.defaultdict(int)
+
+        results_glob = f"{self.results_dir}/parquet/**/results_up*.parquet"
+        try:
+            results_files = fs.glob(results_glob)
+        except FileNotFoundError:
+            logger.info(f"No results parquet files found at {results_glob}")
+            return
+
+        for result in results_files:
+            upgrade_id = result.split(".")[0][-2:]
+            with fs.open(result) as f:
+                df = pd.read_parquet(f, columns=["completed_status"])
+            # Dict mapping from status (e.g. "Success") to count
+            statuses = df.groupby("completed_status").size().to_dict()
+            status_summary[upgrade_id] = statuses
+            for status, count in statuses.items():
+                total_counts[status] += count
+
+        # Always include these statuses and show them first
+        always_use = ["Success", "Fail"]
+        all_statuses = always_use + list(total_counts.keys() - set(always_use))
+        s = "Final status of all simulations:"
+        for upgrade, counts in status_summary.items():
+            if upgrade == "00":
+                s += "\nBaseline     "
+            else:
+                s += f"\nUpgrade {upgrade}   "
+            for status in all_statuses:
+                s += f"{status}: {counts.get(status, 0):<7d}  "
+
+        s += "\n\nTotal        "
+        for status in all_statuses:
+            s += f"{status}: {total_counts.get(status, 0):<7d}  "
+        s += "\n"
+
+        for upgrade in postprocessing.get_upgrade_list(self.cfg):
+            if f"{upgrade:02d}" not in status_summary:
+                s += f"\nNo results found for Upgrade {upgrade}"
+        logger.info(s)
