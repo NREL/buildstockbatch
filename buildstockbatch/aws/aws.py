@@ -37,7 +37,6 @@ import yaml
 
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
 from buildstockbatch.base import ValidationError
-from buildstockbatch.cloud import docker_base
 from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch.utils import (
     log_error_details,
@@ -1276,7 +1275,6 @@ class AwsBatch(DockerBatchBase):
         weather_dir = sim_dir / "weather"
         os.makedirs(weather_dir, exist_ok=True)
 
-        epws_to_download = docker_base.determine_epws_needed_for_job(sim_dir, jobs_d)
         # Make a lookup of which parameter points to the weather file from options_lookup.tsv
         with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
             tsv_reader = csv.reader(f, delimiter="\t")

@@ -68,6 +68,8 @@ For Windows, the process is similar.
 
 .. _bsb-python:
 
+.. _bsb-python:
+
 BuildStockBatch Python Library
 ..............................
 
@@ -277,6 +279,7 @@ create IAM roles, VPCs, compute resources, etc.
 
    For NREL users, the typical ``resbldg-user`` or ``developers`` role in the
    nrel-aws-resbldg account is probably insufficient.
+
 
 Google Cloud Platform
 ~~~~~~~~~~~~~~~~~~~~~

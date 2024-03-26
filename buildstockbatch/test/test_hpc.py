@@ -331,7 +331,7 @@ def test_run_building_process(mocker, basic_residential_project_file):
     # check results job-json
     refrence_path = pathlib.Path(__file__).resolve().parent / "test_results" / "reference_files"
 
-    refrence_list = json.loads(gzip.open(refrence_path / "results_job1.json.gz", "r").read())
+    refrence_list = json.loads(open(refrence_path / "results_job1.json", "r").read())
 
     output_list = json.loads(gzip.open(results_dir / "simulation_output" / "results_job1.json.gz", "r").read())
 
