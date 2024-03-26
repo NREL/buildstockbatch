@@ -47,3 +47,9 @@ Development Changelog
         :pullreq: 435
 
         Add helper to log a summary of how many simulations succeeded and failed at the end of a job.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 437
+
+        Add a ``step_failures`` section to json results files with error messages from OpenStudio simulations.
