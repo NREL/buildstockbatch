@@ -34,9 +34,9 @@ import tqdm
 import io
 import yaml
 
-from buildstockbatch.base import ValidationError
 from buildstockbatch.aws.awsbase import AwsJobBase, boto_client_config
-from buildstockbatch.cloud.docker_base import DockerBatchBase
+from buildstockbatch.base import ValidationError
+from buildstockbatch.cloud import docker_base
 from buildstockbatch.utils import (
     log_error_details,
     get_project_configuration,
@@ -947,7 +947,7 @@ class AwsBatchEnv(AwsJobBase):
                 raise error
 
 
-class AwsBatch(DockerBatchBase):
+class AwsBatch(docker_base.DockerBatchBase):
     def __init__(self, project_filename):
         super().__init__(project_filename)
 
@@ -1002,10 +1002,6 @@ class AwsBatch(DockerBatchBase):
     @property
     def docker_image(self):
         return "nrel/buildstockbatch"
-
-    @property
-    def weather_dir(self):
-        return self._weather_dir
 
     @property
     def results_dir(self):
@@ -1275,36 +1271,7 @@ class AwsBatch(DockerBatchBase):
         weather_dir = sim_dir / "weather"
         os.makedirs(weather_dir, exist_ok=True)
 
-        # Make a lookup of which parameter points to the weather file from options_lookup.tsv
-        with open(sim_dir / "lib" / "resources" / "options_lookup.tsv", "r", encoding="utf-8") as f:
-            tsv_reader = csv.reader(f, delimiter="\t")
-            next(tsv_reader)  # skip headers
-            param_name = None
-            epws_by_option = {}
-            for row in tsv_reader:
-                row_has_epw = [x.endswith(".epw") for x in row[2:]]
-                if sum(row_has_epw):
-                    if row[0] != param_name and param_name is not None:
-                        raise RuntimeError(
-                            f"The epw files are specified in options_lookup.tsv under more than one parameter type: {param_name}, {row[0]}"
-                        )  # noqa: E501
-                    epw_filename = row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
-                    param_name = row[0]
-                    option_name = row[1]
-                    epws_by_option[option_name] = epw_filename
-
-        # Look through the buildstock.csv to find the appropriate location and epw
-        epws_to_download = set()
-        building_ids = [x[0] for x in jobs_d["batch"]]
-        with open(
-            sim_dir / "lib" / "housing_characteristics" / "buildstock.csv",
-            "r",
-            encoding="utf-8",
-        ) as f:
-            csv_reader = csv.DictReader(f)
-            for row in csv_reader:
-                if int(row["Building"]) in building_ids:
-                    epws_to_download.add(epws_by_option[row[param_name]])
+        epws_to_download = docker_base.determine_weather_files_needed_for_job(sim_dir, jobs_d)
 
         # Download the epws needed for these simulations
         for epw_filename in epws_to_download:

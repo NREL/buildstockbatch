@@ -53,3 +53,10 @@ Development Changelog
         :pullreq: 437
 
         Add a ``step_failures`` section to json results files with error messages from OpenStudio simulations.
+
+    .. change::
+        :tags: general
+        :pullreq: 436
+
+        Clean up handling of weather files in GCP/AWS implementations: only upload files that are required,
+        and fail with clearer messaging if any files are missing.
