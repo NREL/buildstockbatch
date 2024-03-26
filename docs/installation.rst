@@ -64,10 +64,6 @@ For Windows, the process is similar.
 .. _set a Windows environment Variable: https://www.computerhope.com/issues/ch000549.htm
 .. _OpenStudio release: https://github.com/NREL/OpenStudio/releases
 
-.. _python:
-
-.. _bsb-python:
-
 .. _bsb-python:
 
 BuildStockBatch Python Library
@@ -144,7 +140,7 @@ You can get a list of installed environments by looking in the envs directory
 
    ls /kfs2/shared-projects/buildstock/envs
 
-Developer Installaion
+Developer Installation
 ......................
 
 For those doing development work on buildstockbatch (not most users), a new
@@ -248,7 +244,7 @@ Install either `Docker Desktop <https://docs.docker.com/get-docker/>`_ of
 BuildStockBatch Python Library
 ..............................
 
-Instal the buildstockbatch python library as described in :ref:`bsb-python` for
+Install the buildstockbatch python library as described in :ref:`bsb-python` for
 the local installation. You'll need to install with the ``aws`` extra as follows.
 
 For a standard installation
@@ -305,7 +301,7 @@ One-time GCP setup that can be shared by multiple users.
       * Install `Terraform`_.
       * From the buildstockbatch/gcp/ directory, run the following with your chosen GCP project and region
         (e.g. "us-central1"). You can optionally specify the names of the storage bucket and
-        artifact registery repository. See `main.tf` for more details.
+        artifact registry repository. See `main.tf` for more details.
 
         ::
 
@@ -332,7 +328,7 @@ One-time setup that each user needs to do on the workstation from which they'll 
 manage BuildStockBatch runs.
 
 1. Install `Docker`_. This is needed by the script to manage Docker images (pull, push, etc).
-2. Get BuildStockBatch and set up a Python environment for it using the :ref:`python` instructions
+2. Get BuildStockBatch and set up a Python environment for it using the :ref:`bsb-python` instructions
    above. (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
    with the command below.)
 
