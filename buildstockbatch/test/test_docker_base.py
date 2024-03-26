@@ -3,6 +3,7 @@
 from fsspec.implementations.local import LocalFileSystem
 import gzip
 import json
+import logging
 import os
 import pathlib
 import shutil
@@ -160,3 +161,28 @@ def test_run_simulations(basic_residential_project_file):
         # Check that files were cleaned up correctly
         assert not os.listdir(sim_dir)
         os.chdir(old_cwd)
+
+
+def test_log_summary(basic_residential_project_file, mocker, caplog):
+    """
+    Test logging a summary of simulation statuses.
+    """
+    project_filename, results_dir = basic_residential_project_file()
+
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    dbb = DockerBatchBase(project_filename)
+    # Add results CSV files
+    shutil.copytree(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "test_results",
+            "parquet",
+        ),
+        os.path.join(results_dir, "parquet"),
+    )
+
+    with caplog.at_level(logging.INFO):
+        dbb.log_summary()
+        assert "Upgrade 01   Success: 4        Fail: 0" in caplog.text
+        assert "Baseline     Success: 4        Fail: 0" in caplog.text
+        assert "Total        Success: 8        Fail: 0" in caplog.text

@@ -44,6 +44,18 @@ Development Changelog
 
     .. change::
         :tags: general
+        :pullreq: 435
+
+        Add helper to log a summary of how many simulations succeeded and failed at the end of a job.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 437
+
+        Add a ``step_failures`` section to json results files with error messages from OpenStudio simulations.
+
+    .. change::
+        :tags: general
         :pullreq: 436
 
         Clean up handling of weather files in GCP/AWS implementations: only upload files that are required,
