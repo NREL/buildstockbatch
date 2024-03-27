@@ -102,11 +102,6 @@ def compress_file(in_filename, out_filename):
             shutil.copyfileobj(f_in, f_out)
 
 
-def calc_hash_for_file(filename):
-    with open(filename, "rb") as f:
-        return hashlib.sha256(f.read()).hexdigest()
-
-
 def copy_s3_file(src_bucket, src_key, dest_bucket, dest_key):
     s3 = boto3.client("s3", config=boto_client_config)
     s3.copy({"Bucket": src_bucket, "Key": src_key}, dest_bucket, dest_key)
@@ -1371,13 +1366,13 @@ def main():
         if args.clean:
             batch.clean()
         elif args.postprocessonly:
-            batch.build_image()
+            batch.build_image("aws")
             batch.push_image()
             batch.process_results()
         elif args.crawl:
             batch.process_results(skip_combine=True, use_dask_cluster=False)
         else:
-            batch.build_image()
+            batch.build_image("aws")
             batch.push_image()
             batch.run_batch()
             batch.process_results()
