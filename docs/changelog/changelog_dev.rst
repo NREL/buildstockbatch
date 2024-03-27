@@ -60,3 +60,9 @@ Development Changelog
 
         Clean up handling of weather files in GCP/AWS implementations: only upload files that are required,
         and fail with clearer messaging if any files are missing.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 444
+
+        Add GCP implementation.

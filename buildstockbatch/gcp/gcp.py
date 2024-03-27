@@ -788,15 +788,10 @@ Results output browser (Cloud Console):
 
         cls.run_simulations(cfg, task_index, jobs_d, sim_dir, GCSFileSystem(), f"{gcs_bucket}/{gcs_prefix}")
 
-    # todo: Do cleanup (which the aws script does, in the 'nrel/aws_batch' branch)
-    # todo: aws-shared (see file comment): Such cleanup should be shared with the aws script.
-    def cleanup_dask(self):
-        pass
-
     def get_fs(self):
         """
-        Overrides `BuildStockBatchBase.get_fs()` (in the 'nrel/aws_batch' branch). This would
-        indirectly result in `postprocessing.combine_results()` writing to GCS (GCP Cloud Storage);
+        Overrides `BuildStockBatchBase.get_fs()`. This would indirectly result in
+        `postprocessing.combine_results()` writing to GCS (GCP Cloud Storage);
         however, we also override `BuildStockBatch.process_results()`, so we also make the call to
         `postprocessing.combine_results()` and can directly define where that writes to.
 
