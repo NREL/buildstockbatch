@@ -33,7 +33,7 @@ def test_custom_gem_install(basic_residential_project_file):
     buildstock_directory = cfg["buildstock_directory"]
 
     batch = AwsBatch(project_filename)
-    batch.build_image()
+    batch.build_image("aws")
 
     gem_list_log_log_path = os.path.join(
         buildstock_directory,
@@ -70,7 +70,7 @@ def test_no_custom_gem_install(basic_residential_project_file):
     buildstock_directory = cfg["buildstock_directory"]
 
     batch = AwsBatch(project_filename)
-    batch.build_image()
+    batch.build_image("aws")
 
     gem_list_log_log_path = os.path.join(
         buildstock_directory,

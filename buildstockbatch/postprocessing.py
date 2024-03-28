@@ -16,7 +16,6 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
 import json
@@ -29,9 +28,9 @@ import pyarrow as pa
 from pyarrow import parquet
 import random
 import re
-from s3fs import S3FileSystem
 import tempfile
 import time
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -397,7 +396,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
 
-    :param fs: fsspec filesystem (currently supports local and s3)
+    :param fs: fsspec filesystem (currently supports local, s3, gcs)
     :type fs: fsspec filesystem
     :param results_dir: directory where results are stored and written
     :type results_dir: str
@@ -590,13 +589,17 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmpfilepath = Path(tmpdir, "dask-report.html")
                 with performance_report(filename=str(tmpfilepath)):
-                    dask.compute(
-                        map(
-                            concat_partial,
-                            *zip(*enumerate(bldg_id_groups)),
-                            partition_vals_list,
+                    try:
+                        dask.compute(
+                            map(
+                                concat_partial,
+                                *zip(*enumerate(bldg_id_groups)),
+                                partition_vals_list,
+                            )
                         )
-                    )
+                    except:
+                        logger.warning("Exception `dask.compute(map(concat_partial, ...` exception", exc_info=True)
+                        sys.exit(1)
                 if tmpfilepath.exists():
                     fs.put_file(
                         str(tmpfilepath),

@@ -23,6 +23,7 @@ import os
 import pandas as pd
 import pathlib
 import random
+import re
 import shutil
 import subprocess
 import tarfile
@@ -106,10 +107,14 @@ class DockerBatchBase(BuildStockBatchBase):
         job_count: int
 
     CONTAINER_RUNTIME = ContainerRuntime.DOCKER
-    MAX_JOB_COUNT = 10000
 
-    def __init__(self, project_filename):
+    def __init__(self, project_filename, missing_only=False):
+        """
+        :param missing_only: If true, use asset files from a previous job and only run the simulations
+            that don't already have successful results from a previous run. Support must be added in subclasses.
+        """
         super().__init__(project_filename)
+        self.missing_only = missing_only
 
         if get_bool_env_var("POSTPROCESSING_INSIDE_DOCKER_CONTAINER"):
             return
@@ -120,6 +125,10 @@ class DockerBatchBase(BuildStockBatchBase):
         except:  # noqa: E722 (allow bare except in this case because error can be a weird non-class Windows API error)
             logger.error("The docker server did not respond, make sure Docker Desktop is started then retry.")
             raise RuntimeError("The docker server did not respond, make sure Docker Desktop is started then retry.")
+
+        # Save reporting measure names, because (if we're running ComStock) we won't be able to look up the names
+        # when running individual tasks on the cloud.
+        self.cfg["reporting_measure_names"] = self.get_reporting_measures(self.cfg)
 
     def get_fs(self):
         return LocalFileSystem()
@@ -153,10 +162,13 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         raise NotImplementedError
 
-    def build_image(self):
+    def build_image(self, platform):
         """
         Build the docker image to use in the batch simulation
+
+        :param platform: String specifying the platform to build for. Must be "aws" or "gcp".
         """
+        assert platform in ("aws", "gcp")
         root_path = pathlib.Path(os.path.abspath(__file__)).parent.parent.parent
         if not (root_path / "Dockerfile").exists():
             raise RuntimeError(f"The needs to be run from the root of the repo, found {root_path}")
@@ -193,7 +205,7 @@ class DockerBatchBase(BuildStockBatchBase):
             rm=True,
             target=stage,
             platform="linux/amd64",
-            buildargs={"OS_VER": self.os_version},
+            buildargs={"OS_VER": self.os_version, "CLOUD_PLATFORM": platform},
         )
         build_image_log = os.path.join(local_log_dir, "build_image.log")
         with open(build_image_log, "w") as f_out:
@@ -254,12 +266,15 @@ class DockerBatchBase(BuildStockBatchBase):
             tmppath = pathlib.Path(tmpdir)
             weather_files_to_copy, batch_info = self._run_batch_prep(tmppath)
 
-            # Copy all the files to cloud storage
-            logger.info("Uploading files for batch...")
-            self.upload_batch_files_to_cloud(tmppath)
+            # If we're rerunning failed tasks from a previous job, DO NOT overwrite the job files.
+            # That would assign a new random set of buildings to each task, making the rerun useless.
+            if not self.missing_only:
+                # Copy all the files to cloud storage
+                logger.info("Uploading files for batch...")
+                self.upload_batch_files_to_cloud(tmppath)
 
-            logger.info("Copying duplicate weather files...")
-            self.copy_files_at_cloud(weather_files_to_copy)
+                logger.info("Copying duplicate weather files...")
+                self.copy_files_at_cloud(weather_files_to_copy)
 
         self.start_batch_job(batch_info)
 
@@ -288,18 +303,22 @@ class DockerBatchBase(BuildStockBatchBase):
         :returns: DockerBatchBase.BatchInfo
         """
 
-        # Project configuration
-        logger.info("Writing project configuration for upload...")
-        with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
-            json.dump(self.cfg, f)
+        if not self.missing_only:
+            # Project configuration
+            logger.info("Writing project configuration for upload...")
+            with open(tmppath / "config.json", "wt", encoding="utf-8") as f:
+                json.dump(self.cfg, f)
 
         # Collect simulations to queue (along with the EPWs those sims need)
         logger.info("Preparing simulation batch jobs...")
         batch_info, files_needed = self._prep_jobs_for_batch(tmppath)
 
-        # Weather files
-        logger.info("Prepping weather files...")
-        epws_to_copy = self._prep_weather_files_for_batch(tmppath, files_needed)
+        if self.missing_only:
+            epws_to_copy = None
+        else:
+            # Weather files
+            logger.info("Prepping weather files...")
+            epws_to_copy = self._prep_weather_files_for_batch(tmppath, files_needed)
 
         return (epws_to_copy, batch_info)
 
@@ -307,7 +326,7 @@ class DockerBatchBase(BuildStockBatchBase):
         """Prepare the weather files needed by the batch.
 
         1. Downloads, if necessary, and extracts weather files to ``self._weather_dir``.
-        2. Ensures that all EPWs needed by the batch are present.
+        2. Ensures that all weather files needed by the batch are present.
         3. Identifies weather files thare are duplicates to avoid redundant compression work and
            bytes uploaded to the cloud.
             * Puts unique files in the ``tmppath`` (in the 'weather' subdir) which will get uploaded
@@ -403,7 +422,10 @@ class DockerBatchBase(BuildStockBatchBase):
         self.validate_buildstock_csv(self.project_filename, df)
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
-        n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
+        if self.skip_baseline_sims:
+            n_sims = n_datapoints * len(self.cfg.get("upgrades", []))
+        else:
+            n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
         logger.debug("Total number of simulations = {}".format(n_sims))
 
         n_sims_per_job = math.ceil(n_sims / self.batch_array_size)
@@ -411,9 +433,12 @@ class DockerBatchBase(BuildStockBatchBase):
         logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
 
         # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
-        baseline_sims = zip(building_ids, itertools.repeat(None))
         upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
-        all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        if not self.skip_baseline_sims:
+            baseline_sims = zip(building_ids, itertools.repeat(None))
+            all_sims = list(itertools.chain(baseline_sims, upgrade_sims))
+        else:
+            all_sims = list(upgrade_sims)
         random.shuffle(all_sims)
         all_sims_iter = iter(all_sims)
 
@@ -442,6 +467,9 @@ class DockerBatchBase(BuildStockBatchBase):
                 )
         job_count = i
         logger.debug("Job count = {}".format(job_count))
+        batch_info = DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count)
+        if self.missing_only:
+            return batch_info, files_needed
 
         # Compress job jsons
         jobs_dir = tmppath / "jobs"
@@ -472,15 +500,14 @@ class DockerBatchBase(BuildStockBatchBase):
                 "lib/housing_characteristics",
             )
 
-        return (
-            DockerBatchBase.BatchInfo(n_sims=n_sims, n_sims_per_job=n_sims_per_job, job_count=job_count),
-            files_needed,
-        )
+        return batch_info, files_needed
 
     def _determine_weather_files_needed_for_batch(self, buildstock_df):
         """
         Gets the list of weather filenames required for a batch of simulations.
+
         :param buildstock_df: DataFrame of the buildstock batch being simulated.
+
         :returns: Set of weather filenames needed for this batch of simulations.
         """
         # Fetch the mapping for building to weather file from options_lookup.tsv
@@ -622,6 +649,36 @@ class DockerBatchBase(BuildStockBatchBase):
                 shutil.rmtree(item)
             elif os.path.isfile(item):
                 os.remove(item)
+
+    def find_missing_tasks(self, expected):
+        """Creates a file with a list of task numbers that are missing results.
+
+        This only checks for results_job[ID].json.gz files in the results directory.
+
+        :param expected: Number of result files expected.
+
+        :returns: The number of files that were missing.
+        """
+        fs = self.get_fs()
+        done_tasks = set()
+
+        try:
+            for f in fs.ls(f"{self.results_dir}/simulation_output/"):
+                if m := re.match(".*results_job(\\d*).json.gz$", f):
+                    done_tasks.add(int(m.group(1)))
+        except FileNotFoundError:
+            logger.warning("No completed task files found. Running all tasks.")
+
+        missing_tasks = []
+        with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
+            for task_id in range(expected):
+                if task_id not in done_tasks:
+                    f.write(f"{task_id}\n")
+                    missing_tasks.append(str(task_id))
+
+        logger.info(f"Found missing tasks: {', '.join(missing_tasks)}")
+
+        return len(missing_tasks)
 
     def log_summary(self):
         """

@@ -1,6 +1,7 @@
 [run]
     omit =
         buildstockbatch/aws/*
+        buildstockbatch/gcp/*
         buildstockbatch/sampler/sobol_lib.py
         buildstockbatch/sampler/commercial_sobol.py
 

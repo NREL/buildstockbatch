@@ -128,7 +128,7 @@ following properties:
      Multiple costs can be entered and each is multiplied by a cost multiplier, described below.
 
         - ``value``: A cost for the measure, which will be multiplied by the multiplier.
-        - ``multiplier``: The cost above is multiplied by this value, which is a function of the buiding.
+        - ``multiplier``: The cost above is multiplied by this value, which is a function of the building.
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
@@ -214,7 +214,7 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 .. note::
 
    Many of these options overlap with options specified in the
-   :ref:`postprocessing` section. The options here take pecedence when running
+   :ref:`postprocessing` section. The options here take precedence when running
    on AWS. In a future version we will break backwards compatibility in the
    config file and have more consistent options.
 
@@ -272,6 +272,83 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 .. _instance type: https://aws.amazon.com/ec2/instance-types/
 .. _Fargate Task CPU and memory: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-tasks-services.html#fargate-tasks-size
 
+
+.. _gcp-config:
+
+GCP Configuration
+~~~~~~~~~~~~~~~~~
+The top-level ``gcp`` key is used to specify options for running the batch job on GCP,
+using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://cloud.google.com/run>`_.
+
+.. note::
+
+    When BuildStockBatch is run on GCP, it will only save results to GCP Cloud Storage (using the
+    ``gcs`` configuration below); i.e., it currently cannot save to AWS S3 and Athena. Likewise,
+    buildstock run locally, on Eagle, or on AWS cannot save to GCP.
+
+*  ``job_identifier``: A unique string that starts with an alphabetical character,
+   is up to 48 characters long, and only has lowercase letters, numbers and/or hyphens.
+   This is used to name the GCP Batch and Cloud Run jobs to be created and
+   differentiate them from other jobs.
+*  ``project``: The GCP Project ID in which the job will run.
+*  ``service_account``: Optional. The service account email address to use when running jobs on GCP.
+   Default: the Compute Engine default service account of the GCP project.
+*  ``gcs``: Configuration for project data storage on GCP Cloud Storage.
+
+    *  ``bucket``: The Cloud Storage bucket this project will use for simulation output and
+       processed data storage.
+    *  ``prefix``: The Cloud Storage prefix at which the data will be stored within the bucket.
+    *  ``upload_chunk_size_mib``: Optional. The size of data chunks used when uploading files to GCS, in MiB.
+       If your network environment produces a TimeoutError when uploading project files, reducing this
+       may help. Default: 40 MiB
+
+*  ``region``: The GCP region in which the job will be run and the region of the Artifact Registry.
+   (e.g. ``us-central1``)
+*  ``batch_array_size``: Number of tasks to divide the simulations into. Tasks with fewer than 100
+   simulations each are recommended when using spot instances, to minimize lost/repeated work when
+   instances are preempted. Max: 10,000.
+*  ``parallelism``: Optional. Maximum number of tasks that can run in parallel. If not specified,
+   uses `GCP's default behavior`_ (the lesser of ``batch_array_size`` and `job limits`_).
+   Parallelism is also limited by Compute Engine quotas and limits (including vCPU quota).
+*  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry.
+
+    *  ``repository``: The name of the GCP Artifact Repository in which Docker images are stored.
+       This will be combined with the ``project`` and ``region`` to build the full URL to the
+       repository.
+*  ``job_environment``: Optional. Specifies the computing requirements for each simulation.
+
+    *  ``vcpus``: Optional. Number of CPUs to allocate for running each simulation. Default: 1.
+    *  ``memory_mib``: Optional. Amount of RAM memory to allocate for each simulation in MiB.
+       Default: 1024
+    *  ``boot_disk_mib``: Optional. Extra boot disk size in MiB for each task. This affects how
+       large the boot disk will be (see the `Batch OS environment docs`_ for details) of the
+       machine(s) running simulations (which is the disk used by simulations). This will likely need
+       to be set to at least 2,048 if more than 8 simulations will be run in parallel on the same
+       machine (i.e., when vCPUs per machine_type ÷ vCPUs per sim > 8). Default: None (which should
+       result in a 30 GB boot disk according to the docs linked above).
+    *  ``machine_type``: Optional. GCP Compute Engine `machine type`_ to use. If omitted, GCP Batch will
+       choose a machine type based on the requested vCPUs and memory. If set, the machine type
+       should have at least as many resources as requested for each simulation above. If it is
+       large enough, multiple simulations will be run in parallel on the same machine. Typically
+       this is a type from the `E2 series`_. Usually safe to leave unset.
+    *  ``use_spot``: Optional. Whether to use `Spot VMs <https://cloud.google.com/spot-vms>`_
+       for data simulations, which can reduce costs by up to 91%. Default: false
+    *  ``minutes_per_sim``: Optional. Maximum time per simulation. Default works well for ResStock,
+       but this should be increased for ComStock. Default: 3 minutes
+*  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
+   postprocessing.
+
+    *  ``cpus``: Optional. `Number of CPUs`_ to use. Use up to 8 for large jobs. Default: 2.
+    *  ``memory_mib``: Optional. `Amount of RAM`_ needed in MiB. At least 2048 MiB per CPU is recommended.
+       Use up to 32768 MiB for large jobs. Default: 4096 MiB.
+
+.. _GCP's default behavior: https://cloud.google.com/python/docs/reference/batch/latest/google.cloud.batch_v1.types.TaskGroup
+.. _job limits: https://cloud.google.com/batch/quotas
+.. _Batch OS environment docs: https://cloud.google.com/batch/docs/vm-os-environment-overview#default
+.. _Number of CPUs: https://cloud.google.com/run/docs/configuring/services/cpu
+.. _Amount of RAM: https://cloud.google.com/run/docs/configuring/services/memory-limits
+.. _machine type: https://cloud.google.com/compute/docs/general-purpose-machines
+.. _E2 series: https://cloud.google.com/compute/docs/general-purpose-machines#e2_machine_types
 
 .. _postprocessing:
 

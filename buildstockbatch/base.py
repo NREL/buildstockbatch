@@ -136,6 +136,9 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def get_reporting_measures(cls, cfg):
+        if "reporting_measure_names" in cfg:
+            return cfg["reporting_measure_names"]
+
         WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
         wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
         return wg.reporting_measures()
