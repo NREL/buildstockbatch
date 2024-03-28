@@ -40,7 +40,7 @@ import shutil
 import tempfile
 
 from buildstockbatch.utils import ContainerRuntime
-from sampler import residential_quota
+from buildstockbatch.sampler import residential_quota
 
 
 class SampleOnly:
