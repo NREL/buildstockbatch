@@ -1,5 +1,10 @@
 """Runs the residental quota sampler for a single county+PUMA.
 
+The residential quota downselect sampler can be used to do the same thing, but this script
+is much faster, especially for more rural counties. To generate N buildings for a location that contains
+0.01% of the national building stock, the downselect sampler creates ~10000*N buildings, then filters down to
+those in the selected location. This script generates only the N buildings that are needed.
+
 Usage:
     python3 sample_one_county.py --help
 
