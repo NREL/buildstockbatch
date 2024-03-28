@@ -3,6 +3,7 @@
         buildstockbatch/aws/*
         buildstockbatch/sampler/sobol_lib.py
         buildstockbatch/sampler/commercial_sobol.py
+        buildstockbatch/sample_one_county.py
 
 [html]
     directory = coverage/htmlreport
