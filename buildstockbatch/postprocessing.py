@@ -16,9 +16,7 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-from fsspec.implementations.local import LocalFileSystem
 from functools import partial
-from gcsfs import GCSFileSystem
 import gzip
 import json
 import logging
@@ -30,7 +28,6 @@ import pyarrow as pa
 from pyarrow import parquet
 import random
 import re
-from s3fs import S3FileSystem
 import tempfile
 import time
 import sys
