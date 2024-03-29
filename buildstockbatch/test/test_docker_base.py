@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import pathlib
+import pytest
 import shutil
 import tarfile
 import tempfile
@@ -18,6 +19,29 @@ from buildstockbatch.utils import get_project_configuration
 
 here = os.path.dirname(os.path.abspath(__file__))
 resources_dir = os.path.join(here, "test_inputs", "test_openstudio_buildstock", "resources")
+
+
+@docker_available
+@pytest.mark.parametrize("skip_baseline_sims,expected", [(False, 10), (True, 5)])
+def test_skip_baseline_sims(basic_residential_project_file, mocker, skip_baseline_sims, expected):
+    """Test "skip_sims" baseline configuration's effect on ``n_sims``"""
+    update_args = {"baseline": {"skip_sims": True}} if skip_baseline_sims else {}
+    project_filename, results_dir = basic_residential_project_file(update_args)
+
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    sampler_property_mock = mocker.patch.object(DockerBatchBase, "sampler", new_callable=PropertyMock)
+    sampler_mock = mocker.MagicMock()
+    sampler_property_mock.return_value = sampler_mock
+    # Hard-coded sampling output includes 5 buildings.
+    sampler_mock.run_sampling = MagicMock(return_value=os.path.join(resources_dir, "buildstock_good.csv"))
+
+    dbb = DockerBatchBase(project_filename)
+    dbb.batch_array_size = 3
+    DockerBatchBase.validate_project = MagicMock(return_value=True)
+
+    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
+        _, batch_info = dbb._run_batch_prep(pathlib.Path(tmpdir))
+        assert batch_info.n_sims == expected
 
 
 @docker_available
@@ -161,6 +185,26 @@ def test_run_simulations(basic_residential_project_file):
         # Check that files were cleaned up correctly
         assert not os.listdir(sim_dir)
         os.chdir(old_cwd)
+
+
+def test_find_missing_tasks(basic_residential_project_file, mocker):
+    project_filename, results_dir = basic_residential_project_file()
+    results_dir = os.path.join(results_dir, "results")
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    dbb = DockerBatchBase(project_filename)
+
+    existing_results = [1, 3, 5]
+    missing_results = [0, 2, 4, 6]
+    os.makedirs(os.path.join(results_dir, "simulation_output"))
+    for res in existing_results:
+        # Create empty results files
+        with open(os.path.join(results_dir, f"simulation_output/results_job{res}.json.gz"), "w"):
+            pass
+
+    assert dbb.find_missing_tasks(7) == len(missing_results)
+
+    with open(os.path.join(results_dir, "missing_tasks.txt"), "r") as f:
+        assert [int(t) for t in f.readlines()] == missing_results
 
 
 def test_log_summary(basic_residential_project_file, mocker, caplog):

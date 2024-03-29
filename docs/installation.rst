@@ -141,7 +141,7 @@ You can get a list of installed environments by looking in the envs directory
 
    ls /kfs2/shared-projects/buildstock/envs
 
-Developer Installaion
+Developer Installation
 ......................
 
 For those doing development work on buildstockbatch (not most users), a new
@@ -245,7 +245,7 @@ Install either `Docker Desktop <https://docs.docker.com/get-docker/>`_ of
 BuildStockBatch Python Library
 ..............................
 
-Instal the buildstockbatch python library as described in :ref:`bsb-python` for
+Install the buildstockbatch python library as described in :ref:`bsb-python` for
 the local installation. You'll need to install with the ``aws`` extra as follows.
 
 For a standard installation
@@ -276,3 +276,93 @@ create IAM roles, VPCs, compute resources, etc.
 
    For NREL users, the typical ``resbldg-user`` or ``developers`` role in the
    nrel-aws-resbldg account is probably insufficient.
+
+
+Google Cloud Platform
+~~~~~~~~~~~~~~~~~~~~~
+
+Shared, one-time GCP setup
+..........................
+One-time GCP setup that can be shared by multiple users.
+
+1. If needed, create a GCP Project. The following steps will occur in that project.
+2. Set up the following resources in your GCP projects. You can either do this manually or
+   using terraform.
+
+    * **Option 1**: Manual setup
+
+      * `Create a Google Cloud Storage Bucket`_ (that will store simulation and postprocessing output).
+        Alternatively, each user can create and use their own bucket.
+      * `Create a repository`_ in Artifact Registry (to store Docker images).
+        This is expected to be in the same region as the storage bucket.
+
+    * **Option 2**: Terraform
+
+      * Follow the :ref:`per-user-gcp` instructions below to install BuildStockBatch and the Google Cloud CLI.
+      * Install `Terraform`_.
+      * From the buildstockbatch/gcp/ directory, run the following with your chosen GCP project and region
+        (e.g. "us-central1"). You can optionally specify the names of the storage bucket and
+        artifact registry repository. See `main.tf` for more details.
+
+        ::
+
+            terraform init
+            terraform apply -var="gcp_project=PROJECT" -var="region=REGION"
+
+3. Optionally, create a shared Service Account. Alternatively, each user can create their own service account,
+   or each user can install the `gcloud CLI`_. The following documentation will assume use of a Service
+   Account.
+
+.. _Create a repository:
+   https://cloud.google.com/artifact-registry/docs/repositories/create-repos
+.. _Create a Google Cloud Storage Bucket:
+   https://cloud.google.com/storage/docs/creating-buckets
+.. _gcloud CLI: https://cloud.google.com/sdk/docs/install
+.. _Terraform: https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli
+
+
+.. _per-user-gcp:
+
+Per-user setup
+..............
+One-time setup that each user needs to do on the workstation from which they'll launch and
+manage BuildStockBatch runs.
+
+1. Install `Docker`_. This is needed by the script to manage Docker images (pull, push, etc).
+2. Get BuildStockBatch and set up a Python environment for it using the :ref:`bsb-python` instructions
+   above. (i.e., create a Python virtual environment, activate the venv, and install buildstockbatch
+   with the command below.)
+
+   * Install with the ``[gcp]`` option to include GCP-specific dependencies:
+
+    ::
+
+        cd /path/to/buildstockbatch
+        python -m pip install -e ".[gcp]"
+
+3. Download/Clone ResStock or ComStock.
+4. Set up GCP authentication.
+
+   * **Option 1**: Create and download a `Service Account Key`_.
+
+     * Add the location of the key file as an environment variable; e.g.,
+       ``export GOOGLE_APPLICATION_CREDENTIALS="~/path/to/service-account-key.json"``. This can be
+       done at the command line (in which case it will need to be done for every shell session that
+       will run BuildStockBatch, and it will only be in effect for only that session), or added to a
+       shell startup script (in which case it will be available to all shell sessions).
+
+   * **Option 2**: Install the `Google Cloud CLI`_ and run the following:
+
+      ::
+
+        gcloud config set project PROJECT
+        gcloud auth application-default login
+
+        gcloud auth login
+        gcloud auth configure-docker REGION-docker.pkg.dev
+
+
+
+.. _Docker: https://www.docker.com/get-started/
+.. _Service Account Key: https://cloud.google.com/iam/docs/keys-create-delete
+.. _Google Cloud CLI: https://cloud.google.com/sdk/docs/install-sdk
