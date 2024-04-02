@@ -83,7 +83,7 @@ def _epws_by_option(options_lookup_path):
                         "The epw files are specified in options_lookup.tsv under more than one parameter "
                         f"type: {param_name}, {row[0]}"
                     )  # noqa: E501
-                epw_filename = row[row_has_epw.index(True) + 2].split("=")[1]
+                epw_filename = row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
                 param_name = row[0]
                 option_name = row[1]
                 epws_by_option[option_name] = epw_filename
