@@ -50,15 +50,16 @@ def backoff(thefunc, *args, **kwargs):
     backoff_mult = 1.1
     delay = 3
     tries = 5
-    error_patterns = [r"\w+.NotFound"]
+    error_patterns = [r"\w+.NotFound", r"not in VALID state"]
     while tries > 0:
         try:
             result = thefunc(*args, **kwargs)
         except ClientError as error:
             error_code = error.response["Error"]["Code"]
+            error_msg = error.response["Error"]["Message"]
             caught_error = False
             for pat in error_patterns:
-                if re.search(pat, error_code):
+                if re.search(pat, error_code) or re.search(pat, error_msg):
                     logger.debug(f"{error_code}: Waiting and retrying in {delay} seconds")
                     caught_error = True
                     time.sleep(delay)
