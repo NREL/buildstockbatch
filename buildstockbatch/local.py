@@ -52,114 +52,20 @@ class LocalBatch(BuildStockBatchBase):
         for i in range(0, len(self.cfg.get('upgrades', [])) + 1):
             (sim_out_ts_dir / f'up{i:02d}').mkdir(exist_ok=True, parents=True)
 
-        # Check to see if custom gems are needed and if so install.
-        # TODO: this should be a method at the least - it is highly separable, completely confuses, and buries the lead
+        # Install custom gems if requested
         if self.cfg.get("baseline", dict()).get("custom_gems", False):
-
-            # Install custom gems to a local folder that will be used by all workers
-            gems_install_path = pathlib.Path(self.buildstock_dir, '.custom_gems')
-            logger.info(f'Attempting to install custom gems to local folder `{gems_install_path}`')
-            # Clear if exists else create the buildstock/.custom_gems dir to local gems
-            if not gems_install_path.exists():
-                gems_install_path.mkdir(parents=True)
-
-            # Check that the Gemfile exists
-            local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
-            if not os.path.exists(local_gemfile_path):
-                print(f'local_gemfile_path = {local_gemfile_path}')
-                raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
-
-            # Change executables based on operating system
-            gem_exe = 'gem'
-            bundler_exe = 'bundle'
-            # TODO @asparke to test
-            if os.name == 'nt':
-                gem_exe = 'gem.cmd'
-                bundler_exe = 'bundle.cmd'
-
-            # Check the active ruby bundler version through the return of `gem list`
-            # TODO simplify all of this by wrapping subprocess.run() with logging and proper stdout/err management
-            proc_output = subprocess.run(
-                [gem_exe, 'list'],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
-            ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
-
-            # Check the openstudio static object bundler version through the return of `openstudio gem_list`
-            proc_output = subprocess.run(
-                [self.openstudio_exe(), 'gem_list'],
-                check=True,
-                capture_output=True,
-                text=True
-            )
-            print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
-            openstudio_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
-
-            # Test to ascertain the most up to date shared bundler version else install the openstudio bundler
-            common_bundler_versions = set(ruby_bundler_versions).intersection(openstudio_bundler_versions)
-            if common_bundler_versions:
-                # Use the most recent bundler that is in both
-                common_bundler_version = sorted(common_bundler_versions, key=StrictVersion)[-1]
-            else:
-                # Install the bundler that's in openstudio
-                common_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
-                subprocess.run(
-                    [gem_exe, 'install', 'bundler', '-v', common_bundler_version],
-                    check=True
-                )
-
-            # Run bundler to install the custom gems
-            copied_gemfile_path = gems_install_path / "Gemfile"
-            shutil.copy2(local_gemfile_path, copied_gemfile_path)
-            logger.debug(f'Installing custom gems to {gems_install_path}')
-            proc_output = subprocess.run(
-                [
-                    bundler_exe, f"_{common_bundler_version}_",
-                    "install",
-                    '--path', str(gems_install_path),
-                    '--gemfile', str(copied_gemfile_path),
-                    "--without", "native_ext",
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-            bundle_install_log = gems_install_path / 'bundle_install_output.log'
-            with open(bundle_install_log, 'wb') as f_out:
-                f_out.write(proc_output.stdout)
-            logger.debug(f'Review bundle install log at: {bundle_install_log}')
-            proc_output.check_returncode()
-            print(proc_output)
-
-            # Report out custom gems installed by OpenStudio CLI
-            proc_output = subprocess.run(
-                [
-                    self.openstudio_exe(),
-                    "--bundle", str(copied_gemfile_path),
-                    "--bundle_path", str(gems_install_path),
-                    "--bundle_without", "native_ext",
-                    "gem_list"
-                ],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT
-            )
-            print(proc_output)
-            gem_list_log = gems_install_path / 'openstudio_gem_list_output.log'
-            with open(gem_list_log, 'wb') as f_out:
-                f_out.write(proc_output.stdout)
-            logger.debug(f'Review custom gems list at: {gem_list_log}')
-            proc_output.check_returncode()
+            self.install_custom_gems()
 
     @staticmethod
     def _get_gem_versions_from_gem_list(gem_name, gem_list_txt):
-        gem_versions_txt = re.search(
-            rf"^{gem_name} \((.*)\)",
-            gem_list_txt,
-            re.MULTILINE
-        ).group(1).strip()
-        gem_versions = re.findall(r"[\d\.]+", gem_versions_txt)
+        gem_versions = []
+        for l in gem_list_txt.split('\n'):
+            if not l.startswith(gem_name):
+                continue
+            # print(f'{gem_name} found in: {l}')
+            vers = re.findall(rf'\(.*\)', l)
+            for v in vers:
+                gem_versions += re.findall(r"[\d\.]+", v)
         return gem_versions
 
     @classmethod
@@ -207,6 +113,12 @@ class LocalBatch(BuildStockBatchBase):
             (resources_path / "hpxml-measures").symlink_to(hpxml_measures_path, target_is_directory=True)
         else:
             resources_path = None
+        custom_gems_path = buildstock_path / ".custom_gems"
+        if custom_gems_path.exists():
+            gems_path = sim_path / ".custom_gems"
+            (gems_path).symlink_to(custom_gems_path, target_is_directory=True)
+        else:
+            gems_path = None
 
         osw = cls.create_osw(cfg, n_datapoints, sim_id, building_id=i, upgrade_idx=upgrade_idx)
 
@@ -295,6 +207,8 @@ class LocalBatch(BuildStockBatchBase):
                 if resources_path:
                     (resources_path / "hpxml-measures").unlink()
                     resources_path.rmdir()
+                if gems_path:
+                    gems_path.unlink()
 
                 # Read data_point_out.json
                 reporting_measures = cls.get_reporting_measures(cfg)
@@ -381,6 +295,107 @@ class LocalBatch(BuildStockBatchBase):
         cluster = LocalCluster(local_directory=os.path.join(self.results_dir, "dask-tmp"))
         return Client(cluster)
 
+    def install_custom_gems(self):
+        # Install custom gems to a local folder that will be used by all workers
+        gems_install_path = pathlib.Path(self.buildstock_dir, '.custom_gems')
+        logger.info(f'Attempting to install custom gems to local folder `{gems_install_path}`')
+        # Clear if exists else create the buildstock/.custom_gems dir to local gems
+        if not gems_install_path.exists():
+            gems_install_path.mkdir(parents=True)
+
+        # Check that the Gemfile exists
+        local_gemfile_path = os.path.join(self.buildstock_dir, 'resources', 'Gemfile')
+        if not os.path.exists(local_gemfile_path):
+            print(f'local_gemfile_path = {local_gemfile_path}')
+            raise AttributeError('baseline:custom_gems = True, but did not find Gemfile in /resources directory')
+
+        # Change executables based on operating system
+        gem_exe = 'gem'
+        bundler_exe = 'bundle'
+        # TODO @asparke to test
+        if os.name == 'nt':
+            gem_exe = 'gem.cmd'
+            bundler_exe = 'bundle.bat'
+
+        # Check the active ruby bundler version through the return of `gem list`
+        # TODO simplify all of this by wrapping subprocess.run() with logging and proper stdout/err management
+        proc_output = subprocess.run(
+            [gem_exe, 'list'],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
+        ruby_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+        print(f'System Ruby bundler versions: {ruby_bundler_versions}')
+
+        # Check the openstudio static object bundler version through the return of `openstudio gem_list`
+        proc_output = subprocess.run(
+            [self.openstudio_exe(), 'gem_list'],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
+        openstudio_bundler_versions = self._get_gem_versions_from_gem_list('bundler', proc_output.stdout)
+        print(f'OpenStudio bundler versions: {openstudio_bundler_versions}')
+
+        # Test to ascertain the most up to date shared bundler version else install the openstudio bundler
+        common_bundler_versions = set(ruby_bundler_versions).intersection(openstudio_bundler_versions)
+        print(f'Shared bundler versions: {common_bundler_versions}')
+        if common_bundler_versions:
+            # Use the most recent bundler that is in both
+            common_bundler_version = sorted(common_bundler_versions, key=StrictVersion)[-1]
+        else:
+            # Install the bundler that's in openstudio
+            common_bundler_version = sorted(openstudio_bundler_versions, key=StrictVersion)[-1]
+            subprocess.run(
+                [gem_exe, 'install', 'bundler', '-v', common_bundler_version],
+                check=True
+            )
+
+        # Run bundler to install the custom gems
+        copied_gemfile_path = gems_install_path / "Gemfile"
+        shutil.copy2(local_gemfile_path, copied_gemfile_path)
+        logger.debug(f'Installing custom gems to {gems_install_path}')
+        proc_output = subprocess.run(
+            [
+                bundler_exe, f"_{common_bundler_version}_",
+                "install",
+                '--path', str(gems_install_path),
+                '--gemfile', str(copied_gemfile_path),
+                "--without", "test",
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
+        bundle_install_log = gems_install_path / 'bundle_install_output.log'
+        with open(bundle_install_log, 'wb') as f_out:
+            f_out.write(proc_output.stdout)
+        logger.debug(f'Review bundle install log at: {bundle_install_log}')
+        proc_output.check_returncode()
+
+        # Report out custom gems installed by OpenStudio CLI
+        proc_output = subprocess.run(
+            [
+                self.openstudio_exe(),
+                "--bundle", str(copied_gemfile_path),
+                "--bundle_path", str(gems_install_path),
+                "--bundle_without", "test",
+                "gem_list"
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT
+        )
+        print(f'Ran command `{proc_output.args}` with exit code {proc_output.returncode}')
+        gem_list_log = gems_install_path / 'openstudio_gem_list_output.log'
+        with open(gem_list_log, 'wb') as f_out:
+            f_out.write(proc_output.stdout)
+        logger.debug(f'Review custom gems list at: {gem_list_log}')
+        proc_output.check_returncode()
+
+        return
 
 @log_error_details()
 def main():
