@@ -66,3 +66,9 @@ Development Changelog
         :pullreq: 423
 
         Add GCP implementation.
+
+    .. change::
+        :tags: bugfix, schema
+        :pullreq: 450
+
+        Requires ``os_version`` and ``os_sha`` in the project file.
