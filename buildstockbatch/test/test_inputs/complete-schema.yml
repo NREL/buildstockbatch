@@ -1,3 +1,5 @@
+os_version: asdf
+os_sha: asdf
 buildstock_directory: /home/epresent/OpenStudio-BuildStock-master
 project_directory: project_singlefamilydetached
 output_directory: /scratch/epresent/yaml1s

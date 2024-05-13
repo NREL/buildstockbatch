@@ -51,6 +51,8 @@ def basic_residential_project_file():
                 "weather.zip",
             )
             cfg = {
+                "os_version": "asdf",
+                "os_sha": "asdf",
                 "buildstock_directory": buildstock_directory,
                 "project_directory": project_directory,
                 "output_directory": output_directory,
