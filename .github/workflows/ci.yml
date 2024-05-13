@@ -34,7 +34,7 @@ jobs:
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
       - name: Download and Install OpenStudio
         run: |
-          sudo snap install -y yq
+          sudo snap install yq
           export OS_VER=`yq '.os_version' resstock/project_national/national_baseline.yml`
           export OS_SHA=`yq '.os_sha' resstock/project_national/national_baseline.yml`
           export OS_INSTALLER_FILENAME="OpenStudio-${OS_VER}+${OS_SHA}-Ubuntu-22.04-x86_64.deb"
