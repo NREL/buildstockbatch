@@ -1,7 +1,7 @@
 Residential Quota Sampler
 -------------------------
 
-The Residential Quota sampler utilizes a `quota-based sampling method <https://en.wikipedia.org/wiki/Quota_sampling>`_ to determine the buildings to simulate. It is the primary sampling algorithm used in ResStock. 
+The Residential Quota sampler utilizes a `quota-based sampling method <https://en.wikipedia.org/wiki/Quota_sampling>`_ to determine the buildings to simulate. It is the primary sampling algorithm used in ResStock.
 
 Configuration Example
 ~~~~~~~~~~~~~~~~~~~~~

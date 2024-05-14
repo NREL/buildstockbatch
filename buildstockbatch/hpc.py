@@ -41,16 +41,13 @@ from buildstockbatch.utils import (
     path_rel_to_file,
     get_project_configuration,
     read_csv,
+    get_bool_env_var,
 )
 from buildstockbatch import postprocessing
 from buildstockbatch.__version__ import __version__ as bsb_version
 from buildstockbatch.exc import ValidationError
 
 logger = logging.getLogger(__name__)
-
-
-def get_bool_env_var(varname):
-    return os.environ.get(varname, "0").lower() in ("true", "t", "1", "y", "yes")
 
 
 class SlurmBatch(BuildStockBatchBase):
@@ -494,6 +491,7 @@ class SlurmBatch(BuildStockBatchBase):
             "--time={}".format(cfg[cls.HPC_NAME].get("sampling", {}).get("time", 60)),
             "--account={}".format(cfg[cls.HPC_NAME]["account"]),
             "--nodes=1",
+            "--mem={}".format(cls.DEFAULT_NODE_MEMORY_MB),
             "--export={}".format(",".join(env.keys())),
             "--output=sampling.out",
             hpc_sh,
@@ -544,6 +542,7 @@ class SlurmBatch(BuildStockBatchBase):
             "sbatch",
             "--account={}".format(account),
             "--time={}".format(walltime),
+            "--mem={}".format(self.DEFAULT_NODE_MEMORY_MB),
             "--export={}".format(",".join(export_vars)),
             "--array={}".format(array_spec),
             "--output=job.out-%a",
@@ -625,6 +624,7 @@ class SlurmBatch(BuildStockBatchBase):
 
         args = [
             "sbatch",
+            "--tmp=1000000",
             "--account={}".format(account),
             "--time={}".format(walltime),
             "--export={}".format(",".join(env_export.keys())),
@@ -632,6 +632,7 @@ class SlurmBatch(BuildStockBatchBase):
             "--output=postprocessing.out",
             "--nodes=1",
             ":",
+            "--tmp=1000000",
             "--mem={}".format(memory),
             "--output=dask_workers.out",
             "--nodes={}".format(n_workers),
@@ -751,6 +752,7 @@ class EagleBatch(SlurmBatch):
     CORES_PER_NODE = 36
     MIN_SIMS_PER_JOB = 36 * 2
     DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 85248
+    DEFAULT_NODE_MEMORY_MB = 85248  # standard node on Eagle
     DEFAULT_POSTPROCESSING_N_PROCS = 18
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
@@ -781,7 +783,8 @@ class KestrelBatch(SlurmBatch):
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2
-    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 250000  # Standard node
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 247000  # Standard node
+    DEFAULT_NODE_MEMORY_MB = 247000  # standard node on Kestrel
     DEFAULT_POSTPROCESSING_N_PROCS = 52
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
@@ -964,7 +967,7 @@ def main():
         assert not measures_only
         assert not sampling_only
         if upload_only:
-            batch.process_results(skip_combine=True, force_upload=True)
+            batch.process_results(skip_combine=True)
         else:
             batch.process_results()
     else:

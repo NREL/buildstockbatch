@@ -18,7 +18,7 @@ v2023.10.0 Changelog
         :pullreq: 384
 
         Introduce '*' as a valid option name in options_lookup.tsv to indicate a
-        parameter that can take any option and don't need to pass arguments to 
+        parameter that can take any option and don't need to pass arguments to
         measures. Enables buildstock.csv validation for ComStock without blowing
         up the size of the options_lookup.tsv file.
 

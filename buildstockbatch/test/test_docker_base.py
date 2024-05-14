@@ -1,13 +1,18 @@
 """Tests for the DockerBatchBase class."""
+
 from fsspec.implementations.local import LocalFileSystem
+import gzip
 import json
+import logging
 import os
 import pathlib
+import pytest
 import shutil
 import tarfile
 import tempfile
 from unittest.mock import MagicMock, PropertyMock
 
+from buildstockbatch.cloud import docker_base
 from buildstockbatch.cloud.docker_base import DockerBatchBase
 from buildstockbatch.test.shared_testing_stuff import docker_available
 from buildstockbatch.utils import get_project_configuration
@@ -17,7 +22,30 @@ resources_dir = os.path.join(here, "test_inputs", "test_openstudio_buildstock", 
 
 
 @docker_available
-def test_prep_batches(basic_residential_project_file, mocker):
+@pytest.mark.parametrize("skip_baseline_sims,expected", [(False, 10), (True, 5)])
+def test_skip_baseline_sims(basic_residential_project_file, mocker, skip_baseline_sims, expected):
+    """Test "skip_sims" baseline configuration's effect on ``n_sims``"""
+    update_args = {"baseline": {"skip_sims": True}} if skip_baseline_sims else {}
+    project_filename, results_dir = basic_residential_project_file(update_args)
+
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    sampler_property_mock = mocker.patch.object(DockerBatchBase, "sampler", new_callable=PropertyMock)
+    sampler_mock = mocker.MagicMock()
+    sampler_property_mock.return_value = sampler_mock
+    # Hard-coded sampling output includes 5 buildings.
+    sampler_mock.run_sampling = MagicMock(return_value=os.path.join(resources_dir, "buildstock_good.csv"))
+
+    dbb = DockerBatchBase(project_filename)
+    dbb.batch_array_size = 3
+    DockerBatchBase.validate_project = MagicMock(return_value=True)
+
+    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
+        _, batch_info = dbb._run_batch_prep(pathlib.Path(tmpdir))
+        assert batch_info.n_sims == expected
+
+
+@docker_available
+def test_run_batch_prep(basic_residential_project_file, mocker):
     """Test that samples are created and bundled into batches correctly."""
     project_filename, results_dir = basic_residential_project_file()
 
@@ -32,24 +60,30 @@ def test_prep_batches(basic_residential_project_file, mocker):
     dbb.batch_array_size = 3
     DockerBatchBase.validate_project = MagicMock(return_value=True)
 
-    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir, tempfile.TemporaryDirectory(
-        prefix="bsb_"
-    ) as tmp_weather_dir:
-        dbb._weather_dir = tmp_weather_dir
+    with tempfile.TemporaryDirectory(prefix="bsb_") as tmpdir:
         tmppath = pathlib.Path(tmpdir)
-
-        job_count, unique_epws = dbb.prep_batches(tmppath)
+        files_to_copy, batch_info = dbb._run_batch_prep(tmppath)
         sampler_mock.run_sampling.assert_called_once()
 
-        # Of the three test weather files, two are identical
-        assert sorted([sorted(i) for i in unique_epws.values()]) == [
-            ["G2500210.epw"],
-            ["G2601210.epw", "G2601390.epw"],
-        ]
+        # There are three sets of weather files...
+        #   * "G2500210.epw" is unique; check for it (gz'd) in tmppath
+        #   * "G2601210.epw" and "G2601390.epw" are dupes. One should be in
+        #     tmppath; one should be copied to the other according to ``files_to_copy``
+        #   Same for the .ddy and .stat files.
+        assert os.path.isfile(tmppath / "weather" / "G2500210.epw.gz")
+        assert os.path.isfile(tmppath / "weather" / "G2601210.epw.gz") or os.path.isfile(
+            tmppath / "weather" / "G2601390.epw.gz"
+        )
+        assert ("G2601210.epw.gz", "G2601390.epw.gz") in files_to_copy or (
+            "G2601390.epw.gz",
+            "G2601210.epw.gz",
+        ) in files_to_copy
 
         # Three job files should be created, with 10 total simulations, split
         # into batches of 4, 4, and 2 simulations.
-        assert job_count == 3
+        assert batch_info.n_sims == 10
+        assert batch_info.n_sims_per_job == 4
+        assert batch_info.job_count == 3
         jobs_file_path = tmppath / "jobs.tar.gz"
         with tarfile.open(jobs_file_path, "r") as tar_f:
             all_job_files = ["jobs", "jobs/job00000.json", "jobs/job00001.json", "jobs/job00002.json"]
@@ -71,7 +105,7 @@ def test_prep_batches(basic_residential_project_file, mocker):
                 assert [building, 0] in simulations
 
 
-def test_get_epws_to_download():
+def test_get_weather_files_to_download():
     resources_dir_path = pathlib.Path(resources_dir)
     options_file = resources_dir_path / "options_lookup.tsv"
     buildstock_file = resources_dir_path / "buildstock_good.csv"
@@ -92,11 +126,27 @@ def test_get_epws_to_download():
             ],
         }
 
-        epws = DockerBatchBase.get_epws_to_download(sim_dir, jobs_d)
-        assert epws == set(["weather/G0100970.epw", "weather/G0100830.epw"])
+        files = docker_base.determine_weather_files_needed_for_job(sim_dir, jobs_d)
+        assert files == {
+            "empty.epw",
+            "empty.stat",
+            "empty.ddy",
+            "weather/G2500210.epw",
+            "weather/G2601390.epw",
+            "weather/G2500210.ddy",
+            "weather/G2601390.ddy",
+            "weather/G2500210.stat",
+            "weather/G2601390.stat",
+        }
 
 
 def test_run_simulations(basic_residential_project_file):
+    """
+    Test running a single batch of simulation.
+
+    This doesn't provide all the necessary inputs for the simulations to succeed, but it confirms that they are
+    attempted, that the output files are produced, and that intermediate files are cleaned up.
+    """
     jobs_d = {
         "job_num": 0,
         "n_datapoints": 10,
@@ -124,6 +174,59 @@ def test_run_simulations(basic_residential_project_file):
 
         output_dir = bucket / "test_prefix" / "results" / "simulation_output"
         assert sorted(os.listdir(output_dir)) == ["results_job0.json.gz", "simulations_job0.tar.gz"]
+
+        # Check that buildings 1 and 5 (specified in jobs_d) are in the results
+        with gzip.open(output_dir / "results_job0.json.gz", "r") as f:
+            results = json.load(f)
+        assert len(results) == 2
+        for building in results:
+            assert building["building_id"] in (1, 5)
+
         # Check that files were cleaned up correctly
         assert not os.listdir(sim_dir)
         os.chdir(old_cwd)
+
+
+def test_find_missing_tasks(basic_residential_project_file, mocker):
+    project_filename, results_dir = basic_residential_project_file()
+    results_dir = os.path.join(results_dir, "results")
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    dbb = DockerBatchBase(project_filename)
+
+    existing_results = [1, 3, 5]
+    missing_results = [0, 2, 4, 6]
+    os.makedirs(os.path.join(results_dir, "simulation_output"))
+    for res in existing_results:
+        # Create empty results files
+        with open(os.path.join(results_dir, f"simulation_output/results_job{res}.json.gz"), "w"):
+            pass
+
+    assert dbb.find_missing_tasks(7) == len(missing_results)
+
+    with open(os.path.join(results_dir, "missing_tasks.txt"), "r") as f:
+        assert [int(t) for t in f.readlines()] == missing_results
+
+
+def test_log_summary(basic_residential_project_file, mocker, caplog):
+    """
+    Test logging a summary of simulation statuses.
+    """
+    project_filename, results_dir = basic_residential_project_file()
+
+    mocker.patch.object(DockerBatchBase, "results_dir", results_dir)
+    dbb = DockerBatchBase(project_filename)
+    # Add results CSV files
+    shutil.copytree(
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "test_results",
+            "parquet",
+        ),
+        os.path.join(results_dir, "parquet"),
+    )
+
+    with caplog.at_level(logging.INFO):
+        dbb.log_summary()
+        assert "Upgrade 01   Success: 4        Fail: 0" in caplog.text
+        assert "Baseline     Success: 4        Fail: 0" in caplog.text
+        assert "Total        Success: 8        Fail: 0" in caplog.text

@@ -14,8 +14,9 @@ Vintage	2000s
 Vintage	2010s
 State	VA
 State	CO
-County	County1	weather_station_epw_filepath=weather/G0100970.epw
-County	County2	weather_station_epw_filepath=weather/G0100830.epw
+County	County1	weather_station_epw_filepath=weather/G2500210.epw
+County	County2	weather_station_epw_filepath=weather/G2601210.epw
+County	County3	weather_station_epw_filepath=weather/G2601390.epw
 Bedroom	1
 Bedroom	2
 Bedroom	3
