@@ -87,8 +87,8 @@ class SlurmBatch(BuildStockBatchBase):
         try:
             cls.get_apptainer_image(
                 cfg,
-                cfg.get("os_version", cls.DEFAULT_OS_VERSION),
-                cfg.get("os_sha", cls.DEFAULT_OS_SHA),
+                cfg["os_version"],
+                cfg["os_sha"],
             )
         except RuntimeError as err:
             raise ValidationError(str(err))

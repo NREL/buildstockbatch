@@ -440,9 +440,7 @@ def test_validate_apptainer_image():
         with pytest.raises(ValidationError, match=r"Could not find apptainer image: .+\.sif or .+\.simg"):
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
         for ext in ["Apptainer.sif", "Singularity.simg"]:
-            filename = pathlib.Path(
-                tmpdir, f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}"
-            )
+            filename = pathlib.Path(tmpdir, f"OpenStudio-{cfg['os_version']}.{cfg['os_sha']}-{ext}")
             filename.touch()
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
             filename.unlink()
