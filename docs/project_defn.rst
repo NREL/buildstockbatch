@@ -91,23 +91,29 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE, KESTREL, AND LOCAL
-  DOCKER** When true, buildstockbatch will call the OpenStudio CLI commands with
-  the  ``bundle`` and ``bundle_path`` options. These options tell the CLI to
-  load a custom set of gems rather than those included in the OpenStudio CLI.
-  For both Eagle, Kestrel, and local Docker runs, these gems are first specified in the
-  ``buildstock\resources\Gemfile``. For Eagle, Kestrel, when the apptainer image is
-  built, these gems are added to the image. For local Docker, when the
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE, KESTREL, AND LOCAL**
+  When true, buildstockbatch will call the OpenStudio CLI commands with the
+  ``bundle`` and ``bundle_path`` options. These options tell the CLI to load a
+  custom set of gems rather than those included in the OpenStudio CLI. For both
+  Eagle, Kestrel, and local Docker runs, these gems are first specified in the
+  ``buildstock\resources\Gemfile``. For Eagle, Kestrel, when the apptainer image
+  is built, these gems are added to the image. For local Docker, when the
   containers are started, the gems specified in the Gemfile are installed into a
   Docker volume on the local computer. This volume is mounted by each container
   as models are run, so each run uses the custom gems.
 
-OpenStudio Version Overrides
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OpenStudio Version
+~~~~~~~~~~~~~~~~~~
 
-This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
-details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.2``
-schema: ``os_version`` and ``os_sha``.
+The following two top level keys are required:
+
+- ``os_version``: The version of OpenStudio required for the run (e.g. "3.7.0").
+  BuildStockBatch will verify that a suitable version of OpenStudio is available
+  and return an error if not.
+- ``os_sha``: The sha hash of the required OpenStudio version (e.g.
+  "06d9d975e1"). This must match the sha of the matching `OpenStudio release`_.
+
+.. _OpenStudio release: https://github.com/NREL/OpenStudio/releases
 
 Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~

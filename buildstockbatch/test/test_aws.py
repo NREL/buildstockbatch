@@ -10,25 +10,26 @@ logger = logging.getLogger(__name__)
 
 
 def test_custom_gem_install(basic_residential_project_file):
-    project_filename, results_dir = basic_residential_project_file()
+    project_filename, results_dir = basic_residential_project_file(
+        update_args={
+            "os_version": "3.7.0",
+            "baseline": {
+                "custom_gems": True,
+                "n_buildings_represented": 80000000,
+            },
+            "aws": {
+                "job_identifier": "testaws",
+                "s3": {"bucket": "resbldg-datasets", "prefix": "testing/external_demo_project"},
+                "region": "us-west-2",
+                "use_spot": True,
+                "batch_array_size": 100,
+                "notifications_email": "user@example.com",
+            },
+        }
+    )
 
-    # Add aws and custom_gems to the project file
     with open(project_filename, "r") as f:
         cfg = yaml.safe_load(f)
-    # custom_gems
-    cfg["baseline"]["custom_gems"] = True
-    # AWS
-    cfg["aws"] = {}
-    cfg["aws"]["job_identifier"] = "testaws"
-    cfg["aws"]["s3"] = {}
-    cfg["aws"]["s3"]["bucket"] = "resbldg-datasets"
-    cfg["aws"]["s3"]["prefix"] = "testing/external_demo_project"
-    cfg["aws"]["region"] = "us-west-2"
-    cfg["aws"]["use_spot"] = True
-    cfg["aws"]["batch_array_size"] = 100
-    cfg["aws"]["notifications_email"] = "user@example.com"
-    with open(project_filename, "w") as f:
-        yaml.dump(cfg, f)
 
     buildstock_directory = cfg["buildstock_directory"]
 
@@ -49,23 +50,23 @@ def test_custom_gem_install(basic_residential_project_file):
 
 
 def test_no_custom_gem_install(basic_residential_project_file):
-    project_filename, results_dir = basic_residential_project_file()
+    project_filename, results_dir = basic_residential_project_file(
+        update_args={
+            "os_version": "3.7.0",
+            "aws": {
+                "job_identifier": "testaws",
+                "s3": {"bucket": "resbldg-datasets", "prefix": "testing/external_demo_project"},
+                "region": "us-west-2",
+                "use_spot": True,
+                "batch_array_size": 100,
+                "notifications_email": "user@example.com",
+            },
+        }
+    )
 
     # Add aws to the project file
     with open(project_filename, "r") as f:
         cfg = yaml.safe_load(f)
-    # AWS
-    cfg["aws"] = {}
-    cfg["aws"]["job_identifier"] = "testaws"
-    cfg["aws"]["s3"] = {}
-    cfg["aws"]["s3"]["bucket"] = "resbldg-datasets"
-    cfg["aws"]["s3"]["prefix"] = "testing/external_demo_project"
-    cfg["aws"]["region"] = "us-west-2"
-    cfg["aws"]["use_spot"] = True
-    cfg["aws"]["batch_array_size"] = 100
-    cfg["aws"]["notifications_email"] = "user@example.com"
-    with open(project_filename, "w") as f:
-        yaml.dump(cfg, f)
 
     buildstock_directory = cfg["buildstock_directory"]
 
