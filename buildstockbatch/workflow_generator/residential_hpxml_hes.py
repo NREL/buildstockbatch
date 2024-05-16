@@ -19,15 +19,15 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
     @property
     def os_hescore_dir(self):
-        return self.cfg['workflow_generator']['args']['build_existing_model']['os_hescore_directory']
+        return self.cfg["workflow_generator"]["args"]["build_existing_model"]["os_hescore_directory"]
 
     def create_osw(self, sim_id, building_id, upgrade_idx):
         osw = super().create_osw(sim_id, building_id, upgrade_idx)
-        if 'os_hescore_directory' in osw['steps'][0]['arguments']:
-            osw['steps'][0]['arguments']['os_hescore_directory'] = self.os_hescore_dir
+        if "os_hescore_directory" in osw["steps"][0]["arguments"]:
+            osw["steps"][0]["arguments"]["os_hescore_directory"] = self.os_hescore_dir
 
         # Add measure path for reporting measure
-        osw['measure_paths'].insert(0, os.path.join(self.os_hescore_dir, 'hpxml-measures'))
+        osw["measure_paths"].insert(0, os.path.join(self.os_hescore_dir, "hpxml-measures"))
         return osw
 
     @classmethod
@@ -36,5 +36,5 @@ class ResidentialHpxmlHesWorkflowGenerator(ResidentialHpxmlWorkflowGenerator):
 
         # Require os_hescore_directory argument
         string_validator = yamale.validators.String(required=True)
-        schema.includes['build-existing-model-spec'].dict['os_hescore_directory'] = string_validator
+        schema.includes["build-existing-model-spec"].dict["os_hescore_directory"] = string_validator
         return schema
