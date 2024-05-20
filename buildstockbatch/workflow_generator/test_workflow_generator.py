@@ -129,6 +129,8 @@ def test_residential_hpxml(mocker):
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
+    assert utility_bills_step["arguments"]["register_annual_bills"] is True
+    assert utility_bills_step["arguments"]["register_monthly_bills"] is False
 
     upgrade_costs_step = steps[6]
     assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
