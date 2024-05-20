@@ -118,8 +118,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             output_variables: list(include('output-var-spec'), required=False)
             include_annual_bills: bool(required=False)
             include_monthly_bills: bool(required=False)
-            register_annual_bills: bool(required=False)
-            register_monthly_bills: bool(required=False)
         output-var-spec:
             name: str(required=True)
         measure-spec:
@@ -432,29 +430,33 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         measure_path = os.path.join(measures_dir, "ReportUtilityBills")
         util_bills_rep_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
 
+        # Annual bills
         if "include_annual_bills" in util_bills_rep_args_avail:
             util_bills_rep_args["include_annual_bills"] = True
             if "include_annual_bills" in sim_out_rep_args:
                 util_bills_rep_args["include_annual_bills"] = sim_out_rep_args["include_annual_bills"]
-                sim_out_rep_args.pop("include_annual_bills")
 
+        if "register_annual_bills" in util_bills_rep_args_avail:
+            util_bills_rep_args["register_annual_bills"] = True
+            if "include_annual_bills" in sim_out_rep_args:
+                util_bills_rep_args["register_annual_bills"] = sim_out_rep_args["include_annual_bills"]
+
+        if "include_annual_bills" in sim_out_rep_args:
+            sim_out_rep_args.pop("include_annual_bills")
+
+        # Monthly bills
         if "include_monthly_bills" in util_bills_rep_args_avail:
             util_bills_rep_args["include_monthly_bills"] = False
             if "include_monthly_bills" in sim_out_rep_args:
                 util_bills_rep_args["include_monthly_bills"] = sim_out_rep_args["include_monthly_bills"]
-                sim_out_rep_args.pop("include_monthly_bills")
 
-        if 'register_annual_bills' in util_bills_rep_args_avail:
-            util_bills_rep_args['register_annual_bills'] = True
-            if "register_annual_bills" in sim_out_rep_args:
-                util_bills_rep_args["register_annual_bills"] = sim_out_rep_args["register_annual_bills"]
-                sim_out_rep_args.pop("register_annual_bills")
+        if "register_monthly_bills" in util_bills_rep_args_avail:
+            util_bills_rep_args["register_monthly_bills"] = False
+            if "include_monthly_bills" in sim_out_rep_args:
+                util_bills_rep_args["register_monthly_bills"] = sim_out_rep_args["include_monthly_bills"]
 
-        if 'register_monthly_bills' in util_bills_rep_args_avail:
-            util_bills_rep_args['register_monthly_bills'] = False
-            if "register_monthly_bills" in sim_out_rep_args:
-                util_bills_rep_args["register_monthly_bills"] = sim_out_rep_args["register_monthly_bills"]
-                sim_out_rep_args.pop("register_monthly_bills")
+        if "include_monthly_bills" in sim_out_rep_args:
+            sim_out_rep_args.pop("include_monthly_bills")
 
         osw = {
             "id": sim_id,
