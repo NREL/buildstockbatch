@@ -43,7 +43,7 @@ setuptools.setup(
     package_data={"buildstockbatch": ["*.sh", "schemas/*.yaml"], "": ["LICENSE"]},
     install_requires=[
         "pyyaml",
-        "requests",
+        "requests!=2.32.0",
         "numpy",
         "pandas>=2",
         "joblib",
