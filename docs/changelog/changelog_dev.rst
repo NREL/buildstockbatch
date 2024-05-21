@@ -72,3 +72,10 @@ Development Changelog
         :pullreq: 450
 
         Requires ``os_version`` and ``os_sha`` in the project file.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 451
+
+        For the Residential HPXML Workflow Generator, exposes optional ``include_annual_bills`` and
+        ``include_monthly_bills`` arguments for reporting annual/monthly utility bill outputs.
