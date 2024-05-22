@@ -13,13 +13,13 @@ jobs:
     if: ${{ github.event.workflow_run.event == 'pull_request' }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.workflow_run.head_commit.id }}
 
       - name: Download Coverage Artifacts
-        uses: Legit-Labs/action-download-artifact@v2
+        uses: Legit-Labs/action-download-artifact@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: ${{ github.event.workflow_run.workflow_id }}
