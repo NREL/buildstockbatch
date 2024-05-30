@@ -1,5 +1,6 @@
 #!/bin/bash
 #SBATCH --tmp=1000000
+#SBATCH --no-kill
 
 echo "begin kestrel_postprocessing.sh"
 
