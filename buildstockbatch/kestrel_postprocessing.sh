@@ -11,10 +11,10 @@ df -h
 
 module load python apptainer
 source "$MY_PYTHON_ENV/bin/activate"
-# Default LOCAL_SCRATCH = /tmp/scratch
+# Default LOCAL_SCRATCH = $TMPDIR
 # Setting to user-specific dir to avoid
 # issues with deleting previous buildstock run debris
-export LOCAL_SCRATCH=/tmp/scratch/$USER
+export LOCAL_SCRATCH=$TMPDIR
 source /kfs2/shared-projects/buildstock/aws_credentials.sh
 
 export POSTPROCESS=1
