@@ -16,7 +16,6 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-from fsspec.implementations.local import LocalFileSystem
 from functools import partial
 import gzip
 import json
@@ -29,9 +28,9 @@ import pyarrow as pa
 from pyarrow import parquet
 import random
 import re
-from s3fs import S3FileSystem
 import tempfile
 import time
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +111,21 @@ def read_out_osw(fs, filename):
         keys_to_copy = ["started_at", "completed_at", "completed_status"]
         for key in keys_to_copy:
             out_d[key] = d.get(key, None)
+
+        step_errors = []
         for step in d.get("steps", []):
-            if step["measure_dir_name"] == "BuildExistingModel":
+            measure_dir_name = step["measure_dir_name"]
+            if measure_dir_name == "BuildExistingModel":
                 out_d["building_id"] = step["arguments"]["building_id"]
+
+            # Collect error messages from any failed steps.
+            if result := step.get("result"):
+                if result.get("step_result", "Success") != "Success":
+                    step_errors.append({"measure_dir_name": measure_dir_name, "step_errors": result.get("step_errors")})
+
+        if step_errors:
+            out_d["step_failures"] = step_errors
+
         return out_d
 
 
@@ -226,7 +237,7 @@ def read_results_json(fs, filename, all_cols=None):
         for missing_col in set(all_cols).difference(df.columns.values):
             df[missing_col] = None
     # Sorting is needed to ensure all dfs have same column order. Dask will fail otherwise.
-    df = df.reindex(sorted(df.columns), axis=1).convert_dtypes(dtype_backend='pyarrow')
+    df = df.reindex(sorted(df.columns), axis=1).convert_dtypes(dtype_backend="pyarrow")
     return df
 
 
@@ -363,9 +374,9 @@ def get_upgrade_list(cfg):
 
 
 def write_metadata_files(fs, parquet_root_dir, partition_columns):
-    df = dd.read_parquet(parquet_root_dir)
+    df = dd.read_parquet(parquet_root_dir, filesystem=fs)
     sch = pa.Schema.from_pandas(df._meta_nonempty)
-    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata")
+    parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata", filesystem=fs)
     logger.info(f"Written _common_metadata to {parquet_root_dir}")
 
     if partition_columns:
@@ -385,7 +396,7 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
 
-    :param fs: fsspec filesystem (currently supports local and s3)
+    :param fs: fsspec filesystem (currently supports local, s3, gcs)
     :type fs: fsspec filesystem
     :param results_dir: directory where results are stored and written
     :type results_dir: str
@@ -554,16 +565,12 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 f"partitions which go into {ngroup} column group(s) of {partition_columns}"
             )
 
-            if isinstance(fs, LocalFileSystem):
-                ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}/"
-            else:
-                assert isinstance(fs, S3FileSystem)
-                ts_out_loc = f"s3://{ts_dir}/upgrade={upgrade_id}/"
+            ts_out_loc = f"{ts_dir}/upgrade={upgrade_id}"
 
             fs.makedirs(ts_out_loc)
             logger.info(f"Created directory {ts_out_loc} for writing. Now concatenating ...")
 
-            src_path = f"{ts_in_dir}/up{upgrade_id:02d}/"
+            src_path = f"{ts_in_dir}/up{upgrade_id:02d}"
             concat_partial = dask.delayed(
                 partial(
                     concat_and_normalize,
@@ -575,20 +582,24 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
                 )
             )
             partition_vals_list = [
-                list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else []
+                (list(partition_df.loc[bldg_id_list[0]].values) if partition_columns else [])
                 for bldg_id_list in bldg_id_groups
             ]
 
             with tempfile.TemporaryDirectory() as tmpdir:
                 tmpfilepath = Path(tmpdir, "dask-report.html")
                 with performance_report(filename=str(tmpfilepath)):
-                    dask.compute(
-                        map(
-                            concat_partial,
-                            *zip(*enumerate(bldg_id_groups)),
-                            partition_vals_list,
+                    try:
+                        dask.compute(
+                            map(
+                                concat_partial,
+                                *zip(*enumerate(bldg_id_groups)),
+                                partition_vals_list,
+                            )
                         )
-                    )
+                    except:
+                        logger.warning("Exception `dask.compute(map(concat_partial, ...` exception", exc_info=True)
+                        sys.exit(1)
                 if tmpfilepath.exists():
                     fs.put_file(
                         str(tmpfilepath),

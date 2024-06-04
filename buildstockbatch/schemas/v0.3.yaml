@@ -7,17 +7,55 @@ sampler: include('sampler-spec', required=True)
 workflow_generator: include('workflow-generator-spec', required=True)
 eagle: include('hpc-spec', required=False)
 kestrel: include('hpc-spec', required=False)
+gcp: include('gcp-spec', required=False)
 aws: include('aws-spec', required=False)
 output_directory: regex('^(.*\/)?[a-z][a-z0-9_]*\/?$', required=True)
 sys_image_dir: str(required=False)
 baseline: include('sim-spec', required=True)
-os_version: str(required=False)
-os_sha: str(required=False)
+os_version: str(required=True)
+os_sha: str(required=True)
 max_minutes_per_sim: int(max=1440, required=False)
 upgrades: list(include('upgrade-spec'), required=False)
 postprocessing: include('postprocessing-spec', required=False)
 references: map(required=False)
 ---
+gcp-spec:
+  # The GCP job ID (for Batch and Cloud Run) pattern is `^[a-z]([a-z0-9-]{0,61}[a-z0-9])?$`.
+  # For postprocessing job id, we append 3 characters ("-pp"), so this can be up to 60 chars.
+  job_identifier: regex('^[a-z]([a-z0-9-]{0,58}[a-z0-9])?$', required=True)
+  project: str(required=True)
+  region: str(required=True)
+  service_account: str(required=False)
+  artifact_registry: include('gcp-ar-spec', required=True)
+  batch_array_size: num(min=1, max=10000, required=True)
+  parallelism: num(min=1, max=10000, required=False)
+  gcs: include('gcs-spec', required=True)
+  job_environment: include('gcp-job-environment-spec', required=False)
+  postprocessing_environment: include('gcp-postprocessing_environment-spec', required=False)
+
+gcs-spec:
+  bucket: str(required=True)
+  prefix: str(required=True)
+  upload_chunk_size_mib: num(min=5, max=5000, required=False)
+
+gcp-ar-spec:
+  repository: str(required=True)
+
+gcp-job-environment-spec:
+  vcpus: int(min=1, max=224, required=False)
+  memory_mib: int(min=512, required=False)
+  boot_disk_mib: int(required=False)
+  machine_type: str(required=False)
+  use_spot: bool(required=False)
+  minutes_per_sim: num(min=0.05, max=480, required=False)
+
+gcp-postprocessing_environment-spec:
+  # Limits documented at
+  # https://cloud.google.com/run/docs/configuring/services/memory-limits
+  # https://cloud.google.com/run/docs/configuring/services/cpu
+  cpus: int(min=1, max=8, required=False)
+  memory_mib: int(min=512, max=32768, required=False)
+
 aws-spec:
   job_identifier: regex('^[a-zA-Z]\w{,9}$', required=True)
   s3: include('s3-aws-postprocessing-spec', required=True)
@@ -26,18 +64,20 @@ aws-spec:
   spot_bid_percent: num(min=1, max=100, required=False)
   batch_array_size: num(min=1, max=10000, required=True)
   notifications_email: regex('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$', name='email', required=True)
-  emr: include('aws-emr-spec', required=False)
+  dask: include('aws-dask-spec', required=True)
   job_environment: include('aws-job-environment', required=False)
+  tags: map(str(), str(), required=False)
 
 aws-job-environment:
   vcpus: int(min=1, max=36, required=False)
   memory: int(min=1024, required=False)
 
-aws-emr-spec:
-  manager_instance_type: str(required=False)
-  worker_instance_type: str(required=False)
-  worker_instance_count: int(min=1, required=False)
-  dask_worker_vcores: int(min=1, required=False)
+aws-dask-spec:
+  scheduler_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  scheduler_memory: int(min=1024, required=False)
+  worker_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
+  worker_memory: int(min=1024, required=False)
+  n_workers: int(min=1, required=True)
 
 hpc-spec:
   account: str(required=True)

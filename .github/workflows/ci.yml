@@ -34,22 +34,23 @@ jobs:
           wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
       - name: Download and Install OpenStudio
         run: |
-          wget -q https://github.com/NREL/OpenStudio/releases/download/v3.7.0/OpenStudio-3.7.0+d5269793f1-Ubuntu-22.04-x86_64.deb
-          sudo apt install -y ./OpenStudio-3.7.0+d5269793f1-Ubuntu-22.04-x86_64.deb
+          sudo snap install yq
+          export OS_VER=`yq '.os_version' resstock/project_national/national_baseline.yml`
+          export OS_SHA=`yq '.os_sha' resstock/project_national/national_baseline.yml`
+          export OS_INSTALLER_FILENAME="OpenStudio-${OS_VER}+${OS_SHA}-Ubuntu-22.04-x86_64.deb"
+          wget -q "https://github.com/NREL/OpenStudio/releases/download/v${OS_VER}/${OS_INSTALLER_FILENAME}"
+          sudo apt install -y "./${OS_INSTALLER_FILENAME}"
           openstudio openstudio_version
           which openstudio
       - name: Install buildstockbatch
         run: |
           cd buildstockbatch
           python -m pip install --progress-bar off --upgrade pip
-          pip install .[dev] --progress-bar off
-      - name: Linting
-        run: |
-          cd buildstockbatch
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 buildstockbatch --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings.
-          flake8 buildstockbatch --count --statistics --exit-zero
+          pip install .[dev,aws] --progress-bar off
+      - name: Black
+        uses: psf/black@stable
+        with:
+          src: "./buildstockbatch"
       - name: Run PyTest and Coverage
         run: |
           cd buildstockbatch
@@ -84,5 +85,3 @@ jobs:
         with:
           name: documentation
           path: buildstockbatch/docs/_build/html/
-      - uses: pre-commit-ci/lite-action@v1.0.1
-        if: always()

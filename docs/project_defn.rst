@@ -91,23 +91,29 @@ Information about baseline simulations are listed under the ``baseline`` key.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.
-- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE, KESTREL, AND LOCAL
-  DOCKER** When true, buildstockbatch will call the OpenStudio CLI commands with
-  the  ``bundle`` and ``bundle_path`` options. These options tell the CLI to
-  load a custom set of gems rather than those included in the OpenStudio CLI.
-  For both Eagle, Kestrel, and local Docker runs, these gems are first specified in the
-  ``buildstock\resources\Gemfile``. For Eagle, Kestrel, when the apptainer image is
-  built, these gems are added to the image. For local Docker, when the
+- ``custom_gems``: true or false. **ONLY WORKS ON EAGLE, KESTREL, AND LOCAL**
+  When true, buildstockbatch will call the OpenStudio CLI commands with the
+  ``bundle`` and ``bundle_path`` options. These options tell the CLI to load a
+  custom set of gems rather than those included in the OpenStudio CLI. For both
+  Eagle, Kestrel, and local Docker runs, these gems are first specified in the
+  ``buildstock\resources\Gemfile``. For Eagle, Kestrel, when the apptainer image
+  is built, these gems are added to the image. For local Docker, when the
   containers are started, the gems specified in the Gemfile are installed into a
   Docker volume on the local computer. This volume is mounted by each container
   as models are run, so each run uses the custom gems.
 
-OpenStudio Version Overrides
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+OpenStudio Version
+~~~~~~~~~~~~~~~~~~
 
-This is a feature only used by ComStock at the moment. Please refer to the ComStock HPC documentation for additional
-details on the correct configuration. This is noted here to explain the presence of two keys in the version ``0.2``
-schema: ``os_version`` and ``os_sha``.
+The following two top level keys are required:
+
+- ``os_version``: The version of OpenStudio required for the run (e.g. "3.7.0").
+  BuildStockBatch will verify that a suitable version of OpenStudio is available
+  and return an error if not.
+- ``os_sha``: The sha hash of the required OpenStudio version (e.g.
+  "06d9d975e1"). This must match the sha of the matching `OpenStudio release`_.
+
+.. _OpenStudio release: https://github.com/NREL/OpenStudio/releases
 
 Upgrade Scenarios
 ~~~~~~~~~~~~~~~~~
@@ -128,7 +134,7 @@ following properties:
      Multiple costs can be entered and each is multiplied by a cost multiplier, described below.
 
         - ``value``: A cost for the measure, which will be multiplied by the multiplier.
-        - ``multiplier``: The cost above is multiplied by this value, which is a function of the buiding.
+        - ``multiplier``: The cost above is multiplied by this value, which is a function of the building.
           Since there can be multiple costs, this permits both fixed and variable costs for upgrades
           that depend on the properties of the baseline building.
           The multiplier needs to be from
@@ -214,47 +220,141 @@ on the `AWS Batch <https://aws.amazon.com/batch/>`_ service.
 .. note::
 
    Many of these options overlap with options specified in the
-   :ref:`postprocessing` section. The options here take pecedence when running
+   :ref:`postprocessing` section. The options here take precedence when running
    on AWS. In a future version we will break backwards compatibility in the
    config file and have more consistent options.
 
-*  ``job_identifier``: A unique string that starts with an alphabetical character,
+*  ``job_identifier``: (required) A unique string that starts with an alphabetical character,
    is up to 10 characters long, and only has letters, numbers or underscore.
    This is used to name all the AWS service objects to be created and
    differentiate it from other jobs.
-*  ``s3``: Configuration for project data storage on s3. When running on AWS,
+*  ``s3``: (required) Configuration for project data storage on s3. When running on AWS,
    this overrides the s3 configuration in the :ref:`post-config-opts`.
 
     *  ``bucket``: The s3 bucket this project will use for simulation output and processed data storage.
     *  ``prefix``: The s3 prefix at which the data will be stored.
 
-*  ``region``: The AWS region in which the batch will be run and data stored.
-*  ``use_spot``: true or false. Defaults to false if missing. This tells the project
+*  ``region``: (required) The AWS region in which the batch will be run and data stored. Probably "us-west-2" if you're at NREL.
+*  ``use_spot``: (optional) true or false. Defaults to true if missing. This tells the project
    to use the `Spot Market <https://aws.amazon.com/ec2/spot/>`_ for data
    simulations, which typically yields about 60-70% cost savings.
-*  ``spot_bid_percent``: Percent of on-demand price you're willing to pay for
+*  ``spot_bid_percent``: (optional) Percent of on-demand price you're willing to pay for
    your simulations. The batch will wait to run until the price drops below this
-   level.
-*  ``batch_array_size``: Number of concurrent simulations to run. Max: 10000.
-*  ``notifications_email``: Email to notify you of simulation completion.
+   level. Usually leave this one blank.
+*  ``batch_array_size``: (required) Number of concurrent simulations to run. Max: 10,000.
+   Unless this is a small run with fewer than 100,000 simulations, just set this
+   to 10,000.
+*  ``notifications_email``: (required) Email to notify you of simulation completion.
    You'll receive an email at the beginning where you'll need to accept the
-   subscription to receive further notification emails.
-*  ``emr``: Optional key to specify options for postprocessing using an EMR cluster. Generally the defaults should work fine.
+   subscription to receive further notification emails. This doesn't work right now.
+*  ``dask``: (required) Dask configuration for postprocessing
 
-    * ``manager_instance_type``: The `instance type`_ to use for the EMR master node. Default: ``m5.xlarge``.
-    * ``worker_instance_type``: The `instance type`_ to use for the EMR worker nodes. Default: ``r5.4xlarge``.
-    * ``worker_instance_count``: The number of worker nodes to use. Same as ``eagle.postprocessing.n_workers``.
-      Increase this for a large dataset. Default: 2.
-    * ``dask_worker_vcores``: The number of cores for each dask worker. Increase this if your dask workers are running out of memory. Default: 2.
+   * ``n_workers``: (required) Number of dask workers to use.
+   * ``scheduler_cpu``: (optional) One of ``[1024, 2048, 4096, 8192, 16384]``.
+     Default: 2048. CPU to allocate for the scheduler task. 1024 = 1 VCPU. See
+     `Fargate Task CPU and memory`_ for allowable combinations of CPU and
+     memory.
+   * ``scheduler_memory``: (optional) Amount of memory to allocate to the
+     scheduler task. Default: 8192. See `Fargate Task CPU and memory`_ for
+     allowable combinations of CPU and memory.
+   * ``worker_cpu``: (optional) One of ``[1024, 2048, 4096, 8192, 16384]``.
+     Default: 2048. CPU to allocate for the worker tasks. 1024 = 1 VCPU. See
+     `Fargate Task CPU and memory`_ for allowable combinations of CPU and
+     memory.
+   * ``worker_memory``: (optional) Amount of memory to allocate to the worker
+     tasks. Default: 8192. See `Fargate Task CPU and memory`_ for allowable
+     combinations of CPU and memory.
 *  ``job_environment``: Specifies the computing requirements for each simulation.
 
-    * ``vcpus``: Number of CPUs needed. default: 1.
-    * ``memory``: Amount of RAM memory needed for each simulation in MiB. default 1024. For large multifamily buildings
+    * ``vcpus``: (optional) Number of CPUs needed. Default: 1. This probably doesn't need to be changed.
+    * ``memory``: (optional) Amount of RAM memory needed for each simulation in MiB. default 1024. For large multifamily buildings
       this works better if set to 2048.
+*  ``tags``: (optional) This is a list of key-value pairs to attach as tags to
+   all the AWS objects created in the process of running the simulation. If you
+   are at NREL, please fill out the following tags so we can track and allocate
+   costs: ``billingId``, ``org``, and ``owner``.
 
 
 .. _instance type: https://aws.amazon.com/ec2/instance-types/
+.. _Fargate Task CPU and memory: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/fargate-tasks-services.html#fargate-tasks-size
 
+
+.. _gcp-config:
+
+GCP Configuration
+~~~~~~~~~~~~~~~~~
+The top-level ``gcp`` key is used to specify options for running the batch job on GCP,
+using `GCP Batch <https://cloud.google.com/batch>`_ and `Cloud Run <https://cloud.google.com/run>`_.
+
+.. note::
+
+    When BuildStockBatch is run on GCP, it will only save results to GCP Cloud Storage (using the
+    ``gcs`` configuration below); i.e., it currently cannot save to AWS S3 and Athena. Likewise,
+    buildstock run locally, on Eagle, or on AWS cannot save to GCP.
+
+*  ``job_identifier``: A unique string that starts with an alphabetical character,
+   is up to 48 characters long, and only has lowercase letters, numbers and/or hyphens.
+   This is used to name the GCP Batch and Cloud Run jobs to be created and
+   differentiate them from other jobs.
+*  ``project``: The GCP Project ID in which the job will run.
+*  ``service_account``: Optional. The service account email address to use when running jobs on GCP.
+   Default: the Compute Engine default service account of the GCP project.
+*  ``gcs``: Configuration for project data storage on GCP Cloud Storage.
+
+    *  ``bucket``: The Cloud Storage bucket this project will use for simulation output and
+       processed data storage.
+    *  ``prefix``: The Cloud Storage prefix at which the data will be stored within the bucket.
+    *  ``upload_chunk_size_mib``: Optional. The size of data chunks used when uploading files to GCS, in MiB.
+       If your network environment produces a TimeoutError when uploading project files, reducing this
+       may help. Default: 40 MiB
+
+*  ``region``: The GCP region in which the job will be run and the region of the Artifact Registry.
+   (e.g. ``us-central1``)
+*  ``batch_array_size``: Number of tasks to divide the simulations into. Tasks with fewer than 100
+   simulations each are recommended when using spot instances, to minimize lost/repeated work when
+   instances are preempted. Max: 10,000.
+*  ``parallelism``: Optional. Maximum number of tasks that can run in parallel. If not specified,
+   uses `GCP's default behavior`_ (the lesser of ``batch_array_size`` and `job limits`_).
+   Parallelism is also limited by Compute Engine quotas and limits (including vCPU quota).
+*  ``artifact_registry``: Configuration for Docker image storage in GCP Artifact Registry.
+
+    *  ``repository``: The name of the GCP Artifact Repository in which Docker images are stored.
+       This will be combined with the ``project`` and ``region`` to build the full URL to the
+       repository.
+*  ``job_environment``: Optional. Specifies the computing requirements for each simulation.
+
+    *  ``vcpus``: Optional. Number of CPUs to allocate for running each simulation. Default: 1.
+    *  ``memory_mib``: Optional. Amount of RAM memory to allocate for each simulation in MiB.
+       Default: 1024
+    *  ``boot_disk_mib``: Optional. Extra boot disk size in MiB for each task. This affects how
+       large the boot disk will be (see the `Batch OS environment docs`_ for details) of the
+       machine(s) running simulations (which is the disk used by simulations). This will likely need
+       to be set to at least 2,048 if more than 8 simulations will be run in parallel on the same
+       machine (i.e., when vCPUs per machine_type ÷ vCPUs per sim > 8). Default: None (which should
+       result in a 30 GB boot disk according to the docs linked above).
+    *  ``machine_type``: Optional. GCP Compute Engine `machine type`_ to use. If omitted, GCP Batch will
+       choose a machine type based on the requested vCPUs and memory. If set, the machine type
+       should have at least as many resources as requested for each simulation above. If it is
+       large enough, multiple simulations will be run in parallel on the same machine. Typically
+       this is a type from the `E2 series`_. Usually safe to leave unset.
+    *  ``use_spot``: Optional. Whether to use `Spot VMs <https://cloud.google.com/spot-vms>`_
+       for data simulations, which can reduce costs by up to 91%. Default: false
+    *  ``minutes_per_sim``: Optional. Maximum time per simulation. Default works well for ResStock,
+       but this should be increased for ComStock. Default: 3 minutes
+*  ``postprocessing_environment``: Optional. Specifies the Cloud Run computing environment for
+   postprocessing.
+
+    *  ``cpus``: Optional. `Number of CPUs`_ to use. Use up to 8 for large jobs. Default: 2.
+    *  ``memory_mib``: Optional. `Amount of RAM`_ needed in MiB. At least 2048 MiB per CPU is recommended.
+       Use up to 32768 MiB for large jobs. Default: 4096 MiB.
+
+.. _GCP's default behavior: https://cloud.google.com/python/docs/reference/batch/latest/google.cloud.batch_v1.types.TaskGroup
+.. _job limits: https://cloud.google.com/batch/quotas
+.. _Batch OS environment docs: https://cloud.google.com/batch/docs/vm-os-environment-overview#default
+.. _Number of CPUs: https://cloud.google.com/run/docs/configuring/services/cpu
+.. _Amount of RAM: https://cloud.google.com/run/docs/configuring/services/memory-limits
+.. _machine type: https://cloud.google.com/compute/docs/general-purpose-machines
+.. _E2 series: https://cloud.google.com/compute/docs/general-purpose-machines#e2_machine_types
 
 .. _postprocessing:
 
@@ -288,7 +388,8 @@ Athena. This process requires appropriate access to an AWS account to be
 configured on your machine. You will need to set this up wherever you use
 buildstockbatch. If you don't have keys, consult your AWS administrator to get
 them set up. The appropriate keys are already installed on Eagle and Kestrel, so
-no action is required.
+no action is required. If you run on AWS, this step is already done since the
+simulation outputs are already on S3.
 
 * :ref:`Local AWS setup instructions <aws-user-config-local>`
 * `Detailed instructions from AWS <https://boto3.amazonaws.com/v1/documentation/api/latest/guide/quickstart.html#configuration>`_

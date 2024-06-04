@@ -1,7 +1,10 @@
 import logging
+from botocore.config import Config
 
 
 logger = logging.getLogger(__name__)
+
+boto_client_config = Config(retries={"max_attempts": 5, "mode": "standard"})
 
 
 class AWSIAMHelper:
@@ -13,7 +16,7 @@ class AWSIAMHelper:
         :param session: boto3 Session from 'parent' job base class
         """
         self.session = session
-        self.iam = self.session.client("iam")
+        self.iam = self.session.client("iam", config=boto_client_config)
 
     def role_stitcher(
         self,
@@ -141,9 +144,9 @@ class AwsJobBase:
         self.session = boto3_session
         self.iam_helper = AWSIAMHelper(self.session)
         self.iam = self.iam_helper.iam
-        self.s3 = self.session.client("s3")
+        self.s3 = self.session.client("s3", config=boto_client_config)
         self.job_identifier = job_identifier
-        self.account = self.session.client("sts").get_caller_identity().get("Account")
+        self.account = self.session.client("sts", config=boto_client_config).get_caller_identity().get("Account")
         self.region = aws_config["region"]
         self.operator_email = aws_config["notifications_email"]
 
@@ -155,29 +158,9 @@ class AwsJobBase:
         self.s3_lambda_emr_config_key = f"{self.s3_bucket_prefix}/lambda_functions/emr_config.json"
         self.s3_emr_folder_name = "emr"
 
-        # EMR
-        emr_config = aws_config.get("emr", {})
-        self.emr_manager_instance_type = emr_config.get("manager_instance_type", "m5.4xlarge")
-        self.emr_worker_instance_type = emr_config.get("worker_instance_type", "r5.4xlarge")
-        self.emr_worker_instance_count = emr_config.get("worker_instance_count", 4)
-        self.emr_cluster_security_group_name = f"{self.job_identifier}_emr_security_group"
-        self.emr_cluster_name = f"{self.job_identifier}_emr_dask_cluster"
-        self.emr_job_flow_role_name = f"{self.job_identifier}_emr_job_flow_role"
-        self.emr_job_flow_role_arn = ""
-        self.emr_service_role_name = f"{self.job_identifier}_emr_service_role"
-        self.emr_service_role_arn = ""
-        self.emr_cluster_security_group_id = ""
-        self.emr_log_uri = f"s3://{self.s3_bucket}/{self.s3_bucket_prefix}/emrlogs/"
-        self.emr_instance_profile_name = f"{self.job_identifier}_emr_instance_profile"
-
-        # Lambda
-        self.lambda_emr_job_step_execution_role = f"{self.job_identifier}_emr_job_step_execution_role"
-        self.lambda_emr_job_step_function_name = f"{self.job_identifier}_emr_job_step_submission"
-        self.lambda_emr_job_step_execution_role_arn = ""
-
         # Batch
         self.batch_compute_environment_name = f"computeenvionment_{self.job_identifier}"
-        self.batch_compute_environment_ami = "ami-0184013939261b626"
+        self.launch_template_name = f"launch_templ_{self.job_identifier}"
         self.batch_job_queue_name = f"job_queue_{self.job_identifier}"
         self.batch_service_role_name = f"batch_service_role_{self.job_identifier}"
         self.batch_instance_role_name = f"batch_instance_role_{self.job_identifier}"
@@ -188,13 +171,6 @@ class AwsJobBase:
         self.batch_use_spot = aws_config.get("use_spot", True)
         self.batch_spot_bid_percent = aws_config.get("spot_bid_percent", 100)
 
-        # Step Functions
-        self.state_machine_name = f"{self.job_identifier}_state_machine"
-        self.state_machine_role_name = f"{self.job_identifier}_state_machine_role"
-
-        # SNS
-        self.sns_state_machine_topic = f"{self.job_identifier}_state_machine_notifications"
-
         # VPC
         self.vpc_name = self.job_identifier
         self.vpc_id = ""  # will be available after VPC creation
@@ -202,13 +178,26 @@ class AwsJobBase:
         self.priv_vpc_subnet_id_1 = "REPL"  # will be available after VPC creation
         self.priv_vpc_subnet_id_2 = "REPL"  # will be available after VPC creation
 
+    def get_tags(self, **kwargs):
+        tags = kwargs.copy()
+        tags.update(self.aws_config.get("tags", {}))
+        return tags
+
+    def get_tags_uppercase(self, **kwargs):
+        tags = self.get_tags(**kwargs)
+        return [{"Key": k, "Value": v} for k, v in tags.items()]
+
+    def get_tags_lowercase(self, _caps=True, **kwargs):
+        tags = self.get_tags(**kwargs)
+        return [{"key": k, "value": v} for k, v in tags.items()]
+
     def __repr__(self):
         return f"""
 Job Identifier: {self.job_identifier}
 S3 Bucket for Source Data:  {self.s3_bucket}
 S3 Prefix for Source Data:  {self.s3_bucket_prefix}
 
-A state machine {self.state_machine_name} will execute an AWS Batch job {self.job_identifier} against the source data.
+This will execute an AWS Batch job {self.job_identifier} against the source data.
 Notifications of execution progress will be sent to {self.operator_email} once the email subscription is confirmed.
 Once processing is complete the
 state machine will then launch an EMR cluster with a job to combine the results and create an AWS Glue table.

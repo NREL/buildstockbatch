@@ -35,3 +35,40 @@ Development Changelog
         :pullreq: 426
 
         A bugfix for gracefully handling empty data_point_out.json files.
+
+    .. change::
+        :tags: aws, feature
+        :pullreq: 345
+
+        Major update to get AWS Batch run environment working.
+
+    .. change::
+        :tags: general
+        :pullreq: 435
+
+        Add helper to log a summary of how many simulations succeeded and failed at the end of a job.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 437
+
+        Add a ``step_failures`` section to json results files with error messages from OpenStudio simulations.
+
+    .. change::
+        :tags: general
+        :pullreq: 436
+
+        Clean up handling of weather files in GCP/AWS implementations: only upload files that are required,
+        and fail with clearer messaging if any files are missing.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 423
+
+        Add GCP implementation.
+
+    .. change::
+        :tags: bugfix, schema
+        :pullreq: 450
+
+        Requires ``os_version`` and ``os_sha`` in the project file.

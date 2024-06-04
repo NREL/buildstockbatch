@@ -11,7 +11,7 @@ General
 =======
 
 Changes between these versions focused on bugfixes, performance improvements,
-and documentation updates. See :doc:`changelog_0_21` for details. 
+and documentation updates. See :doc:`changelog_0_21` for details.
 
 Schema Updates
 ==============

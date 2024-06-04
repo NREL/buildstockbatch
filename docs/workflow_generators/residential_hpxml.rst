@@ -107,7 +107,7 @@ Arguments
   - ``include_timeseries_total_loads``: Generates timeseries total heating, cooling, and hot water loads (in kBtu) for the building.
   - ``include_timeseries_component_loads``: Generates timeseries heating and cooling loads (in kBtu) disaggregated by component type (e.g., Walls, Windows, Infiltration, Ducts, etc.).
   - ``include_timeseries_unmet_hours``: Generates timeseries unmet hours for heating and cooling.
-  - ``include_timeseries_zone_temperatures``: Generates timeseries average temperatures (in deg-F) for each space modeled (e.g., living space, attic, garage, basement, crawlspace, etc.). 
+  - ``include_timeseries_zone_temperatures``: Generates timeseries average temperatures (in deg-F) for each space modeled (e.g., living space, attic, garage, basement, crawlspace, etc.).
   - ``include_timeseries_airflows``: Generates timeseries airflow rates (in cfm) for infiltration, mechanical ventilation (including clothes dryer exhaust), natural ventilation, whole house fans.
   - ``include_timeseries_weather``: Generates timeseries weather file data including outdoor temperatures, relative humidity, wind speed, and solar.
   - ``include_timeseries_resilience``: Generates timeseries resilience outputs.

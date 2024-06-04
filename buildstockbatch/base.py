@@ -42,8 +42,6 @@ logger = logging.getLogger(__name__)
 
 class BuildStockBatchBase(object):
     # http://openstudio-builds.s3-website-us-east-1.amazonaws.com
-    DEFAULT_OS_VERSION = "3.6.1"
-    DEFAULT_OS_SHA = "bb9481519e"
     CONTAINER_RUNTIME = None
     LOGO = """
      _ __         _     __,              _ __
@@ -69,8 +67,8 @@ class BuildStockBatchBase(object):
 
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
-        self.os_version = self.cfg.get("os_version", self.DEFAULT_OS_VERSION)
-        self.os_sha = self.cfg.get("os_sha", self.DEFAULT_OS_SHA)
+        self.os_version = self.cfg["os_version"]
+        self.os_sha = self.cfg["os_sha"]
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
     @staticmethod
@@ -136,6 +134,9 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def get_reporting_measures(cls, cfg):
+        if "reporting_measure_names" in cfg:
+            return cfg["reporting_measure_names"]
+
         WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
         wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
         return wg.reporting_measures()
@@ -295,8 +296,8 @@ class BuildStockBatchBase(object):
     @classmethod
     def validate_openstudio_path(cls, project_file):
         cfg = get_project_configuration(project_file)
-        os_version = cfg.get("os_version", cls.DEFAULT_OS_VERSION)
-        os_sha = cfg.get("os_sha", cls.DEFAULT_OS_SHA)
+        os_version = cfg["os_version"]
+        os_sha = cfg["os_sha"]
         try:
             proc_out = subprocess.run(
                 [cls.openstudio_exe(), "openstudio_version"],
@@ -870,7 +871,7 @@ class BuildStockBatchBase(object):
         """
         cfg = get_project_configuration(project_file)
 
-        os_version = cfg.get("os_version", BuildStockBatchBase.DEFAULT_OS_VERSION)
+        os_version = cfg["os_version"]
         version_path = "resources/hpxml-measures/HPXMLtoOpenStudio/resources/version.rb"
         version_rb = os.path.join(cfg["buildstock_directory"], version_path)
         if os.path.exists(version_rb):
@@ -897,30 +898,47 @@ class BuildStockBatchBase(object):
     def get_dask_client(self):
         return Client()
 
-    def process_results(self, skip_combine=False, force_upload=False):
-        self.get_dask_client()  # noqa: F841
+    def cleanup_dask(self):
+        pass
 
-        if self.cfg["workflow_generator"]["type"] == "residential_hpxml":
-            if "simulation_output_report" in self.cfg["workflow_generator"]["args"].keys():
-                if "timeseries_frequency" in self.cfg["workflow_generator"]["args"]["simulation_output_report"].keys():
-                    do_timeseries = (
-                        self.cfg["workflow_generator"]["args"]["simulation_output_report"]["timeseries_frequency"]
-                        != "none"
+    def get_fs(self):
+        return LocalFileSystem()
+
+    def upload_results(self, *args, **kwargs):
+        return postprocessing.upload_results(*args, **kwargs)
+
+    def process_results(self, skip_combine=False, use_dask_cluster=True):
+        if use_dask_cluster:
+            self.get_dask_client()  # noqa F841
+
+        try:
+            wfg_args = self.cfg["workflow_generator"].get("args", {})
+            if self.cfg["workflow_generator"]["type"] == "residential_hpxml":
+                if "simulation_output_report" in wfg_args.keys():
+                    if "timeseries_frequency" in wfg_args["simulation_output_report"].keys():
+                        do_timeseries = wfg_args["simulation_output_report"]["timeseries_frequency"] != "none"
+            else:
+                do_timeseries = "timeseries_csv_export" in wfg_args.keys()
+
+            fs = self.get_fs()
+            if not skip_combine:
+                postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
+
+            aws_conf = self.cfg.get("postprocessing", {}).get("aws", {})
+            if "s3" in aws_conf or "aws" in self.cfg:
+                s3_bucket, s3_prefix = self.upload_results(
+                    aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path
+                )
+                if "athena" in aws_conf:
+                    postprocessing.create_athena_tables(
+                        aws_conf,
+                        os.path.basename(self.output_dir),
+                        s3_bucket,
+                        s3_prefix,
                     )
-        else:
-            do_timeseries = "timeseries_csv_export" in self.cfg["workflow_generator"]["args"].keys()
-
-        fs = LocalFileSystem()
-        if not skip_combine:
-            postprocessing.combine_results(fs, self.results_dir, self.cfg, do_timeseries=do_timeseries)
-
-        aws_conf = self.cfg.get("postprocessing", {}).get("aws", {})
-        if "s3" in aws_conf or force_upload:
-            s3_bucket, s3_prefix = postprocessing.upload_results(
-                aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path
-            )
-            if "athena" in aws_conf:
-                postprocessing.create_athena_tables(aws_conf, os.path.basename(self.output_dir), s3_bucket, s3_prefix)
+        finally:
+            if use_dask_cluster:
+                self.cleanup_dask()
 
         keep_individual_timeseries = self.cfg.get("postprocessing", {}).get("keep_individual_timeseries", False)
         postprocessing.remove_intermediate_files(fs, self.results_dir, keep_individual_timeseries)

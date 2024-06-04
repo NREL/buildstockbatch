@@ -18,6 +18,7 @@ import tempfile
 import json
 import pathlib
 from buildstockbatch.hpc import EagleBatch, SlurmBatch, KestrelBatch
+from buildstockbatch.aws.aws import AwsBatch
 from buildstockbatch.local import LocalBatch
 from buildstockbatch.base import BuildStockBatchBase, ValidationError
 from buildstockbatch.test.shared_testing_stuff import (
@@ -58,6 +59,11 @@ def test_eagle_validation_is_classmethod():
 
 def test_local_docker_validation_is_classmethod():
     assert inspect.ismethod(LocalBatch.validate_project)
+
+
+def test_aws_batch_validation_is_static():
+    assert isinstance(AwsBatch.validate_project, types.FunctionType)
+    assert isinstance(AwsBatch.validate_dask_settings, types.FunctionType)
 
 
 def test_complete_schema_passes_validation():
@@ -348,6 +354,38 @@ def test_validate_resstock_or_comstock_version(mocker):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
 
 
+def test_dask_config():
+    orig_filename = os.path.join(example_yml_dir, "minimal-schema.yml")
+    cfg = get_project_configuration(orig_filename)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cfg["aws"] = {
+            "dask": {
+                "scheduler_cpu": 1024,
+                "scheduler_memory": 2048,
+                "worker_cpu": 1024,
+                "worker_memory": 2048,
+                "n_workers": 1,
+            }
+        }
+        test1_filename = os.path.join(tmpdir, "test1.yml")
+        with open(test1_filename, "w") as f:
+            json.dump(cfg, f)
+        AwsBatch.validate_dask_settings(test1_filename)
+        cfg["aws"]["dask"]["scheduler_memory"] = 9 * 1024
+        test2_filename = os.path.join(tmpdir, "test2.yml")
+        with open(test2_filename, "w") as f:
+            json.dump(cfg, f)
+        with pytest.raises(ValidationError, match=r"between 2048 and 8192"):
+            AwsBatch.validate_dask_settings(test2_filename)
+        cfg["aws"]["dask"]["scheduler_memory"] = 8 * 1024
+        cfg["aws"]["dask"]["worker_memory"] = 1025
+        test3_filename = os.path.join(tmpdir, "test3.yml")
+        with open(test3_filename, "w") as f:
+            json.dump(cfg, f)
+        with pytest.raises(ValidationError, match=r"needs to be a multiple of 1024"):
+            AwsBatch.validate_dask_settings(test3_filename)
+
+
 def test_validate_eagle_output_directory():
     minimal_yml = pathlib.Path(example_yml_dir, "minimal-schema.yml")
     with pytest.raises(ValidationError, match=r"must be in /scratch or /projects"):
@@ -402,9 +440,7 @@ def test_validate_apptainer_image():
         with pytest.raises(ValidationError, match=r"Could not find apptainer image: .+\.sif or .+\.simg"):
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
         for ext in ["Apptainer.sif", "Singularity.simg"]:
-            filename = pathlib.Path(
-                tmpdir, f"OpenStudio-{SlurmBatch.DEFAULT_OS_VERSION}.{SlurmBatch.DEFAULT_OS_SHA}-{ext}"
-            )
+            filename = pathlib.Path(tmpdir, f"OpenStudio-{cfg['os_version']}.{cfg['os_sha']}-{ext}")
             filename.touch()
             SlurmBatch.validate_apptainer_image_hpc(str(temp_yml))
             filename.unlink()

@@ -1,3 +1,5 @@
+os_version: 3.8.0-rc2
+os_sha: af997f4fef
 buildstock_directory: here
 project_directory: there
 weather_files_path: over-yonder
