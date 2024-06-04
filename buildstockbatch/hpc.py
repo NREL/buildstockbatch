@@ -776,7 +776,8 @@ class KestrelBatch(SlurmBatch):
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2
-    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 250000  # Standard node
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
+    DEFAULT_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
     DEFAULT_POSTPROCESSING_N_PROCS = 52
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
