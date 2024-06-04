@@ -877,6 +877,7 @@ class AwsBatchEnv(AwsJobBase):
             for internet_gateway in igw_response["InternetGateways"]:
                 for attachment in internet_gateway["Attachments"]:
                     if attachment["VpcId"] == this_vpc:
+                        i = 0
                         while True:
                             try:
                                 try:
@@ -899,8 +900,11 @@ class AwsBatchEnv(AwsJobBase):
                                         "Waiting for IPs to be released before deleting Internet Gateway.  Sleeping..."
                                     )
                                     time.sleep(5)
+                                    if i >= 6:
+                                        raise
                                 else:
                                     raise
+                            i += 1
 
             subn_response = self.ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
 
@@ -1243,6 +1247,14 @@ class AwsBatch(docker_base.DockerBatchBase):
             cfg["buildstock_directory"] = container_buildstock_dir
             cfg["project_directory"] = str(pathlib.Path(self.project_dir).relative_to(self.buildstock_dir))
 
+            if cfg["sampler"]["type"] == "precomputed":
+                host_sample_file_path = cfg["sampler"]["args"]["sample_file"]
+                container_sample_file_path = str(container_workpath / "buildstock.csv")
+                cfg["sampler"]["args"]["sample_file"] = container_sample_file_path
+            else:
+                host_sample_file_path = None
+                container_sample_file_path = None
+
             with open(tmppath / "project_config.yml", "w") as f:
                 f.write(yaml.dump(cfg, Dumper=yaml.SafeDumper))
             container_cfg_path = str(container_workpath / "project_config.yml")
@@ -1259,21 +1271,32 @@ class AwsBatch(docker_base.DockerBatchBase):
                 env["AWS_SESSION_TOKEN"] = credentials.token
             env["POSTPROCESSING_INSIDE_DOCKER_CONTAINER"] = "true"
 
+            volumes = {
+                tmpdir: {"bind": str(container_workpath), "mode": "rw"},
+                self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
+            }
+            if container_sample_file_path:
+                volumes[host_sample_file_path] = {"bind": container_sample_file_path, "mode": "ro"}
+
             logger.info("Starting container for postprocessing")
             container = self.docker_client.containers.run(
                 self.image_url,
                 ["python3", "-m", "buildstockbatch.aws.aws", container_cfg_path],
-                volumes={
-                    tmpdir: {"bind": str(container_workpath), "mode": "rw"},
-                    self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
-                },
+                volumes=volumes,
                 environment=env,
                 name="bsb_post",
                 auto_remove=True,
                 detach=True,
             )
             for msg in container.logs(stream=True):
-                logger.debug(msg)
+                logger.debug(msg.decode().rstrip("\n"))
+
+            result = container.wait()
+
+            if result["StatusCode"] != 0:
+                raise RuntimeError(
+                    "There was an error in the postprocessing code running inside the container. See logs above."
+                )
 
     def _process_results_inside_container(self):
         with open("/var/simdata/openstudio/args.json", "r") as f:
