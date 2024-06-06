@@ -485,6 +485,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                         "add_component_loads": add_component_loads,
                         "skip_validation": True,
                     },
+                },
+                {"measure_dir_name": "HPXMLOutput",
+                    "arguments": {}
+                },
+                {"measure_dir_name": "CostMultipliers",
+                    "arguments": {"debug": debug}
                 }
             ]
         )
@@ -497,12 +503,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     "measure_dir_name": "ReportSimulationOutput",
                     "arguments": sim_out_rep_args,
                 },
-                {"measure_dir_name": "ReportHPXMLOutput", "arguments": {}},
                 {
                     "measure_dir_name": "ReportUtilityBills",
                     "arguments": util_bills_rep_args,
                 },
-                {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}},
                 {
                     "measure_dir_name": "ServerDirectoryCleanup",
                     "arguments": server_dir_cleanup_args,
