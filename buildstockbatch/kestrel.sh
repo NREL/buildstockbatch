@@ -12,10 +12,7 @@ df -h
 
 module load python apptainer
 source "$MY_PYTHON_ENV/bin/activate"
-# Default LOCAL_SCRATCH = /tmp/scratch
-# Setting to user-specific dir to avoid
-# issues with deleting previous buildstock run debris
-export LOCAL_SCRATCH=/tmp/scratch/$SLURM_JOB_ID
+export LOCAL_SCRATCH=$TMPDIR # $TMPDIR is set to /tmp/scratch/$JOBID
 source /kfs2/shared-projects/buildstock/aws_credentials.sh
 
 time python -u -m buildstockbatch.hpc kestrel "$PROJECTFILE"
