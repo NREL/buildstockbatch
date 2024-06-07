@@ -489,7 +489,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 {"measure_dir_name": "HPXMLOutput",
                     "arguments": {}
                 },
-                {"measure_dir_name": "CostMultipliers",
+                {"measure_dir_name": "UpgradeCosts",
                     "arguments": {"debug": debug}
                 }
             ]
