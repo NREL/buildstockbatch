@@ -486,12 +486,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                         "skip_validation": True,
                     },
                 },
-                {"measure_dir_name": "HPXMLOutput",
-                    "arguments": {}
-                },
-                {"measure_dir_name": "UpgradeCosts",
-                    "arguments": {"debug": debug}
-                }
+                {"measure_dir_name": "HPXMLOutput", "arguments": {}},
+                {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}},
             ]
         )
 
