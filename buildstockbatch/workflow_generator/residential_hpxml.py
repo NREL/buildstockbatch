@@ -40,6 +40,16 @@ def get_measure_arguments(xml_path):
             arguments.append(name)
     return arguments
 
+def get_measure_attributes(xml_path):
+    attributes = {}
+    if os.path.isfile(xml_path):
+        root = get_measure_xml(xml_path)
+        for argument in root.findall("./attributes/attribute"):
+            name = argument.find("./name").text
+            value = argument.find("./value").text
+            attributes[name] = value
+    return attributes
+
 
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
     @classmethod
@@ -486,10 +496,20 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                         "skip_validation": True,
                     },
                 },
-                {"measure_dir_name": "HPXMLOutput", "arguments": {}},
-                {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}},
+                
             ]
         )
+
+        measures_dir = os.path.join(buildstock_dir, "measures")
+        measure_path = os.path.join(measures_dir, "UpgradeCosts")
+        upg_costs_atts_avail = get_measure_attributes(os.path.join(measure_path, "measure.xml"))
+
+        if upg_costs_atts_avail["Measure Type"] == 'ModelMeasure':
+            osw["steps"].extend(
+                [
+                    {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}},
+                ]
+            )
 
         osw["steps"].extend(workflow_args["measures"])
 
@@ -509,6 +529,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 },
             ]
         )
+
+        if upg_costs_atts_avail["Measure Type"] == "ReportingMeasure":
+            osw["steps"].insert(-1, {"measure_dir_name": "ReportHPXMLOutput", "arguments": {}})
+            osw["steps"].insert(-1, {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}})
 
         if upgrade_idx is not None:
             measure_d = self.cfg["upgrades"][upgrade_idx]

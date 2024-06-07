@@ -68,7 +68,7 @@ def test_residential_hpxml(mocker):
     osw = osw_gen.create_osw(sim_id, building_id, upgrade_idx)
 
     steps = osw["steps"]
-    assert len(steps) == 8
+    assert len(steps) == 7
 
     build_existing_model_step = steps[0]
     assert build_existing_model_step["measure_dir_name"] == "BuildExistingModel"
@@ -84,13 +84,10 @@ def test_residential_hpxml(mocker):
     hpxml_to_os_step = steps[2]
     assert hpxml_to_os_step["measure_dir_name"] == "HPXMLtoOpenStudio"
 
-    hpxml_output_step = steps[3]
-    assert hpxml_output_step["measure_dir_name"] == "HPXMLOutput"
-
-    upgrade_costs_step = steps[4]
+    upgrade_costs_step = steps[3]
     assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
 
-    simulation_output_step = steps[5]
+    simulation_output_step = steps[4]
     assert simulation_output_step["measure_dir_name"] == "ReportSimulationOutput"
     assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
     assert simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
@@ -128,12 +125,12 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step["arguments"]["add_timeseries_dst_column"] is True
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
 
-    utility_bills_step = steps[6]
+    utility_bills_step = steps[5]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
 
-    server_dir_cleanup_step = steps[7]
+    server_dir_cleanup_step = steps[6]
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
 
 
