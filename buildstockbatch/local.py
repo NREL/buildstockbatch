@@ -138,7 +138,7 @@ class LocalBatch(BuildStockBatchBase):
                 cls.openstudio_exe(),
                 '--bundle', str(custom_gem_dir / 'Gemfile'),
                 '--bundle_path', str(custom_gem_dir),
-                '--bundle_without', 'native_ext',
+                '--bundle_without', 'test',
                 'run', '-w', 'in.osw',
                 '--debug'
             ]

@@ -382,7 +382,7 @@ class SlurmBatch(BuildStockBatchBase):
                 if cfg.get("baseline", dict()).get("custom_gems", False):
                     cli_cmd = (
                         "openstudio --bundle /var/oscli/Gemfile --bundle_path /var/oscli/gems "
-                        "--bundle_without native_ext run -w in.osw --debug"
+                        "--bundle_without test run -w in.osw --debug"
                     )
                 if get_bool_env_var("MEASURESONLY"):
                     cli_cmd += " --measures_only"
