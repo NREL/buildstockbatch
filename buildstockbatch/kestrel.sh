@@ -2,7 +2,6 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --tmp=1000000
-#SBATCH --reservation=jobdebugging
  
 echo "Job ID: $SLURM_JOB_ID"
 echo "Hostname: $HOSTNAME"
