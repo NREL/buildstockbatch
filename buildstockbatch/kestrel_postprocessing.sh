@@ -1,6 +1,5 @@
 #!/bin/bash
 #SBATCH --tmp=1000000
-#SBATCH --no-kill
 #SBATCH --reservation=jobdebugging
 
 echo "begin kestrel_postprocessing.sh"
