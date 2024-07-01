@@ -200,9 +200,7 @@ def test_missing_measures(project_file):
         except (ValidationError, YamaleError) as er:
             assert "'QOIReport' not found" in str(er)
         else:
-            raise Exception(
-                "Supposed to raise missing measure error for QOIReport"
-            )
+            raise Exception("Supposed to raise missing measure error for QOIReport")
 
 
 @pytest.mark.parametrize(
