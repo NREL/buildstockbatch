@@ -146,7 +146,7 @@ Arguments
 Build Existing Model Defaults
 .............................
 
-.. include:: ../../buildstockbatch/workflow_generator/resedential/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/residential_hpxml.py
    :code: python
    :start-after: sim_ctl_args = {
    :end-before: }
