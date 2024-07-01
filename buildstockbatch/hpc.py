@@ -132,7 +132,7 @@ class SlurmBatch(BuildStockBatchBase):
         # Create simulation_output dir
         sim_out_ts_dir = pathlib.Path(self.output_dir) / "results" / "simulation_output" / "timeseries"
         os.makedirs(sim_out_ts_dir, exist_ok=True)
-        for i in range(0, len(self.cfg.get("upgrades", [])) + 1):
+        for i in range(0, self.num_upgrades + 1):
             os.makedirs(sim_out_ts_dir / f"up{i:02d}")
 
         # create destination_dir and copy housing_characteristics into it
@@ -161,7 +161,7 @@ class SlurmBatch(BuildStockBatchBase):
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
         # number of simulations is number of buildings * number of upgrades
-        n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
+        n_sims = n_datapoints * (self.num_upgrades + 1)
 
         # this is the number of simulations defined for this run as a "full job"
         #     number of simulations per job if we believe the .yml file n_jobs
@@ -170,7 +170,7 @@ class SlurmBatch(BuildStockBatchBase):
         #     larger than we need, now that we know n_sims
         n_sims_per_job = max(n_sims_per_job, self.MIN_SIMS_PER_JOB)
 
-        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
+        upgrade_sims = itertools.product(building_ids, range(self.num_upgrades))
         if not self.skip_baseline_sims:
             # create batches of simulations
             baseline_sims = zip(building_ids, itertools.repeat(None))
