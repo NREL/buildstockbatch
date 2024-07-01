@@ -1,12 +1,9 @@
 from buildstockbatch.workflow_generator.residential.residential_hpxml import (
-    ResidentialHpxmlWorkflowGenerator, get_measure_arguments
+    ResidentialHpxmlWorkflowGenerator,
+    get_measure_arguments,
 )
-from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import (
-    DEFAULT_MEASURE_ARGS
-)
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import (
-    BUILD_EXISTING_MODEL_ARG_MAP
-)
+from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
+from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import BUILD_EXISTING_MODEL_ARG_MAP
 
 from buildstockbatch.test.shared_testing_stuff import resstock_directory
 import os
@@ -29,7 +26,7 @@ def test_residential_hpxml(mocker):
                     "simulation_control_run_period_end_month": 2,
                     "simulation_control_run_period_end_day_of_month": 28,
                     "simulation_control_run_period_calendar_year": 2010,
-                    "add_component_loads": True
+                    "add_component_loads": True,
                 },
                 "emissions": [
                     {
@@ -39,7 +36,7 @@ def test_residential_hpxml(mocker):
                         "gas_value": 147.3,
                         "propane_value": 177.8,
                         "oil_value": 195.9,
-                        "wood_value": 200.0
+                        "wood_value": 200.0,
                     },
                     {
                         "scenario_name": "LRMER_HighCase_15",
@@ -48,20 +45,12 @@ def test_residential_hpxml(mocker):
                         "gas_value": 187.3,
                         "propane_value": 187.8,
                         "oil_value": 199.9,
-                        "wood_value": 250.0
-                    }
+                        "wood_value": 250.0,
+                    },
                 ],
                 "utility_bills": [
-                    {
-                        "scenario_name": "Bills",
-                        "elc_fixed_charge": 10.0,
-                        "elc_marginal_rate": 0.12
-                    },
-                    {
-                        "scenario_name": "Bills2",
-                        "gas_fixed_charge": 12.0,
-                        "gas_marginal_rate": 0.15
-                    }
+                    {"scenario_name": "Bills", "elc_fixed_charge": 10.0, "elc_marginal_rate": 0.12},
+                    {"scenario_name": "Bills2", "gas_fixed_charge": 12.0, "gas_marginal_rate": 0.15},
                 ],
                 "simulation_output_report": {
                     "timeseries_frequency": "hourly",
@@ -72,7 +61,7 @@ def test_residential_hpxml(mocker):
                     "output_variables": [
                         {"name": "Zone Mean Air Temperature"},
                         {"name": "Zone People Occupant Count"},
-                    ]
+                    ],
                 },
                 "reporting_measures": [
                     {
@@ -80,14 +69,14 @@ def test_residential_hpxml(mocker):
                         "arguments": {
                             "TestReportingMeasure1_arg1": "TestReportingMeasure1_val1",
                             "TestReportingMeasure1_arg2": "TestReportingMeasure1_val2",
-                        }
+                        },
                     },
                     {
                         "measure_dir_name": "TestReportingMeasure2",
                         "arguments": {
                             "TestReportingMeasure2_arg1": "TestReportingMeasure2_val1",
                             "TestReportingMeasure2_arg2": "TestReportingMeasure2_val2",
-                        }
+                        },
                     },
                 ],
                 "measures": [
@@ -96,10 +85,10 @@ def test_residential_hpxml(mocker):
                         "arguments": {
                             "TestMeasure1_arg1": 1,
                             "TestMeasure1_arg2": 2,
-                        }
+                        },
                     },
                     {"measure_dir_name": "TestMeasure2"},
-                ]
+                ],
             },
         },
         "upgrades": [

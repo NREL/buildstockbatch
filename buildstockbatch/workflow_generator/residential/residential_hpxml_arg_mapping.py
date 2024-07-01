@@ -23,10 +23,8 @@ BUILD_EXISTING_MODEL_ARG_MAP = {
         "wood_fixed_charge": "utility_bill_wood_fixed_charges",
         "wood_marginal_rate": "utility_bill_wood_marginal_rates",
         "pv_compensation_type": "utility_bill_pv_compensation_types",
-        "pv_net_metering_annual_excess_sellback_rate_type":
-        "utility_bill_pv_net_metering_annual_excess_sellback_rate_types",
-        "pv_net_metering_annual_excess_sellback_rate":
-            "utility_bill_pv_net_metering_annual_excess_sellback_rates",
+        "pv_net_metering_annual_excess_sellback_rate_type": "utility_bill_pv_net_metering_annual_excess_sellback_rate_types",
+        "pv_net_metering_annual_excess_sellback_rate": "utility_bill_pv_net_metering_annual_excess_sellback_rates",
         "pv_feed_in_tariff_rate": "utility_bill_pv_feed_in_tariff_rates",
         "pv_monthly_grid_connection_fee_units": "utility_bill_pv_monthly_grid_connection_fee_units",
         "pv_monthly_grid_connection_fee": "utility_bill_pv_monthly_grid_connection_fees",
@@ -39,5 +37,5 @@ BUILD_EXISTING_MODEL_ARG_MAP = {
         "propane_value": "emissions_propane_values",
         "oil_value": "emissions_fuel_oil_values",
         "wood_value": "emissions_wood_values",
-    }
+    },
 }

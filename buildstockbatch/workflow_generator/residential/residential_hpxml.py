@@ -96,10 +96,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         error_msgs = ""
         warning_msgs = ""
-        if 'upgrades' in self.cfg:
+        if "upgrades" in self.cfg:
             # For ApplyUpgrade measure, verify that all the cost_multipliers used are correct
             valid_multipliers = self._get_apply_upgrade_multipliers()
-            invalid_multipliers = self._get_invalid_multipliers(self.cfg['upgrades'], valid_multipliers)
+            invalid_multipliers = self._get_invalid_multipliers(self.cfg["upgrades"], valid_multipliers)
             if invalid_multipliers:
                 error_msgs += "* The following multipliers values are invalid: \n"
                 for multiplier, count in invalid_multipliers.items():
@@ -253,8 +253,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         sim_out_rep_args.update(workflow_args["simulation_output_report"])
         if "output_variables" in sim_out_rep_args:
             # convert list to comma separated string and change key name to user_output_variables
-            sim_out_rep_args["user_output_variables"] = ",".join([str(s.get("name"))
-                                                                  for s in sim_out_rep_args["output_variables"]])
+            sim_out_rep_args["user_output_variables"] = ",".join(
+                [str(s.get("name")) for s in sim_out_rep_args["output_variables"]]
+            )
             sim_out_rep_args.pop("output_variables")
 
         return sim_out_rep_args
@@ -281,7 +282,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             return bill_args
 
         utility_bills = workflow_args["utility_bills"]
-        arg_name_map = BUILD_EXISTING_MODEL_ARG_MAP['utility_bills']
+        arg_name_map = BUILD_EXISTING_MODEL_ARG_MAP["utility_bills"]
         return self._get_mapped_args(arg_name_map, utility_bills)
 
     def _get_emission_args(self, workflow_args):
