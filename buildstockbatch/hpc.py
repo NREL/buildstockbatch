@@ -213,12 +213,6 @@ class SlurmBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / "measures",
             self.local_buildstock_dir / "measures",
         )
-        # Already copied when copying the resources directory
-        # if os.path.exists(pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures"):
-        #     self.clear_and_copy_dir(
-        #         pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures",
-        #         self.local_buildstock_dir / "resources/hpxml-measures",
-        #     )
         self.clear_and_copy_dir(self.weather_dir, self.local_weather_dir)
         self.clear_and_copy_dir(
             pathlib.Path(self.output_dir) / "housing_characteristics",
