@@ -348,6 +348,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 "user_output_variables": "var1,va2",
         }
         """
+        block_count = len(block) if isinstance(block, list) else 1
         block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(block)
         measure_args = {}
         for measure_dir_name, arg_map in arg_maps.items():
@@ -362,5 +363,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                             mapped_args[dest_arg] = ",".join(str(v) for v in block.pop(source_arg))
                     else:
                         mapped_args[dest_arg] = block.pop(source_arg)
+                else:
+                    mapped_args[dest_arg] = ",".join([""] * block_count)
 
         return measure_args
