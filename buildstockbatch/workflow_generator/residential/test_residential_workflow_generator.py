@@ -1,19 +1,18 @@
 from buildstockbatch.workflow_generator.residential.residential_hpxml import (
     ResidentialHpxmlWorkflowGenerator,
-    get_measure_arguments,
 )
 from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import BUILD_EXISTING_MODEL_ARG_MAP
-
+from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import ARG_MAP
+from testfixtures import LogCapture
 from buildstockbatch.test.shared_testing_stuff import resstock_directory
 import os
 import yamale
+import logging
 
 
 def test_residential_hpxml(mocker):
     sim_id = "bldb1up1"
     building_id = 1
-    upgrade_idx = 0
     cfg = {
         "buildstock_directory": resstock_directory,
         "baseline": {"n_buildings_represented": 100},
@@ -93,6 +92,7 @@ def test_residential_hpxml(mocker):
         },
         "upgrades": [
             {
+                "upgrade_name": "Upgrade 1",
                 "options": [
                     {
                         "option": "Parameter|Option",
@@ -193,48 +193,134 @@ def test_residential_hpxml(mocker):
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
 
 
+def test_old_resstock(mocker):
+    """
+    Some keys defined in schema can be unavailable in the measure.
+    This test verifies that such keys are not passed to the measure, but warnings are raised.
+    """
+    cfg = {
+        "buildstock_directory": resstock_directory,
+        "baseline": {"n_buildings_represented": 100},
+        "workflow_generator": {
+            "type": "residential_hpxml",
+            "args": {
+                "build_existing_model": {
+                    "simulation_control_run_period_begin_month": 2,
+                    "new_key1": "test_value",  # simulate old resstock by adding a new key not in the measure
+                },
+            },
+        },
+    }
+    n_datapoints = 10
+    osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
+    osw_gen.default_args["BuildExistingModel"]["new_key2"] = "test_value"
+
+    with LogCapture(level=logging.INFO) as log:
+        measure_args = osw_gen._get_measure_args(
+            cfg["workflow_generator"]["args"]["build_existing_model"], "BuildExistingModel", debug=False
+        )
+        assert len(log.records) == 2
+        all_msg = "\n".join([record.msg for record in log.records])
+        assert "'new_key1' in workflow_generator not found in 'BuildExistingModel'" in all_msg
+        assert "'new_key2' in defaults not found in 'BuildExistingModel'" in all_msg
+    assert "new_key1" not in measure_args
+    assert "new_key2" not in measure_args
+
+
 def test_hpmxl_schema_defaults_and_mapping():
-    # load the residential_hpxml_schema.yml  in current directory
+    """
+    Verify that the keys used in the defaults, workflow schema and arg mapping are available in the measure
+    """
     schema_yaml = os.path.join(os.path.dirname(__file__), "residential_hpxml_schema.yml")
     schema_obj = yamale.make_schema(schema_yaml, parser="ruamel")
 
-    # check build_existing_model keys are valid input to the measure
-    measure_dir = os.path.join(resstock_directory, "measures")
-    measure_path = os.path.join(measure_dir, "BuildExistingModel")
-    avilable_measure_input = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
+    def assert_valid_mapped_keys(measure_dir_name, valid_args):
+        for yaml_block_name, measure_arg_map in ARG_MAP.items():
+            for measure_arg in measure_arg_map.get(measure_dir_name, {}).values():
+                assert measure_arg in valid_args, f"{measure_arg} in ARG_MAP[{yaml_block_name}] not available"
+                f"as input to {measure_dir_name} measure"
 
-    schema_keys = set(schema_obj.includes[schema_obj.dict["build_existing_model"].include_name].dict.keys())
-    default_keys = set(DEFAULT_MEASURE_ARGS["measures/BuildExistingModel"].keys())
-    emissions_keys = BUILD_EXISTING_MODEL_ARG_MAP["emissions"].values()  # dict values correspond to measure input
-    utility_bills_keys = BUILD_EXISTING_MODEL_ARG_MAP["utility_bills"].values()
-    special_keys = {"add_component_loads"}  # Special keys are not directly passed to the measure
-    for key in schema_keys - special_keys:
-        assert key in avilable_measure_input, f"{key} in schema not available as input to BuildExistingModel measure"
-    for key in default_keys - special_keys:
-        assert key in avilable_measure_input, f"{key} in defaults not available in BuildExistingModel measure"
-    for key in emissions_keys:
-        assert key in avilable_measure_input, f"{key} in BUILD_EXISTING_MODEL_ARG_MAP for emission invalid."
-    for key in utility_bills_keys:
-        assert key in avilable_measure_input, f"{key} in BUILD_EXISTING_MODEL_ARG_MAP for utility bills invalid."
+    def assert_valid_schema_keys(yaml_block_name, valid_keys, exclude_keys):
+        schema_keys = set(schema_obj.includes[schema_obj.dict[yaml_block_name].include_name].dict.keys())
+        for key in schema_keys - exclude_keys:
+            assert key in valid_keys, f"{key} in {yaml_block_name} not available as input to the measure"
 
-    # check server_directory_cleanup keys are valid input to the measure
-    measure_path = os.path.join(measure_dir, "ServerDirectoryCleanup")
-    server_dir_cleanup_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
-    schema_keys = set(schema_obj.includes[schema_obj.dict["server_directory_cleanup"].include_name].dict.keys())
-    default_keys = set(DEFAULT_MEASURE_ARGS["measures/ServerDirectoryCleanup"].keys())
-    for key in schema_keys:
-        assert key in server_dir_cleanup_args_avail, f"{key} in schema not available as input to ServerDirectoryCleanup"
-    for key in default_keys:
-        assert key in schema_keys, f"{key} in defaults not available in ServerDirectoryCleanup"
+    def assert_valid_default_keys(measure_dir_name, valid_keys, exclude_keys):
+        default_keys = set(DEFAULT_MEASURE_ARGS[measure_dir_name].keys())
+        for key in default_keys - exclude_keys:
+            assert key in valid_keys, f"{key} in defaults not available in {measure_dir_name} measure"
 
-    # check simulation_output_report keys are valid input to the measure
-    measures_dir = os.path.join(resstock_directory, "resources/hpxml-measures")
-    measure_path = os.path.join(measures_dir, "ReportSimulationOutput")
-    sim_out_rep_args_avail = get_measure_arguments(os.path.join(measure_path, "measure.xml"))
-    sim_ouput_schema_keys = schema_obj.includes[schema_obj.dict["simulation_output_report"].include_name].dict.keys()
-    default_keys = DEFAULT_MEASURE_ARGS["resources/hpxml-measures/ReportSimulationOutput"].keys()
-    special_keys = {"output_variables"}
-    for key in sim_ouput_schema_keys - special_keys:
-        assert key in sim_out_rep_args_avail, f"{key} in schema not available as input to ReportSimulationOutput"
-    for key in default_keys - special_keys:
-        assert key in sim_out_rep_args_avail, f"{key} in defaults not available as input to ReportSimulationOutput"
+    def assert_valid_keys(measure_dir_name, yaml_block_name, exclude_keys):
+        avilable_measure_input = ResidentialHpxmlWorkflowGenerator.get_measure_arguments_from_xml(
+            resstock_directory, measure_dir_name
+        )
+        assert_valid_default_keys(measure_dir_name, avilable_measure_input, exclude_keys)
+        assert_valid_mapped_keys(measure_dir_name, avilable_measure_input)
+        if yaml_block_name:  # Not all measures have input defined/allowed in the schema
+            assert_valid_schema_keys(yaml_block_name, avilable_measure_input, exclude_keys)
+
+    assert_valid_keys("BuildExistingModel", "build_existing_model", {"add_component_loads"})
+    assert_valid_keys("HPXMLtoOpenStudio", None, set())
+    assert_valid_keys("ReportSimulationOutput", "simulation_output_report", {"output_variables"})
+    assert_valid_keys("ReportHPXMLOutput", None, set())
+    assert_valid_keys("ReportUtilityBills", None, set())
+    assert_valid_keys("UpgradeCosts", None, set())
+    assert_valid_keys("ServerDirectoryCleanup", "server_directory_cleanup", set())
+
+
+def test_block_compression_and_argmap():
+    test_wf_arg = {
+        "block1": {"key1": "v1", "key2": "v2", "key3": ["v3", "v4"]},
+        "block2": [
+            {
+                "key1": "val1",
+                "key2": "val2",
+            },
+            {
+                "key1": "val11",
+                "key3": "val33",
+            },
+        ],
+    }
+    compressed_block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(test_wf_arg["block1"])
+    assert compressed_block == test_wf_arg["block1"]
+    compressed_block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(test_wf_arg["block2"])
+    assert compressed_block == {"key1": ["val1", "val11"], "key2": ["val2", ""], "key3": ["", "val33"]}
+    arg_map = {
+        "block1": {
+            "measure1": {
+                # "key1": "arg1",  # key1 is not to be passed
+                "key2": "arg2",
+                "key3": "arg3",
+            },
+        },
+        "block2": {
+            "measure2": {
+                "key1": "arg1",
+                "key2": "arg2",
+                "key3": "arg3",
+            },
+        },
+    }
+    measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
+        test_wf_arg["block1"], arg_map["block1"]
+    )
+    assert measure_args == {
+        "measure1": {
+            "arg2": "v2",
+            "arg3": "v3,v4",
+        }
+    }
+    measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
+        test_wf_arg["block2"], arg_map["block2"]
+    )
+    assert measure_args == {
+        "measure2": {
+            "arg1": "val1,val11",
+            "arg2": "val2,",
+            "arg3": ",val33",
+        }
+    }
+
+    # Only key1 should be remaining since the other two is already mapped to measure
+    assert test_wf_arg["block1"] == {"key1": "v1"}

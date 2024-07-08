@@ -5,7 +5,7 @@ buildstockbatch.workflow_generator.residential_hpxml
 ~~~~~~~~~~~~~~~
 This object contains the residential classes for generating OSW files from individual samples
 
-:author: Joe Robertson
+:author: Joe Robertson, Rajendra Adhikari
 :copyright: (c) 2021 by The Alliance for Sustainable Energy
 :license: BSD-3
 """
@@ -17,30 +17,15 @@ import logging
 import os
 from xml.etree import ElementTree
 import yamale
-
+from typing import Dict, Any
 
 from ..base import WorkflowGeneratorBase
 from buildstockbatch.exc import ValidationError
 from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import BUILD_EXISTING_MODEL_ARG_MAP
+from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import ARG_MAP
+import copy
 
 logger = logging.getLogger(__name__)
-
-
-def get_measure_xml(xml_path):
-    tree = ElementTree.parse(xml_path)
-    root = tree.getroot()
-    return root
-
-
-def get_measure_arguments(xml_path):
-    arguments = set()
-    if os.path.isfile(xml_path):
-        root = get_measure_xml(xml_path)
-        for argument in root.findall("./arguments/argument"):
-            name = argument.find("./name").text
-            arguments.add(name)
-    return arguments
 
 
 class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
@@ -49,6 +34,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         super().__init__(cfg, n_datapoints)
         self.buildstock_dir = cfg["buildstock_directory"]
         self.measures_dir = os.path.join(self.buildstock_dir, "measures")
+        self.workflow_args = self.cfg["workflow_generator"].get("args", {})
+        self.default_args = copy.deepcopy(DEFAULT_MEASURE_ARGS)
+        self.arg_map = copy.deepcopy(ARG_MAP)
 
     def validate(self):
         """Validate arguments
@@ -65,12 +53,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
     def reporting_measures(self):
         """Return a list of reporting measures to include in outputs"""
-        workflow_args = self.cfg["workflow_generator"].get("args", {})
-        return [x["measure_dir_name"] for x in workflow_args.get("reporting_measures", [])]
+        return [x["measure_dir_name"] for x in self.workflow_args.get("reporting_measures", [])]
 
     def _get_apply_upgrade_multipliers(self):
         measure_path = os.path.join(self.measures_dir, "ApplyUpgrade")
-        root = get_measure_xml(os.path.join(measure_path, "measure.xml"))
+        root = ElementTree.parse(os.path.join(measure_path, "measure.xml")).getroot()
         multipliers = set()
         for argument in root.findall("./arguments/argument"):
             name = argument.find("./name")
@@ -91,9 +78,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         return invalid_multipliers
 
     def validate_measures_and_arguments(self):
-
-        workflow_args = self.cfg["workflow_generator"].get("args", {})
-
         error_msgs = ""
         warning_msgs = ""
         if "upgrades" in self.cfg:
@@ -106,7 +90,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     error_msgs += f"    '{multiplier}' - Used {count} times \n"
                 error_msgs += f"    The list of valid multipliers are {valid_multipliers}.\n"
 
-        for reporting_measure in workflow_args.get("reporting_measures", []):
+        for reporting_measure in self.workflow_args.get("reporting_measures", []):
             if not os.path.isdir(os.path.join(self.measures_dir, reporting_measure["measure_dir_name"])):
                 error_msgs += f"* Reporting measure '{reporting_measure['measure_dir_name']}' not found\n"
 
@@ -128,75 +112,70 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         logger.debug("Generating OSW, sim_id={}".format(sim_id))
-        workflow_args = self.cfg["workflow_generator"].get("args", {})
 
-        bld_exist_model_args = {
-            "building_id": building_id,
-            "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
+        workflow_args = copy.deepcopy(self.workflow_args)
+
+        measure_args = self._get_mapped_args(workflow_args)  # start with the mapped arguments
+
+        measure_args["BuildExistingModel"].update(
+            {
+                "building_id": building_id,
+                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
+            }
+        )
+        debug = workflow_args.get("debug", False)
+
+        measure_args_mapping = {
+            "build_existing_model": "BuildExistingModel",
+            "hpxml_to_openstudio": "HPXMLtoOpenStudio",
+            "simulation_output_report": "ReportSimulationOutput",
+            "report_hpxml_output": "ReportHPXMLOutput",
+            "report_utility_bills": "ReportUtilityBills",
+            "upgrade_costs": "UpgradeCosts",
+            "server_directory_cleanup": "ServerDirectoryCleanup",
         }
 
-        bld_exist_model_args.update(DEFAULT_MEASURE_ARGS["measures/BuildExistingModel"])
-        bld_exist_model_args.update(workflow_args.get("build_existing_model", {}))
+        steps = []
+        for key, measure_dir_name in measure_args_mapping.items():
+            if measure_dir_name not in measure_args:
+                measure_args[measure_dir_name] = {}
 
-        # add_component_loads argument needs to be passed to HPXMLtoOpenStudio measure
-        add_component_loads = bld_exist_model_args.pop("add_component_loads")
+            measure_args[measure_dir_name].update(
+                self._get_measure_args(workflow_args.get(key, {}), measure_dir_name, debug)
+            )
+            steps.append(
+                {
+                    "measure_dir_name": measure_dir_name,
+                    "arguments": measure_args[measure_dir_name],
+                }
+            )
 
-        bld_exist_model_args.update(self._get_emission_args(workflow_args))
-        bld_exist_model_args.update(self._get_bill_args(workflow_args))
-        sim_out_rep_args = self._get_sim_out_args(workflow_args)
-        util_bills_rep_args = self._get_bill_report_args()
-        server_dir_cleanup_args = self._get_server_dir_cleanup_args(workflow_args)
-        debug = workflow_args.get("debug", False)
         osw = {
             "id": sim_id,
-            "steps": [
-                {
-                    "measure_dir_name": "BuildExistingModel",
-                    "arguments": bld_exist_model_args,
-                }
-            ],
+            "steps": steps,
             "created_at": dt.datetime.now().isoformat(),
             "measure_paths": ["measures", "resources/hpxml-measures"],
             "run_options": {"skip_zip_results": True},
         }
+        for measure in reversed(workflow_args.get("measures", [])):
+            osw["steps"].insert(2, measure)
 
-        osw["steps"].extend(
-            [
-                {
-                    "measure_dir_name": "HPXMLtoOpenStudio",
-                    "arguments": {
-                        "hpxml_path": "../../run/home.xml",
-                        "output_dir": "../../run",
-                        "debug": debug,
-                        "add_component_loads": add_component_loads,
-                        "skip_validation": True,
-                    },
-                }
-            ]
-        )
+        self.add_upgrade_step_to_osw(upgrade_idx, osw)
 
-        osw["steps"].extend(workflow_args.get("measures", []))
+        for reporting_measure in self.workflow_args.get("reporting_measures", []):
+            if "arguments" not in reporting_measure:
+                reporting_measure["arguments"] = {}
+            reporting_measure["measure_type"] = "ReportingMeasure"
+            osw["steps"].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
 
-        osw["steps"].extend(
-            [
-                {
-                    "measure_dir_name": "ReportSimulationOutput",
-                    "arguments": sim_out_rep_args,
-                },
-                {"measure_dir_name": "ReportHPXMLOutput", "arguments": {}},
-                {
-                    "measure_dir_name": "ReportUtilityBills",
-                    "arguments": util_bills_rep_args,
-                },
-                {"measure_dir_name": "UpgradeCosts", "arguments": {"debug": debug}},
-                {
-                    "measure_dir_name": "ServerDirectoryCleanup",
-                    "arguments": server_dir_cleanup_args,
-                },
-            ]
-        )
+        return osw
 
-        if upgrade_idx is not None:
+    def add_upgrade_step_to_osw(self, upgrade_idx, osw):
+        num_regular_upgrades = len(self.cfg.get("upgrades", []))
+        if upgrade_idx is None:
+            return
+
+        if upgrade_idx < num_regular_upgrades:
             measure_d = self.cfg["upgrades"][upgrade_idx]
             apply_upgrade_measure = {
                 "measure_dir_name": "ApplyUpgrade",
@@ -223,75 +202,165 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 apply_upgrade_measure["arguments"]["package_apply_logic"] = self.make_apply_logic_arg(
                     measure_d["package_apply_logic"]
                 )
+            osw["steps"].insert(1, apply_upgrade_measure)  # right after BuildExistingModel
 
-            build_existing_model_idx = [x["measure_dir_name"] == "BuildExistingModel" for x in osw["steps"]].index(True)
-            osw["steps"].insert(build_existing_model_idx + 1, apply_upgrade_measure)
-
-        for reporting_measure in workflow_args.get("reporting_measures", []):
-            if "arguments" not in reporting_measure:
-                reporting_measure["arguments"] = {}
-            reporting_measure["measure_type"] = "ReportingMeasure"
-            osw["steps"].insert(-1, reporting_measure)  # right before ServerDirectoryCleanup
-
-        return osw
-
-    def _get_server_dir_cleanup_args(self, workflow_args):
-        server_dir_cleanup_args = DEFAULT_MEASURE_ARGS["measures/ServerDirectoryCleanup"].copy()
-        server_dir_cleanup_args.update(workflow_args.get("server_directory_cleanup", {}))
-        return server_dir_cleanup_args
-
-    def _get_bill_report_args(self):
-        util_bills_rep_args = DEFAULT_MEASURE_ARGS["resources/hpxml-measures/ReportUtilityBills"].copy()
-        return util_bills_rep_args
-
-    def _get_sim_out_args(self, workflow_args):
+    def _get_measure_args(self, workflow_block_args, measure_dir_name, debug):
         """
-        Get the simulation output related arguments from the workflow_args to be added to the ReportSimulationOutput
-        measure argument
+        Get the arguments to the measure from the workflow_args and defaults. The arguments are filtered based
+        on the measure's measure.xml file. If an argument is not found in the measure.xml file, it is not
+        passed to the measure and a warning is logged.
         """
-        sim_out_rep_args = DEFAULT_MEASURE_ARGS["resources/hpxml-measures/ReportSimulationOutput"].copy()
-        sim_out_rep_args.update(workflow_args["simulation_output_report"])
-        if "output_variables" in sim_out_rep_args:
-            # convert list to comma separated string and change key name to user_output_variables
-            sim_out_rep_args["user_output_variables"] = ",".join(
-                [str(s.get("name")) for s in sim_out_rep_args["output_variables"]]
-            )
-            sim_out_rep_args.pop("output_variables")
+        xml_args = self.get_measure_arguments_from_xml(self.buildstock_dir, measure_dir_name)
+        measure_args = self.default_args.get(measure_dir_name, {}).copy()
+        measure_args.update(workflow_block_args)
+        for key in list(measure_args.keys()):
+            if key not in xml_args:
+                location = "workflow_generator" if key in workflow_block_args else "defaults"
+                logger.warning(
+                    f"'{key}' in {location} not found in '{measure_dir_name}'. This key will not be passed"
+                    " to the measure. This warning is expected if you are using older version of ResStock."
+                )
+                del measure_args[key]
+        if "debug" in xml_args:
+            measure_args["debug"] = debug
+        return measure_args
 
-        return sim_out_rep_args
+    def _get_mapped_args(self, workflow_args):
+        """
+        Get the arguments to various measures from the workflow_args. The mapping is defined in the ARG_MAP
+        """
+        measure_args = {}
+        for yaml_blockname, arg_maps in self.arg_map.items():
+            if yaml_blockname not in workflow_args:
+                continue
+            yaml_block = workflow_args[yaml_blockname]
+            self.recursive_dict_update(measure_args, self._get_mapped_args_from_block(yaml_block, arg_maps))
+        return measure_args
 
-    def _get_mapped_args(self, workflow2measure, entries):
-        """
-        Get the arguments from the workflow_args to be added to the BuildExistingModel measure argument
-        by mapping the workflow argument names to the measure argument names and aggregating the values
-        across multiple entries as a comma separated string
-        """
-        mapped_args = {}
-        for workflow_arg_name, measure_arg_name in workflow2measure.items():
-            workflow_arg_vals = [str(entry.get(workflow_arg_name, "")) for entry in entries]
-            mapped_args[measure_arg_name] = ",".join(workflow_arg_vals)
-        return mapped_args
+    @staticmethod
+    def get_measure_arguments_from_xml(buildstock_dir, measure_dir_name: str):
+        for measure_path in ["measures", "resources/hpxml-measures"]:
+            measure_dir_path = os.path.join(buildstock_dir, measure_path, measure_dir_name)
+            if os.path.isdir(measure_dir_path):
+                break
+        else:
+            raise ValueError(f"Measure '{measure_dir_name}' not found in any of the measure directories")
+        measure_xml_path = os.path.join(measure_dir_path, "measure.xml")
+        if not os.path.isfile(measure_xml_path):
+            raise ValueError(f"Measure '{measure_dir_name}' does not have a measure xml file")
+        arguments = set()
+        root = ElementTree.parse(measure_xml_path).getroot()
+        for argument in root.findall("./arguments/argument"):
+            name = argument.find("./name").text
+            arguments.add(name)
+        return arguments
 
-    def _get_bill_args(self, workflow_args):
+    @staticmethod
+    def recursive_dict_update(base_dict, new_dict):
         """
-        Get the utility bill related arguments from the workflow_args to be added to the BuildExistingModel
-        measure argument
+        Fully update a dictionary with another dictionary, traversing nested dictionaries
         """
-        bill_args = {}
-        if "utility_bills" not in workflow_args:
-            return bill_args
+        for key, value in new_dict.items():
+            if isinstance(value, dict):
+                base_dict.setdefault(key, {})
+                ResidentialHpxmlWorkflowGenerator.recursive_dict_update(base_dict[key], value)
+            else:
+                base_dict[key] = value
+        return True
 
-        utility_bills = workflow_args["utility_bills"]
-        arg_name_map = BUILD_EXISTING_MODEL_ARG_MAP["utility_bills"]
-        return self._get_mapped_args(arg_name_map, utility_bills)
+    @staticmethod
+    def _get_condensed_block(yaml_block):
+        """
+        If the yaml_block is a list of dicts, condense it into a single dict
+        with values being the list of values from the dicts in the list. If
+        a key is missing in a particular block, use empty string as the value.
 
-    def _get_emission_args(self, workflow_args):
+        The purpose of this function is to convert the certain blocks like utility_bills
+        and emissions into a single block with list values to be passed to the measures.
+        Example Input:
+        [
+            {"a": 1, "b": 2},
+            {"a": 3, "b": 4}
+        ]
+        Example Output:
+        {
+            "a": [1, 3],
+            "b": [2, 4]
+        }
+
+        Example Input2:
+        [
+            {"a": 1, "b": 2},
+            {"a": 3}
+        ]
+        Example Output2:
+        {
+            "a": [1, 3],
+            "b": [2, ""]
+        }
         """
-        Get the emission related arguments from the workflow_args to be added to the BuildExistingModel
-        measure argument
+        if not isinstance(yaml_block, list):
+            return yaml_block
+        condensed_block = {}
+        all_keys = set()
+        for block in yaml_block:
+            all_keys.update(block.keys())
+        for key in all_keys:
+            condensed_block[key] = [block.get(key, "") for block in yaml_block]
+        return condensed_block
+
+    @staticmethod
+    def _get_mapped_args_from_block(block, arg_maps: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, Any]]:
         """
-        emission_args = {}
-        if "emissions" not in workflow_args:
-            return emission_args
-        arg_name_mapping = BUILD_EXISTING_MODEL_ARG_MAP["emissions"]
-        return self._get_mapped_args(arg_name_mapping, workflow_args["emissions"])
+        Get the arguments to meaures using the ARG_MAP for the given block.
+        The block is either a dict or a list of dicts. If it is a list of dicts, it is
+        first condensed into a single dict using _get_condensed_block function.
+
+        The arg_maps is a dictionary with the destination measure name as the key
+        and a dictionary as the value. The value dictionary has the source argument name as the key
+        and the destination argument name as the value. The source argument name is the key in the
+        yaml and destination argument name is the key to be passed to the measure.
+
+        If a value is a list, it is joined into a comma separated string.
+        If a value is a list of dicts, then the "name" key is used to join into a comma separated string.
+        Otherwise, the value is passed as is.
+        Example Input:
+        {
+            "utility_bills": [
+                {"scenario_name": "scenario1", "simple_filepath": "file1"},
+                {"scenario_name": "scenario2", "simple_filepath": "file2"}
+            ],
+            ...
+            "report_simulation_output": {
+                "output_variables": [
+                    {"name": "var1"},
+                    {"name": "var2"}
+                ]
+            }
+        }
+        Example output:
+        {
+            "BuildExistingModel": {
+                "utility_bill_scenario_names": "scenario1,scenario2",
+                ...
+            },
+            "ReportSimulationOutput": {
+                "user_output_variables": "var1,va2",
+        }
+        """
+        block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(block)
+        measure_args = {}
+        for measure_dir_name, arg_map in arg_maps.items():
+            mapped_args = measure_args.setdefault(measure_dir_name, {})
+            for source_arg, dest_arg in arg_map.items():
+                if source_arg in block:
+                    # Use pop to remove the key from the block since it is already consumed
+                    if isinstance(block[source_arg], list):
+                        if isinstance(block[source_arg][0], dict):
+                            mapped_args[dest_arg] = ",".join(str(v.get("name", "")) for v in block.pop(source_arg))
+                        else:
+                            mapped_args[dest_arg] = ",".join(str(v) for v in block.pop(source_arg))
+                    else:
+                        mapped_args[dest_arg] = block.pop(source_arg)
+
+        return measure_args

@@ -1,18 +1,34 @@
-# Default values for various measure arguments used in the residential HPXML workflow generator is defined here.
-# This default values provide a means to use different defaults than the one defined in the measure itself.
+"""
+Default values for various measure arguments used in the residential HPXML workflow generator is defined here.
+This default values provide a means to use different defaults than the one defined in the measure itself.
 
+Structure of DEFAULT_MEASURE_ARGS:
+DEFAULT_MEASURE_ARGS = {
+    "MeasureDirName": {  <-- Directory name only, path will be automatically found
+        "measure_arg_name": "default_value",
+        ...
+    },
+    ...
+}
+"""
 
 DEFAULT_MEASURE_ARGS = {
-    "measures/BuildExistingModel": {
+    "BuildExistingModel": {
         "simulation_control_timestep": 60,
         "simulation_control_run_period_begin_month": 1,
         "simulation_control_run_period_begin_day_of_month": 1,
         "simulation_control_run_period_end_month": 12,
         "simulation_control_run_period_end_day_of_month": 31,
         "simulation_control_run_period_calendar_year": 2007,
-        "add_component_loads": False,
     },
-    "resources/hpxml-measures/ReportSimulationOutput": {
+    "HPXMLtoOpenStudio": {
+        "hpxml_path": "../../run/home.xml",
+        "output_dir": "../../run",
+        "debug": False,
+        "add_component_loads": False,
+        "skip_validation": True,
+    },
+    "ReportSimulationOutput": {
         "timeseries_frequency": "none",
         "include_timeseries_total_consumptions": False,
         "include_timeseries_fuel_consumptions": False,
@@ -50,8 +66,10 @@ DEFAULT_MEASURE_ARGS = {
         "timeseries_num_decimal_places": 3,
         "user_output_variables": "",
     },
-    "resources/hpxml-measures/ReportUtilityBills": {"include_annual_bills": True, "include_monthly_bills": False},
-    "measures/ServerDirectoryCleanup": {
+    "ReportHPXMLOutput": {},
+    "ReportUtilityBills": {"include_annual_bills": True, "include_monthly_bills": False},
+    "UpgradeCosts": {"debug": False},
+    "ServerDirectoryCleanup": {
         "retain_in_osm": False,
         "retain_in_idf": True,
         "retain_pre_process_idf": False,
