@@ -2,6 +2,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --tmp=1000000
+#SBATCH --reservation=h100-testing
+#SBATCH --partition=gpu-h100 
  
 echo "Job ID: $SLURM_JOB_ID"
 echo "Hostname: $HOSTNAME"
