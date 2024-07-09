@@ -1,5 +1,8 @@
 #!/bin/bash
 #SBATCH --tmp=1000000
+#SBATCH --reservation=h100-testing
+#SBATCH --partition=gpu-h100 
+ 
 
 echo "begin kestrel_postprocessing.sh"
 
