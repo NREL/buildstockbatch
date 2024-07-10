@@ -116,6 +116,8 @@ Arguments
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
   - ``add_timeseries_utc_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeUTC column. If the time zone UTC offset is not provided in the HPXML file, the time zone in the EPW header will be used.
   - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
+  - ``include_annual_bills``: Generates output file containing annual utility bills, and registers annual utility bills with the OpenStudio runner for downstream processing.
+  - ``include_monthly_bills``: Generates output file containing monthly utility bills, and registers monthly utility bills with the OpenStudio runner for downstream processing.
 
 - ``reporting_measures`` (optional): A list of additional reporting measures to apply to the workflow.
   Any columns reported by these additional measures will be appended to the results csv.

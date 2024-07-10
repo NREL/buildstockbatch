@@ -78,3 +78,11 @@ Development Changelog
         :pullreq: 456
 
         Refactor WorkflowGenerator.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: TODO
+
+        For the Residential HPXML Workflow Generator, exposes optional ``include_annual_bills`` and
+        ``include_monthly_bills`` arguments for reporting annual and monthly utility bill outputs,
+        respectively.

@@ -63,5 +63,11 @@ ARG_MAP = {
         "ReportSimulationOutput": {
             "output_variables": "user_output_variables",
         },
+        "ReportUtilityBills": {
+            "include_annual_bills": "include_annual_bills",
+            "register_annual_bills": "register_annual_bills",
+            "include_monthly_bills": "include_monthly_bills",
+            "register_monthly_bills": "register_monthly_bills",
+        },
     },
 }

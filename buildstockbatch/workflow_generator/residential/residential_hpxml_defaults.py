@@ -67,7 +67,12 @@ DEFAULT_MEASURE_ARGS = {
         "user_output_variables": "",
     },
     "ReportHPXMLOutput": {},
-    "ReportUtilityBills": {"include_annual_bills": True, "include_monthly_bills": False},
+    "ReportUtilityBills": {
+        "include_annual_bills": True,
+        "include_monthly_bills": False,
+        "register_annual_bills": True,
+        "register_monthly_bills": False,
+    },
     "UpgradeCosts": {"debug": False},
     "ServerDirectoryCleanup": {
         "retain_in_osm": False,
