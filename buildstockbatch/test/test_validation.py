@@ -191,6 +191,20 @@ def test_bad_measures(project_file):
 
 @pytest.mark.parametrize(
     "project_file",
+    [os.path.join(example_yml_dir, "enforce-validate-measures-missing-dir.yml")],
+)
+def test_missing_measures(project_file):
+    with LogCapture(level=logging.INFO) as _:
+        try:
+            BuildStockBatchBase.validate_workflow_generator(project_file)
+        except (ValidationError, YamaleError) as er:
+            assert "'QOIReport' not found" in str(er)
+        else:
+            raise Exception("Supposed to raise missing measure error for QOIReport")
+
+
+@pytest.mark.parametrize(
+    "project_file",
     [
         os.path.join(example_yml_dir, "enforce-validate-measures-good-2.yml"),
         os.path.join(example_yml_dir, "enforce-validate-measures-good-2-with-anchors.yml"),

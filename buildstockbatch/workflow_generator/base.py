@@ -12,6 +12,7 @@ This object contains the base class for generating OSW files from individual sam
 
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,8 +56,7 @@ class WorkflowGeneratorBase(object):
         elif isinstance(logic, str):
             return logic
 
-    @classmethod
-    def validate(cls, cfg):
+    def validate(self):
         """Validate the workflor generator arguments
 
         Replace this in your subclass.

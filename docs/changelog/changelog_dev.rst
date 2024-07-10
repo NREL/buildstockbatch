@@ -72,3 +72,9 @@ Development Changelog
         :pullreq: 450
 
         Requires ``os_version`` and ``os_sha`` in the project file.
+
+    .. change::
+        :tags: general
+        :pullreq: 456
+
+        Refactor WorkflowGenerator.

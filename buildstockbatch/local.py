@@ -48,7 +48,7 @@ class LocalBatch(BuildStockBatchBase):
         # Create simulation_output dir
         sim_out_ts_dir = os.path.join(self.results_dir, "simulation_output", "timeseries")
         os.makedirs(sim_out_ts_dir, exist_ok=True)
-        for i in range(0, len(self.cfg.get("upgrades", [])) + 1):
+        for i in range(0, self.num_upgrades + 1):
             os.makedirs(os.path.join(sim_out_ts_dir, f"up{i:02d}"), exist_ok=True)
 
         # Install custom gems to a volume that will be used by all workers
@@ -290,7 +290,7 @@ class LocalBatch(BuildStockBatchBase):
             self.cfg,
         )
         upgrade_sims = []
-        for i in range(len(self.cfg.get("upgrades", []))):
+        for i in range(self.num_upgrades):
             upgrade_sims.append(map(functools.partial(run_building_d, upgrade_idx=i), building_ids))
         if not self.skip_baseline_sims:
             baseline_sims = map(run_building_d, building_ids)
