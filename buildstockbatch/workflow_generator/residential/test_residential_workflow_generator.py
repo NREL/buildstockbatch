@@ -61,6 +61,7 @@ def test_residential_hpxml(mocker):
                         {"name": "Zone Mean Air Temperature"},
                         {"name": "Zone People Occupant Count"},
                     ],
+                    "include_monthly_bills": True,
                 },
                 "reporting_measures": [
                     {
@@ -180,8 +181,10 @@ def test_residential_hpxml(mocker):
 
     utility_bills_step = osw["steps"][7]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
-    assert utility_bills_step["arguments"]["include_annual_bills"] is True
+    assert utility_bills_step["arguments"]["include_annual_bills"] is False
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
+    assert utility_bills_step["arguments"]["register_annual_bills"] is True
+    assert utility_bills_step["arguments"]["register_monthly_bills"] is True
 
     upgrade_costs_step = osw["steps"][8]
     assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"

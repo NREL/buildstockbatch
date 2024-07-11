@@ -68,7 +68,7 @@ DEFAULT_MEASURE_ARGS = {
     },
     "ReportHPXMLOutput": {},
     "ReportUtilityBills": {
-        "include_annual_bills": True,
+        "include_annual_bills": False,
         "include_monthly_bills": False,
         "register_annual_bills": True,
         "register_monthly_bills": False,
