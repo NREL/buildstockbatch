@@ -105,7 +105,7 @@ def test_residential_hpxml(mocker):
     osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
 
     osw = osw_gen.create_osw(sim_id, building_id, 0)
-    assert len(osw["steps"]) == 12
+    assert len(osw["steps"]) == 11
 
     apply_upgrade_step = osw["steps"][1]
     assert apply_upgrade_step["measure_dir_name"] == "ApplyUpgrade"
@@ -131,13 +131,16 @@ def test_residential_hpxml(mocker):
     hpxml_to_os_step = osw["steps"][2]
     assert hpxml_to_os_step["measure_dir_name"] == "HPXMLtoOpenStudio"
 
-    assert osw["steps"][3]["measure_dir_name"] == "TestMeasure1"
-    assert osw["steps"][3]["arguments"]["TestMeasure1_arg1"] == 1
-    assert osw["steps"][3]["arguments"]["TestMeasure1_arg2"] == 2
-    assert osw["steps"][4]["measure_dir_name"] == "TestMeasure2"
-    assert osw["steps"][4].get("arguments") is None
+    upgrade_costs_step = osw["steps"][3]
+    assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
 
-    simulation_output_step = osw["steps"][5]
+    assert osw["steps"][4]["measure_dir_name"] == "TestMeasure1"
+    assert osw["steps"][4]["arguments"]["TestMeasure1_arg1"] == 1
+    assert osw["steps"][4]["arguments"]["TestMeasure1_arg2"] == 2
+    assert osw["steps"][5]["measure_dir_name"] == "TestMeasure2"
+    assert osw["steps"][5].get("arguments") is None
+
+    simulation_output_step = osw["steps"][6]
     assert simulation_output_step["measure_dir_name"] == "ReportSimulationOutput"
     assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
     assert simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
@@ -175,25 +178,19 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step["arguments"]["add_timeseries_dst_column"] is True
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
 
-    hpxml_output_step = osw["steps"][6]
-    assert hpxml_output_step["measure_dir_name"] == "ReportHPXMLOutput"
-
     utility_bills_step = osw["steps"][7]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
 
-    upgrade_costs_step = osw["steps"][8]
-    assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
+    assert osw["steps"][8]["measure_dir_name"] == "TestReportingMeasure1"
+    assert osw["steps"][8]["arguments"]["TestReportingMeasure1_arg1"] == "TestReportingMeasure1_val1"
+    assert osw["steps"][8]["arguments"]["TestReportingMeasure1_arg2"] == "TestReportingMeasure1_val2"
+    assert osw["steps"][9]["measure_dir_name"] == "TestReportingMeasure2"
+    assert osw["steps"][9]["arguments"]["TestReportingMeasure2_arg1"] == "TestReportingMeasure2_val1"
+    assert osw["steps"][9]["arguments"]["TestReportingMeasure2_arg2"] == "TestReportingMeasure2_val2"
 
-    assert osw["steps"][9]["measure_dir_name"] == "TestReportingMeasure1"
-    assert osw["steps"][9]["arguments"]["TestReportingMeasure1_arg1"] == "TestReportingMeasure1_val1"
-    assert osw["steps"][9]["arguments"]["TestReportingMeasure1_arg2"] == "TestReportingMeasure1_val2"
-    assert osw["steps"][10]["measure_dir_name"] == "TestReportingMeasure2"
-    assert osw["steps"][10]["arguments"]["TestReportingMeasure2_arg1"] == "TestReportingMeasure2_val1"
-    assert osw["steps"][10]["arguments"]["TestReportingMeasure2_arg2"] == "TestReportingMeasure2_val2"
-
-    server_dir_cleanup_step = osw["steps"][11]
+    server_dir_cleanup_step = osw["steps"][10]
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
 
 

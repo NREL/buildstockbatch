@@ -78,3 +78,10 @@ Development Changelog
         :pullreq: 456
 
         Refactor WorkflowGenerator.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: TODO
+
+        For the Residential HPXML Workflow Generator, supports the UpgradeCosts measure
+        changing from ReportingMeasure to ModelMeasure.

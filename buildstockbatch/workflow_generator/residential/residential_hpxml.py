@@ -125,15 +125,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         )
         debug = workflow_args.get("debug", False)
 
-        measure_args_mapping = {
-            "build_existing_model": "BuildExistingModel",
-            "hpxml_to_openstudio": "HPXMLtoOpenStudio",
-            "simulation_output_report": "ReportSimulationOutput",
-            "report_hpxml_output": "ReportHPXMLOutput",
-            "report_utility_bills": "ReportUtilityBills",
-            "upgrade_costs": "UpgradeCosts",
-            "server_directory_cleanup": "ServerDirectoryCleanup",
-        }
+        measure_args_mapping = self._get_measure_args_mapping()
 
         steps = []
         for key, measure_dir_name in measure_args_mapping.items():
@@ -223,6 +215,32 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             measure_args["debug"] = debug
         return measure_args
 
+    def _get_measure_args_mapping(self):
+        upg_costs_measure_attrs = self.get_measure_attributes_from_xml(self.buildstock_dir, "UpgradeCosts")
+        upg_costs_measure_type = upg_costs_measure_attrs["Measure Type"]
+        if upg_costs_measure_type == "ModelMeasure":
+            measure_args_mapping = {
+                "build_existing_model": "BuildExistingModel",
+                "hpxml_to_openstudio": "HPXMLtoOpenStudio",
+                "upgrade_costs": "UpgradeCosts",
+                "simulation_output_report": "ReportSimulationOutput",
+                "report_utility_bills": "ReportUtilityBills",
+                "server_directory_cleanup": "ServerDirectoryCleanup",
+            }
+        elif upg_costs_measure_type == "ReportingMeasure":
+            measure_args_mapping = {
+                "build_existing_model": "BuildExistingModel",
+                "hpxml_to_openstudio": "HPXMLtoOpenStudio",
+                "simulation_output_report": "ReportSimulationOutput",
+                "report_hpxml_output": "ReportHPXMLOutput",
+                "report_utility_bills": "ReportUtilityBills",
+                "upgrade_costs": "UpgradeCosts",
+                "server_directory_cleanup": "ServerDirectoryCleanup",
+            }
+        else:
+            raise ValueError(f"Measure Type '{upg_costs_measure_type}' not recognized for measure 'UpgradeCosts'")
+        return measure_args_mapping
+
     def _get_mapped_args(self, workflow_args):
         """
         Get the arguments to various measures from the workflow_args. The mapping is defined in the ARG_MAP
@@ -252,6 +270,25 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             name = argument.find("./name").text
             arguments.add(name)
         return arguments
+
+    @staticmethod
+    def get_measure_attributes_from_xml(buildstock_dir, measure_dir_name: str):
+        for measure_path in ["measures", "resources/hpxml-measures"]:
+            measure_dir_path = os.path.join(buildstock_dir, measure_path, measure_dir_name)
+            if os.path.isdir(measure_dir_path):
+                break
+        else:
+            raise ValueError(f"Measure '{measure_dir_name}' not found in any of the measure directories")
+        measure_xml_path = os.path.join(measure_dir_path, "measure.xml")
+        if not os.path.isfile(measure_xml_path):
+            raise ValueError(f"Measure '{measure_dir_name}' does not have a measure xml file")
+        attributes = {}
+        root = ElementTree.parse(measure_xml_path).getroot()
+        for attribute in root.findall("./attributes/attribute"):
+            name = attribute.find("./name").text
+            value = attribute.find("./value").text
+            attributes[name] = value
+        return attributes
 
     @staticmethod
     def recursive_dict_update(base_dict, new_dict):
