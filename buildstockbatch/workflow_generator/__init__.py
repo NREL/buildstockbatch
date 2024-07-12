@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from .commercial import CommercialDefaultWorkflowGenerator  # noqa F041
-from .residential_hpxml import ResidentialHpxmlWorkflowGenerator  # noqa F041
-from .residential_hpxml_hes import ResidentialHpxmlHesWorkflowGenerator  # noqa F041
+from .commercial.commercial import CommercialDefaultWorkflowGenerator  # noqa F041
+from .residential.residential_hpxml import ResidentialHpxmlWorkflowGenerator  # noqa F041
+from residential.residential_hpxml_hes import ResidentialHpxmlHesWorkflowGenerator  # noqa F041

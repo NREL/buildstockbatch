@@ -81,6 +81,10 @@ class BuildStockBatchBase(object):
         self.os_sha = self.cfg["os_sha"]
         logger.debug(f"Using OpenStudio version: {self.os_version} with SHA: {self.os_sha}")
 
+    @property
+    def num_upgrades(self):
+        return len(self.cfg.get("upgrades", []))
+
     @staticmethod
     def get_sampler_class(sampler_name):
         sampler_class_name = "".join(x.capitalize() for x in sampler_name.strip().split("_")) + "Sampler"
@@ -377,7 +381,7 @@ class BuildStockBatchBase(object):
     def validate_workflow_generator(cls, project_file):
         cfg = get_project_configuration(project_file)
         WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
-        return WorkflowGenerator.validate(cfg)
+        return WorkflowGenerator(cfg, 1).validate()
 
     @staticmethod
     def validate_project_schema(project_file):
