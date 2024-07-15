@@ -8,138 +8,204 @@ from buildstockbatch.test.shared_testing_stuff import resstock_directory
 import os
 import yamale
 import logging
+import copy
+import itertools
+import pytest
 
-
-def test_residential_hpxml(mocker):
-    sim_id = "bldb1up1"
-    building_id = 1
-    cfg = {
-        "buildstock_directory": resstock_directory,
-        "baseline": {"n_buildings_represented": 100},
-        "workflow_generator": {
-            "type": "residential_hpxml",
-            "args": {
-                "build_existing_model": {
-                    "simulation_control_run_period_begin_month": 2,
-                    "simulation_control_run_period_begin_day_of_month": 1,
-                    "simulation_control_run_period_end_month": 2,
-                    "simulation_control_run_period_end_day_of_month": 28,
-                    "simulation_control_run_period_calendar_year": 2010,
-                    "add_component_loads": True,
+test_cfg = {
+    "buildstock_directory": resstock_directory,
+    "baseline": {"n_buildings_represented": 100},
+    "workflow_generator": {
+        "type": "residential_hpxml",
+        "args": {
+            "build_existing_model": {
+                "simulation_control_timestep": 15,
+                "simulation_control_run_period_begin_month": 2,
+                "simulation_control_run_period_begin_day_of_month": 1,
+                "simulation_control_run_period_end_month": 2,
+                "simulation_control_run_period_end_day_of_month": 28,
+                "simulation_control_run_period_calendar_year": 2010,
+                "add_component_loads": True,
+            },
+            "emissions": [
+                {
+                    "scenario_name": "LRMER_MidCase_15",
+                    "type": "CO2e",
+                    "elec_folder": "data/emissions/cambium/2022/LRMER_MidCase_15",
+                    "gas_value": 147.3,
+                    "propane_value": 177.8,
+                    "oil_value": 195.9,
+                    "wood_value": 200.0,
                 },
-                "emissions": [
-                    {
-                        "scenario_name": "LRMER_MidCase_15",
-                        "type": "CO2e",
-                        "elec_folder": "data/emissions/cambium/2022/LRMER_MidCase_15",
-                        "gas_value": 147.3,
-                        "propane_value": 177.8,
-                        "oil_value": 195.9,
-                        "wood_value": 200.0,
-                    },
-                    {
-                        "scenario_name": "LRMER_HighCase_15",
-                        "type": "CO2e",
-                        "elec_folder": "data/emissions/cambium/2022/LRMER_HighCase_15",
-                        "gas_value": 187.3,
-                        "propane_value": 187.8,
-                        "oil_value": 199.9,
-                        "wood_value": 250.0,
-                    },
-                ],
-                "utility_bills": [
-                    {"scenario_name": "Bills", "elc_fixed_charge": 10.0, "elc_marginal_rate": 0.12},
-                    {"scenario_name": "Bills2", "gas_fixed_charge": 12.0, "gas_marginal_rate": 0.15},
-                ],
-                "simulation_output_report": {
-                    "timeseries_frequency": "hourly",
-                    "include_timeseries_total_consumptions": True,
-                    "include_timeseries_end_use_consumptions": True,
-                    "include_timeseries_total_loads": True,
-                    "include_timeseries_zone_temperatures": False,
-                    "output_variables": [
-                        {"name": "Zone Mean Air Temperature"},
-                        {"name": "Zone People Occupant Count"},
-                    ],
+                {
+                    "scenario_name": "LRMER_HighCase_15",
+                    "type": "CO2e",
+                    "elec_folder": "data/emissions/cambium/2022/LRMER_HighCase_15",
+                    "gas_value": 187.3,
+                    "propane_value": 187.8,
+                    "oil_value": 199.9,
+                    "wood_value": 250.0,
                 },
-                "reporting_measures": [
-                    {
-                        "measure_dir_name": "TestReportingMeasure1",
-                        "arguments": {
-                            "TestReportingMeasure1_arg1": "TestReportingMeasure1_val1",
-                            "TestReportingMeasure1_arg2": "TestReportingMeasure1_val2",
-                        },
-                    },
-                    {
-                        "measure_dir_name": "TestReportingMeasure2",
-                        "arguments": {
-                            "TestReportingMeasure2_arg1": "TestReportingMeasure2_val1",
-                            "TestReportingMeasure2_arg2": "TestReportingMeasure2_val2",
-                        },
-                    },
-                ],
-                "measures": [
-                    {
-                        "measure_dir_name": "TestMeasure1",
-                        "arguments": {
-                            "TestMeasure1_arg1": 1,
-                            "TestMeasure1_arg2": 2,
-                        },
-                    },
-                    {"measure_dir_name": "TestMeasure2"},
+            ],
+            "utility_bills": [
+                {"scenario_name": "Bills", "elc_fixed_charge": 10.0, "elc_marginal_rate": 0.12},
+                {"scenario_name": "Bills2", "gas_fixed_charge": 12.0, "gas_marginal_rate": 0.15},
+            ],
+            "simulation_output_report": {
+                "timeseries_frequency": "hourly",
+                "include_timeseries_total_consumptions": True,
+                "include_timeseries_end_use_consumptions": True,
+                "include_timeseries_total_loads": True,
+                "include_timeseries_zone_temperatures": True,
+                "output_variables": [
+                    {"name": "Zone Mean Air Temperature"},
+                    {"name": "Zone People Occupant Count"},
                 ],
             },
+            "server_directory_cleanup": {"retain_in_osm": True, "retain_eplusout_msgpack": True},
+            "reporting_measures": [
+                {
+                    "measure_dir_name": "TestReportingMeasure1",
+                    "arguments": {
+                        "TestReportingMeasure1_arg1": "TestReportingMeasure1_val1",
+                        "TestReportingMeasure1_arg2": "TestReportingMeasure1_val2",
+                    },
+                },
+                {
+                    "measure_dir_name": "TestReportingMeasure2",
+                    "arguments": {
+                        "TestReportingMeasure2_arg1": "TestReportingMeasure2_val1",
+                        "TestReportingMeasure2_arg2": "TestReportingMeasure2_val2",
+                    },
+                },
+            ],
+            "measures": [
+                {
+                    "measure_dir_name": "TestMeasure1",
+                    "arguments": {
+                        "TestMeasure1_arg1": 1,
+                        "TestMeasure1_arg2": 2,
+                    },
+                },
+                {"measure_dir_name": "TestMeasure2"},
+            ],
         },
-        "upgrades": [
-            {
-                "upgrade_name": "Upgrade 1",
-                "options": [
-                    {
-                        "option": "Parameter|Option",
-                    }
-                ],
-            }
-        ],
-    }
+    },
+    "upgrades": [
+        {
+            "upgrade_name": "Upgrade 1",
+            "options": [
+                {
+                    "option": "Parameter|Option",
+                }
+            ],
+        }
+    ],
+}
+
+
+def pytest_generate_tests(metafunc):
+    # Generate all possible combinations of blocks to remove
+    # The yaml file will not always contain all the blocks - it can be any subset of the blocks
+    if "blocks_to_remove" in metafunc.fixturenames:
+        arg_blocks = [
+            "build_existing_model",
+            "emissions",
+            "utility_bills",
+            "measures",
+            "reporting_measures",
+            "simulation_output_report",
+            "server_directory_cleanup",
+        ]
+        blocks_to_remove = []
+        for i in range(0, len(arg_blocks) + 1):
+            blocks_to_remove.extend(list(itertools.combinations(arg_blocks, i)))
+        metafunc.parametrize("blocks_to_remove", blocks_to_remove)
+
+
+@pytest.mark.parametrize("upgrade", [0, None])
+def test_residential_hpxml(upgrade, blocks_to_remove):
+    sim_id = "bldb1up1"
+    building_id = 1
     n_datapoints = 10
+    cfg = copy.deepcopy(test_cfg)
+
+    for block_name in blocks_to_remove:
+        del cfg["workflow_generator"]["args"][block_name]
+
     osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
+    osw = osw_gen.create_osw(sim_id, building_id, upgrade)
 
-    osw = osw_gen.create_osw(sim_id, building_id, 0)
-    assert len(osw["steps"]) == 12
+    index = 0
 
-    apply_upgrade_step = osw["steps"][1]
-    assert apply_upgrade_step["measure_dir_name"] == "ApplyUpgrade"
-    assert apply_upgrade_step["arguments"]["upgrade_name"] == "Upgrade 1"
-    assert apply_upgrade_step["arguments"]["run_measure"] == 1
-    assert apply_upgrade_step["arguments"]["option_1"] == "Parameter|Option"
-
-    build_existing_model_step = osw["steps"][0]
+    build_existing_model_step = osw["steps"][index]
     assert build_existing_model_step["measure_dir_name"] == "BuildExistingModel"
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_month"] == 2
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_day_of_month"] == 1
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_end_month"] == 2
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_end_day_of_month"] == 28
-    assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2010
 
-    assert build_existing_model_step["arguments"]["emissions_scenario_names"] == "LRMER_MidCase_15,LRMER_HighCase_15"
-    assert build_existing_model_step["arguments"]["emissions_natural_gas_values"] == "147.3,187.3"
+    if "build_existing_model" not in blocks_to_remove:
+        assert build_existing_model_step["arguments"]["simulation_control_timestep"] == 15
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_month"] == 2
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_day_of_month"] == 1
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_end_month"] == 2
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_end_day_of_month"] == 28
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2010
+    else:
+        # Defaults
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_month"] == 1
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_day_of_month"] == 1
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_end_month"] == 12
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_end_day_of_month"] == 31
+        assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2007
+        assert build_existing_model_step["arguments"]["simulation_control_timestep"] == 60
 
-    assert build_existing_model_step["arguments"]["utility_bill_scenario_names"] == "Bills,Bills2"
-    assert build_existing_model_step["arguments"]["utility_bill_natural_gas_fixed_charges"] == ",12.0"
-    assert build_existing_model_step["arguments"]["utility_bill_simple_filepaths"] == ","
+    if "emissions" not in blocks_to_remove:
+        assert (
+            build_existing_model_step["arguments"]["emissions_scenario_names"] == "LRMER_MidCase_15,LRMER_HighCase_15"
+        )
+        assert build_existing_model_step["arguments"]["emissions_natural_gas_values"] == "147.3,187.3"
 
-    hpxml_to_os_step = osw["steps"][2]
+    if "utility_bills" not in blocks_to_remove:
+        assert build_existing_model_step["arguments"]["utility_bill_scenario_names"] == "Bills,Bills2"
+        assert build_existing_model_step["arguments"]["utility_bill_natural_gas_fixed_charges"] == ",12.0"
+        assert build_existing_model_step["arguments"]["utility_bill_simple_filepaths"] == ","
+    index += 1
+
+    if upgrade is not None:
+        apply_upgrade_step = osw["steps"][index]
+        assert apply_upgrade_step["measure_dir_name"] == "ApplyUpgrade"
+        assert apply_upgrade_step["arguments"]["upgrade_name"] == "Upgrade 1"
+        assert apply_upgrade_step["arguments"]["run_measure"] == 1
+        assert apply_upgrade_step["arguments"]["option_1"] == "Parameter|Option"
+        index += 1
+
+    hpxml_to_os_step = osw["steps"][index]
     assert hpxml_to_os_step["measure_dir_name"] == "HPXMLtoOpenStudio"
+    index += 1
 
-    assert osw["steps"][3]["measure_dir_name"] == "TestMeasure1"
-    assert osw["steps"][3]["arguments"]["TestMeasure1_arg1"] == 1
-    assert osw["steps"][3]["arguments"]["TestMeasure1_arg2"] == 2
-    assert osw["steps"][4]["measure_dir_name"] == "TestMeasure2"
-    assert osw["steps"][4].get("arguments") is None
+    if "measures" not in blocks_to_remove:
+        assert osw["steps"][index]["measure_dir_name"] == "TestMeasure1"
+        assert osw["steps"][index]["arguments"]["TestMeasure1_arg1"] == 1
+        assert osw["steps"][index]["arguments"]["TestMeasure1_arg2"] == 2
+        index += 1
 
-    simulation_output_step = osw["steps"][5]
+        assert osw["steps"][index]["measure_dir_name"] == "TestMeasure2"
+        assert osw["steps"][index].get("arguments") is None
+        index += 1
+
+    simulation_output_step = osw["steps"][index]
     assert simulation_output_step["measure_dir_name"] == "ReportSimulationOutput"
-    assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
+    if "simulation_output_report" not in blocks_to_remove:
+        assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
+        assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is True
+        assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
+        assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
+        assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is True
+    else:  # Defaults
+        assert simulation_output_step["arguments"]["timeseries_frequency"] == "none"
+        assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is False
+        assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
+        assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
+        assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is False
+
     assert simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
     assert simulation_output_step["arguments"]["include_annual_fuel_consumptions"] is True
     assert simulation_output_step["arguments"]["include_annual_end_use_consumptions"] is True
@@ -155,18 +221,14 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step["arguments"]["include_annual_hot_water_uses"] is True
     assert simulation_output_step["arguments"]["include_annual_hvac_summary"] is True
     assert simulation_output_step["arguments"]["include_annual_resilience"] is True
-    assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is True
     assert simulation_output_step["arguments"]["include_timeseries_fuel_consumptions"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
     assert simulation_output_step["arguments"]["include_timeseries_system_use_consumptions"] is False
     assert simulation_output_step["arguments"]["include_timeseries_emissions"] is False
     assert simulation_output_step["arguments"]["include_timeseries_emission_fuels"] is False
     assert simulation_output_step["arguments"]["include_timeseries_emission_end_uses"] is False
     assert simulation_output_step["arguments"]["include_timeseries_hot_water_uses"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
     assert simulation_output_step["arguments"]["include_timeseries_component_loads"] is False
     assert simulation_output_step["arguments"]["include_timeseries_unmet_hours"] is False
-    assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is False
     assert simulation_output_step["arguments"]["include_timeseries_airflows"] is False
     assert simulation_output_step["arguments"]["include_timeseries_weather"] is False
     assert simulation_output_step["arguments"]["include_timeseries_resilience"] is False
@@ -174,27 +236,43 @@ def test_residential_hpxml(mocker):
     assert simulation_output_step["arguments"]["timeseries_num_decimal_places"] == 3
     assert simulation_output_step["arguments"]["add_timeseries_dst_column"] is True
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
+    # assert simulation_output_step["arguments"]["user_output_variables"] == "Zone Mean Air Temperature,Zone People Occupant Count"
+    index += 1
 
-    hpxml_output_step = osw["steps"][6]
+    hpxml_output_step = osw["steps"][index]
     assert hpxml_output_step["measure_dir_name"] == "ReportHPXMLOutput"
+    index += 1
 
-    utility_bills_step = osw["steps"][7]
+    utility_bills_step = osw["steps"][index]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
+    index += 1
 
-    upgrade_costs_step = osw["steps"][8]
+    upgrade_costs_step = osw["steps"][index]
     assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
+    index += 1
 
-    assert osw["steps"][9]["measure_dir_name"] == "TestReportingMeasure1"
-    assert osw["steps"][9]["arguments"]["TestReportingMeasure1_arg1"] == "TestReportingMeasure1_val1"
-    assert osw["steps"][9]["arguments"]["TestReportingMeasure1_arg2"] == "TestReportingMeasure1_val2"
-    assert osw["steps"][10]["measure_dir_name"] == "TestReportingMeasure2"
-    assert osw["steps"][10]["arguments"]["TestReportingMeasure2_arg1"] == "TestReportingMeasure2_val1"
-    assert osw["steps"][10]["arguments"]["TestReportingMeasure2_arg2"] == "TestReportingMeasure2_val2"
+    if "reporting_measures" not in blocks_to_remove:
+        assert osw["steps"][index]["measure_dir_name"] == "TestReportingMeasure1"
+        assert osw["steps"][index]["arguments"]["TestReportingMeasure1_arg1"] == "TestReportingMeasure1_val1"
+        assert osw["steps"][index]["arguments"]["TestReportingMeasure1_arg2"] == "TestReportingMeasure1_val2"
+        index += 1
 
-    server_dir_cleanup_step = osw["steps"][11]
+        assert osw["steps"][index]["measure_dir_name"] == "TestReportingMeasure2"
+        assert osw["steps"][index]["arguments"]["TestReportingMeasure2_arg1"] == "TestReportingMeasure2_val1"
+        assert osw["steps"][index]["arguments"]["TestReportingMeasure2_arg2"] == "TestReportingMeasure2_val2"
+        index += 1
+
+    server_dir_cleanup_step = osw["steps"][index]
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
+    if "server_directory_cleanup" not in blocks_to_remove:
+        assert server_dir_cleanup_step["arguments"]["retain_in_osm"] is True
+        assert server_dir_cleanup_step["arguments"]["retain_eplusout_msgpack"] is True
+    else:  # Defaults
+        assert server_dir_cleanup_step["arguments"]["retain_in_osm"] is False
+        assert server_dir_cleanup_step["arguments"]["retain_eplusout_msgpack"] is False
+    index += 1
 
 
 def test_old_resstock(mocker):
