@@ -117,12 +117,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
 
         measure_args = self._get_mapped_args(workflow_args)  # start with the mapped arguments
 
-        measure_args["BuildExistingModel"].update(
-            {
-                "building_id": building_id,
-                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
-            }
-        )
         debug = workflow_args.get("debug", False)
 
         measure_args_mapping = {
@@ -149,6 +143,13 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     "arguments": measure_args[measure_dir_name],
                 }
             )
+
+        measure_args["BuildExistingModel"].update(
+            {
+                "building_id": building_id,
+                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
+            }
+        )
 
         osw = {
             "id": sim_id,
