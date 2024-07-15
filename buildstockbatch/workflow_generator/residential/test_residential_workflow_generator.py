@@ -199,12 +199,17 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
         assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
         assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
         assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is True
+        assert (
+            simulation_output_step["arguments"]["user_output_variables"]
+            == "Zone Mean Air Temperature,Zone People Occupant Count"
+        )
     else:  # Defaults
         assert simulation_output_step["arguments"]["timeseries_frequency"] == "none"
         assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is False
         assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
         assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
         assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is False
+        assert simulation_output_step["arguments"]["user_output_variables"] == ""
 
     assert simulation_output_step["arguments"]["include_annual_total_consumptions"] is True
     assert simulation_output_step["arguments"]["include_annual_fuel_consumptions"] is True
@@ -236,7 +241,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
     assert simulation_output_step["arguments"]["timeseries_num_decimal_places"] == 3
     assert simulation_output_step["arguments"]["add_timeseries_dst_column"] is True
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
-    # assert simulation_output_step["arguments"]["user_output_variables"] == "Zone Mean Air Temperature,Zone People Occupant Count"
+
     index += 1
 
     hpxml_output_step = osw["steps"][index]
