@@ -18,6 +18,7 @@ test_cfg = {
     "workflow_generator": {
         "type": "residential_hpxml",
         "args": {
+            "debug": True,
             "build_existing_model": {
                 "simulation_control_timestep": 15,
                 "simulation_control_run_period_begin_month": 2,
@@ -126,7 +127,7 @@ def pytest_generate_tests(metafunc):
 @pytest.mark.parametrize("upgrade", [0, None])
 def test_residential_hpxml(upgrade, blocks_to_remove):
     sim_id = "bldb1up1"
-    building_id = 1
+    building_id = 13
     n_datapoints = 10
     cfg = copy.deepcopy(test_cfg)
 
@@ -140,6 +141,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     build_existing_model_step = osw["steps"][index]
     assert build_existing_model_step["measure_dir_name"] == "BuildExistingModel"
+    assert build_existing_model_step["arguments"]["building_id"] == building_id
 
     if "build_existing_model" not in blocks_to_remove:
         assert build_existing_model_step["arguments"]["simulation_control_timestep"] == 15
@@ -179,6 +181,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     hpxml_to_os_step = osw["steps"][index]
     assert hpxml_to_os_step["measure_dir_name"] == "HPXMLtoOpenStudio"
+    assert hpxml_to_os_step["arguments"]["debug"] is True
     index += 1
 
     if "measures" not in blocks_to_remove:
@@ -256,6 +259,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     upgrade_costs_step = osw["steps"][index]
     assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
+    assert upgrade_costs_step["arguments"]["debug"] is True
     index += 1
 
     if "reporting_measures" not in blocks_to_remove:
@@ -271,6 +275,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     server_dir_cleanup_step = osw["steps"][index]
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
+    assert server_dir_cleanup_step["arguments"]["debug"] is True
     if "server_directory_cleanup" not in blocks_to_remove:
         assert server_dir_cleanup_step["arguments"]["retain_in_osm"] is True
         assert server_dir_cleanup_step["arguments"]["retain_eplusout_msgpack"] is True
@@ -304,7 +309,7 @@ def test_old_resstock(mocker):
 
     with LogCapture(level=logging.INFO) as log:
         measure_args = osw_gen._get_measure_args(
-            cfg["workflow_generator"]["args"]["build_existing_model"], "BuildExistingModel", debug=False
+            cfg["workflow_generator"]["args"], "build_existing_model", "BuildExistingModel", debug=False
         )
         assert len(log.records) == 2
         all_msg = "\n".join([record.msg for record in log.records])
@@ -357,7 +362,7 @@ def test_hpmxl_schema_defaults_and_mapping():
 
 def test_block_compression_and_argmap():
     test_wf_arg = {
-        "block1": {"key1": "v1", "key2": "v2", "key3": ["v3", "v4"]},
+        "block1": {"key1": "v1", "key2": "v2", "key3": ["v3", "v4"], "key4": "v4"},
         "block2": [
             {
                 "key1": "val1",
@@ -374,40 +379,44 @@ def test_block_compression_and_argmap():
     compressed_block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(test_wf_arg["block2"])
     assert compressed_block == {"key1": ["val1", "val11"], "key2": ["val2", ""], "key3": ["", "val33"]}
     arg_map = {
-        "block1": {
-            "measure1": {
-                # "key1": "arg1",  # key1 is not to be passed
+        "measure1": {
+            "block1": {
+                # "key1": "arg1",  # key1 is passed to measure 2
                 "key2": "arg2",
                 "key3": "arg3",
-            },
+            }
         },
-        "block2": {
-            "measure2": {
+        "measure2": {
+            "block2": {
                 "key1": "arg1",
                 "key2": "arg2",
                 "key3": "arg3",
             },
+            "block1": {"key1": "arg4"},
         },
     }
     measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
-        test_wf_arg["block1"], arg_map["block1"]
+        test_wf_arg["block1"], arg_map["measure1"]["block1"]
     )
     assert measure_args == {
-        "measure1": {
-            "arg2": "v2",
-            "arg3": "v3,v4",
-        }
+        "arg2": "v2",
+        "arg3": "v3,v4",
     }
     measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
-        test_wf_arg["block2"], arg_map["block2"]
+        test_wf_arg["block1"], arg_map["measure2"]["block1"]
     )
     assert measure_args == {
-        "measure2": {
-            "arg1": "val1,val11",
-            "arg2": "val2,",
-            "arg3": ",val33",
-        }
+        "arg4": "v1",
     }
 
-    # Only key1 should be remaining since the other two is already mapped to measure
-    assert test_wf_arg["block1"] == {"key1": "v1"}
+    measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
+        test_wf_arg["block2"], arg_map["measure2"]["block2"]
+    )
+    assert measure_args == {
+        "arg1": "val1,val11",
+        "arg2": "val2,",
+        "arg3": ",val33",
+    }
+
+    # Only key4 should be remaining since the other three is already mapped to measure
+    assert test_wf_arg["block1"] == {"key4": "v4"}
