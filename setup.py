@@ -41,7 +41,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     python_requires=">=3.8",
     package_data={
-        "buildstockbatch": ["*.sh", "schemas/*.yaml"],
+        "buildstockbatch": ["*.sh", "schemas/*.yaml", "workflow_generator/residential/*.yml"],
         "": ["LICENSE"],
     },
     install_requires=[
