@@ -101,7 +101,7 @@ jobs:
       - name: Install buildstockbatch
         run: |
           python -m pip install --progress-bar off --upgrade pip
-          pip install git+https://github.com/NREL/buildstockbatch.git@${{ github.ref_name }}
+          pip install git+https://github.com/NREL/buildstockbatch.git@${{ github.head_ref }}
       - name: Run local validation of project national yml
         run: |
           cd resstock
