@@ -890,18 +890,18 @@ def user_cli(Batch: SlurmBatch, argv: list):
     # validate the project, and in case of the --validateonly flag return True if validation passes
     Batch.validate_project(project_filename)
     if args.validateonly:
-        return True
+        return
 
     # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
         batch = Batch(project_filename)
         batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return True
+        return
 
     if args.rerun_failed:
         batch = Batch(project_filename)
         batch.rerun_failed_jobs(hipri=args.hipri)
-        return True
+        return
 
     # otherwise, queue up the whole buildstockbatch process
     # the main work of the first job is to run the sampling script ...
