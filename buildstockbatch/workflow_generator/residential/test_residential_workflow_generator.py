@@ -106,9 +106,9 @@ test_cfg = {
 
 
 def pytest_generate_tests(metafunc):
-    # Generate all possible combinations of blocks to remove
-    # The yaml file will not always contain all the blocks - it can be any subset of the blocks
-    if "blocks_to_remove" in metafunc.fixturenames:
+    # Generate various combinations of blocks in the configuration file
+    # because the yaml file will not always contain all the blocks - it can be any subset of the blocks
+    if "dynamic_cfg" in metafunc.fixturenames:
         arg_blocks = [
             "build_existing_model",
             "emissions",
@@ -121,18 +121,50 @@ def pytest_generate_tests(metafunc):
         blocks_to_remove = []
         for i in range(0, len(arg_blocks) + 1):
             blocks_to_remove.extend(list(itertools.combinations(arg_blocks, i)))
-        metafunc.parametrize("blocks_to_remove", blocks_to_remove)
+
+        cfg_variants = []
+        for blocks in blocks_to_remove:
+            cfg = copy.deepcopy(test_cfg)
+            for block_name in blocks:
+                del cfg["workflow_generator"]["args"][block_name]
+            cfg_variants.append(cfg)
+
+            # Add a variant without the add_component_loads key
+            if "build_existing_model" not in blocks:
+                cfg = copy.deepcopy(cfg)
+                del cfg["workflow_generator"]["args"]["build_existing_model"]["add_component_loads"]
+                cfg_variants.append(cfg)
+
+            # Add a variant with only one emissions scenario
+            if "emissions" not in blocks:
+                cfg = copy.deepcopy(cfg)
+                cfg["workflow_generator"]["args"]["emissions"].pop()
+                cfg_variants.append(cfg)
+
+            # Add a variant with only one utility bill scenario
+            if "utility_bills" not in blocks:
+                cfg = copy.deepcopy(cfg)
+                cfg["workflow_generator"]["args"]["utility_bills"].pop()
+                cfg_variants.append(cfg)
+
+            # Add a variant with only one output_variable, and no output_variables key
+            if "simulation_output_report" not in blocks:
+                cfg = copy.deepcopy(cfg)
+                cfg["workflow_generator"]["args"]["simulation_output_report"]["output_variables"].pop()
+                cfg_variants.append(cfg)
+                cfg = copy.deepcopy(cfg)
+                del cfg["workflow_generator"]["args"]["simulation_output_report"]["output_variables"]
+                cfg_variants.append(cfg)
+
+        metafunc.parametrize("dynamic_cfg", cfg_variants)
 
 
 @pytest.mark.parametrize("upgrade", [0, None])
-def test_residential_hpxml(upgrade, blocks_to_remove):
+def test_residential_hpxml(upgrade, dynamic_cfg):
     sim_id = "bldb1up1"
     building_id = 13
     n_datapoints = 10
-    cfg = copy.deepcopy(test_cfg)
-
-    for block_name in blocks_to_remove:
-        del cfg["workflow_generator"]["args"][block_name]
+    cfg = copy.deepcopy(dynamic_cfg)
 
     osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
     osw = osw_gen.create_osw(sim_id, building_id, upgrade)
@@ -143,7 +175,9 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
     assert build_existing_model_step["measure_dir_name"] == "BuildExistingModel"
     assert build_existing_model_step["arguments"]["building_id"] == building_id
 
-    if "build_existing_model" not in blocks_to_remove:
+    workflow_args = cfg["workflow_generator"].get("args", {})
+
+    if "build_existing_model" in workflow_args:
         assert build_existing_model_step["arguments"]["simulation_control_timestep"] == 15
         assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_month"] == 2
         assert build_existing_model_step["arguments"]["simulation_control_run_period_begin_day_of_month"] == 1
@@ -159,16 +193,25 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
         assert build_existing_model_step["arguments"]["simulation_control_run_period_calendar_year"] == 2007
         assert build_existing_model_step["arguments"]["simulation_control_timestep"] == 60
 
-    if "emissions" not in blocks_to_remove:
-        assert (
-            build_existing_model_step["arguments"]["emissions_scenario_names"] == "LRMER_MidCase_15,LRMER_HighCase_15"
-        )
-        assert build_existing_model_step["arguments"]["emissions_natural_gas_values"] == "147.3,187.3"
+    if "emissions" in workflow_args:
 
-    if "utility_bills" not in blocks_to_remove:
-        assert build_existing_model_step["arguments"]["utility_bill_scenario_names"] == "Bills,Bills2"
-        assert build_existing_model_step["arguments"]["utility_bill_natural_gas_fixed_charges"] == ",12.0"
-        assert build_existing_model_step["arguments"]["utility_bill_simple_filepaths"] == ","
+        assert build_existing_model_step["arguments"]["emissions_scenario_names"] == ",".join(
+            e["scenario_name"] for e in workflow_args["emissions"]
+        )
+        assert build_existing_model_step["arguments"]["emissions_natural_gas_values"] == ",".join(
+            str(e["gas_value"]) for e in workflow_args["emissions"]
+        )
+
+    if "utility_bills" in workflow_args:
+        assert build_existing_model_step["arguments"]["utility_bill_scenario_names"] == ",".join(
+            u["scenario_name"] for u in workflow_args["utility_bills"]
+        )
+        assert build_existing_model_step["arguments"]["utility_bill_natural_gas_fixed_charges"] == ",".join(
+            str(u.get("gas_fixed_charge", "")) for u in workflow_args["utility_bills"]
+        )
+        assert build_existing_model_step["arguments"]["utility_bill_simple_filepaths"] == ",".join(
+            u.get("simple_filepath", "") for u in workflow_args["utility_bills"]
+        )
     index += 1
 
     if upgrade is not None:
@@ -181,10 +224,16 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     hpxml_to_os_step = osw["steps"][index]
     assert hpxml_to_os_step["measure_dir_name"] == "HPXMLtoOpenStudio"
+    if "build_existing_model" in workflow_args:
+        assert hpxml_to_os_step["arguments"]["add_component_loads"] == workflow_args["build_existing_model"].get(
+            "add_component_loads", False
+        )
+    else:
+        assert hpxml_to_os_step["arguments"]["add_component_loads"] is False
     assert hpxml_to_os_step["arguments"]["debug"] is True
     index += 1
 
-    if "measures" not in blocks_to_remove:
+    if "measures" in workflow_args:
         assert osw["steps"][index]["measure_dir_name"] == "TestMeasure1"
         assert osw["steps"][index]["arguments"]["TestMeasure1_arg1"] == 1
         assert osw["steps"][index]["arguments"]["TestMeasure1_arg2"] == 2
@@ -196,16 +245,16 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
 
     simulation_output_step = osw["steps"][index]
     assert simulation_output_step["measure_dir_name"] == "ReportSimulationOutput"
-    if "simulation_output_report" not in blocks_to_remove:
+    if "simulation_output_report" in workflow_args:
         assert simulation_output_step["arguments"]["timeseries_frequency"] == "hourly"
         assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is True
         assert simulation_output_step["arguments"]["include_timeseries_end_use_consumptions"] is True
         assert simulation_output_step["arguments"]["include_timeseries_total_loads"] is True
         assert simulation_output_step["arguments"]["include_timeseries_zone_temperatures"] is True
-        assert (
-            simulation_output_step["arguments"]["user_output_variables"]
-            == "Zone Mean Air Temperature,Zone People Occupant Count"
-        )
+        if "output_variables" in workflow_args["simulation_output_report"]:
+            assert simulation_output_step["arguments"]["user_output_variables"] == ",".join(
+                v["name"] for v in workflow_args["simulation_output_report"]["output_variables"]
+            )
     else:  # Defaults
         assert simulation_output_step["arguments"]["timeseries_frequency"] == "none"
         assert simulation_output_step["arguments"]["include_timeseries_total_consumptions"] is False
@@ -262,7 +311,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
     assert upgrade_costs_step["arguments"]["debug"] is True
     index += 1
 
-    if "reporting_measures" not in blocks_to_remove:
+    if "reporting_measures" in workflow_args:
         assert osw["steps"][index]["measure_dir_name"] == "TestReportingMeasure1"
         assert osw["steps"][index]["arguments"]["TestReportingMeasure1_arg1"] == "TestReportingMeasure1_val1"
         assert osw["steps"][index]["arguments"]["TestReportingMeasure1_arg2"] == "TestReportingMeasure1_val2"
@@ -276,7 +325,7 @@ def test_residential_hpxml(upgrade, blocks_to_remove):
     server_dir_cleanup_step = osw["steps"][index]
     assert server_dir_cleanup_step["measure_dir_name"] == "ServerDirectoryCleanup"
     assert server_dir_cleanup_step["arguments"]["debug"] is True
-    if "server_directory_cleanup" not in blocks_to_remove:
+    if "server_directory_cleanup" in workflow_args:
         assert server_dir_cleanup_step["arguments"]["retain_in_osm"] is True
         assert server_dir_cleanup_step["arguments"]["retain_eplusout_msgpack"] is True
     else:  # Defaults
@@ -384,6 +433,8 @@ def test_block_compression_and_argmap():
                 # "key1": "arg1",  # key1 is passed to measure 2
                 "key2": "arg2",
                 "key3": "arg3",
+                "key_not_in_block": "arg5",
+                "key_not_in_block2": "arg6",
             }
         },
         "measure2": {
@@ -396,21 +447,23 @@ def test_block_compression_and_argmap():
         },
     }
     measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
-        test_wf_arg["block1"], arg_map["measure1"]["block1"]
+        test_wf_arg["block1"], arg_map["measure1"]["block1"], {"arg6": False}
     )
     assert measure_args == {
         "arg2": "v2",
         "arg3": "v3,v4",
+        "arg5": "",
+        "arg6": False,
     }
     measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
-        test_wf_arg["block1"], arg_map["measure2"]["block1"]
+        test_wf_arg["block1"], arg_map["measure2"]["block1"], {}
     )
     assert measure_args == {
         "arg4": "v1",
     }
 
     measure_args = ResidentialHpxmlWorkflowGenerator._get_mapped_args_from_block(
-        test_wf_arg["block2"], arg_map["measure2"]["block2"]
+        test_wf_arg["block2"], arg_map["measure2"]["block2"], {}
     )
     assert measure_args == {
         "arg1": "val1,val11",

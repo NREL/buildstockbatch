@@ -235,7 +235,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             if yaml_blockname not in workflow_args:
                 continue
             yaml_block = workflow_args[yaml_blockname]
-            measure_args.update(self._get_mapped_args_from_block(yaml_block, arg_map))
+            measure_args.update(
+                self._get_mapped_args_from_block(yaml_block, arg_map, self.default_args.get(measure_dir_name, {}))
+            )
         return measure_args
 
     @staticmethod
@@ -298,7 +300,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         return condensed_block
 
     @staticmethod
-    def _get_mapped_args_from_block(block, arg_map: Dict[str, str]) -> Dict[str, Any]:
+    def _get_mapped_args_from_block(block, arg_map: Dict[str, str], default_args) -> Dict[str, Any]:
         """
         Get the arguments to meaures using the ARG_MAP for the given block.
         The block is either a dict or a list of dicts. If it is a list of dicts, it is
@@ -356,6 +358,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 else:
                     mapped_args[dest_arg] = block.pop(source_arg)
             else:
-                mapped_args[dest_arg] = ",".join([""] * block_count)
+                if block_count > 1:
+                    mapped_args[dest_arg] = ",".join([str(default_args.get(dest_arg, ""))] * block_count)
+                else:
+                    mapped_args[dest_arg] = default_args.get(dest_arg, "")
 
         return mapped_args
