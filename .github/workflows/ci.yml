@@ -118,12 +118,10 @@ jobs:
           python -m pip install --progress-bar off --upgrade pip
           pip install git+https://github.com/NREL/buildstockbatch.git@${{ github.head_ref }}
       - name: Run local validation of project national yml
-        run: |
-          cd resstock
-          buildstock_local --validateonly project_national/national_baseline.yml
+        run: buildstock_local --validateonly resstock/project_national/national_baseline.yml
       - name: Validate upgrades
-        run: buildstock_local --validateonly project_national/national_upgrades.yml
+        run: buildstock_local --validateonly resstock/project_national/national_upgrades.yml
       - name: Validate testing projects
-        run: buildstock_local --validateonly project_testing/testing_baseline.yml
+        run: buildstock_local --validateonly resstock/project_testing/testing_baseline.yml
       - name: Validate testing upgrades
-        run: buildstock_local --validateonly project_testing/testing_upgrades.yml
+        run: buildstock_local --validateonly resstock/project_testing/testing_upgrades.yml
