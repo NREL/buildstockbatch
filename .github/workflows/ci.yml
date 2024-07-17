@@ -23,7 +23,7 @@ jobs:
         with:
           repository: NREL/resstock
           path: resstock
-          ref: develop
+          ref: res-reporting
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
