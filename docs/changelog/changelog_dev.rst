@@ -81,7 +81,7 @@ Development Changelog
 
     .. change::
         :tags: general, feature
-        :pullreq: TODO
+        :pullreq: 458
 
         For the Residential HPXML Workflow Generator, supports the UpgradeCosts measure
         changing from ReportingMeasure to ModelMeasure.
