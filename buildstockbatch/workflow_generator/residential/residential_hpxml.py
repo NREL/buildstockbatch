@@ -126,8 +126,25 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         steps = []
         measure_args = {}
         debug = workflow_args.get("debug", False)
+
+        # start with defaults
         for workflow_key, measure_name in workflow_key_to_measure_names.items():
-            measure_args[measure_name] = self._get_measure_args(workflow_args, workflow_key, measure_name, debug)
+            measure_args[measure_name] = self.default_args.get(measure_name, {}).copy()
+
+        # update with mapped args
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            measure_args[measure_name].update(self._get_mapped_args(workflow_args, measure_name))
+
+        # update with workflow block args
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            measure_args[measure_name].update(workflow_args.get(workflow_key, {}).copy())
+
+        # Verify the arguments and add to steps
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            xml_args = self.get_measure_arguments_from_xml(self.buildstock_dir, measure_name)
+            self._validate_against_xml_args(measure_args[measure_name], measure_name, xml_args)
+            if "debug" in xml_args:
+                measure_args[measure_name]["debug"] = debug
             steps.append(
                 {
                     "measure_dir_name": measure_name,
@@ -194,33 +211,20 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             )
         osw["steps"].insert(1, apply_upgrade_measure)  # right after BuildExistingModel
 
-    def _get_measure_args(self, workflow_args, workflow_key, measure_dir_name, debug):
+    def _validate_against_xml_args(self, measure_args, measure_dir_name, xml_args):
         """
-        Get the arguments to the measure from the workflow_args and defaults. The arguments are filtered based
-        on the measure's measure.xml file. If an argument is not found in the measure.xml file, it is not
-        passed to the measure and a warning is logged.
+        Check if the arguments in the measure_args are valid for the measure_dir_name
+        based on the measure.xml file in the measure directory.
+        Optionally add the debug argument if it is present in the measure.xml file.
         """
         xml_args = self.get_measure_arguments_from_xml(self.buildstock_dir, measure_dir_name)
-        measure_args = {}
-
-        default_args = self.default_args.get(measure_dir_name, {}).copy()
-        mapped_args = self._get_mapped_args(workflow_args, measure_dir_name)
-        workflow_block_args = workflow_args.get(workflow_key, {}).copy()
-
-        for update_dict in [default_args, mapped_args, workflow_block_args]:
-            measure_args.update(update_dict)
-
         for key in list(measure_args.keys()):
             if key not in xml_args:
-                location = "workflow_generator" if key in workflow_block_args else "defaults"
                 logger.warning(
-                    f"'{key}' in {location} not found in '{measure_dir_name}'. This key will not be passed"
+                    f"'{key}' not found in '{measure_dir_name}'. This key will not be passed"
                     " to the measure. This warning is expected if you are using older version of ResStock."
                 )
                 del measure_args[key]
-        if "debug" in xml_args:
-            measure_args["debug"] = debug
-        return measure_args
 
     def _get_mapped_args(
         self,
