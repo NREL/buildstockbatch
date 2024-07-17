@@ -403,10 +403,9 @@ def test_hpmxl_schema_defaults_and_mapping():
 
     assert_valid_keys("BuildExistingModel", "build_existing_model", {"add_component_loads"})
     assert_valid_keys("HPXMLtoOpenStudio", None, set())
-    assert_valid_keys("ReportSimulationOutput", "simulation_output_report", {"output_variables"})
-    assert_valid_keys("ReportHPXMLOutput", None, set())
-    assert_valid_keys("ReportUtilityBills", None, set())
     assert_valid_keys("UpgradeCosts", None, set())
+    assert_valid_keys("ReportSimulationOutput", "simulation_output_report", {"output_variables"})
+    assert_valid_keys("ReportUtilityBills", None, set())
     assert_valid_keys("ServerDirectoryCleanup", "server_directory_cleanup", set())
 
 
