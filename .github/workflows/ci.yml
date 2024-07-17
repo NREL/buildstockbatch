@@ -90,12 +90,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: NREL/resstock
           path: resstock
-          ref: develop
-      - uses: actions/setup-python@v4
+          ref: latest-os-hpxml
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.11
       - name: Download weather
