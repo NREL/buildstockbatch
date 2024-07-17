@@ -8,7 +8,7 @@ on:
       - synchronize
       - opened
 jobs:
-  tests:
+  full_tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -85,3 +85,43 @@ jobs:
         with:
           name: documentation
           path: buildstockbatch/docs/_build/html/
+  pip_install_test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          repository: NREL/resstock
+          path: resstock
+          ref: develop
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      - name: Download weather
+        run: |
+          mkdir weather
+          cd weather
+          wget --quiet https://data.nrel.gov/system/files/156/BuildStock_TMY3_FIPS.zip
+      - name: Download and Install OpenStudio
+        run: |
+          sudo snap install yq
+          export OS_VER=`yq '.os_version' resstock/project_national/national_baseline.yml`
+          export OS_SHA=`yq '.os_sha' resstock/project_national/national_baseline.yml`
+          export OS_INSTALLER_FILENAME="OpenStudio-${OS_VER}+${OS_SHA}-Ubuntu-22.04-x86_64.deb"
+          wget -q "https://github.com/NREL/OpenStudio/releases/download/v${OS_VER}/${OS_INSTALLER_FILENAME}"
+          sudo apt install -y "./${OS_INSTALLER_FILENAME}"
+          openstudio openstudio_version
+          which openstudio
+      - name: Install buildstockbatch
+        run: |
+          python -m pip install --progress-bar off --upgrade pip
+          pip install git+https://github.com/NREL/buildstockbatch.git@${{ github.head_ref }}
+      - name: Run local validation of project national yml
+        run: buildstock_local --validateonly resstock/project_national/national_baseline.yml
+      - name: Validate upgrades
+        run: buildstock_local --validateonly resstock/project_national/national_upgrades.yml
+      - name: Validate testing projects
+        run: buildstock_local --validateonly resstock/project_testing/testing_baseline.yml
+      - name: Validate testing upgrades
+        run: buildstock_local --validateonly resstock/project_testing/testing_upgrades.yml
