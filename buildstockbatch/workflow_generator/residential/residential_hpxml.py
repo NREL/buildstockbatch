@@ -231,17 +231,15 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                 "server_directory_cleanup": "ServerDirectoryCleanup",
             }
         elif upg_costs_measure_type == "ReportingMeasure":
-            measure_args_mapping = (
-                {  # This is the order the osw steps will be in if UpgradeCosts is ReportingMeasure (old workflow)
-                    "build_existing_model": "BuildExistingModel",
-                    "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
-                    "simulation_output_report": "ReportSimulationOutput",
-                    "report_hpxml_output": "ReportHPXMLOutput",
-                    "report_utility_bills": "ReportUtilityBills",
-                    "upgrade_costs": "UpgradeCosts",
-                    "server_directory_cleanup": "ServerDirectoryCleanup",
-                }
-            )
+            measure_args_mapping = {  # This is the order the osw steps will be in if UpgradeCosts is ReportingMeasure
+                "build_existing_model": "BuildExistingModel",
+                "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
+                "simulation_output_report": "ReportSimulationOutput",
+                "report_hpxml_output": "ReportHPXMLOutput",
+                "report_utility_bills": "ReportUtilityBills",
+                "upgrade_costs": "UpgradeCosts",
+                "server_directory_cleanup": "ServerDirectoryCleanup",
+            }
         else:
             raise ValueError(f"Measure Type '{upg_costs_measure_type}' not recognized for measure 'UpgradeCosts'")
         return measure_args_mapping
