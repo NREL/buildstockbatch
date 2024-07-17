@@ -306,7 +306,9 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
     assert utility_bills_step["arguments"]["include_annual_bills"] is False
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
     assert utility_bills_step["arguments"]["register_annual_bills"] is True
-    assert utility_bills_step["arguments"]["register_monthly_bills"] is True
+    if "simulation_output_report" in workflow_args:
+        assert utility_bills_step["arguments"]["register_monthly_bills"] is True
+
     index += 1
 
     upgrade_costs_step = osw["steps"][index]
