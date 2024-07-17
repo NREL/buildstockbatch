@@ -334,7 +334,7 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
     index += 1
 
 
-def test_old_resstock(mocker):
+def test_missing_arg_warning():
     """
     Some keys defined in schema can be unavailable in the measure.
     This test verifies that such keys are not passed to the measure, but warnings are raised.
@@ -347,6 +347,7 @@ def test_old_resstock(mocker):
             "args": {
                 "build_existing_model": {
                     "simulation_control_run_period_begin_month": 2,
+                    "add_component_loads": True,
                     "new_key1": "test_value",  # simulate old resstock by adding a new key not in the measure
                 },
             },
@@ -357,15 +358,19 @@ def test_old_resstock(mocker):
     osw_gen.default_args["BuildExistingModel"]["new_key2"] = "test_value"
 
     with LogCapture(level=logging.INFO) as log:
-        measure_args = osw_gen._get_measure_args(
-            cfg["workflow_generator"]["args"], "build_existing_model", "BuildExistingModel", debug=False
-        )
+        measure_args = osw_gen.create_osw("bldb1up1", 13, None)
         assert len(log.records) == 2
         all_msg = "\n".join([record.msg for record in log.records])
-        assert "'new_key1' in workflow_generator not found in 'BuildExistingModel'" in all_msg
-        assert "'new_key2' in defaults not found in 'BuildExistingModel'" in all_msg
+        assert "'new_key1' not found in 'BuildExistingModel'" in all_msg
+        assert "'new_key2' not found in 'BuildExistingModel'" in all_msg
     assert "new_key1" not in measure_args
     assert "new_key2" not in measure_args
+
+    del cfg["workflow_generator"]["args"]["build_existing_model"]["new_key1"]
+    osw_gen = ResidentialHpxmlWorkflowGenerator(cfg, n_datapoints)
+    with LogCapture(level=logging.INFO) as log:
+        measure_args = osw_gen.create_osw("bldb1up1", 13, None)
+        assert len(log.records) == 0
 
 
 def test_hpmxl_schema_defaults_and_mapping():
