@@ -1360,7 +1360,7 @@ def main():
         # validate the project, and in case of the --validateonly flag return True if validation passes
         AwsBatch.validate_project(os.path.abspath(args.project_filename))
         if args.validateonly:
-            return True
+            return
 
         batch = AwsBatch(args.project_filename)
         if args.clean:
