@@ -10,8 +10,8 @@ This ARG_MAP dictionary specifies the mapping from the workflow_generator args a
 
 Structure of ARG_MAP:
 ARG_MAP = {
-    "workflow_generator_arg_group_name": {  <-- Source
-        "MeasureDirName": {  <-- Destination
+    "MeasureDirName": {  <-- Destination
+        "workflow_generator_arg_group_name": {  <-- Source
             "workflow_generator_arg_name": "measure_arg_name",  <-- Source: Destination
             ...
         },
@@ -22,11 +22,13 @@ ARG_MAP = {
 """
 
 ARG_MAP = {
-    "build_existing_model": {
-        "HPXMLtoOpenStudio": {"add_component_loads": "add_component_loads"},
+    "HPXMLtoOpenStudio": {
+        "build_existing_model": {
+            "add_component_loads": "add_component_loads",
+        },
     },
-    "emissions": {
-        "BuildExistingModel": {
+    "BuildExistingModel": {
+        "emissions": {
             "scenario_name": "emissions_scenario_names",
             "type": "emissions_types",
             "elec_folder": "emissions_electricity_folders",
@@ -35,9 +37,7 @@ ARG_MAP = {
             "oil_value": "emissions_fuel_oil_values",
             "wood_value": "emissions_wood_values",
         },
-    },
-    "utility_bills": {
-        "BuildExistingModel": {
+        "utility_bills": {
             "scenario_name": "utility_bill_scenario_names",
             "simple_filepath": "utility_bill_simple_filepaths",
             "detailed_filepath": "utility_bill_detailed_filepaths",
@@ -57,10 +57,10 @@ ARG_MAP = {
             "pv_feed_in_tariff_rate": "utility_bill_pv_feed_in_tariff_rates",
             "pv_monthly_grid_connection_fee_units": "utility_bill_pv_monthly_grid_connection_fee_units",
             "pv_monthly_grid_connection_fee": "utility_bill_pv_monthly_grid_connection_fees",
-        }
+        },
     },
-    "simulation_output_report": {
-        "ReportSimulationOutput": {
+    "ReportSimulationOutput": {
+        "simulation_output_report": {
             "output_variables": "user_output_variables",
         },
     },

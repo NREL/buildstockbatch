@@ -1151,7 +1151,7 @@ def main():
         # validate the project, and if --validateonly flag is set, return True if validation passes
         GcpBatch.validate_project(os.path.abspath(args.project_filename))
         if args.validateonly:
-            return True
+            return
 
         batch = GcpBatch(args.project_filename, args.job_identifier, missing_only=args.missingonly)
         if args.clean:

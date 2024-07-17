@@ -36,7 +36,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         self.measures_dir = os.path.join(self.buildstock_dir, "measures")
         self.workflow_args = self.cfg["workflow_generator"].get("args", {})
         self.default_args = copy.deepcopy(DEFAULT_MEASURE_ARGS)
-        self.arg_map = copy.deepcopy(ARG_MAP)
+        self.all_arg_map = copy.deepcopy(ARG_MAP)
 
     def validate(self):
         """Validate arguments
@@ -112,22 +112,10 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :param upgrade_idx: integer index of the upgrade scenario to apply, None if baseline
         """
         logger.debug("Generating OSW, sim_id={}".format(sim_id))
-
         workflow_args = copy.deepcopy(self.workflow_args)
-
-        measure_args = self._get_mapped_args(workflow_args)  # start with the mapped arguments
-
-        measure_args["BuildExistingModel"].update(
-            {
-                "building_id": building_id,
-                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
-            }
-        )
-        debug = workflow_args.get("debug", False)
-
-        measure_args_mapping = {
+        workflow_key_to_measure_names = {  # This is the order the osw steps will be in
             "build_existing_model": "BuildExistingModel",
-            "hpxml_to_openstudio": "HPXMLtoOpenStudio",
+            "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
             "simulation_output_report": "ReportSimulationOutput",
             "report_hpxml_output": "ReportHPXMLOutput",
             "report_utility_bills": "ReportUtilityBills",
@@ -136,19 +124,40 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         }
 
         steps = []
-        for key, measure_dir_name in measure_args_mapping.items():
-            if measure_dir_name not in measure_args:
-                measure_args[measure_dir_name] = {}
+        measure_args = {}
+        debug = workflow_args.get("debug", False)
 
-            measure_args[measure_dir_name].update(
-                self._get_measure_args(workflow_args.get(key, {}), measure_dir_name, debug)
-            )
+        # start with defaults
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            measure_args[measure_name] = self.default_args.get(measure_name, {}).copy()
+
+        # update with mapped args
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            measure_args[measure_name].update(self._get_mapped_args(workflow_args, measure_name))
+
+        # update with workflow block args
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            measure_args[measure_name].update(workflow_args.get(workflow_key, {}).copy())
+
+        # Verify the arguments and add to steps
+        for workflow_key, measure_name in workflow_key_to_measure_names.items():
+            xml_args = self.get_measure_arguments_from_xml(self.buildstock_dir, measure_name)
+            self._validate_against_xml_args(measure_args[measure_name], measure_name, xml_args)
+            if "debug" in xml_args:
+                measure_args[measure_name]["debug"] = debug
             steps.append(
                 {
-                    "measure_dir_name": measure_dir_name,
-                    "arguments": measure_args[measure_dir_name],
+                    "measure_dir_name": measure_name,
+                    "arguments": measure_args[measure_name],
                 }
             )
+
+        measure_args["BuildExistingModel"].update(
+            {
+                "building_id": building_id,
+                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
+            }
+        )
 
         osw = {
             "id": sim_id,
@@ -202,37 +211,37 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             )
         osw["steps"].insert(1, apply_upgrade_measure)  # right after BuildExistingModel
 
-    def _get_measure_args(self, workflow_block_args, measure_dir_name, debug):
+    def _validate_against_xml_args(self, measure_args, measure_dir_name, xml_args):
         """
-        Get the arguments to the measure from the workflow_args and defaults. The arguments are filtered based
-        on the measure's measure.xml file. If an argument is not found in the measure.xml file, it is not
-        passed to the measure and a warning is logged.
+        Check if the arguments in the measure_args are valid for the measure_dir_name
+        based on the measure.xml file in the measure directory.
+        Optionally add the debug argument if it is present in the measure.xml file.
         """
         xml_args = self.get_measure_arguments_from_xml(self.buildstock_dir, measure_dir_name)
-        measure_args = self.default_args.get(measure_dir_name, {}).copy()
-        measure_args.update(workflow_block_args)
         for key in list(measure_args.keys()):
             if key not in xml_args:
-                location = "workflow_generator" if key in workflow_block_args else "defaults"
                 logger.warning(
-                    f"'{key}' in {location} not found in '{measure_dir_name}'. This key will not be passed"
+                    f"'{key}' not found in '{measure_dir_name}'. This key will not be passed"
                     " to the measure. This warning is expected if you are using older version of ResStock."
                 )
                 del measure_args[key]
-        if "debug" in xml_args:
-            measure_args["debug"] = debug
-        return measure_args
 
-    def _get_mapped_args(self, workflow_args):
+    def _get_mapped_args(
+        self,
+        workflow_args,
+        measure_dir_name,
+    ):
         """
-        Get the arguments to various measures from the workflow_args. The mapping is defined in the ARG_MAP
+        Get the arguments to the measures from the workflow_args using the mapping in self.all_arg_map
         """
         measure_args = {}
-        for yaml_blockname, arg_maps in self.arg_map.items():
+        for yaml_blockname, arg_map in self.all_arg_map.get(measure_dir_name, {}).items():
             if yaml_blockname not in workflow_args:
                 continue
             yaml_block = workflow_args[yaml_blockname]
-            self.recursive_dict_update(measure_args, self._get_mapped_args_from_block(yaml_block, arg_maps))
+            measure_args.update(
+                self._get_mapped_args_from_block(yaml_block, arg_map, self.default_args.get(measure_dir_name, {}))
+            )
         return measure_args
 
     @staticmethod
@@ -252,19 +261,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             name = argument.find("./name").text
             arguments.add(name)
         return arguments
-
-    @staticmethod
-    def recursive_dict_update(base_dict, new_dict):
-        """
-        Fully update a dictionary with another dictionary, traversing nested dictionaries
-        """
-        for key, value in new_dict.items():
-            if isinstance(value, dict):
-                base_dict.setdefault(key, {})
-                ResidentialHpxmlWorkflowGenerator.recursive_dict_update(base_dict[key], value)
-            else:
-                base_dict[key] = value
-        return True
 
     @staticmethod
     def _get_condensed_block(yaml_block):
@@ -308,7 +304,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         return condensed_block
 
     @staticmethod
-    def _get_mapped_args_from_block(block, arg_maps: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, Any]]:
+    def _get_mapped_args_from_block(block, arg_map: Dict[str, str], default_args) -> Dict[str, Any]:
         """
         Get the arguments to meaures using the ARG_MAP for the given block.
         The block is either a dict or a list of dicts. If it is a list of dicts, it is
@@ -322,46 +318,53 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         If a value is a list, it is joined into a comma separated string.
         If a value is a list of dicts, then the "name" key is used to join into a comma separated string.
         Otherwise, the value is passed as is.
-        Example Input:
-        {
-            "utility_bills": [
+        Example Input1:
+
+            block = [
                 {"scenario_name": "scenario1", "simple_filepath": "file1"},
                 {"scenario_name": "scenario2", "simple_filepath": "file2"}
-            ],
-            ...
-            "report_simulation_output": {
+            ]
+            arg_map = {
+                        "scenario_name": "utility_bill_scenario_names",
+                        "simple_filepath": "utility_bill_simple_filepaths"
+                       }
+        Example output:
+            output = {"utility_bill_scenario_names": "scenario1,scenario2"}
+        Example Input2:
+            block: {
+                "normal_arg1": 1,
                 "output_variables": [
                     {"name": "var1"},
                     {"name": "var2"}
                 ]
             }
-        }
+            arg_map = {"output_variables": "user_output_variables"}
+
         Example output:
         {
-            "BuildExistingModel": {
-                "utility_bill_scenario_names": "scenario1,scenario2",
-                ...
-            },
+            output = {"normal_arg1", 1, "user_output_variables": "var1,var2"}
             "ReportSimulationOutput": {
                 "user_output_variables": "var1,va2",
         }
         """
         block_count = len(block) if isinstance(block, list) else 1
         block = ResidentialHpxmlWorkflowGenerator._get_condensed_block(block)
-        measure_args = {}
-        for measure_dir_name, arg_map in arg_maps.items():
-            mapped_args = measure_args.setdefault(measure_dir_name, {})
-            for source_arg, dest_arg in arg_map.items():
-                if source_arg in block:
-                    # Use pop to remove the key from the block since it is already consumed
-                    if isinstance(block[source_arg], list):
-                        if isinstance(block[source_arg][0], dict):
-                            mapped_args[dest_arg] = ",".join(str(v.get("name", "")) for v in block.pop(source_arg))
-                        else:
-                            mapped_args[dest_arg] = ",".join(str(v) for v in block.pop(source_arg))
-                    else:
-                        mapped_args[dest_arg] = block.pop(source_arg)
-                else:
-                    mapped_args[dest_arg] = ",".join([""] * block_count)
+        mapped_args = {}
 
-        return measure_args
+        for source_arg, dest_arg in arg_map.items():
+            if source_arg in block:
+                # Use pop to remove the key from the block since it is already consumed
+                if isinstance(block[source_arg], list):
+                    if isinstance(block[source_arg][0], dict):
+                        mapped_args[dest_arg] = ",".join(str(v.get("name", "")) for v in block.pop(source_arg))
+                    else:
+                        mapped_args[dest_arg] = ",".join(str(v) for v in block.pop(source_arg))
+                else:
+                    mapped_args[dest_arg] = block.pop(source_arg)
+            else:
+                if block_count > 1:
+                    mapped_args[dest_arg] = ",".join([str(default_args.get(dest_arg, ""))] * block_count)
+                else:
+                    mapped_args[dest_arg] = default_args.get(dest_arg, "")
+
+        return mapped_args
