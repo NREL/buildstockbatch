@@ -23,7 +23,7 @@ jobs:
         with:
           repository: NREL/resstock
           path: resstock
-          ref: develop
+          ref: latest-os-hpxml
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
