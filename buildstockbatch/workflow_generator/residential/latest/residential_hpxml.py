@@ -117,9 +117,9 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         workflow_key_to_measure_names = {  # This is the order the osw steps will be in
             "build_existing_model": "BuildExistingModel",
             "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
+            "upgrade_costs": "UpgradeCosts",
             "simulation_output_report": "ReportSimulationOutput",
             "report_utility_bills": "ReportUtilityBills",
-            "upgrade_costs": "UpgradeCosts",
             "server_directory_cleanup": "ServerDirectoryCleanup",
         }
 
@@ -167,7 +167,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             "run_options": {"skip_zip_results": True},
         }
         for measure in reversed(workflow_args.get("measures", [])):
-            osw["steps"].insert(2, measure)
+            osw["steps"].insert(3, measure)  # After UpgradeCosts
 
         self.add_upgrade_step_to_osw(upgrade_idx, osw)
 

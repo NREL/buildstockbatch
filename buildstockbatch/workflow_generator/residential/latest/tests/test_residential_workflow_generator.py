@@ -233,6 +233,11 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
     assert hpxml_to_os_step["arguments"]["debug"] is True
     index += 1
 
+    upgrade_costs_step = osw["steps"][index]
+    assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
+    assert upgrade_costs_step["arguments"]["debug"] is True
+    index += 1
+
     if "measures" in workflow_args:
         assert osw["steps"][index]["measure_dir_name"] == "TestMeasure1"
         assert osw["steps"][index]["arguments"]["TestMeasure1_arg1"] == 1
@@ -299,11 +304,6 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
-    index += 1
-
-    upgrade_costs_step = osw["steps"][index]
-    assert upgrade_costs_step["measure_dir_name"] == "UpgradeCosts"
-    assert upgrade_costs_step["arguments"]["debug"] is True
     index += 1
 
     if "reporting_measures" in workflow_args:
