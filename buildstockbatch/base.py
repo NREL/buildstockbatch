@@ -819,11 +819,18 @@ class BuildStockBatchBase(object):
                 raise ValidationError(val_err)
             wg_version = cfg["workflow_generator"].get("version", "latest")
             wg_type = cfg["workflow_generator"].get("type")
-            res_version = workflow_generator.version2info[wg_type][wg_version]["resstock_version"]
+            min_res_version = workflow_generator.version2info[wg_type][wg_version]["minimum_resstock_version"]
+            max_res_version = workflow_generator.version2info[wg_type][wg_version]["maximum_resstock_version"]
             ResStockVersion = semver.Version.parse(versions["ResStock"])
-            if ResStockVersion < semver.Version.parse(res_version):
+            if ResStockVersion < semver.Version.parse(min_res_version):
                 val_err = (
                     f"ResStock version {ResStockVersion} or above is required"
+                    f" for ResStock workflow generator version {wg_version}."
+                )
+                raise ValidationError(val_err)
+            if max_res_version and ResStockVersion > semver.Version.parse(max_res_version):
+                val_err = (
+                    f"ResStock version {ResStockVersion} or below is required"
                     f" for ResStock workflow generator version {wg_version}."
                 )
                 raise ValidationError(val_err)

@@ -398,7 +398,11 @@ def test_validate_workflow_gen_version_pass(mocker):
         "buildstockbatch.base.workflow_generator.version2info",
         {
             "residential_hpxml": {
-                "latest": {"version": "2024.07.19", "resstock_version": "0.0.0"},
+                "latest": {
+                    "version": "2024.07.19",
+                    "minimum_resstock_version": "0.0.0",
+                    "maximum_resstock_version": None,
+                },
             }
         },
     )
@@ -407,14 +411,39 @@ def test_validate_workflow_gen_version_pass(mocker):
 
 
 @resstock_required
-def test_validate_workflow_gen_version_fail(mocker):
+def test_validate_workflow_gen_version_fail_min(mocker):
     # Set the version to a 'really old' one so we trigger the version check error
     mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
     mocker.patch(
         "buildstockbatch.base.workflow_generator.version2info",
         {
             "residential_hpxml": {
-                "latest": {"version": "2024.07.19", "resstock_version": "3000.0.0"},
+                "latest": {
+                    "version": "2024.07.19",
+                    "minimum_resstock_version": "3000.0.0",
+                    "maximum_resstock_version": None,
+                },
+            }
+        },
+    )
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    with pytest.raises(ValidationError):
+        BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
+@resstock_required
+def test_validate_workflow_gen_version_fail_max(mocker):
+    # Set the version to a 'really old' one so we trigger the version check error
+    mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
+    mocker.patch(
+        "buildstockbatch.base.workflow_generator.version2info",
+        {
+            "residential_hpxml": {
+                "latest": {
+                    "version": "2024.07.19",
+                    "minimum_resstock_version": "0.0.0",
+                    "maximum_resstock_version": "0.0.0",
+                },
             }
         },
     )
