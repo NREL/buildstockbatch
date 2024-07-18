@@ -390,6 +390,39 @@ def test_validate_resstock_or_comstock_version(mocker):
         BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
 
 
+@resstock_required
+def test_validate_workflow_gen_version_pass(mocker):
+    # Set the version to a 'really old' one so we trigger the version check error
+    mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
+    mocker.patch(
+        "buildstockbatch.base.workflow_generator.version2info",
+        {
+            "residential_hpxml": {
+                "latest": {"version": "2024.07.19", "resstock_version": "0.0.0"},
+            }
+        },
+    )
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
+@resstock_required
+def test_validate_workflow_gen_version_fail(mocker):
+    # Set the version to a 'really old' one so we trigger the version check error
+    mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
+    mocker.patch(
+        "buildstockbatch.base.workflow_generator.version2info",
+        {
+            "residential_hpxml": {
+                "latest": {"version": "2024.07.19", "resstock_version": "3000.0.0"},
+            }
+        },
+    )
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    with pytest.raises(ValidationError):
+        BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
 def test_dask_config():
     orig_filename = os.path.join(example_yml_dir, "minimal-schema.yml")
     cfg = get_project_configuration(orig_filename)

@@ -1,7 +1,7 @@
 __version__ = "2024.07.19"
 version_info = {
     "version": __version__,
-    "resstock_version": "v3.4.0",
+    "resstock_version": "3.4.0",
     "version_description": """
 Version information for the residential workflow generator.
 This version is compatible with ResStock v3.4.0.

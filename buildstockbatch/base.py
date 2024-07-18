@@ -85,12 +85,12 @@ class BuildStockBatchBase(object):
         generator_type = workflow_generator_block["type"]
         # version can be missing in older schema -> default to latest
         generator_version = workflow_generator_block.get("version", "latest")
-        if generator_version not in workflow_generator.version_map[generator_type]:
+        if generator_version not in workflow_generator.version2GeneratorClass[generator_type]:
             raise ValidationError(
                 f"Invalid generator version {generator_version} for {generator_type}."
-                f"Avaliable versions are {workflow_generator.version_map[generator_type].keys()}"
+                f"Avaliable versions are {workflow_generator.version2GeneratorClass[generator_type].keys()}"
             )
-        return workflow_generator.version_map[generator_type][generator_version]
+        return workflow_generator.version2GeneratorClass[generator_type][generator_version]
 
     @property
     def sampler(self):
@@ -795,7 +795,7 @@ class BuildStockBatchBase(object):
         cfg = get_project_configuration(project_file)
 
         buildstock_rb = os.path.join(cfg["buildstock_directory"], "resources/buildstock.rb")
-        if os.path.exists(buildstock_rb):
+        if os.path.exists(buildstock_rb):  # ResStock domain
             with open(buildstock_rb, "r") as f:
                 versions = dict(
                     re.findall(
@@ -815,6 +815,16 @@ class BuildStockBatchBase(object):
                 val_err = (
                     f"BuildStockBatch version {BuildStockBatch_Version} or above is required"
                     f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
+                )
+                raise ValidationError(val_err)
+            wg_version = cfg["workflow_generator"].get("version", "latest")
+            wg_type = cfg["workflow_generator"].get("type")
+            res_version = workflow_generator.version2info[wg_type][wg_version]["resstock_version"]
+            ResStockVersion = semver.Version.parse(versions["ResStock"])
+            if ResStockVersion < semver.Version.parse(res_version):
+                val_err = (
+                    f"ResStock version {ResStockVersion} or above is required"
+                    f" for ResStock workflow generator version {wg_version}."
                 )
                 raise ValidationError(val_err)
 
