@@ -205,6 +205,28 @@ def test_missing_measures(project_file):
 
 @pytest.mark.parametrize(
     "project_file",
+    [os.path.join(example_yml_dir, "validate_workflow_generator_invalid_version.yml")],
+)
+def test_missing_version(project_file):
+    with LogCapture(level=logging.INFO) as _:
+        try:
+            BuildStockBatchBase.validate_workflow_generator(project_file)
+        except (ValidationError, YamaleError) as er:
+            assert "Invalid generator version" in str(er)
+        else:
+            raise Exception("Supposed to raise missing measure error for QOIReport")
+
+
+@pytest.mark.parametrize(
+    "project_file",
+    [os.path.join(example_yml_dir, "validate_workflow_generator_valid_version.yml")],
+)
+def test_valid_version(project_file):
+    BuildStockBatchBase.validate_workflow_generator(project_file)
+
+
+@pytest.mark.parametrize(
+    "project_file",
     [
         os.path.join(example_yml_dir, "enforce-validate-measures-good-2.yml"),
         os.path.join(example_yml_dir, "enforce-validate-measures-good-2-with-anchors.yml"),

@@ -18,7 +18,7 @@ import re
 from xml.etree import ElementTree
 import yamale
 
-from ..base import WorkflowGeneratorBase
+from ...base import WorkflowGeneratorBase
 
 logger = logging.getLogger(__name__)
 

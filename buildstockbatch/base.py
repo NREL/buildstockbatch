@@ -81,11 +81,16 @@ class BuildStockBatchBase(object):
         return getattr(sampler, sampler_class_name)
 
     @staticmethod
-    def get_workflow_generator_class(workflow_generator_name):
-        workflow_generator_class_name = (
-            "".join(x.capitalize() for x in workflow_generator_name.strip().split("_")) + "WorkflowGenerator"
-        )
-        return getattr(workflow_generator, workflow_generator_class_name)
+    def get_workflow_generator_class(workflow_generator_block):
+        generator_type = workflow_generator_block["type"]
+        # version can be missing in older schema -> default to latest
+        generator_version = workflow_generator_block.get("version", "latest")
+        if generator_version not in workflow_generator.version_map[generator_type]:
+            raise ValidationError(
+                f"Invalid generator version {generator_version} for {generator_type}."
+                f"Avaliable versions are {workflow_generator.version_map[generator_type].keys()}"
+            )
+        return workflow_generator.version_map[generator_type][generator_version]
 
     @property
     def sampler(self):
@@ -141,7 +146,7 @@ class BuildStockBatchBase(object):
         if "reporting_measure_names" in cfg:
             return cfg["reporting_measure_names"]
 
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"])
         wg = WorkflowGenerator(cfg, 1)  # Number of datapoints doesn't really matter here
         return wg.reporting_measures()
 
@@ -150,7 +155,7 @@ class BuildStockBatchBase(object):
 
     @classmethod
     def create_osw(cls, cfg, n_datapoints, *args, **kwargs):
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"])
         osw_generator = WorkflowGenerator(cfg, n_datapoints)
         return osw_generator.create_osw(*args, **kwargs)
 
@@ -370,8 +375,20 @@ class BuildStockBatchBase(object):
     @classmethod
     def validate_workflow_generator(cls, project_file):
         cfg = get_project_configuration(project_file)
-        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"]["type"])
+        WorkflowGenerator = cls.get_workflow_generator_class(cfg["workflow_generator"])
         return WorkflowGenerator(cfg, 1).validate()
+
+    @staticmethod
+    def validate_project_schema(project_file):
+        cfg = get_project_configuration(project_file)
+        schema_version = cfg.get("schema_version")
+        version_schema = os.path.join(os.path.dirname(__file__), "schemas", f"v{schema_version}.yaml")
+        if not os.path.isfile(version_schema):
+            logger.error(f"Could not find validation schema for YAML version {schema_version}")
+            raise FileNotFoundError(version_schema)
+        schema = yamale.make_schema(version_schema)
+        data = yamale.make_data(project_file, parser="ruamel")
+        return yamale.validate(schema, data, strict=True)
 
     @staticmethod
     def validate_project_schema(project_file):

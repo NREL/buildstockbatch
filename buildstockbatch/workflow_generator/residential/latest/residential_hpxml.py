@@ -113,7 +113,16 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         """
         logger.debug("Generating OSW, sim_id={}".format(sim_id))
         workflow_args = copy.deepcopy(self.workflow_args)
-        workflow_key_to_measure_names = self._get_workflow_key_to_measure_names()
+
+        workflow_key_to_measure_names = {  # This is the order the osw steps will be in
+            "build_existing_model": "BuildExistingModel",
+            "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
+            "simulation_output_report": "ReportSimulationOutput",
+            "report_hpxml_output": "ReportHPXMLOutput",
+            "report_utility_bills": "ReportUtilityBills",
+            "upgrade_costs": "UpgradeCosts",
+            "server_directory_cleanup": "ServerDirectoryCleanup",
+        }
 
         steps = []
         measure_args = {}
@@ -217,32 +226,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     " to the measure. This warning is expected if you are using older version of ResStock."
                 )
                 del measure_args[key]
-
-    def _get_workflow_key_to_measure_names(self):
-        upg_costs_measure_attrs = self.get_measure_attributes_from_xml(self.buildstock_dir, "UpgradeCosts")
-        upg_costs_measure_type = upg_costs_measure_attrs["Measure Type"]
-        if upg_costs_measure_type == "ModelMeasure":
-            measure_args_mapping = {  # This is the order the osw steps will be in if UpgradeCosts is ModelMeasure
-                "build_existing_model": "BuildExistingModel",
-                "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
-                "upgrade_costs": "UpgradeCosts",
-                "simulation_output_report": "ReportSimulationOutput",
-                "report_utility_bills": "ReportUtilityBills",
-                "server_directory_cleanup": "ServerDirectoryCleanup",
-            }
-        elif upg_costs_measure_type == "ReportingMeasure":
-            measure_args_mapping = {  # This is the order the osw steps will be in if UpgradeCosts is ReportingMeasure
-                "build_existing_model": "BuildExistingModel",
-                "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
-                "simulation_output_report": "ReportSimulationOutput",
-                "report_hpxml_output": "ReportHPXMLOutput",
-                "report_utility_bills": "ReportUtilityBills",
-                "upgrade_costs": "UpgradeCosts",
-                "server_directory_cleanup": "ServerDirectoryCleanup",
-            }
-        else:
-            raise ValueError(f"Measure Type '{upg_costs_measure_type}' not recognized for measure 'UpgradeCosts'")
-        return measure_args_mapping
 
     def _get_mapped_args(
         self,
