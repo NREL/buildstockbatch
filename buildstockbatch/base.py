@@ -391,18 +391,6 @@ class BuildStockBatchBase(object):
         return yamale.validate(schema, data, strict=True)
 
     @staticmethod
-    def validate_project_schema(project_file):
-        cfg = get_project_configuration(project_file)
-        schema_version = cfg.get("schema_version")
-        version_schema = os.path.join(os.path.dirname(__file__), "schemas", f"v{schema_version}.yaml")
-        if not os.path.isfile(version_schema):
-            logger.error(f"Could not find validation schema for YAML version {schema_version}")
-            raise FileNotFoundError(version_schema)
-        schema = yamale.make_schema(version_schema)
-        data = yamale.make_data(project_file, parser="ruamel")
-        return yamale.validate(schema, data, strict=True)
-
-    @staticmethod
     def validate_misc_constraints(project_file):
         # validate other miscellaneous constraints
         cfg = get_project_configuration(project_file)  # noqa F841
