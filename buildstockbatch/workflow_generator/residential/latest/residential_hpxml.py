@@ -264,25 +264,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         return arguments
 
     @staticmethod
-    def get_measure_attributes_from_xml(buildstock_dir, measure_dir_name: str):
-        for measure_path in ["measures", "resources/hpxml-measures"]:
-            measure_dir_path = os.path.join(buildstock_dir, measure_path, measure_dir_name)
-            if os.path.isdir(measure_dir_path):
-                break
-        else:
-            raise ValueError(f"Measure '{measure_dir_name}' not found in any of the measure directories")
-        measure_xml_path = os.path.join(measure_dir_path, "measure.xml")
-        if not os.path.isfile(measure_xml_path):
-            raise ValueError(f"Measure '{measure_dir_name}' does not have a measure xml file")
-        attributes = {}
-        root = ElementTree.parse(measure_xml_path).getroot()
-        for attribute in root.findall("./attributes/attribute"):
-            name = attribute.find("./name").text
-            value = attribute.find("./value").text
-            attributes[name] = value
-        return attributes
-
-    @staticmethod
     def _get_condensed_block(yaml_block):
         """
         If the yaml_block is a list of dicts, condense it into a single dict
