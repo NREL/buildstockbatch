@@ -4,13 +4,14 @@ from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxm
 from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
 from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_arg_mapping import ARG_MAP
 from testfixtures import LogCapture
-from buildstockbatch.test.shared_testing_stuff import resstock_directory
-import os
+import pathlib
 import yamale
 import logging
 import copy
 import itertools
 import pytest
+
+resstock_directory = pathlib.Path(__file__).parent / "testing_resstock_data"
 
 test_cfg = {
     "buildstock_directory": resstock_directory,
