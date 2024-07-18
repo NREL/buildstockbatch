@@ -4,6 +4,7 @@ from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxm
 from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
 from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_arg_mapping import ARG_MAP
 from testfixtures import LogCapture
+import os
 import pathlib
 import yamale
 import logging
