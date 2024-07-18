@@ -66,7 +66,6 @@ DEFAULT_MEASURE_ARGS = {
         "timeseries_num_decimal_places": 3,
         "user_output_variables": "",
     },
-    "ReportHPXMLOutput": {},
     "ReportUtilityBills": {"include_annual_bills": True, "include_monthly_bills": False},
     "UpgradeCosts": {"debug": False},
     "ServerDirectoryCleanup": {

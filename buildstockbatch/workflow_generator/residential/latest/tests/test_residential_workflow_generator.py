@@ -295,10 +295,6 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
     assert simulation_output_step["arguments"]["add_timeseries_utc_column"] is True
     index += 1
 
-    hpxml_output_step = osw["steps"][index]
-    assert hpxml_output_step["measure_dir_name"] == "ReportHPXMLOutput"
-    index += 1
-
     utility_bills_step = osw["steps"][index]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
     assert utility_bills_step["arguments"]["include_annual_bills"] is True

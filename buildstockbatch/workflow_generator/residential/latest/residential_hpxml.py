@@ -118,7 +118,6 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             "build_existing_model": "BuildExistingModel",
             "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
             "simulation_output_report": "ReportSimulationOutput",
-            "report_hpxml_output": "ReportHPXMLOutput",
             "report_utility_bills": "ReportUtilityBills",
             "upgrade_costs": "UpgradeCosts",
             "server_directory_cleanup": "ServerDirectoryCleanup",
