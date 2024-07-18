@@ -19,10 +19,10 @@ from xml.etree import ElementTree
 import yamale
 from typing import Dict, Any
 
-from ..base import WorkflowGeneratorBase
+from ...base import WorkflowGeneratorBase
 from buildstockbatch.exc import ValidationError
-from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import ARG_MAP
+from .residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
+from .residential_hpxml_arg_mapping import ARG_MAP
 import copy
 
 logger = logging.getLogger(__name__)
