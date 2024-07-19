@@ -21,8 +21,8 @@ from typing import Dict, Any
 
 from ...base import WorkflowGeneratorBase
 from buildstockbatch.exc import ValidationError
-from .residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from .residential_hpxml_arg_mapping import ARG_MAP
+from buildstockbatch.workflow_generator.residential.v2024_07_19.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
+from buildstockbatch.workflow_generator.residential.v2024_07_19.residential_hpxml_arg_mapping import ARG_MAP
 import copy
 
 logger = logging.getLogger(__name__)

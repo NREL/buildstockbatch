@@ -98,6 +98,6 @@ Development Changelog
         :tags: general, feature
         :pullreq: 461
 
-        For the Residential HPXML Workflow Generator, exposes optional ``include_annual_bills`` and
-        ``include_monthly_bills`` arguments for reporting annual and monthly utility bill outputs,
-        respectively.
+        Add a new version (2024.07.20) of the Residential HPXML Workflow Generator that
+        exposes optional ``include_annual_bills`` and ``include_monthly_bills`` arguments
+        for reporting annual and monthly utility bill outputs, respectively.
