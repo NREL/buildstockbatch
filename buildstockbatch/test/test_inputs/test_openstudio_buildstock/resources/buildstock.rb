@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 class Version
-  ResStock_Version = '2000.1.0' # Version of ResStock
+  ResStock_Version = '3.1.0' # Version of ResStock
   BuildStockBatch_Version = '2023.5.0' # Minimum required version of BuildStockBatch
+  WorkflowGenerator_Version = '2024.07.19'
   def self.check_buildstockbatch_version
     if ENV.keys.include?('BUILDSTOCKBATCH_VERSION') # buildstockbatch is installed
       bsb_version = ENV['BUILDSTOCKBATCH_VERSION']
