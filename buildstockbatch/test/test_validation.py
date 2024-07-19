@@ -398,23 +398,66 @@ def test_validate_workflow_gen_version_pass(mocker):
         "buildstockbatch.base.workflow_generator.version2info",
         {
             "residential_hpxml": {
-                "2024.07.18": {
-                    "version": "2024.07.18",
+                "3024.12.23": {
+                    "version": "3024.12.23",
                 },
             }
         },
+    )
+    mocker.patch(
+        "buildstockbatch.base.BuildStockBatchBase.get_stock_version_info",
+        lambda _: {"BuildStockBatch": "0.0.0", "ResStock": "3.2.0", "WorkflowGenerator": "3024.12.23"},
+    )
+    mocker.patch(
+        "buildstockbatch.base.get_project_configuration",
+        lambda _: {"workflow_generator": {"version": "3024.12.23", "type": "residential_hpxml", "args": {}}},
     )
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
 
 
 @resstock_required
-def test_validate_workflow_gen_version_fail(mocker):
+def test_validate_workflow_gen_version_fail_unavailable(mocker):
     # Set the version to a 'really old' one so we trigger the version check error
     mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
     mocker.patch(
         "buildstockbatch.base.workflow_generator.version2info",
-        {"residential_hpxml": {}},  # No available versions
+        {"residential_hpxml": {}},
+    )
+    mocker.patch(
+        "buildstockbatch.base.BuildStockBatchBase.get_stock_version_info",
+        lambda _: {"BuildStockBatch": "0.0.0", "ResStock": "3.2.0", "WorkflowGenerator": "3024.12.23"},
+    )
+    mocker.patch(
+        "buildstockbatch.base.get_project_configuration",
+        lambda _: {"workflow_generator": {"version": "3024.12.23", "type": "residential_hpxml", "args": {}}},
+    )
+    proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
+    with pytest.raises(ValidationError):
+        BuildStockBatchBase.validate_resstock_or_comstock_version(str(proj_filename))
+
+
+@resstock_required
+def test_validate_workflow_gen_version_fail_mismatch(mocker):
+    # Set the version to a 'really old' one so we trigger the version check error
+    mocker.patch("buildstockbatch.base.bsb_version", "3000.0.0")
+    mocker.patch(
+        "buildstockbatch.base.workflow_generator.version2info",
+        {
+            "residential_hpxml": {
+                "3024.12.24": {
+                    "version": "3024.12.24",
+                },
+            }
+        },
+    )
+    mocker.patch(
+        "buildstockbatch.base.BuildStockBatchBase.get_stock_version_info",
+        lambda _: {"BuildStockBatch": "0.0.0", "ResStock": "3.2.0", "WorkflowGenerator": "3024.12.23"},
+    )
+    mocker.patch(
+        "buildstockbatch.base.get_project_configuration",
+        lambda _: {"workflow_generator": {"version": "3024.12.24", "type": "residential_hpxml", "args": {}}},
     )
     proj_filename = resstock_directory / "project_national" / "national_upgrades.yml"
     with pytest.raises(ValidationError):

@@ -788,45 +788,55 @@ class BuildStockBatchBase(object):
         return True  # Only print the warning, but always pass the validation
 
     @staticmethod
+    def get_stock_version_info(project_file):
+        cfg = get_project_configuration(project_file)
+        buildstock_dir = BuildStockBatchBase.get_buildstock_dir(project_file, cfg)
+        version_rb = os.path.join(buildstock_dir, "resources/buildstock.rb")
+        if not os.path.exists(version_rb):
+            return {}
+
+        with open(version_rb, "r") as f:
+            versions = dict(
+                re.findall(
+                    r"^\s*(ResStock|ComStock|BuildStockBatch|WorkflowGenerator)_Version\s*=\s*'(.+)'",
+                    f.read(),
+                    re.MULTILINE,
+                )
+            )
+            return versions
+
+    @staticmethod
     def validate_resstock_or_comstock_version(project_file):
         """
         Checks the minimum required version of BuildStockBatch against the version being used
         """
         cfg = get_project_configuration(project_file)
-
-        buildstock_rb = os.path.join(cfg["buildstock_directory"], "resources/buildstock.rb")
-        if os.path.exists(buildstock_rb):  # ResStock domain
-            with open(buildstock_rb, "r") as f:
-                versions = dict(
-                    re.findall(
-                        r"^\s*(ResStock|ComStock|BuildStockBatch)_Version\s*=\s*'(.+)'",
-                        f.read(),
-                        re.MULTILINE,
-                    )
-                )
-            BuildStockBatch_Version = semver.Version.parse(versions["BuildStockBatch"])
-            if bsb_version < BuildStockBatch_Version:
-                if "ResStock" in versions.keys():
-                    stock_version = versions["ResStock"]
-                elif "ComStock" in versions.keys():
-                    stock_version = versions["ComStock"]
-                else:
-                    stock_version = "Unknown"
-                val_err = (
-                    f"BuildStockBatch version {BuildStockBatch_Version} or above is required"
-                    f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
-                )
-                raise ValidationError(val_err)
-            wg_version = cfg["workflow_generator"].get("version", "2024.07.18")
-            wg_type = cfg["workflow_generator"]["type"]
-            if wg_version not in workflow_generator.version2info[wg_type]:
-                raise ValidationError(f"Workflow generator version {wg_version} not found")
-            expected_version = versions.get("WorkflowGenerator_Version", "2024.07.18")
-            if wg_version != expected_version:
-                raise ValidationError(
-                    f"Workflow generator version {expected_version} is required by the buildstock."
-                    f"The yaml is asking for {wg_version}"
-                )
+        version_info = BuildStockBatchBase.get_stock_version_info(project_file)
+        if not version_info:
+            return True
+        BuildStockBatch_Version = semver.Version.parse(version_info["BuildStockBatch"])
+        if bsb_version < BuildStockBatch_Version:
+            if "ResStock" in version_info.keys():
+                stock_version = version_info["ResStock"]
+            elif "ComStock" in version_info.keys():
+                stock_version = version_info["ComStock"]
+            else:
+                stock_version = "Unknown"
+            val_err = (
+                f"BuildStockBatch version {BuildStockBatch_Version} or above is required"
+                f" for ResStock or ComStock version {stock_version}. Found {bsb_version}"
+            )
+            raise ValidationError(val_err)
+        wg_version = cfg["workflow_generator"].get("version", "2024.07.18")
+        wg_type = cfg["workflow_generator"]["type"]
+        if wg_version not in workflow_generator.version2info[wg_type]:
+            raise ValidationError(f"Workflow generator version {wg_version} not found")
+        expected_version = version_info.get("WorkflowGenerator", "2024.07.18")
+        if wg_version != expected_version:
+            raise ValidationError(
+                f"Workflow generator version {expected_version} is required by the buildstock."
+                f"The yaml is asking for {wg_version}"
+            )
 
         return True
 
