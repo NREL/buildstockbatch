@@ -146,7 +146,7 @@ Arguments
 Build Existing Model Defaults
 .............................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential/residential_hpxml_defaults.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
    :start-after: BuildExistingModel": {
    :end-before: }
@@ -156,7 +156,7 @@ Build Existing Model Defaults
 Simulation Output Report Defaults
 ..................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential/residential_hpxml_defaults.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
    :start-after: ReportSimulationOutput": {
    :end-before: }
@@ -166,7 +166,7 @@ Simulation Output Report Defaults
 Server Directory Cleanup Defaults
 .................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential/residential_hpxml_defaults.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
    :start-after: ServerDirectoryCleanup": {
    :end-before: }

@@ -1,16 +1,18 @@
-from buildstockbatch.workflow_generator.residential.residential_hpxml import (
+from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml import (
     ResidentialHpxmlWorkflowGenerator,
 )
-from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import ARG_MAP
+from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
+from buildstockbatch.workflow_generator.residential.v2024_07_18.residential_hpxml_arg_mapping import ARG_MAP
 from testfixtures import LogCapture
-from buildstockbatch.test.shared_testing_stuff import resstock_directory
 import os
+import pathlib
 import yamale
 import logging
 import copy
 import itertools
 import pytest
+
+resstock_directory = pathlib.Path(__file__).parent / "testing_resstock_data"
 
 test_cfg = {
     "buildstock_directory": resstock_directory,
@@ -377,7 +379,7 @@ def test_hpmxl_schema_defaults_and_mapping():
     """
     Verify that the keys used in the defaults, workflow schema and arg mapping are available in the measure
     """
-    schema_yaml = os.path.join(os.path.dirname(__file__), "residential_hpxml_schema.yml")
+    schema_yaml = os.path.join(os.path.dirname(__file__), "..", "residential_hpxml_schema.yml")
     schema_obj = yamale.make_schema(schema_yaml, parser="ruamel")
 
     def assert_valid_mapped_keys(measure_dir_name, valid_args):

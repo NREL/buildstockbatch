@@ -19,10 +19,10 @@ from xml.etree import ElementTree
 import yamale
 from typing import Dict, Any
 
-from ..base import WorkflowGeneratorBase
+from ...base import WorkflowGeneratorBase
 from buildstockbatch.exc import ValidationError
-from buildstockbatch.workflow_generator.residential.residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
-from buildstockbatch.workflow_generator.residential.residential_hpxml_arg_mapping import ARG_MAP
+from .residential_hpxml_defaults import DEFAULT_MEASURE_ARGS
+from .residential_hpxml_arg_mapping import ARG_MAP
 import copy
 
 logger = logging.getLogger(__name__)
@@ -113,13 +113,13 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         """
         logger.debug("Generating OSW, sim_id={}".format(sim_id))
         workflow_args = copy.deepcopy(self.workflow_args)
+
         workflow_key_to_measure_names = {  # This is the order the osw steps will be in
             "build_existing_model": "BuildExistingModel",
             "hpxml_to_openstudio": "HPXMLtoOpenStudio",  # Non-existing Workflow Key is fine
-            "simulation_output_report": "ReportSimulationOutput",
-            "report_hpxml_output": "ReportHPXMLOutput",
-            "report_utility_bills": "ReportUtilityBills",
             "upgrade_costs": "UpgradeCosts",
+            "simulation_output_report": "ReportSimulationOutput",
+            "report_utility_bills": "ReportUtilityBills",
             "server_directory_cleanup": "ServerDirectoryCleanup",
         }
 
@@ -167,7 +167,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             "run_options": {"skip_zip_results": True},
         }
         for measure in reversed(workflow_args.get("measures", [])):
-            osw["steps"].insert(2, measure)
+            osw["steps"].insert(3, measure)  # After UpgradeCosts
 
         self.add_upgrade_step_to_osw(upgrade_idx, osw)
 
