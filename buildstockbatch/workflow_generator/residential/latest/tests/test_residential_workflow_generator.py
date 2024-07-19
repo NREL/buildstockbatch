@@ -379,9 +379,17 @@ def test_hpmxl_schema_defaults_and_mapping():
     schema_yaml = os.path.join(os.path.dirname(__file__), "..", "residential_hpxml_schema.yml")
     schema_obj = yamale.make_schema(schema_yaml, parser="ruamel")
 
+    def get_mapped_away_yaml_keys(yaml_block_name):
+        mapped_keys = set()
+        for measure_dir_name, measure_arg_maps in ARG_MAP.items():
+            for block_name, measure_arg_map in measure_arg_maps.items():
+                if block_name == yaml_block_name:
+                    mapped_keys.update(measure_arg_map.keys())
+        return mapped_keys
+
     def assert_valid_mapped_keys(measure_dir_name, valid_args):
-        for yaml_block_name, measure_arg_map in ARG_MAP.items():
-            for measure_arg in measure_arg_map.get(measure_dir_name, {}).values():
+        for yaml_block_name, measure_arg_map in ARG_MAP.get(measure_dir_name, {}).items():
+            for measure_arg in measure_arg_map.values():
                 assert measure_arg in valid_args, f"{measure_arg} in ARG_MAP[{yaml_block_name}] not available"
                 f"as input to {measure_dir_name} measure"
 
@@ -395,21 +403,22 @@ def test_hpmxl_schema_defaults_and_mapping():
         for key in default_keys - exclude_keys:
             assert key in valid_keys, f"{key} in defaults not available in {measure_dir_name} measure"
 
-    def assert_valid_keys(measure_dir_name, yaml_block_name, exclude_keys):
-        avilable_measure_input = ResidentialHpxmlWorkflowGenerator.get_measure_arguments_from_xml(
+    def assert_valid_keys(measure_dir_name, yaml_block_name):
+        available_measure_input = ResidentialHpxmlWorkflowGenerator.get_measure_arguments_from_xml(
             resstock_directory, measure_dir_name
         )
-        assert_valid_default_keys(measure_dir_name, avilable_measure_input, exclude_keys)
-        assert_valid_mapped_keys(measure_dir_name, avilable_measure_input)
+        exclude_keys = get_mapped_away_yaml_keys(yaml_block_name)  # Keys that are mapped away to other measures
+        assert_valid_default_keys(measure_dir_name, available_measure_input, exclude_keys)
+        assert_valid_mapped_keys(measure_dir_name, available_measure_input)
         if yaml_block_name:  # Not all measures have input defined/allowed in the schema
-            assert_valid_schema_keys(yaml_block_name, avilable_measure_input, exclude_keys)
+            assert_valid_schema_keys(yaml_block_name, available_measure_input, exclude_keys)
 
-    assert_valid_keys("BuildExistingModel", "build_existing_model", {"add_component_loads"})
-    assert_valid_keys("HPXMLtoOpenStudio", None, set())
-    assert_valid_keys("UpgradeCosts", None, set())
-    assert_valid_keys("ReportSimulationOutput", "simulation_output_report", {"output_variables"})
-    assert_valid_keys("ReportUtilityBills", None, set())
-    assert_valid_keys("ServerDirectoryCleanup", "server_directory_cleanup", set())
+    assert_valid_keys("BuildExistingModel", "build_existing_model")
+    assert_valid_keys("HPXMLtoOpenStudio", None)
+    assert_valid_keys("UpgradeCosts", None)
+    assert_valid_keys("ReportSimulationOutput", "simulation_output_report")
+    assert_valid_keys("ReportUtilityBills", None)
+    assert_valid_keys("ServerDirectoryCleanup", "server_directory_cleanup")
 
 
 def test_block_compression_and_argmap():
