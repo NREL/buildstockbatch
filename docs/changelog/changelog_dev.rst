@@ -83,5 +83,13 @@ Development Changelog
         :tags: general, feature
         :pullreq: 458
 
-        For the Residential HPXML Workflow Generator, supports the UpgradeCosts measure
-        changing from ReportingMeasure to ModelMeasure.
+        Add a new version (2024.07.19) of the Residential HPXML Workflow Generator that
+        changes UpgradeCosts from reporting measure to a regular measure. ReportHPXMLOutput
+        is no longer called. This feature is created to support the corresponding update in
+        ResStock (https://github.com/NREL/resstock/pull/1253)
+
+        To facilitate the creation of new version, the workflow generator code base is refactored
+        to have one folder for each version. New yaml schema (v0.4) is created that defines a
+        `version` key for the `workflow_generator` block. The base class loads the appropriate
+        version of the workflow_generator based on the version key. If version key is missing
+        (when using older schema), it is defaulted to the oldest available version (2024.07.18).
