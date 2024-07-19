@@ -19,7 +19,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_commit.id }}
 
       - name: Download Coverage Artifacts
-        uses: Legit-Labs/action-download-artifact@v3
+        uses: Legit-Labs/action-download-artifact@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           workflow: ${{ github.event.workflow_run.workflow_id }}
