@@ -62,7 +62,6 @@ test_cfg = {
                     {"name": "Zone Mean Air Temperature"},
                     {"name": "Zone People Occupant Count"},
                 ],
-                "include_monthly_bills": True,
             },
             "server_directory_cleanup": {"retain_in_osm": True, "retain_eplusout_msgpack": True},
             "reporting_measures": [
@@ -303,11 +302,8 @@ def test_residential_hpxml(upgrade, dynamic_cfg):
 
     utility_bills_step = osw["steps"][index]
     assert utility_bills_step["measure_dir_name"] == "ReportUtilityBills"
-    assert utility_bills_step["arguments"]["include_annual_bills"] is False
+    assert utility_bills_step["arguments"]["include_annual_bills"] is True
     assert utility_bills_step["arguments"]["include_monthly_bills"] is False
-    assert utility_bills_step["arguments"]["register_annual_bills"] is True
-    if "simulation_output_report" in workflow_args:
-        assert utility_bills_step["arguments"]["register_monthly_bills"] is True
     index += 1
 
     if "reporting_measures" in workflow_args:

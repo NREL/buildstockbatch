@@ -1,8 +1,9 @@
-__version__ = "2024.07.19"
+__version__ = "2024.07.20"
 version_info = {
     "version": __version__,
     "version_description": """
-In this version, the UpgradeCosts measure is converted to a regular measure
-and is run early in the workflow. ReportHPXMLOutput measure is no longer used.
+In this version, optional include_annual_bills and
+include_monthly bills arguments are exposed for reporting
+annual and monthly utility bill outputs.
 """,
 }
