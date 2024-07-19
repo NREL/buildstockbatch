@@ -16,15 +16,15 @@ jobs:
         python-version: ['3.8', '3.9', '3.10', '3.11']
     name: Tests - Python ${{ matrix.python-version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           path: buildstockbatch
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: NREL/resstock
           path: resstock
           ref: develop
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Download weather
@@ -63,13 +63,13 @@ jobs:
           check_name: Testing Report
           fail_on_failure: true
       - name: Save Coverage Report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ matrix.python-version == '3.11' }}
         with:
           name: coverage-report-html
           path: buildstockbatch/coverage/htmlreport/
       - name: Save Coverage Report XML
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ matrix.python-version == '3.11' }}
         with:
           name: coverage-report-xml
@@ -80,7 +80,7 @@ jobs:
           cd buildstockbatch/docs
           make html SPHINXOPTS="-W --keep-going -n"
       - name: Save Docs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: ${{ matrix.python-version == '3.11' }}
         with:
           name: documentation
@@ -90,12 +90,12 @@ jobs:
     strategy:
       fail-fast: false
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           repository: NREL/resstock
           path: resstock
           ref: develop
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: 3.11
       - name: Download weather

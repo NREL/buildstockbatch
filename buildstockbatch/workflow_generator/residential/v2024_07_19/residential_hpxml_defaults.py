@@ -66,12 +66,7 @@ DEFAULT_MEASURE_ARGS = {
         "timeseries_num_decimal_places": 3,
         "user_output_variables": "",
     },
-    "ReportUtilityBills": {
-        "include_annual_bills": False,
-        "include_monthly_bills": False,
-        "register_annual_bills": True,
-        "register_monthly_bills": False,
-    },
+    "ReportUtilityBills": {"include_annual_bills": True, "include_monthly_bills": False},
     "UpgradeCosts": {"debug": False},
     "ServerDirectoryCleanup": {
         "retain_in_osm": False,

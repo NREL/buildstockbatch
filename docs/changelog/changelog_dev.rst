@@ -93,3 +93,12 @@ Development Changelog
         `version` key for the `workflow_generator` block. The base class loads the appropriate
         version of the workflow_generator based on the version key. If version key is missing
         (when using older schema), it is defaulted to the oldest available version (2024.07.18).
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 461
+
+        Add a new version (2024.07.20) of the Residential HPXML Workflow Generator that
+        exposes optional ``include_annual_bills`` (defaults to true) and
+        ``include_monthly_bills`` (defaults to false) arguments for reporting annual
+        and monthly utility bill outputs, respectively.
