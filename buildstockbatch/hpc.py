@@ -619,15 +619,18 @@ class SlurmBatch(BuildStockBatchBase):
             "--time={}".format(walltime),
             "--export={}".format(",".join(env_export.keys())),
             "--job-name=bstkpost",
-            "--output=postprocessing.out",
+            "--output=postprocessing_jobdebugging.out",
+            "--reservation=jobdebugging",
             "--nodes=1",
             ":",
             "--tmp=1000000",
             "--mem={}".format(memory),
             "--output=dask_workers.out",
+            "--reservation=jobdebugging",
             "--nodes={}".format(n_workers),
             hpc_post_sh,
         ]
+        print(args)
 
         if after_jobids:
             args.insert(4, "--dependency=afterany:{}".format(":".join(after_jobids)))
@@ -773,8 +776,8 @@ class KestrelBatch(SlurmBatch):
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2
-    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 247000  # Standard node
-    DEFAULT_NODE_MEMORY_MB = 247000  # standard node on Kestrel
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 239000  # Standard node
+    DEFAULT_NODE_MEMORY_MB = 239000  # standard node on Kestrel
     DEFAULT_POSTPROCESSING_N_PROCS = 52
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
