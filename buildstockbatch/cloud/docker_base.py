@@ -423,9 +423,9 @@ class DockerBatchBase(BuildStockBatchBase):
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
         if self.skip_baseline_sims:
-            n_sims = n_datapoints * len(self.cfg.get("upgrades", []))
+            n_sims = n_datapoints * self.num_upgrades
         else:
-            n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
+            n_sims = n_datapoints * (self.num_upgrades + 1)
         logger.debug("Total number of simulations = {}".format(n_sims))
 
         n_sims_per_job = math.ceil(n_sims / self.batch_array_size)
@@ -433,7 +433,7 @@ class DockerBatchBase(BuildStockBatchBase):
         logger.debug("Number of simulations per array job = {}".format(n_sims_per_job))
 
         # Create list of (building ID, upgrade to apply) pairs for all simulations to run.
-        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
+        upgrade_sims = itertools.product(building_ids, range(self.num_upgrades))
         if not self.skip_baseline_sims:
             baseline_sims = zip(building_ids, itertools.repeat(None))
             all_sims = list(itertools.chain(baseline_sims, upgrade_sims))

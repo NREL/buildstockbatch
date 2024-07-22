@@ -1085,7 +1085,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         """Implements :func:`DockerBase.start_batch_job`"""
         # Create the output directories
         fs = S3FileSystem()
-        for upgrade_id in range(len(self.cfg.get("upgrades", [])) + 1):
+        for upgrade_id in range(self.num_upgrades + 1):
             fs.makedirs(
                 f"{self.cfg['aws']['s3']['bucket']}/{self.cfg['aws']['s3']['prefix']}/results/simulation_output/"
                 f"timeseries/up{upgrade_id:02d}"
@@ -1360,7 +1360,7 @@ def main():
         # validate the project, and in case of the --validateonly flag return True if validation passes
         AwsBatch.validate_project(os.path.abspath(args.project_filename))
         if args.validateonly:
-            return True
+            return
 
         batch = AwsBatch(args.project_filename)
         if args.clean:

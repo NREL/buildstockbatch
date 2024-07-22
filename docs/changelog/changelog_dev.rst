@@ -72,3 +72,33 @@ Development Changelog
         :pullreq: 450
 
         Requires ``os_version`` and ``os_sha`` in the project file.
+
+    .. change::
+        :tags: general
+        :pullreq: 456
+
+        Refactor WorkflowGenerator.
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 458
+
+        Add a new version (2024.07.19) of the Residential HPXML Workflow Generator that
+        changes UpgradeCosts from reporting measure to a regular measure. ReportHPXMLOutput
+        is no longer called. This feature is created to support the corresponding update in
+        ResStock (https://github.com/NREL/resstock/pull/1253)
+
+        To facilitate the creation of new version, the workflow generator code base is refactored
+        to have one folder for each version. New yaml schema (v0.4) is created that defines a
+        `version` key for the `workflow_generator` block. The base class loads the appropriate
+        version of the workflow_generator based on the version key. If version key is missing
+        (when using older schema), it is defaulted to the oldest available version (2024.07.18).
+
+    .. change::
+        :tags: general, feature
+        :pullreq: 461
+
+        Add a new version (2024.07.20) of the Residential HPXML Workflow Generator that
+        exposes optional ``include_annual_bills`` (defaults to true) and
+        ``include_monthly_bills`` (defaults to false) arguments for reporting annual
+        and monthly utility bill outputs, respectively.

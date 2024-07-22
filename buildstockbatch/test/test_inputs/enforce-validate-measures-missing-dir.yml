@@ -1,0 +1,77 @@
+schema_version: '0.3'
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+weather_files_url: https://fake-url
+baseline:
+  n_buildings_represented: 81221016
+
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 30
+
+workflow_generator:
+  type: residential_hpxml
+  args:
+    build_existing_model:
+      simulation_control_timestep: 60
+      simulation_control_run_period_begin_month: 1
+      simulation_control_run_period_begin_day_of_month: 1
+      simulation_control_run_period_end_month: 12
+      simulation_control_run_period_end_day_of_month: 31
+      simulation_control_run_period_calendar_year: 2007
+
+    emissions:
+      - scenario_name: LRMER_MidCase_15
+        type: CO2e
+        elec_folder: data/cambium/LRMER_MidCase_15
+
+    utility_bills:
+      - scenario_name: Bills
+
+    simulation_output_report:
+      timeseries_frequency: hourly
+      include_timeseries_total_consumptions: true
+      include_timeseries_fuel_consumptions: true
+      include_timeseries_end_use_consumptions: true
+      include_timeseries_emissions: true
+      include_timeseries_emission_fuels: true
+      include_timeseries_emission_end_uses: true
+      include_timeseries_hot_water_uses: true
+      include_timeseries_total_loads: true
+      include_timeseries_component_loads: true
+      include_timeseries_unmet_hours: true
+      include_timeseries_zone_temperatures: true
+      include_timeseries_airflows: true
+      include_timeseries_weather: true
+
+    reporting_measures:
+      - measure_dir_name: QOIReport
+
+    server_directory_cleanup:
+      retain_in_idf: false
+      retain_schedules_csv: false
+
+upgrades:
+  - upgrade_name: cool upgrade
+    options:
+      - option: Vintage<1940
+  - upgrade_name: good upgrade
+    options:
+      - option: Vintage|<1940
+        apply_logic:
+          - or:
+            - Insulation Slab|Good Option
+            - Insulation Slab|None
+          - not: Insulation Wall|Good Option
+          - and:
+              - Vintage|1960s||Vintage|1960s
+              - Vintage|1980s
+        costs:
+          - value: 0.9
+            multiplier: Fixed (1)
+      - option: Insulation Finished Basement|Good Option
+        apply_logic:
+          - Insulation Unfinished Basement|Extra Argument
+    package_apply_logic: Vintage|1960s||Vintage|1940s
+    reference_scenario: cool upgrade

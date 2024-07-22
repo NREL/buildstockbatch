@@ -18,7 +18,7 @@ import re
 from xml.etree import ElementTree
 import yamale
 
-from .base import WorkflowGeneratorBase
+from ...base import WorkflowGeneratorBase
 
 logger = logging.getLogger(__name__)
 
@@ -30,8 +30,8 @@ def get_measure_xml(xml_path):
 
 
 class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
-    @classmethod
-    def validate(cls, cfg):
+
+    def validate(self):
         """Validate arguments
 
         :param cfg: project configuration
@@ -46,11 +46,12 @@ class CommercialDefaultWorkflowGenerator(WorkflowGeneratorBase):
             measure_dir_name: str(required=True)
             arguments: map(required=False)
         """
-        workflow_generator_args = cfg["workflow_generator"]["args"]
+        workflow_generator_args = self.cfg["workflow_generator"]["args"]
         schema_yml = re.sub(r"^ {8}", "", schema_yml, flags=re.MULTILINE)
         schema = yamale.make_schema(content=schema_yml, parser="ruamel")
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser="ruamel")
-        return yamale.validate(schema, data, strict=True)
+        yamale.validate(schema, data, strict=True)
+        return True
 
     def reporting_measures(self):
         """Return a list of reporting measures to include in outputs"""

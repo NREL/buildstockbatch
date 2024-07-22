@@ -132,7 +132,7 @@ class SlurmBatch(BuildStockBatchBase):
         # Create simulation_output dir
         sim_out_ts_dir = pathlib.Path(self.output_dir) / "results" / "simulation_output" / "timeseries"
         os.makedirs(sim_out_ts_dir, exist_ok=True)
-        for i in range(0, len(self.cfg.get("upgrades", [])) + 1):
+        for i in range(0, self.num_upgrades + 1):
             os.makedirs(sim_out_ts_dir / f"up{i:02d}")
 
         # create destination_dir and copy housing_characteristics into it
@@ -161,7 +161,7 @@ class SlurmBatch(BuildStockBatchBase):
         building_ids = df.index.tolist()
         n_datapoints = len(building_ids)
         # number of simulations is number of buildings * number of upgrades
-        n_sims = n_datapoints * (len(self.cfg.get("upgrades", [])) + 1)
+        n_sims = n_datapoints * (self.num_upgrades + 1)
 
         # this is the number of simulations defined for this run as a "full job"
         #     number of simulations per job if we believe the .yml file n_jobs
@@ -170,7 +170,7 @@ class SlurmBatch(BuildStockBatchBase):
         #     larger than we need, now that we know n_sims
         n_sims_per_job = max(n_sims_per_job, self.MIN_SIMS_PER_JOB)
 
-        upgrade_sims = itertools.product(building_ids, range(len(self.cfg.get("upgrades", []))))
+        upgrade_sims = itertools.product(building_ids, range(self.num_upgrades))
         if not self.skip_baseline_sims:
             # create batches of simulations
             baseline_sims = zip(building_ids, itertools.repeat(None))
@@ -213,11 +213,6 @@ class SlurmBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / "measures",
             self.local_buildstock_dir / "measures",
         )
-        if os.path.exists(pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures"):
-            self.clear_and_copy_dir(
-                pathlib.Path(self.buildstock_dir) / "resources/hpxml-measures",
-                self.local_buildstock_dir / "resources/hpxml-measures",
-            )
         self.clear_and_copy_dir(self.weather_dir, self.local_weather_dir)
         self.clear_and_copy_dir(
             pathlib.Path(self.output_dir) / "housing_characteristics",
@@ -778,8 +773,8 @@ class KestrelBatch(SlurmBatch):
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2
-    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 247000  # Standard node
-    DEFAULT_NODE_MEMORY_MB = 247000  # standard node on Kestrel
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
+    DEFAULT_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
     DEFAULT_POSTPROCESSING_N_PROCS = 52
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
@@ -895,18 +890,18 @@ def user_cli(Batch: SlurmBatch, argv: list):
     # validate the project, and in case of the --validateonly flag return True if validation passes
     Batch.validate_project(project_filename)
     if args.validateonly:
-        return True
+        return
 
     # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
         batch = Batch(project_filename)
         batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return True
+        return
 
     if args.rerun_failed:
         batch = Batch(project_filename)
         batch.rerun_failed_jobs(hipri=args.hipri)
-        return True
+        return
 
     # otherwise, queue up the whole buildstockbatch process
     # the main work of the first job is to run the sampling script ...

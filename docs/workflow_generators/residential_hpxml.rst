@@ -31,6 +31,7 @@ Configuration Example
           include_timeseries_emissions: true
           output_variables:
             - name: Zone People Occupant Count
+          include_monthly_bills: true
 
         reporting_measures:
           - measure_dir_name: QOIReport
@@ -116,6 +117,8 @@ Arguments
   - ``add_timeseries_dst_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeDST column. Requires that daylight saving time is enabled.
   - ``add_timeseries_utc_column``: Optionally add, in addition to the default local standard Time column, a local clock TimeUTC column. If the time zone UTC offset is not provided in the HPXML file, the time zone in the EPW header will be used.
   - ``output_variables``: Optionally request EnergyPlus output variables. Do not include key values; by default all key values will be requested.
+  - ``include_annual_bills``: Registers annual utility bills with the OpenStudio runner for downstream processing. Default is true.
+  - ``include_monthly_bills``: Registers monthly utility bills with the OpenStudio runner for downstream processing. Default is false.
 
 - ``reporting_measures`` (optional): A list of additional reporting measures to apply to the workflow.
   Any columns reported by these additional measures will be appended to the results csv.
@@ -146,9 +149,9 @@ Arguments
 Build Existing Model Defaults
 .............................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
-   :start-after: sim_ctl_args = {
+   :start-after: BuildExistingModel": {
    :end-before: }
 
 .. _hpxml-sim-output-report-defaults:
@@ -156,9 +159,9 @@ Build Existing Model Defaults
 Simulation Output Report Defaults
 ..................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
-   :start-after: sim_out_rep_args = {
+   :start-after: ReportSimulationOutput": {
    :end-before: }
 
 .. _hpxml-server-dir-cleanup-defaults:
@@ -166,7 +169,7 @@ Simulation Output Report Defaults
 Server Directory Cleanup Defaults
 .................................
 
-.. include:: ../../buildstockbatch/workflow_generator/residential_hpxml.py
+.. include:: ../../buildstockbatch/workflow_generator/residential/latest/residential_hpxml_defaults.py
    :code: python
-   :start-after: server_dir_cleanup_args = {
+   :start-after: ServerDirectoryCleanup": {
    :end-before: }
