@@ -171,6 +171,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             "measure_paths": ["measures", "resources/hpxml-measures"],
             "run_options": {"skip_zip_results": True},
         }
+
+        # Insert the OpenStudio-HEScore measures into the workflow if we're doing a HEScore run
+        if os_hescore_directory := workflow_args.get("build_existing_model", {}).get("os_hescore_directory"):
+            osw["measure_paths"].insert(0, os.path.join(os_hescore_directory, "hpxml-measures"))
+
         for measure in reversed(workflow_args.get("measures", [])):
             osw["steps"].insert(3, measure)  # After UpgradeCosts
 

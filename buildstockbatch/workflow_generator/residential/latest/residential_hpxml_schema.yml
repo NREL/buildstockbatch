@@ -15,6 +15,7 @@ build-existing-model-spec:
     simulation_control_run_period_end_day_of_month: int(required=False)
     simulation_control_run_period_calendar_year: int(required=False)
     add_component_loads: bool(required=False)
+    os_hescore_directory: str(required=False)
 emission-scenario-spec:
     scenario_name: str(required=True)
     type: str(required=True)
