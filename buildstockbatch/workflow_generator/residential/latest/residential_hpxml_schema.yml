@@ -64,6 +64,8 @@ sim-output-report-spec:
     add_timeseries_dst_column: bool(required=False)
     add_timeseries_utc_column: bool(required=False)
     output_variables: list(include('output-var-spec'), required=False)
+    include_annual_bills: bool(required=False)
+    include_monthly_bills: bool(required=False)
 output-var-spec:
     name: str(required=True)
 measure-spec:

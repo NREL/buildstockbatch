@@ -409,7 +409,7 @@ def main():
     # Validate the project, and in case of the --validateonly flag return True if validation passes
     LocalBatch.validate_project(args.project_filename)
     if args.validateonly:
-        return True
+        return
     batch = LocalBatch(args.project_filename)
     if not (args.postprocessonly or args.uploadonly or args.validateonly):
         batch.run_batch(

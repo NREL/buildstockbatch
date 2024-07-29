@@ -778,8 +778,8 @@ class KestrelBatch(SlurmBatch):
     HPC_NAME = "kestrel"
     CORES_PER_NODE = 104
     MIN_SIMS_PER_JOB = 104 * 2
-    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 247000  # Standard node
-    DEFAULT_NODE_MEMORY_MB = 247000  # standard node on Kestrel
+    DEFAULT_POSTPROCESSING_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
+    DEFAULT_NODE_MEMORY_MB = 246000  # Standard node on Kestrel as of 6/3/2024 HPC email
     DEFAULT_POSTPROCESSING_N_PROCS = 52
     DEFAULT_POSTPROCESSING_N_WORKERS = 2
 
@@ -895,18 +895,18 @@ def user_cli(Batch: SlurmBatch, argv: list):
     # validate the project, and in case of the --validateonly flag return True if validation passes
     Batch.validate_project(project_filename)
     if args.validateonly:
-        return True
+        return
 
     # if the project has already been run, simply queue the correct post-processing step
     if args.postprocessonly or args.uploadonly:
         batch = Batch(project_filename)
         batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
-        return True
+        return
 
     if args.rerun_failed:
         batch = Batch(project_filename)
         batch.rerun_failed_jobs(hipri=args.hipri)
-        return True
+        return
 
     # otherwise, queue up the whole buildstockbatch process
     # the main work of the first job is to run the sampling script ...

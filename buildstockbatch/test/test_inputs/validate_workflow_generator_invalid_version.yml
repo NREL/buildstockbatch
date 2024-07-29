@@ -1,0 +1,18 @@
+schema_version: '0.4'
+buildstock_directory: test_openstudio_buildstock
+project_directory: project_singlefamilydetached
+weather_files_url: https://fake-url
+baseline:
+  n_buildings_represented: 81221016
+
+sampler:
+  type: residential_quota
+  args:
+    n_datapoints: 30
+
+workflow_generator:
+  type: residential_hpxml
+  version: "vNotARealVersion"
+  args:
+    build_existing_model:
+      simulation_control_timestep: 60
