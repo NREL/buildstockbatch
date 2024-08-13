@@ -379,19 +379,6 @@ def write_metadata_files(fs, parquet_root_dir, partition_columns):
     parquet.write_metadata(sch, f"{parquet_root_dir}/_common_metadata", filesystem=fs)
     logger.info(f"Written _common_metadata to {parquet_root_dir}")
 
-    if partition_columns:
-        partition_glob = "/".join([f"{c}*" for c in partition_columns])
-        glob_str = f"{parquet_root_dir}/up*/{partition_glob}/*.parquet"
-    else:
-        glob_str = f"{parquet_root_dir}/up*/*.parquet"
-
-    logger.info(f"Gathering all the parquet files in {glob_str}")
-    concat_files = fs.glob(glob_str)
-    logger.info(f"Gathered {len(concat_files)} files. Now writing _metadata")
-    parquet_root_dir = Path(parquet_root_dir).as_posix()
-    create_metadata_file(concat_files, root_dir=parquet_root_dir, engine="pyarrow", fs=fs)
-    logger.info(f"_metadata file written to {parquet_root_dir}")
-
 
 def combine_results(fs, results_dir, cfg, do_timeseries=True):
     """Combine the results of the batch simulations.
