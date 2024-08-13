@@ -102,3 +102,10 @@ Development Changelog
         exposes optional ``include_annual_bills`` (defaults to true) and
         ``include_monthly_bills`` (defaults to false) arguments for reporting annual
         and monthly utility bill outputs, respectively.
+
+    .. change::
+        :tags: general, bugfix
+        :pullreq: 464
+
+        Stop creating dask _metadata files for the timeseries parquet files since it crashes the
+        postprocessing.
