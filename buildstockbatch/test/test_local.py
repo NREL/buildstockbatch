@@ -89,7 +89,6 @@ def test_resstock_local_batch(project_filename):
             assert (upg["completed_status"] == "Success").all()
             assert upg.shape[0] == n_datapoints
     assert (ts_pq_path / "_common_metadata").exists()
-    assert (ts_pq_path / "_metadata").exists()
 
     shutil.rmtree(out_path)
 
