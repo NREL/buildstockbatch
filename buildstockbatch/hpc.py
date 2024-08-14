@@ -567,7 +567,7 @@ class SlurmBatch(BuildStockBatchBase):
         job_id = m.group(1)
         return [job_id]
 
-    def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False):
+    def queue_post_processing(self, after_jobids=[], upload_only=False, hipri=False, continue_upload=False):
         # Configuration values
         hpc_cfg = self.cfg[self.HPC_NAME]
         account = hpc_cfg["account"]
@@ -605,6 +605,7 @@ class SlurmBatch(BuildStockBatchBase):
             "PROJECTFILE": self.project_filename,
             "OUT_DIR": self.output_dir,
             "UPLOADONLY": str(upload_only),
+            "CONTINUE_UPLOAD": str(continue_upload),
             "MEMORY": str(memory),
             "NPROCS": str(n_procs),
         }
@@ -868,7 +869,14 @@ def user_cli(Batch: SlurmBatch, argv: list):
     )
     group.add_argument(
         "--uploadonly",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
+            " Errors out if files already exists in s3",
+        action="store_true",
+    )
+    group.add_argument(
+        "--continue_upload",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
+            " Continues with remaining files if files already exists in s3",
         action="store_true",
     )
     group.add_argument(
@@ -893,9 +901,9 @@ def user_cli(Batch: SlurmBatch, argv: list):
         return
 
     # if the project has already been run, simply queue the correct post-processing step
-    if args.postprocessonly or args.uploadonly:
+    if args.postprocessonly or args.uploadonly or args.continue_upload:
         batch = Batch(project_filename)
-        batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri)
+        batch.queue_post_processing(upload_only=args.uploadonly, hipri=args.hipri, continue_upload=args.continue_upload)
         return
 
     if args.rerun_failed:
@@ -943,6 +951,7 @@ def main():
     job_array_number = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
     post_process = get_bool_env_var("POSTPROCESS")
     upload_only = get_bool_env_var("UPLOADONLY")
+    continue_upload = get_bool_env_var("CONTINUE_UPLOAD")
     measures_only = get_bool_env_var("MEASURESONLY")
     sampling_only = get_bool_env_var("SAMPLINGONLY")
     if job_array_number:
@@ -958,6 +967,8 @@ def main():
         assert not sampling_only
         if upload_only:
             batch.process_results(skip_combine=True)
+        elif continue_upload:
+            batch.process_results(skip_combine=True, continue_upload=True)
         else:
             batch.process_results()
     else:

@@ -393,7 +393,14 @@ def main():
     )
     group.add_argument(
         "--uploadonly",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the " "upload flag in yaml",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
+            " Errors out if files already exists in s3",
+        action="store_true",
+    )
+    group.add_argument(
+        "--continue_upload",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
+            " Continues with remaining files if files already exists in s3",
         action="store_true",
     )
     group.add_argument(
@@ -421,6 +428,8 @@ def main():
         return
     if args.uploadonly:
         batch.process_results(skip_combine=True)
+    elif args.continue_upload:
+        batch.process_results(skip_combine=True, continue_upload=True)
     else:
         batch.process_results()
 
