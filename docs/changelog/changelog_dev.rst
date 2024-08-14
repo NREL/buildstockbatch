@@ -112,6 +112,6 @@ Development Changelog
 
     .. change::
         :tags: general, bugfix
-        :pullreq: 465
+        :pullreq: 466
 
-        Upload only the missing files to s3
+        Add a flag to allow only uploading the missing files to s3.
