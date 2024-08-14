@@ -957,8 +957,7 @@ class BuildStockBatchBase(object):
             aws_conf = self.cfg.get("postprocessing", {}).get("aws", {})
             if "s3" in aws_conf or "aws" in self.cfg:
                 s3_bucket, s3_prefix = self.upload_results(
-                    aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path,
-                    continue_upload=continue_upload
+                    aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path, continue_upload=continue_upload
                 )
                 if "athena" in aws_conf:
                     postprocessing.create_athena_tables(

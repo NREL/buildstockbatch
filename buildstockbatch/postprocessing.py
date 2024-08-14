@@ -612,7 +612,7 @@ def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False)
         fs.rm(ts_in_dir, recursive=True)
 
 
-def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename, continue_upload = False):
+def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename, continue_upload=False):
     logger.info("Uploading the parquet files to s3")
 
     output_folder_name = Path(output_dir).name

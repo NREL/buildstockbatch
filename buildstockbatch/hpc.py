@@ -869,14 +869,14 @@ def user_cli(Batch: SlurmBatch, argv: list):
     )
     group.add_argument(
         "--uploadonly",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
-            " Errors out if files already exists in s3",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."
+        " Errors out if files already exists in s3",
         action="store_true",
     )
     group.add_argument(
         "--continue_upload",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."\
-            " Continues with remaining files if files already exists in s3",
+        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."
+        " Continues with remaining files if files already exists in s3",
         action="store_true",
     )
     group.add_argument(
