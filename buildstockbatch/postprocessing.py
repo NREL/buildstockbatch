@@ -608,9 +608,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
     logger.info("All aggregation completed. ")
-    if do_timeseries:
-        logger.info("Writing timeseries metadata files")
-        write_metadata_files(fs, ts_dir, partition_columns)
+    # if do_timeseries:
+    #     logger.info("Writing timeseries metadata files")
+    #     write_metadata_files(fs, ts_dir, partition_columns)
 
 
 def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False):

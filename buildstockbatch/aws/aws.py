@@ -600,6 +600,7 @@ class AwsBatchEnv(AwsJobBase):
                         "type": "SPOT",
                         "bidPercentage": 100,
                         "spotIamFleetRole": self.spot_service_role_arn,
+                        "allocationStrategy": "SPOT_PRICE_CAPACITY_OPTIMIZED",
                     }
                 )
             else:
@@ -692,7 +693,7 @@ class AwsBatchEnv(AwsJobBase):
                 "jobRoleArn": self.task_role_arn,
                 "environment": self.generate_name_value_inputs(env_vars),
             },
-            retryStrategy={"attempts": 2},
+            retryStrategy={"attempts": 5},
             tags=self.get_tags(),
         )
 
@@ -1185,7 +1186,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         jobs_file_path = sim_dir.parent / "jobs.tar.gz"
         s3.download_file(bucket, f"{prefix}/jobs.tar.gz", str(jobs_file_path))
         with tarfile.open(jobs_file_path, "r") as tar_f:
-            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8")
+            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"))
         logger.debug("Number of simulations = {}".format(len(jobs_d["batch"])))
 
         logger.debug("Getting weather files")
@@ -1215,9 +1216,10 @@ class AwsBatch(docker_base.DockerBatchBase):
         m = 1024
         self.dask_cluster = FargateCluster(
             region_name=self.region,
-            fargate_spot=True,
+            fargate_spot=dask_cfg.get("fargate_spot", True),
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",
+            scheduler_timeout="3600",
             scheduler_cpu=dask_cfg.get("scheduler_cpu", 2 * m),
             scheduler_mem=dask_cfg.get("scheduler_memory", 8 * m),
             worker_cpu=dask_cfg.get("worker_cpu", 2 * m),
@@ -1227,6 +1229,7 @@ class AwsBatch(docker_base.DockerBatchBase):
             tags=batch_env.get_tags(),
         )
         self.dask_client = Client(self.dask_cluster)
+        logger.info(f"Dask Dashboard: {self.dask_client.dashboard_link}")
         return self.dask_client
 
     def cleanup_dask(self):
@@ -1262,14 +1265,13 @@ class AwsBatch(docker_base.DockerBatchBase):
             with open(tmppath / "args.json", "w") as f:
                 json.dump([args, kwargs], f)
 
-            credentials = boto3.Session().get_credentials().get_frozen_credentials()
-            env = {
-                "AWS_ACCESS_KEY_ID": credentials.access_key,
-                "AWS_SECRET_ACCESS_KEY": credentials.secret_key,
-            }
-            if credentials.token:
-                env["AWS_SESSION_TOKEN"] = credentials.token
-            env["POSTPROCESSING_INSIDE_DOCKER_CONTAINER"] = "true"
+            env = {"POSTPROCESSING_INSIDE_DOCKER_CONTAINER": "true"}
+            if self.cfg["aws"]["dask"].get("pass_frozen_credentials", False):
+                credentials = boto3.Session().get_credentials().get_frozen_credentials()
+                env["AWS_ACCESS_KEY_ID"] = credentials.access_key
+                env["AWS_SECRET_ACCESS_KEY"] = credentials.secret_key
+                if credentials.token:
+                    env["AWS_SESSION_TOKEN"] = credentials.token
 
             volumes = {
                 tmpdir: {"bind": str(container_workpath), "mode": "rw"},
