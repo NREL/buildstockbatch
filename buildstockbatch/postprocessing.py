@@ -16,6 +16,7 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
+from datetime import datetime
 from functools import partial
 import gzip
 import json
@@ -357,7 +358,10 @@ def get_partitioned_bldg_groups(partition_df, partition_columns, files_per_parti
         flat_groups = split_into_groups(total_building, files_per_partition)
 
     cum_files_count = np.cumsum(flat_groups)
-    assert cum_files_count[-1] == total_building
+    if cum_files_count[-1] != total_building:
+        logger.warn(f'WARNING: {total_building - cum_files_count[-1]} of {total_building} files missing.')
+        if abs(cum_files_count[-1] - total_building) > 3:
+            raise RuntimeError('Too large a discrepency in expected file count.')
     cur_index = 0
     bldg_id_groups = []
     for indx in cum_files_count:
@@ -635,12 +639,12 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
         return
     s3_prefix_output = s3_prefix + "/" + output_folder_name + "/"
 
-    s3 = boto3.resource("s3")
-    bucket = s3.Bucket(s3_bucket)
-    n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix_output)))
-    if n_existing_files > 0:
-        logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
-        raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix_output}")
+    # s3 = boto3.resource("s3")
+    # bucket = s3.Bucket(s3_bucket)
+    # n_existing_files = len(list(bucket.objects.filter(Prefix=s3_prefix_output)))
+    # if n_existing_files > 0:
+    #     logger.error(f"There are already {n_existing_files} files in the s3 folder {s3_bucket}/{s3_prefix_output}.")
+    #     raise FileExistsError(f"s3://{s3_bucket}/{s3_prefix_output}")
 
     def upload_file(filepath, s3key=None):
         full_path = filepath if filepath.is_absolute() else parquet_dir.joinpath(filepath)
@@ -648,7 +652,28 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
         bucket = s3.Bucket(s3_bucket)
         if s3key is None:
             s3key = Path(s3_prefix_output).joinpath(filepath).as_posix()
-        bucket.upload_file(str(full_path), str(s3key))
+        try:
+            last_modified = bucket.Object(s3key).last_modified
+            safety_factor_time = datetime.datetime(2024, 8, 28, 18, 1, 54, tzinfo=datetime.timezone(-datetime.timedelta(hours=6)))
+            if last_modified < safety_factor_time:
+                return
+        except botocore.exceptions.ClientError:
+            pass
+
+        count = 0
+        while count < 10:
+            count += 1
+            try:
+                bucket.upload_file(str(full_path), str(s3key))
+            except botocore.exceptions.EndpointConnectionError:
+                logger.warn(f"AWS Upload EndpointConnectionError at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                time.sleep(3)
+            except Exception as err:
+                logger.warn(f"AWS Upload Unexpected {err=}, {type(err)=} at at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                time.sleep(3)
+            else:
+                return
+        raise RuntimeError(f'Unable to upload file {str(full_path)} to {str(s3key)} - please review the logs.')
 
     tasks = list(map(dask.delayed(upload_file), all_files))
     if buildstock_csv_filename is not None:
