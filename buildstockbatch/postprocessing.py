@@ -16,7 +16,7 @@ from dask.distributed import performance_report
 import dask
 import dask.dataframe as dd
 from dask.dataframe.io.parquet import create_metadata_file
-from datetime import datetime
+import datetime as dt
 from functools import partial
 import gzip
 import json
@@ -654,7 +654,7 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
             s3key = Path(s3_prefix_output).joinpath(filepath).as_posix()
         try:
             last_modified = bucket.Object(s3key).last_modified
-            safety_factor_time = datetime.datetime(2024, 8, 28, 18, 1, 54, tzinfo=datetime.timezone(-datetime.timedelta(hours=6)))
+            safety_factor_time = dt.datetime(2024, 8, 28, 18, 1, 54, tzinfo=dt.timezone(-dt.timedelta(hours=6)))
             if last_modified < safety_factor_time:
                 return
         except botocore.exceptions.ClientError:
@@ -666,10 +666,10 @@ def upload_results(aws_conf, output_dir, results_dir, buildstock_csv_filename):
             try:
                 bucket.upload_file(str(full_path), str(s3key))
             except botocore.exceptions.EndpointConnectionError:
-                logger.warn(f"AWS Upload EndpointConnectionError at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                logger.warn(f"AWS Upload EndpointConnectionError at {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
                 time.sleep(3)
             except Exception as err:
-                logger.warn(f"AWS Upload Unexpected {err=}, {type(err)=} at at {datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
+                logger.warn(f"AWS Upload Unexpected {err=}, {type(err)=} at at {dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')}")
                 time.sleep(3)
             else:
                 return
