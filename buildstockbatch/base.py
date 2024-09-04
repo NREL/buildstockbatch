@@ -795,7 +795,7 @@ class BuildStockBatchBase(object):
                         re.MULTILINE,
                     )
                 )
-            BuildStockBatch_Version = semver.Version.parse(versions["BuildStockBatch"])
+            BuildStockBatch_Version = semver.parse_version_info(versions["BuildStockBatch"])
             if bsb_version < BuildStockBatch_Version:
                 if "ResStock" in versions.keys():
                     stock_version = versions["ResStock"]
