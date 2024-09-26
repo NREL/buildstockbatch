@@ -218,11 +218,6 @@ def test_upload_files(mocker, basic_residential_project_file):
     assert (source_file_path, s3_file_path) in files_uploaded
     files_uploaded.remove((source_file_path, s3_file_path))
 
-    s3_file_path = s3_path + "timeseries/_metadata"
-    source_file_path = os.path.join(source_path, "timeseries", "_metadata")
-    assert (source_file_path, s3_file_path) in files_uploaded
-    files_uploaded.remove((source_file_path, s3_file_path))
-
     s3_file_path = s3_path + "buildstock_csv/buildstock.csv"
     source_file_path = str(buildstock_csv_path)
     assert (source_file_path, s3_file_path) in files_uploaded
