@@ -399,8 +399,7 @@ def main():
     )
     group.add_argument(
         "--continue_upload",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."
-        " Continues with remaining files if files already exists in s3",
+        help="Continue uploading to S3, useful when previous upload was interrupted.",
         action="store_true",
     )
     group.add_argument(
@@ -418,7 +417,7 @@ def main():
     if args.validateonly:
         return
     batch = LocalBatch(args.project_filename)
-    if not (args.postprocessonly or args.uploadonly or args.validateonly):
+    if not (args.postprocessonly or args.uploadonly or args.validateonly or args.continue_upload):
         batch.run_batch(
             n_jobs=args.j,
             measures_only=args.measures_only,

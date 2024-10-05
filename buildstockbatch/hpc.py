@@ -578,7 +578,7 @@ class SlurmBatch(BuildStockBatchBase):
         print(f"Submitting job to {n_workers} {memory}MB memory nodes using {n_procs} cores in each.")
         # Throw an error if the files already exist.
 
-        if not upload_only:
+        if not (upload_only or continue_upload):
             for subdir in ("parquet", "results_csvs"):
                 subdirpath = pathlib.Path(self.output_dir, "results", subdir)
                 if subdirpath.exists():
@@ -875,8 +875,7 @@ def user_cli(Batch: SlurmBatch, argv: list):
     )
     group.add_argument(
         "--continue_upload",
-        help="Only upload to S3, useful when postprocessing is already done. Ignores the upload flag in yaml."
-        " Continues with remaining files if files already exists in s3",
+        help="Continue uploading to S3, useful when previous upload was interrupted.",
         action="store_true",
     )
     group.add_argument(
