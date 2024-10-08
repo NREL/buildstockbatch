@@ -17,6 +17,7 @@ source /kfs2/shared-projects/buildstock/aws_credentials.sh
 export POSTPROCESS=1
 
 echo "UPLOADONLY: ${UPLOADONLY}"
+echo "CONTINUE_UPLOAD: ${CONTINUE_UPLOAD}"
 echo "MEMORY: ${MEMORY}"
 echo "NPROCS: ${NPROCS}"
 

@@ -109,3 +109,9 @@ Development Changelog
 
         Stop creating dask _metadata files for the timeseries parquet files since it crashes the
         postprocessing.
+
+    .. change::
+        :tags: general, bugfix
+        :pullreq: 466
+
+        Add a flag to allow only uploading the missing files to s3.

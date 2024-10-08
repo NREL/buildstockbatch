@@ -936,11 +936,12 @@ class BuildStockBatchBase(object):
     def upload_results(self, *args, **kwargs):
         return postprocessing.upload_results(*args, **kwargs)
 
-    def process_results(self, skip_combine=False, use_dask_cluster=True):
+    def process_results(self, skip_combine=False, use_dask_cluster=True, continue_upload=False):
         if use_dask_cluster:
             self.get_dask_client()  # noqa F841
 
         try:
+            do_timeseries = False
             wfg_args = self.cfg["workflow_generator"].get("args", {})
             if self.cfg["workflow_generator"]["type"] == "residential_hpxml":
                 if "simulation_output_report" in wfg_args.keys():
@@ -956,7 +957,7 @@ class BuildStockBatchBase(object):
             aws_conf = self.cfg.get("postprocessing", {}).get("aws", {})
             if "s3" in aws_conf or "aws" in self.cfg:
                 s3_bucket, s3_prefix = self.upload_results(
-                    aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path
+                    aws_conf, self.output_dir, self.results_dir, self.sampler.csv_path, continue_upload=continue_upload
                 )
                 if "athena" in aws_conf:
                     postprocessing.create_athena_tables(
