@@ -1105,7 +1105,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         logger.debug(str(batch_env))
         batch_env.create_batch_service_roles()
         batch_env.create_vpc()
-        batch_env.create_compute_environment(volume_size=self.cfg["aws"].get("job_environment", {}).get("volume_size", 200))
+        batch_env.create_compute_environment(volume_size=self.cfg["aws"].get("job_environment", {}).get("volume_size", 100))
         batch_env.create_job_queue()
 
         # Pass through config for the Docker containers
