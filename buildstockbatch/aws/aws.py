@@ -532,7 +532,7 @@ class AwsBatchEnv(AwsJobBase):
                 managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"],
             )
 
-    def create_compute_environment(self, maxCPUs=10000):
+    def create_compute_environment(self, volume_size=200, maxCPUs=10000):
         """
         Creates a compute environment suffixed with the job name
         :param subnets: list of subnet IDs
@@ -548,7 +548,7 @@ class AwsBatchEnv(AwsJobBase):
                     "BlockDeviceMappings": [
                         {
                             "DeviceName": "/dev/xvda",
-                            "Ebs": {"VolumeSize": 100, "VolumeType": "gp2"},
+                            "Ebs": {"VolumeSize": volume_size, "VolumeType": "gp2"},
                         }
                     ]
                 },
@@ -1105,7 +1105,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         logger.debug(str(batch_env))
         batch_env.create_batch_service_roles()
         batch_env.create_vpc()
-        batch_env.create_compute_environment()
+        batch_env.create_compute_environment(volume_size=self.cfg["aws"].get("job_environment", {}).get("volume_size", 200))
         batch_env.create_job_queue()
 
         # Pass through config for the Docker containers
