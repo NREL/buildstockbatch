@@ -109,3 +109,11 @@ Development Changelog
 
         Stop creating dask _metadata files for the timeseries parquet files since it crashes the
         postprocessing.
+
+    .. change::
+        :tags: bugfix, hpc
+        :pullreq: 467
+
+        Updates the bind mount for apptainer to include the whole resources
+        directory instead of just the hpxml-measures directory. Makes it work
+        with newer versions of ResStock.
