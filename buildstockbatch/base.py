@@ -205,7 +205,8 @@ class BuildStockBatchBase(object):
 
         # Convert the timeseries data to parquet
         # and copy it to the results directory
-        timeseries_filepath = os.path.join(sim_dir, "run", "results_timeseries.csv")
+        output_dir = os.path.join(sim_dir, "run")
+        timeseries_filepath = os.path.join(output_dir, "results_timeseries.csv")
         # FIXME: Allowing both names here for compatibility. Should consolidate on one timeseries filename.
         if os.path.isfile(timeseries_filepath):
             units_dict = read_csv(timeseries_filepath, nrows=1).transpose().to_dict()[0]
@@ -215,11 +216,10 @@ class BuildStockBatchBase(object):
             units_dict = {}
             skiprows = []
 
-        schedules_filepath = ""
-        if os.path.isdir(os.path.join(sim_dir, "generated_files")):
-            for file in os.listdir(os.path.join(sim_dir, "generated_files")):
-                if re.match(r".*schedules.*\.csv", file):
-                    schedules_filepath = os.path.join(sim_dir, "generated_files", file)
+        schedules_filepaths = []
+        for file in os.listdir(output_dir):
+            if re.match(r"in.schedules.*\.csv", file):
+                schedules_filepaths.append(os.path.join(output_dir, file))
 
         if os.path.isfile(timeseries_filepath):
             # Find the time columns present in the enduse_timeseries file
@@ -233,7 +233,7 @@ class BuildStockBatchBase(object):
             tsdf = read_csv(timeseries_filepath, parse_dates=actual_time_cols, skiprows=skiprows)
             for col in actual_time_cols:
                 tsdf[col] = tsdf[col].astype(pd.ArrowDtype(pa.timestamp("s")))
-            if os.path.isfile(schedules_filepath):
+            for schedules_filepath in schedules_filepaths:
                 schedules = read_csv(schedules_filepath, dtype=np.float64)
                 schedules.rename(columns=lambda x: f"schedules_{x}", inplace=True)
                 schedules["TimeDST"] = tsdf["Time"]
