@@ -71,6 +71,8 @@ aws-spec:
 aws-job-environment:
   vcpus: int(min=1, max=36, required=False)
   memory: int(min=1024, required=False)
+  volume_size: int(min=1, required=False)
+  chunk_size: int(min=1, required=False)
 
 aws-dask-spec:
   scheduler_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
@@ -78,6 +80,8 @@ aws-dask-spec:
   worker_cpu: enum(1024, 2048, 4096, 8192, 16384, required=False)
   worker_memory: int(min=1024, required=False)
   n_workers: int(min=1, required=True)
+  pass_frozen_credentials: bool(required=False)
+  fargate_spot: bool(required=False)
 
 hpc-spec:
   account: str(required=True)

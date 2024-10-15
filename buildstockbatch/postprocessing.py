@@ -232,7 +232,7 @@ def read_results_json(fs, filename, all_cols=None):
         with gzip.open(f1, "rt", encoding="utf-8") as f2:
             dpouts = json.load(f2)
     df = pd.DataFrame(dpouts)
-    df["job_id"] = int(re.search(r"results_job(\d+)\.json\.gz", filename).group(1))
+    df["job_id"] = int(re.search(r"results_job(\d+)(?:_\d+)?\.json\.gz", filename).group(1))
     if all_cols is not None:
         for missing_col in set(all_cols).difference(df.columns.values):
             df[missing_col] = None
@@ -595,9 +595,9 @@ def combine_results(fs, results_dir, cfg, do_timeseries=True):
 
             logger.info(f"Finished combining and saving timeseries for upgrade{upgrade_id}.")
     logger.info("All aggregation completed. ")
-    if do_timeseries:
-        logger.info("Writing timeseries metadata files")
-        write_metadata_files(fs, ts_dir, partition_columns)
+    # if do_timeseries:
+    #     logger.info("Writing timeseries metadata files")
+    #     write_metadata_files(fs, ts_dir, partition_columns)
 
 
 def remove_intermediate_files(fs, results_dir, keep_individual_timeseries=False):

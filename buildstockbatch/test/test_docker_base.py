@@ -131,12 +131,12 @@ def test_get_weather_files_to_download():
             "empty.epw",
             "empty.stat",
             "empty.ddy",
-            "weather/G2500210.epw",
-            "weather/G2601390.epw",
-            "weather/G2500210.ddy",
-            "weather/G2601390.ddy",
-            "weather/G2500210.stat",
-            "weather/G2601390.stat",
+            "G2500210.epw",
+            "G2601390.epw",
+            "G2500210.ddy",
+            "G2601390.ddy",
+            "G2500210.stat",
+            "G2601390.stat",
         }
 
 

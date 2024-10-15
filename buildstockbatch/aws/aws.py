@@ -50,15 +50,16 @@ def backoff(thefunc, *args, **kwargs):
     backoff_mult = 1.1
     delay = 3
     tries = 5
-    error_patterns = [r"\w+.NotFound"]
+    error_patterns = [r"\w+.NotFound", r"not in VALID state"]
     while tries > 0:
         try:
             result = thefunc(*args, **kwargs)
         except ClientError as error:
             error_code = error.response["Error"]["Code"]
+            error_msg = error.response["Error"]["Message"]
             caught_error = False
             for pat in error_patterns:
-                if re.search(pat, error_code):
+                if re.search(pat, error_code) or re.search(pat, error_msg):
                     logger.debug(f"{error_code}: Waiting and retrying in {delay} seconds")
                     caught_error = True
                     time.sleep(delay)
@@ -531,7 +532,7 @@ class AwsBatchEnv(AwsJobBase):
                 managed_policie_arns=["arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"],
             )
 
-    def create_compute_environment(self, maxCPUs=10000):
+    def create_compute_environment(self, volume_size=200, maxCPUs=10000):
         """
         Creates a compute environment suffixed with the job name
         :param subnets: list of subnet IDs
@@ -547,7 +548,7 @@ class AwsBatchEnv(AwsJobBase):
                     "BlockDeviceMappings": [
                         {
                             "DeviceName": "/dev/xvda",
-                            "Ebs": {"VolumeSize": 100, "VolumeType": "gp2"},
+                            "Ebs": {"VolumeSize": volume_size, "VolumeType": "gp2"},
                         }
                     ]
                 },
@@ -599,6 +600,7 @@ class AwsBatchEnv(AwsJobBase):
                         "type": "SPOT",
                         "bidPercentage": 100,
                         "spotIamFleetRole": self.spot_service_role_arn,
+                        "allocationStrategy": "SPOT_PRICE_CAPACITY_OPTIMIZED",
                     }
                 )
             else:
@@ -691,7 +693,7 @@ class AwsBatchEnv(AwsJobBase):
                 "jobRoleArn": self.task_role_arn,
                 "environment": self.generate_name_value_inputs(env_vars),
             },
-            retryStrategy={"attempts": 2},
+            retryStrategy={"attempts": 5},
             tags=self.get_tags(),
         )
 
@@ -876,6 +878,7 @@ class AwsBatchEnv(AwsJobBase):
             for internet_gateway in igw_response["InternetGateways"]:
                 for attachment in internet_gateway["Attachments"]:
                     if attachment["VpcId"] == this_vpc:
+                        i = 0
                         while True:
                             try:
                                 try:
@@ -898,8 +901,11 @@ class AwsBatchEnv(AwsJobBase):
                                         "Waiting for IPs to be released before deleting Internet Gateway.  Sleeping..."
                                     )
                                     time.sleep(5)
+                                    if i >= 6:
+                                        raise
                                 else:
                                     raise
+                            i += 1
 
             subn_response = self.ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [this_vpc]}])
 
@@ -1099,7 +1105,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         logger.debug(str(batch_env))
         batch_env.create_batch_service_roles()
         batch_env.create_vpc()
-        batch_env.create_compute_environment()
+        batch_env.create_compute_environment(volume_size=self.cfg["aws"].get("job_environment", {}).get("volume_size", 100))
         batch_env.create_job_queue()
 
         # Pass through config for the Docker containers
@@ -1180,7 +1186,7 @@ class AwsBatch(docker_base.DockerBatchBase):
         jobs_file_path = sim_dir.parent / "jobs.tar.gz"
         s3.download_file(bucket, f"{prefix}/jobs.tar.gz", str(jobs_file_path))
         with tarfile.open(jobs_file_path, "r") as tar_f:
-            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"), encoding="utf-8")
+            jobs_d = json.load(tar_f.extractfile(f"jobs/job{job_id:05d}.json"))
         logger.debug("Number of simulations = {}".format(len(jobs_d["batch"])))
 
         logger.debug("Getting weather files")
@@ -1210,9 +1216,10 @@ class AwsBatch(docker_base.DockerBatchBase):
         m = 1024
         self.dask_cluster = FargateCluster(
             region_name=self.region,
-            fargate_spot=True,
+            fargate_spot=dask_cfg.get("fargate_spot", True),
             image=self.image_url,
             cluster_name_template=f"dask-{self.job_identifier}",
+            scheduler_timeout="3600",
             scheduler_cpu=dask_cfg.get("scheduler_cpu", 2 * m),
             scheduler_mem=dask_cfg.get("scheduler_memory", 8 * m),
             worker_cpu=dask_cfg.get("worker_cpu", 2 * m),
@@ -1222,6 +1229,7 @@ class AwsBatch(docker_base.DockerBatchBase):
             tags=batch_env.get_tags(),
         )
         self.dask_client = Client(self.dask_cluster)
+        logger.info(f"Dask Dashboard: {self.dask_client.dashboard_link}")
         return self.dask_client
 
     def cleanup_dask(self):
@@ -1242,6 +1250,14 @@ class AwsBatch(docker_base.DockerBatchBase):
             cfg["buildstock_directory"] = container_buildstock_dir
             cfg["project_directory"] = str(pathlib.Path(self.project_dir).relative_to(self.buildstock_dir))
 
+            if cfg["sampler"]["type"] == "precomputed":
+                host_sample_file_path = cfg["sampler"]["args"]["sample_file"]
+                container_sample_file_path = str(container_workpath / "buildstock.csv")
+                cfg["sampler"]["args"]["sample_file"] = container_sample_file_path
+            else:
+                host_sample_file_path = None
+                container_sample_file_path = None
+
             with open(tmppath / "project_config.yml", "w") as f:
                 f.write(yaml.dump(cfg, Dumper=yaml.SafeDumper))
             container_cfg_path = str(container_workpath / "project_config.yml")
@@ -1249,30 +1265,40 @@ class AwsBatch(docker_base.DockerBatchBase):
             with open(tmppath / "args.json", "w") as f:
                 json.dump([args, kwargs], f)
 
-            credentials = boto3.Session().get_credentials().get_frozen_credentials()
-            env = {
-                "AWS_ACCESS_KEY_ID": credentials.access_key,
-                "AWS_SECRET_ACCESS_KEY": credentials.secret_key,
+            env = {"POSTPROCESSING_INSIDE_DOCKER_CONTAINER": "true"}
+            if self.cfg["aws"]["dask"].get("pass_frozen_credentials", False):
+                credentials = boto3.Session().get_credentials().get_frozen_credentials()
+                env["AWS_ACCESS_KEY_ID"] = credentials.access_key
+                env["AWS_SECRET_ACCESS_KEY"] = credentials.secret_key
+                if credentials.token:
+                    env["AWS_SESSION_TOKEN"] = credentials.token
+
+            volumes = {
+                tmpdir: {"bind": str(container_workpath), "mode": "rw"},
+                self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
             }
-            if credentials.token:
-                env["AWS_SESSION_TOKEN"] = credentials.token
-            env["POSTPROCESSING_INSIDE_DOCKER_CONTAINER"] = "true"
+            if container_sample_file_path:
+                volumes[host_sample_file_path] = {"bind": container_sample_file_path, "mode": "ro"}
 
             logger.info("Starting container for postprocessing")
             container = self.docker_client.containers.run(
                 self.image_url,
                 ["python3", "-m", "buildstockbatch.aws.aws", container_cfg_path],
-                volumes={
-                    tmpdir: {"bind": str(container_workpath), "mode": "rw"},
-                    self.buildstock_dir: {"bind": container_buildstock_dir, "mode": "ro"},
-                },
+                volumes=volumes,
                 environment=env,
                 name="bsb_post",
                 auto_remove=True,
                 detach=True,
             )
             for msg in container.logs(stream=True):
-                logger.debug(msg)
+                logger.debug(msg.decode().rstrip("\n"))
+
+            result = container.wait()
+
+            if result["StatusCode"] != 0:
+                raise RuntimeError(
+                    "There was an error in the postprocessing code running inside the container. See logs above."
+                )
 
     def _process_results_inside_container(self):
         with open("/var/simdata/openstudio/args.json", "r") as f:

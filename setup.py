@@ -47,7 +47,7 @@ setuptools.setup(
     install_requires=[
         "pyyaml",
         "requests",
-        "numpy",
+        "numpy~=1.26",
         "pandas>=2",
         "joblib",
         "pyarrow",

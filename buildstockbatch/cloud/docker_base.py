@@ -83,7 +83,7 @@ def _epws_by_option(options_lookup_path):
                         "The epw files are specified in options_lookup.tsv under more than one parameter "
                         f"type: {param_name}, {row[0]}"
                     )  # noqa: E501
-                epw_filename = row[row_has_epw.index(True) + 2].split("=")[1]
+                epw_filename = row[row_has_epw.index(True) + 2].split("=")[1].split("/")[-1]
                 param_name = row[0]
                 option_name = row[1]
                 epws_by_option[option_name] = epw_filename
@@ -533,6 +533,11 @@ class DockerBatchBase(BuildStockBatchBase):
 
         logger.debug(f"Unique weather files needed for this buildstock: {len(files_needed):,}")
         return files_needed
+    
+    @staticmethod
+    def chunk_list_generator(lst: list, n: int):
+        for i in range(0, len(lst), n):
+            yield lst[i:i + n]
 
     @classmethod
     def run_simulations(cls, cfg, job_id, jobs_d, sim_dir, fs, output_path):
@@ -550,100 +555,130 @@ class DockerBatchBase(BuildStockBatchBase):
         """
         local_fs = LocalFileSystem()
         reporting_measures = cls.get_reporting_measures(cfg)
-        dpouts = []
         simulation_output_tar_filename = sim_dir.parent / "simulation_outputs.tar.gz"
         asset_dirs = os.listdir(sim_dir)
         ts_output_dir = f"{output_path}/results/simulation_output/timeseries"
+        job_state_filename = f"{output_path}/results/simulation_output/job{job_id}_state.json"
 
-        with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
-            for building_id, upgrade_idx in jobs_d["batch"]:
-                upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
-                sim_id = f"bldg{building_id:07d}up{upgrade_id:02d}"
+        if fs.exists(job_state_filename):
+            with fs.open(job_state_filename, "r") as f:
+                job_state = json.load(f)
+        else:
+            job_state = {
+                "job_id": job_id,
+                "status": "in_progress",
+                "chunk": 0
+            }
+        assert job_id == job_state["job_id"]
+        if job_state["status"] == "complete":
+            return
 
-                # Create OSW
-                osw = cls.create_osw(cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx)
-                with open(os.path.join(sim_dir, "in.osw"), "w") as f:
-                    json.dump(osw, f, indent=4)
+        chunk_size = cfg["aws"].get("job_environment", {}).get("chunk_size", 20)
+        for chunk_id, sim_list in enumerate(cls.chunk_list_generator(jobs_d["batch"], chunk_size)):
 
-                # Run Simulation
-                with open(sim_dir / "os_stdout.log", "w") as f_out:
-                    try:
-                        logger.debug("Running {}".format(sim_id))
-                        cli_cmd = ["openstudio", "run", "-w", "in.osw"]
-                        if cfg.get("baseline", dict()).get("custom_gems", False):
-                            cli_cmd = [
-                                "openstudio",
-                                "--bundle",
-                                "/var/oscli/Gemfile",
-                                "--bundle_path",
-                                "/var/oscli/gems",
-                                "--bundle_without",
-                                "native_ext",
-                                "run",
-                                "-w",
-                                "in.osw",
-                                "--debug",
-                            ]
-                        subprocess.run(
-                            cli_cmd,
-                            check=True,
-                            stdout=f_out,
-                            stderr=subprocess.STDOUT,
-                            cwd=str(sim_dir),
-                        )
-                    except subprocess.CalledProcessError:
-                        logger.debug(f"Simulation failed: see {sim_id}/os_stdout.log")
+            if chunk_id < job_state["chunk"]:
+                continue
 
-                # Clean Up simulation directory
-                cls.cleanup_sim_dir(
-                    sim_dir,
-                    fs,
-                    ts_output_dir,
-                    upgrade_id,
-                    building_id,
-                )
+            job_state["chunk"] = chunk_id
+            with fs.open(job_state_filename, "w") as f:
+                json.dump(job_state, f, indent=2)
 
-                # Read data_point_out.json
-                dpout = postprocessing.read_simulation_outputs(
-                    local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
-                )
-                dpouts.append(dpout)
+            dpouts = []
+            with tarfile.open(str(simulation_output_tar_filename), "w:gz") as simout_tar:
+                for building_id, upgrade_idx in sim_list:
+                    upgrade_id = 0 if upgrade_idx is None else upgrade_idx + 1
+                    sim_id = f"bldg{building_id:07d}up{upgrade_id:02d}"
 
-                # Add the rest of the simulation outputs to the tar archive
-                logger.info("Archiving simulation outputs")
-                for dirpath, dirnames, filenames in os.walk(sim_dir):
-                    if dirpath == str(sim_dir):
-                        for dirname in set(dirnames).intersection(asset_dirs):
-                            dirnames.remove(dirname)
-                    for filename in filenames:
-                        abspath = os.path.join(dirpath, filename)
-                        relpath = os.path.relpath(abspath, sim_dir)
-                        simout_tar.add(abspath, os.path.join(sim_id, relpath))
+                    # Create OSW
+                    osw = cls.create_osw(cfg, jobs_d["n_datapoints"], sim_id, building_id, upgrade_idx)
+                    with open(os.path.join(sim_dir, "in.osw"), "w") as f:
+                        json.dump(osw, f, indent=4)
 
-                # Clear directory for next simulation
-                logger.debug("Clearing out simulation directory")
-                for item in set(os.listdir(sim_dir)).difference(asset_dirs):
-                    if os.path.isdir(item):
-                        shutil.rmtree(item)
-                    elif os.path.isfile(item):
-                        os.remove(item)
+                    # Run Simulation
+                    with open(sim_dir / "os_stdout.log", "w") as f_out:
+                        try:
+                            logger.debug("Running {}".format(sim_id))
+                            cli_cmd = ["openstudio", "run", "-w", "in.osw"]
+                            if cfg.get("baseline", dict()).get("custom_gems", False):
+                                cli_cmd = [
+                                    "openstudio",
+                                    "--bundle",
+                                    "/var/oscli/Gemfile",
+                                    "--bundle_path",
+                                    "/var/oscli/gems",
+                                    "--bundle_without",
+                                    "native_ext",
+                                    "run",
+                                    "-w",
+                                    "in.osw",
+                                    "--debug",
+                                ]
+                            subprocess.run(
+                                cli_cmd,
+                                check=True,
+                                stdout=f_out,
+                                stderr=subprocess.STDOUT,
+                                cwd=str(sim_dir),
+                            )
+                        except subprocess.CalledProcessError:
+                            logger.debug(f"Simulation failed: see {sim_id}/os_stdout.log")
 
-        # Upload simulation outputs tarfile to bucket
-        fs.put(
-            str(simulation_output_tar_filename),
-            f"{output_path}/results/simulation_output/simulations_job{job_id}.tar.gz",
-        )
+                    # Clean Up simulation directory
+                    cls.cleanup_sim_dir(
+                        sim_dir,
+                        fs,
+                        ts_output_dir,
+                        upgrade_id,
+                        building_id,
+                    )
 
-        # Upload aggregated dpouts as a json file
-        with fs.open(
-            f"{output_path}/results/simulation_output/results_job{job_id}.json.gz",
-            "wb",
-        ) as f1:
-            with gzip.open(f1, "wt", encoding="utf-8") as f2:
-                json.dump(dpouts, f2)
+                    # Read data_point_out.json
+                    dpout = postprocessing.read_simulation_outputs(
+                        local_fs, reporting_measures, str(sim_dir), upgrade_id, building_id
+                    )
+                    dpouts.append(dpout)
+
+                    # Add the rest of the simulation outputs to the tar archive
+                    logger.info("Archiving simulation outputs")
+                    for dirpath, dirnames, filenames in os.walk(sim_dir):
+                        if dirpath == str(sim_dir):
+                            for dirname in set(dirnames).intersection(asset_dirs):
+                                dirnames.remove(dirname)
+                        for filename in filenames:
+                            abspath = os.path.join(dirpath, filename)
+                            relpath = os.path.relpath(abspath, sim_dir)
+                            simout_tar.add(abspath, os.path.join(sim_id, relpath))
+
+                    # Clear directory for next simulation
+                    logger.debug("Clearing out simulation directory")
+                    for item in set(os.listdir(sim_dir)).difference(asset_dirs):
+                        if os.path.isdir(item):
+                            shutil.rmtree(item)
+                        elif os.path.isfile(item):
+                            os.remove(item)
+
+            # Upload simulation outputs tarfile to bucket
+            fs.put(
+                str(simulation_output_tar_filename),
+                f"{output_path}/results/simulation_output/simulations_job{job_id}_{chunk_id}.tar.gz",
+            )
+            os.remove(simulation_output_tar_filename)
+
+            # Upload aggregated dpouts as a json file
+            with fs.open(
+                f"{output_path}/results/simulation_output/results_job{job_id}_{chunk_id}.json.gz",
+                "wb",
+            ) as f1:
+                with gzip.open(f1, "wt", encoding="utf-8") as f2:
+                    json.dump(dpouts, f2)
+
+        job_state["status"] = "complete"
+        job_state["chunk"] = None
+
+        with fs.open(job_state_filename, "w") as f:
+            json.dump(job_state, f, indent=2)
 
         # Remove files (it helps docker if we don't leave a bunch of files laying around)
-        os.remove(simulation_output_tar_filename)
         for item in os.listdir(sim_dir):
             if os.path.isdir(item):
                 shutil.rmtree(item)
@@ -653,7 +688,7 @@ class DockerBatchBase(BuildStockBatchBase):
     def find_missing_tasks(self, expected):
         """Creates a file with a list of task numbers that are missing results.
 
-        This only checks for results_job[ID].json.gz files in the results directory.
+        This checks the job*_state.json files in the results directory.
 
         :param expected: Number of result files expected.
 
@@ -663,18 +698,18 @@ class DockerBatchBase(BuildStockBatchBase):
         done_tasks = set()
 
         try:
-            for f in fs.ls(f"{self.results_dir}/simulation_output/"):
-                if m := re.match(".*results_job(\\d*).json.gz$", f):
-                    done_tasks.add(int(m.group(1)))
+            for filename in fs.glob(f"{self.results_dir}/simulation_output/job*_state.json"):
+                with fs.open(filename, "r") as f:
+                    job_state = json.load(f)
+                    if job_state["status"] == "complete":
+                        done_tasks.add(job_state["job_id"])
         except FileNotFoundError:
             logger.warning("No completed task files found. Running all tasks.")
 
-        missing_tasks = []
+        missing_tasks = sorted(set(range(expected)).difference(done_tasks))
         with fs.open(f"{self.results_dir}/missing_tasks.txt", "w") as f:
-            for task_id in range(expected):
-                if task_id not in done_tasks:
-                    f.write(f"{task_id}\n")
-                    missing_tasks.append(str(task_id))
+            for task_id in missing_tasks:
+                f.write(f"{task_id}\n")
 
         logger.info(f"Found missing tasks: {', '.join(missing_tasks)}")
 

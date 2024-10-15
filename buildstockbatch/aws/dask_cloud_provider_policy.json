@@ -1,0 +1,48 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:AuthorizeSecurityGroupIngress",
+                "iam:ListRoleTags",
+                "iam:TagRole",
+                "iam:CreateRole",
+                "iam:AttachRolePolicy",
+                "ecs:DescribeTaskDefinition",
+                "ecs:DeregisterTaskDefinition",
+                "iam:PassRole",
+                "iam:DetachRolePolicy",
+                "ecs:RunTask",
+                "ec2:DescribeNetworkInterfaces",
+                "ecs:ListTasks",
+                "ec2:CreateSecurityGroup",
+                "iam:ListAttachedRolePolicies",
+                "ecs:RegisterTaskDefinition",
+                "logs:GetLogEvents",
+                "ecs:StopTask",
+                "ecs:TagResource",
+                "ecs:DescribeTasks",
+                "ecs:UntagResource",
+                "ecs:ListTaskDefinitions",
+                "ecs:ListClusters",
+                "logs:DescribeLogGroups",
+                "ecs:CreateCluster",
+                "ec2:CreateTags",
+                "ecs:DeleteCluster",
+                "iam:ListRoles",
+                "iam:DeleteRole",
+                "logs:CreateLogGroup",
+                "ec2:DescribeSecurityGroups",
+                "ecs:DescribeClusters",
+                "ecs:ListAccountSettings",
+                "ec2:DescribeVpcs",
+                "ec2:DeleteSecurityGroup",
+                "logs:PutRetentionPolicy",
+                "ec2:DescribeSubnets"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
