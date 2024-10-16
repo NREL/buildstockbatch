@@ -37,7 +37,7 @@ def test_hpc_run_building(mock_subprocess, monkeypatch, basic_residential_projec
         KestrelBatch, "local_scratch", tmp_path
     ):
         # Normal run
-        run_bldg_args = [results_dir, cfg, 1, None]
+        run_bldg_args = [results_dir, cfg, None, 1, None]
         KestrelBatch.run_building(*run_bldg_args)
         expected_apptainer_args = [
             "apptainer",

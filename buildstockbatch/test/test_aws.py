@@ -3,12 +3,14 @@ import yaml
 import logging
 
 from buildstockbatch.aws.aws import AwsBatch
+from buildstockbatch.test.shared_testing_stuff import docker_available
 
 here = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level="DEBUG")  # Use DEBUG, INFO, or WARNING
 logger = logging.getLogger(__name__)
 
 
+@docker_available
 def test_custom_gem_install(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(
         update_args={
@@ -49,6 +51,7 @@ def test_custom_gem_install(basic_residential_project_file):
         assert custom_gem in contents
 
 
+@docker_available
 def test_no_custom_gem_install(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(
         update_args={

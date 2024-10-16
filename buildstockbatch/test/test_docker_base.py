@@ -187,6 +187,7 @@ def test_run_simulations(basic_residential_project_file):
         os.chdir(old_cwd)
 
 
+@docker_available
 def test_find_missing_tasks(basic_residential_project_file, mocker):
     project_filename, results_dir = basic_residential_project_file()
     results_dir = os.path.join(results_dir, "results")
@@ -207,6 +208,7 @@ def test_find_missing_tasks(basic_residential_project_file, mocker):
         assert [int(t) for t in f.readlines()] == missing_results
 
 
+@docker_available
 def test_log_summary(basic_residential_project_file, mocker, caplog):
     """
     Test logging a summary of simulation statuses.

@@ -65,6 +65,10 @@ class BuildStockBatchBase(object):
         if not os.path.isdir(self.project_dir):
             raise FileNotFoundError(f"project_directory = {self.project_dir} is not a directory.")
 
+        self.os_hescore_dir = (
+            self.cfg["workflow_generator"].get("args", {}).get("build_existing_model", {}).get("os_hescore_directory")
+        )
+
         # Load in OS_VERSION and OS_SHA arguments if they exist in the YAML,
         # otherwise use defaults specified here.
         self.os_version = self.cfg["os_version"]
@@ -942,7 +946,7 @@ class BuildStockBatchBase(object):
 
         try:
             wfg_args = self.cfg["workflow_generator"].get("args", {})
-            if self.cfg["workflow_generator"]["type"] == "residential_hpxml":
+            if "residential_hpxml" in self.cfg["workflow_generator"]["type"]:
                 if "simulation_output_report" in wfg_args.keys():
                     if "timeseries_frequency" in wfg_args["simulation_output_report"].keys():
                         do_timeseries = wfg_args["simulation_output_report"]["timeseries_frequency"] != "none"

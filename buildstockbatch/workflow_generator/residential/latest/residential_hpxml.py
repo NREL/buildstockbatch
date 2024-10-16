@@ -38,6 +38,12 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         self.default_args = copy.deepcopy(DEFAULT_MEASURE_ARGS)
         self.all_arg_map = copy.deepcopy(ARG_MAP)
 
+    @classmethod
+    def get_yml_schema(cls):
+        schema_yml = os.path.join(os.path.dirname(__file__), "residential_hpxml_schema.yml")
+        schema = yamale.make_schema(schema_yml, parser="ruamel")
+        return schema
+
     def validate(self):
         """Validate arguments
 
@@ -45,9 +51,8 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         :type cfg: dict
         """
         workflow_generator_args = self.cfg["workflow_generator"]["args"]
-        schema_yml = os.path.join(os.path.dirname(__file__), "residential_hpxml_schema.yml")
-        schema = yamale.make_schema(schema_yml, parser="ruamel")
         data = yamale.make_data(content=json.dumps(workflow_generator_args), parser="ruamel")
+        schema = self.get_yml_schema()
         yamale.validate(schema, data, strict=True)
         return self.validate_measures_and_arguments()
 
@@ -166,6 +171,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             "measure_paths": ["measures", "resources/hpxml-measures"],
             "run_options": {"skip_zip_results": True},
         }
+
+        # Insert the OpenStudio-HEScore measures into the workflow if we're doing a HEScore run
+        if os_hescore_directory := workflow_args.get("build_existing_model", {}).get("os_hescore_directory"):
+            osw["measure_paths"].insert(0, os.path.join(os_hescore_directory, "hpxml-measures"))
+
         for measure in reversed(workflow_args.get("measures", [])):
             osw["steps"].insert(3, measure)  # After UpgradeCosts
 
