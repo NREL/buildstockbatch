@@ -546,7 +546,7 @@ class BuildStockBatchBase(object):
             for upgrade_count, upgrade in enumerate(cfg["upgrades"]):
                 upgrade_name = upgrade.get("upgrade_name", "") + f" (Upgrade Number: {upgrade_count})"
                 source_str_upgrade = f"In upgrade '{upgrade_name}'"
-                for option_count, option in enumerate(upgrade["options"]):
+                for option_count, option in enumerate(upgrade.get("options", [])):
                     option_name = option.get("option", "") + f" (Option Number: {option_count})"
                     source_str_option = source_str_upgrade + f", in option '{option_name}'"
                     source_option_str_list.append((source_str_option, option.get("option")))
@@ -665,7 +665,7 @@ class BuildStockBatchBase(object):
             for upgrade_count, upgrade in enumerate(cfg["upgrades"]):
                 upgrade_name = upgrade.get("upgrade_name", "")
                 source_str_upgrade = f"upgrade '{upgrade_name}' (Upgrade Number:{upgrade_count})"
-                for option_count, option in enumerate(upgrade["options"]):
+                for option_count, option in enumerate(upgrade.get("options", [])):
                     option_name = option.get("option", "")
                     source_str_option = source_str_upgrade + f", option '{option_name}' (Option Number:{option_count})"
                     if "apply_logic" in option:
@@ -871,6 +871,8 @@ class BuildStockBatchBase(object):
             for upgrade in cfg.get("upgrades", []):
                 options = upgrade.get("options", [])
                 n_options = len(options)
+                if not options:
+                    continue
                 n_costs = max(len(option.get("costs", [])) for option in options)
                 n_options_in_cfg = max(n_options, n_options_in_cfg)
                 n_costs_in_cfg = max(n_costs, n_costs_in_cfg)

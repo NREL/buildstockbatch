@@ -71,7 +71,7 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
     def _get_invalid_multipliers(self, upgrades, valid_multipliers):
         invalid_multipliers = Counter()
         for upgrade in upgrades:
-            for option in upgrade["options"]:
+            for option in upgrade.get("options", []):
                 for cost_entry in option.get("costs", []):
                     if cost_entry["multiplier"] not in valid_multipliers:
                         invalid_multipliers[cost_entry["multiplier"]] += 1
@@ -183,14 +183,31 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
         if upgrade_idx is None:
             return
 
-        measure_d = self.cfg["upgrades"][upgrade_idx]
+        upgrade_block = self.cfg["upgrades"][upgrade_idx]
+        insertion_index = 1  # index 0 is BuildExistingModel. Insert after that
+        if upgrade_block.get("options"):  #  Not all upgrades have options. Some could be measure only
+            self.insert_apply_upgrade_step(osw, insertion_index, upgrade_block)
+            insertion_index += 1
+        if upgrade_block.get("measures"):
+            self.insert_measures_step(osw, insertion_index, upgrade_block)
+
+    def insert_measures_step(self, osw, insertion_index, upgrade_block):
+        for measure in upgrade_block["measures"]:
+            measure_step = {
+                "measure_dir_name": measure["measure_name"],
+                "arguments": measure.get("args", {}),
+            }
+            measure_step["arguments"]["upgrade_name"] = upgrade_block["upgrade_name"]
+            osw["steps"].insert(insertion_index, measure_step)
+            insertion_index += 1
+
+    def insert_apply_upgrade_step(self, osw, insertion_index, upgrade_block):
         apply_upgrade_measure = {
             "measure_dir_name": "ApplyUpgrade",
             "arguments": {"run_measure": 1},
         }
-        if "upgrade_name" in measure_d:
-            apply_upgrade_measure["arguments"]["upgrade_name"] = measure_d["upgrade_name"]
-        for opt_num, option in enumerate(measure_d["options"], 1):
+        apply_upgrade_measure["arguments"]["upgrade_name"] = upgrade_block["upgrade_name"]
+        for opt_num, option in enumerate(upgrade_block["options"], 1):
             apply_upgrade_measure["arguments"]["option_{}".format(opt_num)] = option["option"]
             if "lifetime" in option:
                 apply_upgrade_measure["arguments"]["option_{}_lifetime".format(opt_num)] = option["lifetime"]
@@ -205,11 +222,11 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
                     apply_upgrade_measure["arguments"]["option_{}_cost_{}_{}".format(opt_num, cost_num, arg)] = cost[
                         arg
                     ]
-        if "package_apply_logic" in measure_d:
+        if "package_apply_logic" in upgrade_block:
             apply_upgrade_measure["arguments"]["package_apply_logic"] = self.make_apply_logic_arg(
-                measure_d["package_apply_logic"]
+                upgrade_block["package_apply_logic"]
             )
-        osw["steps"].insert(1, apply_upgrade_measure)  # right after BuildExistingModel
+        osw["steps"].insert(insertion_index, apply_upgrade_measure)  # right after BuildExistingModel
 
     def _validate_against_xml_args(self, measure_args, measure_dir_name, xml_args):
         """

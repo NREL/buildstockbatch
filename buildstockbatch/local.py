@@ -317,7 +317,10 @@ class LocalBatch(BuildStockBatchBase):
             for dirname in os.listdir(sim_out_path):
                 if re.match(r"up\d+", dirname) and (sim_out_path / dirname).is_dir():
                     tarf.add(sim_out_path / dirname, arcname=dirname)
-                    shutil.rmtree(sim_out_path / dirname)
+                    try:
+                        shutil.rmtree(sim_out_path / dirname)
+                    except:
+                        print(f"Problem removing {sim_out_path / dirname}.")
 
     @property
     def output_dir(self):
