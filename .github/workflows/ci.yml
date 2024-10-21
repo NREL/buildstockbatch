@@ -48,7 +48,7 @@ jobs:
           python -m pip install --progress-bar off --upgrade pip
           pip install .[dev,aws] --progress-bar off
       - name: Black
-        uses: psf/black@24.8.0
+        uses: psf/black@stable
         with:
           src: "./buildstockbatch"
       - name: Run PyTest and Coverage
