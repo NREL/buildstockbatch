@@ -109,3 +109,9 @@ Development Changelog
 
         Stop creating dask _metadata files for the timeseries parquet files since it crashes the
         postprocessing.
+
+    .. change::
+        :tags: general
+        :pullreq: 472
+
+        Remove support for Python 3.8, 3.9, and 3.10.
