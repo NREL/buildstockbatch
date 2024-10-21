@@ -111,6 +111,14 @@ Development Changelog
         postprocessing.
 
     .. change::
+        :tags: bugfix, hpc
+        :pullreq: 467
+
+        Updates the bind mount for apptainer to include the whole resources
+        directory instead of just the hpxml-measures directory. Makes it work
+        with newer versions of ResStock.
+
+    .. change::
         :tags: general
         :pullreq: 472
 

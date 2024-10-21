@@ -356,18 +356,14 @@ class SlurmBatch(BuildStockBatchBase):
                     cls.local_buildstock_dir / "measures",
                     cls.local_weather_dir,
                 ]
+                if (resources_dir := cls.local_buildstock_dir / "resources").exists():
+                    dirs_to_mount.append(resources_dir)
 
                 for src in dirs_to_mount:
                     container_mount = "/" + src.name
                     args.extend(["-B", "{}:{}:ro".format(src, container_mount)])
                     container_symlink = pathlib.Path("/var/simdata/openstudio", src.name)
                     runscript.append("ln -s {} {}".format(*map(shlex.quote, (container_mount, str(container_symlink)))))
-
-                if (cls.local_buildstock_dir / "resources" / "hpxml-measures").exists():
-                    runscript.append("ln -s /resources /var/simdata/openstudio/resources")
-                    src = cls.local_buildstock_dir / "resources" / "hpxml-measures"
-                    container_mount = "/resources/hpxml-measures"
-                    args.extend(["-B", f"{src}:{container_mount}:ro"])
 
                 # Build the openstudio command that will be issued within the
                 # apptainer container If custom gems are to be used in the
