@@ -39,7 +39,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url=metadata["__url__"],
     packages=setuptools.find_packages(),
-    python_requires=">=3.8",
+    python_requires=">=3.11",
     package_data={
         "buildstockbatch": ["*.sh", "schemas/*.yaml", "workflow_generator/residential/**/*.yml"],
         "": ["LICENSE"],
@@ -100,9 +100,7 @@ setuptools.setup(
         "License :: OSI Approved :: BSD License",
         "Natural Language :: English",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
     ],
 )

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def test_custom_gem_install(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(
         update_args={
-            "os_version": "3.7.0",
+            "os_version": "3.8.0",
             "baseline": {
                 "custom_gems": True,
                 "n_buildings_represented": 80000000,
@@ -52,7 +52,7 @@ def test_custom_gem_install(basic_residential_project_file):
 def test_no_custom_gem_install(basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file(
         update_args={
-            "os_version": "3.7.0",
+            "os_version": "3.8.0",
             "aws": {
                 "job_identifier": "testaws",
                 "s3": {"bucket": "resbldg-datasets", "prefix": "testing/external_demo_project"},

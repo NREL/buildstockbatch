@@ -117,3 +117,9 @@ Development Changelog
         Updates the bind mount for apptainer to include the whole resources
         directory instead of just the hpxml-measures directory. Makes it work
         with newer versions of ResStock.
+
+    .. change::
+        :tags: general
+        :pullreq: 472
+
+        Remove support for Python 3.8, 3.9, and 3.10.
