@@ -2,6 +2,8 @@ ARG OS_VER
 FROM --platform=linux/amd64 nrel/openstudio:$OS_VER as buildstockbatch
 ARG CLOUD_PLATFORM=aws
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y \
     software-properties-common \
     wget \
