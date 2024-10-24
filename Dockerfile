@@ -2,8 +2,24 @@ ARG OS_VER
 FROM --platform=linux/amd64 nrel/openstudio:$OS_VER as buildstockbatch
 ARG CLOUD_PLATFORM=aws
 
-RUN sudo apt update && sudo apt install -y python3-pip
-RUN sudo -H pip install --upgrade pip
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y python3.11 python3.11-venv python3.11-dev
+
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
+RUN update-alternatives --set python3 /usr/bin/python3.11
+
+RUN wget https://bootstrap.pypa.io/get-pip.py && \
+    python3.11 get-pip.py && \
+    rm get-pip.py
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
 COPY . /buildstock-batch/
 RUN python3 -m pip install "/buildstock-batch[${CLOUD_PLATFORM}]"
 
