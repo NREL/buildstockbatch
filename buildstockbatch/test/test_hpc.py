@@ -352,6 +352,56 @@ def test_run_building_process(mocker, basic_residential_project_file):
     assert unique_buildings == set(local_buildstock_df["Building"])
 
 
+def test_get_weather_file_stems(tmp_path):
+    options_lookup = tmp_path / "options_lookup.tsv"
+    options_lookup.write_text(
+        "Parameter Name\tOption Name\tMeasure Dir\tMeasure Arg 1\tMeasure Arg 2\n"
+        "county_id\tG0100010\tcreate_custom_building_from_spec\tweather_file_name=G0100010.epw\n"
+        "county_id\tG0100030\tcreate_custom_building_from_spec\tweather_file_name=G0100030.epw\n"
+        "County\tCounty1\tResStockArguments\tweather_station_epw_filepath=../../../weather/G2500210.epw\tfoo=1\n"
+        "County\tCounty2\tResStockArguments\tweather_station_epw_filepath=../../../weather/G2601210.epw\n"
+        "Station\tSouth Bend\tChangeLocation\tweather_file_name=USA_IN_South.Bend.725350_2018.epw\n"
+        "Location\t*\tChangeLocation\tweather_file_name=G9999990.epw\n"
+        "Upgrade Location\tMoved\tChangeLocation\tweather_file_name=G0100050.epw\n"
+        "Vintage\t1980s\n"
+    )
+    rows = [
+        {"Building": "1", "county_id": "G0100010", "County": "County1", "Vintage": "1980s"},
+        {"Building": "2", "county_id": "G0100010", "Station": "South Bend", "Location": "Anywhere"},
+    ]
+    needed, referenced = SlurmBatch.get_weather_file_stems(options_lookup, rows, ["Upgrade Location|Moved"])
+    assert needed == {"G0100010", "G2500210", "USA_IN_South.Bend.725350_2018", "G9999990", "G0100050"}
+    assert referenced == needed | {"G0100030", "G2601210"}
+
+
+def test_copy_weather_files_for_job(mocker, basic_residential_project_file):
+    project_filename, results_dir = basic_residential_project_file()
+    local_scratch = pathlib.Path(results_dir).parent / "local_scratch"
+    local_buildstock_dir = local_scratch / "buildstock"
+    os.makedirs(local_buildstock_dir / "resources")
+    shutil.copy(
+        os.path.join(here, "test_inputs", "test_openstudio_buildstock", "resources", "options_lookup.tsv"),
+        local_buildstock_dir / "resources" / "options_lookup.tsv",
+    )
+    mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
+    mocker.patch.object(KestrelBatch, "local_scratch", local_scratch)
+    mocker.patch.object(KestrelBatch, "local_buildstock_dir", local_buildstock_dir)
+    mocker.patch.object(KestrelBatch, "local_weather_dir", local_scratch / "weather")
+
+    b = KestrelBatch(project_filename)
+    b.copy_weather_files_for_job([{"Building": "1", "County": "County1"}, {"Building": "2", "County": "County1"}])
+
+    # Only County1's weather files plus the files no option references
+    weather_files = sorted(os.listdir(local_scratch / "weather"))
+    assert weather_files == ["G2500210.ddy", "G2500210.epw", "G2500210.stat", "empty.ddy", "empty.epw", "empty.stat"]
+    assert not (local_scratch / "weather.zip").exists()
+
+    # Without a weather zip to extract from, the already extracted weather directory is copied instead
+    del b.cfg["weather_files_path"]
+    b.copy_weather_files_for_job([{"Building": "1", "County": "County1"}])
+    assert sorted(os.listdir(local_scratch / "weather")) == sorted(os.listdir(b.weather_dir))
+
+
 def test_run_building_error_caught(mocker, basic_residential_project_file):
     project_filename, results_dir = basic_residential_project_file()
     results_dir = pathlib.Path(results_dir)
@@ -380,6 +430,7 @@ def test_run_building_error_caught(mocker, basic_residential_project_file):
     mocker.patch("buildstockbatch.hpc.subprocess")
     mocker.patch.object(SlurmBatch, "get_apptainer_image", return_value="/path/to/openstudio.sif")
     mocker.patch.object(KestrelBatch, "run_building", raise_error)
+    mocker.patch.object(KestrelBatch, "copy_weather_files_for_job")
     mocker.patch.object(KestrelBatch, "local_output_dir", results_dir)
     mocker.patch.object(KestrelBatch, "results_dir", results_dir)
     mocker.patch.object(KestrelBatch, "local_buildstock_dir", results_dir / "local_buildstock_dir")

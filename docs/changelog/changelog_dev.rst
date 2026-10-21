@@ -93,3 +93,12 @@ Development Changelog
         both scenarios that use hourly schedules and scenarios that use constant
         values. The previous
         ``2025.12.03`` generator remains available for existing projects.
+
+
+    .. change::
+        :tags: hpc, feature
+
+        Kestrel array jobs now copy the ``weather_files_path`` zip to local scratch and extract only the weather
+        files the job's buildings need, as found in ``options_lookup.tsv``, instead of copying the whole extracted
+        weather directory from Lustre. For a national ComStock run this cut the weather copy from over an hour to
+        under a minute per job. Projects that download weather from ``weather_files_url`` still copy the extracted directory.

@@ -11,6 +11,7 @@ This class contains the object & methods that allow for usage of the library wit
 """
 
 import argparse
+from collections import defaultdict
 from dask.distributed import Client
 import datetime as dt
 from fsspec.implementations.local import LocalFileSystem
@@ -32,6 +33,7 @@ import sys
 import tempfile
 import time
 import csv
+import zipfile
 
 from buildstockbatch.base import BuildStockBatchBase, SimulationExists
 from buildstockbatch.utils import (
@@ -109,6 +111,65 @@ class SlurmBatch(BuildStockBatchBase):
         if os.path.exists(dst):
             shutil.rmtree(dst, ignore_errors=True)
         shutil.copytree(src, dst, dirs_exist_ok=True)
+
+    @staticmethod
+    def get_weather_file_stems(options_lookup_path, buildstock_rows, upgrade_options=()):
+        """
+        Find the weather files referenced in the options lookup and which of them the given buildings need.
+
+        :param options_lookup_path: path to options_lookup.tsv
+        :param buildstock_rows: list of buildstock.csv rows as dicts of {parameter: option}
+        :param upgrade_options: iterable of "Parameter|Option" strings that upgrades can apply
+        :returns: (needed, referenced) sets of weather file stems, e.g. "G0100010" for G0100010.epw
+        """
+        # {(parameter, option): {weather file stems in that option's measure arguments}}
+        option_stems = defaultdict(set)
+        with open(options_lookup_path, "r", encoding="utf-8") as f:
+            for row in csv.reader(f, delimiter="\t"):
+                for cell in row[2:]:
+                    for m in re.finditer(r"([^=/\\\s]+)\.epw\b", cell):
+                        option_stems[(row[0], row[1])].add(m.group(1))
+        referenced = set().union(*option_stems.values())
+
+        needed = set()
+        for bldg in buildstock_rows:
+            for param, option in bldg.items():
+                needed |= option_stems.get((param, option), set())
+                needed |= option_stems.get((param, "*"), set())
+        for param_option in upgrade_options:
+            param, option = param_option.split("|", 1)
+            needed |= option_stems.get((param, option), set())
+        return needed, referenced
+
+    def copy_weather_files_for_job(self, buildstock_rows):
+        """
+        Extract the weather files needed by this job's buildings onto local scratch.
+
+        Copying the zip and extracting it locally is much faster than copying thousands of extracted weather files
+        from Lustre.
+        """
+        weather_zip = self.cfg.get("weather_files_path")
+        if weather_zip is None or not os.path.isfile(weather_zip):
+            # Weather files were downloaded from weather_files_url, so there's no zip to extract from
+            self.clear_and_copy_dir(self.weather_dir, self.local_weather_dir)
+            return
+
+        upgrade_options = [opt["option"] for upgrade in self.cfg.get("upgrades", []) for opt in upgrade["options"]]
+        needed, referenced = self.get_weather_file_stems(
+            self.local_buildstock_dir / "resources" / "options_lookup.tsv", buildstock_rows, upgrade_options
+        )
+        # Skip only the weather files other buildings need so anything else in the zip (e.g. empty.epw) is kept
+        skipped = referenced - needed if needed else set()
+
+        if os.path.exists(self.local_weather_dir):
+            shutil.rmtree(self.local_weather_dir, ignore_errors=True)
+        local_zip = self.local_scratch / "weather.zip"
+        shutil.copy2(weather_zip, local_zip)
+        with zipfile.ZipFile(local_zip, "r") as zf:
+            members = [name for name in zf.namelist() if pathlib.PurePosixPath(name).stem not in skipped]
+            zf.extractall(self.local_weather_dir, members=members)
+        os.remove(local_zip)
+        logger.debug(f"Extracted {len(members)} weather files for {len(needed)} weather locations.")
 
     @classmethod
     def get_apptainer_image(cls, cfg, os_version, os_sha):
@@ -219,7 +280,6 @@ class SlurmBatch(BuildStockBatchBase):
             pathlib.Path(self.buildstock_dir) / project_directory,
             self.local_buildstock_dir / project_directory,
         )
-        self.clear_and_copy_dir(self.weather_dir, self.local_weather_dir)
         self.clear_and_copy_dir(
             pathlib.Path(self.output_dir) / "housing_characteristics",
             self.local_housing_characteristics_dir,
@@ -252,6 +312,8 @@ class SlurmBatch(BuildStockBatchBase):
         df = pd.DataFrame.from_records(valid_rows)
         df.to_csv(buildstock_csv_path, index=False)
         logger.debug(f"Buildstock.csv trimmed to {len(df)} rows.")
+
+        self.copy_weather_files_for_job(valid_rows)
 
         traceback_file_path = self.local_output_dir / "simulation_output" / f"traceback{job_array_number}.out"
 
