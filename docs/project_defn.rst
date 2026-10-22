@@ -87,7 +87,12 @@ Baseline simulations incl. sampling algorithm
 
 Information about baseline simulations are listed under the ``baseline`` key.
 
-- ``n_buildings_represented``: The number of buildings that this sample is meant to represent.
+- ``n_buildings_represented``: The number of buildings that this sample is meant to represent. Each simulated
+  building gets a weight of ``n_buildings_represented / n_datapoints``. Required with every sampler except
+  ``residential_stratified``, where it is an error: that sampler's buildings are weighted by allocating the ACS
+  housing unit catalogue to them (``postprocessing: publish_annual_results``), so the catalogue sets the size of the
+  stock. The ``residential_stratified`` sampler requires ``schema_version: '0.7'`` or later, where ``baseline`` and
+  this key are optional.
 - ``skip_sims``: Include this key to control whether the set of baseline simulations are run. The default (i.e., when
   this key is not included) is to run all the baseline simulations. No results csv table with baseline characteristics
   will be provided when the baseline simulations are skipped.

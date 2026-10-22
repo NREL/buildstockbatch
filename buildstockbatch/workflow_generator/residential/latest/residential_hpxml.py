@@ -163,9 +163,13 @@ class ResidentialHpxmlWorkflowGenerator(WorkflowGeneratorBase):
             {
                 "building_id": building_id,
                 "project_directory": self.cfg["project_directory"],
-                "sample_weight": self.cfg["baseline"]["n_buildings_represented"] / self.n_datapoints,
             }
         )
+        # The residential_stratified sampler has no n_buildings_represented (validation rejects it): its
+        # weights are allocated from the ACS housing unit catalogue in postprocessing, not set here.
+        n_bldgs_represented = self.cfg.get("baseline", {}).get("n_buildings_represented")
+        if n_bldgs_represented is not None:
+            measure_args["BuildExistingModel"]["sample_weight"] = n_bldgs_represented / self.n_datapoints
 
         osw = {
             "id": sim_id,

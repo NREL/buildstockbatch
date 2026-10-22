@@ -44,6 +44,11 @@ def get_project_configuration(project_file):
         logger.error("Failed to load input yaml for validation")
         raise err
 
+    # baseline is optional (a residential_stratified project may have nothing to put in it), and an
+    # empty "baseline:" key loads as None
+    if cfg.get("baseline") is None:
+        cfg["baseline"] = {}
+
     # Set absolute paths
     cfg["buildstock_directory"] = path_rel_to_file(project_file, cfg["buildstock_directory"])
     # if 'precomputed_sample' in cfg.get('baseline', {}):

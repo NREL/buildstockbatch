@@ -93,3 +93,15 @@ Development Changelog
         both scenarios that use hourly schedules and scenarios that use constant
         values. The previous
         ``2025.12.03`` generator remains available for existing projects.
+
+
+    .. change::
+        :tags: validation, feature
+
+        Adds project schema version ``0.7``, in which ``baseline`` and ``baseline: n_buildings_represented`` are
+        optional. The ``residential_stratified`` sampler requires schema version ``0.7`` or later and rejects
+        ``n_buildings_represented``: that sampler's buildings are weighted by allocating the ACS housing unit
+        catalogue to them in ``publish_annual_results``, so the catalogue, not this key, sets the size of the
+        stock, and the key was being silently ignored. ``n_buildings_represented`` is still required with every
+        other sampler, and schema versions ``0.3`` to ``0.6`` are unchanged. The latest residential workflow
+        generator omits ``sample_weight`` when the key is absent.
