@@ -200,6 +200,21 @@ def test_emissions_electricity_values(upgrade, emissions, expected_folders, expe
 
 
 @pytest.mark.parametrize(
+    "baseline, expected_sample_weight",
+    [
+        ({"n_buildings_represented": 100}, 10.0),
+        ({}, None),  # residential_stratified: weights come from the catalogue allocation
+    ],
+)
+def test_sample_weight_from_n_buildings_represented(baseline, expected_sample_weight):
+    cfg = copy.deepcopy(test_cfg)
+    cfg["baseline"] = baseline
+    osw = ResidentialHpxmlWorkflowGenerator(cfg, 10).create_osw("bldg1", 1, None)
+    arguments = osw["steps"][0]["arguments"]
+    assert arguments.get("sample_weight") == expected_sample_weight
+
+
+@pytest.mark.parametrize(
     "electricity_factor",
     [
         {},

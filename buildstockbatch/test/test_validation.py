@@ -547,6 +547,81 @@ def test_validate_apptainer_image():
             filename.unlink()
 
 
+def _n_bldgs_project_file(tmp_path, schema_version, sampler_type, baseline):
+    # minimal-schema.yml with the given sampler and baseline; baseline="absent" drops the key
+    cfg = yaml.safe_load(pathlib.Path(example_yml_dir, "minimal-schema.yml").read_text())
+    cfg["schema_version"] = schema_version
+    cfg["output_directory"] = "somewhere"
+    cfg["workflow_generator"] = {"type": "residential_hpxml", "version": "latest"}
+    cfg["sampler"]["type"] = sampler_type
+    if baseline == "absent":
+        del cfg["baseline"]
+    else:
+        cfg["baseline"] = baseline
+    project_filename = tmp_path / "project.yml"
+    project_filename.write_text(yaml.dump(cfg))
+    return str(project_filename)
+
+
+@pytest.mark.parametrize("schema_version", ["0.4", "0.5", "0.6", "0.7"])
+def test_validate_n_buildings_represented_quota(tmp_path, schema_version):
+    project_filename = _n_bldgs_project_file(
+        tmp_path, schema_version, "residential_quota", {"n_buildings_represented": 12345}
+    )
+    assert BuildStockBatchBase.validate_project_schema(project_filename)
+    assert BuildStockBatchBase.validate_n_buildings_represented(project_filename)
+
+
+@pytest.mark.parametrize("schema_version", ["0.4", "0.5", "0.6"])
+def test_released_schemas_still_require_n_buildings_represented(tmp_path, schema_version):
+    project_filename = _n_bldgs_project_file(tmp_path, schema_version, "residential_quota", {"skip_sims": False})
+    with pytest.raises(ValueError, match="n_buildings_represented"):
+        BuildStockBatchBase.validate_project_schema(project_filename)
+
+
+@pytest.mark.parametrize("baseline", [{"skip_sims": False}, None, "absent"])
+def test_validate_n_buildings_represented_missing_for_quota(tmp_path, baseline):
+    project_filename = _n_bldgs_project_file(tmp_path, "0.7", "residential_quota", baseline)
+    assert BuildStockBatchBase.validate_project_schema(project_filename)
+    with pytest.raises(ValidationError, match="n_buildings_represented is required with the residential_quota"):
+        BuildStockBatchBase.validate_n_buildings_represented(project_filename)
+
+
+def test_validate_n_buildings_represented_rejected_for_stratified(tmp_path):
+    project_filename = _n_bldgs_project_file(
+        tmp_path, "0.7", "residential_stratified", {"n_buildings_represented": 12345}
+    )
+    assert BuildStockBatchBase.validate_project_schema(project_filename)
+    with pytest.raises(ValidationError, match="not used with the residential_stratified sampler"):
+        BuildStockBatchBase.validate_n_buildings_represented(project_filename)
+
+
+@pytest.mark.parametrize("schema_version", ["0.4", "0.5", "0.6"])
+@pytest.mark.parametrize("baseline", [{"n_buildings_represented": 12345}, "absent"])
+def test_validate_n_buildings_represented_stratified_needs_schema_0_7(tmp_path, schema_version, baseline):
+    project_filename = _n_bldgs_project_file(tmp_path, schema_version, "residential_stratified", baseline)
+    with pytest.raises(ValidationError, match=rf"requires schema_version 0.7 or later \(got {schema_version}\)"):
+        BuildStockBatchBase.validate_stratified_schema_version(project_filename)
+
+
+@pytest.mark.parametrize(
+    "sampler_type, schema_version", [("residential_quota", "0.4"), ("residential_stratified", "0.7")]
+)
+def test_validate_stratified_schema_version_passes(tmp_path, sampler_type, schema_version):
+    project_filename = _n_bldgs_project_file(tmp_path, schema_version, sampler_type, "absent")
+    assert BuildStockBatchBase.validate_stratified_schema_version(project_filename)
+
+
+@pytest.mark.parametrize("baseline", [{"skip_sims": False}, {}, None, "absent"])
+def test_validate_n_buildings_represented_stratified_without_it(tmp_path, baseline):
+    # Dropping the key may leave baseline with other keys, empty, null ("baseline:"), or gone altogether
+    project_filename = _n_bldgs_project_file(tmp_path, "0.7", "residential_stratified", baseline)
+    assert BuildStockBatchBase.validate_project_schema(project_filename)
+    assert BuildStockBatchBase.validate_n_buildings_represented(project_filename)
+    expected_baseline = {} if baseline in (None, "absent") else baseline
+    assert get_project_configuration(project_filename)["baseline"] == expected_baseline
+
+
 def test_validate_sampler_good_buildstock(basic_residential_project_file):
     project_filename, _ = basic_residential_project_file(
         {
